@@ -94,25 +94,25 @@ export class WoDItem extends Item {
 	}
 
 	async _onUpdate(updateData, options, user) {
-		try {
-			const item = this;
+		// try {
+		// 	const item = this;
 
-			if ((item) && (item?.actor !== undefined) && (item?.actor !== null)) {
-				const actor = await game.actors.get(item.actor._id);
+		// 	if ((item) && (item?.actor !== undefined) && (item?.actor !== null)) {
+		// 		const actor = await game.actors.get(item.actor._id);
 
-				if (actor !== undefined) {
-					let actorData = foundry.utils.duplicate(this.actor);
-					actorData = await calculateTotals(actorData);
-					actorData.system.settings.isupdated = false;
-					await this.actor.update(actorData);
-				}
-			}			
-		}
-		catch (err) {
-			ui.notifications.error(`Cannot update Item ${updateData.name}. Please check console for details.`);
-			err.message = `Cannot update Item ${updateData.name}: ${err.message}`;
-			console.error(err);
-		}
+		// 		if (actor !== undefined) {
+		// 			let actorData = foundry.utils.duplicate(this.actor);
+		// 			actorData = await calculateTotals(actorData);
+		// 			actorData.system.settings.isupdated = false;
+		// 			await this.actor.update(actorData);
+		// 		}
+		// 	}			
+		// }
+		// catch (err) {
+		// 	ui.notifications.error(`Cannot update Item ${updateData.name}. Please check console for details.`);
+		// 	err.message = `Cannot update Item ${updateData.name}: ${err.message}`;
+		// 	console.error(err);
+		// }
 
 		await super._onUpdate(updateData, options, user);
 	}

@@ -35,19 +35,15 @@ export async function getInstalledPowers(items, includeCompendiums = true) {
     }
     
     // Add compendium items if they don't already exist
+    // Item shape: { name, type: "Power", system: { type: "wod.types.discipline" | ... } }
     if (includeCompendiums) {
         const compendiumPromises = [];
         const itemPacks = [];
         const failedPacks = [];
         
-        // Iterate through all Item packs
         for (const pack of game.packs) {
-            // Validate pack before trying to read from it
             if (!pack) continue;
             if (pack.documentName !== "Item") continue;
-            if (pack.locked) continue; // Skip locked packs
-            
-            // Check if pack has getDocuments method
             if (typeof pack.getDocuments !== "function") {
                 console.warn(`WoD | Skipping pack ${pack.collection || "unknown"}: getDocuments method not available`);
                 continue;
@@ -55,24 +51,15 @@ export async function getInstalledPowers(items, includeCompendiums = true) {
             
             itemPacks.push(pack);
             compendiumPromises.push(
-                pack.getDocuments().then(compendiumItems => {
-                    if (!Array.isArray(compendiumItems)) {
-                        console.warn(`WoD | Compendium ${pack.collection} returned invalid data format`);
-                        return;
-                    }
-                    
+                pack.getDocuments().then((compendiumItems) => {
+                    const items = Array.isArray(compendiumItems) ? compendiumItems : Array.from(compendiumItems || []);
                     let powerCount = 0;
-                    for (const item of compendiumItems) {
-                        // Validate item before trying to use it
-                        if (!item || item.type !== "Power") continue;
-                        if (!item.name || !item.system) continue;
-                        
-                        // Only include power types we're interested in
-                        if (!validPowerTypes.includes(item.system?.type)) continue;
-                        
+                    for (const item of items) {
+                        if (!item || item.type !== "Power" || !item.name || !item.system) continue;
+                        const systemType = item.system.type;
+                        if (!validPowerTypes.includes(systemType)) continue;
                         try {
-                            const key = `${item.name.toLowerCase()}_${item.system?.type || ''}`;
-                            // Only add if there isn't already a world version
+                            const key = `${item.name.toLowerCase()}_${systemType}`;
                             if (!powerMap.has(key)) {
                                 powerMap.set(key, item);
                                 powerCount++;
@@ -157,14 +144,16 @@ export async function getInstalledPowers(items, includeCompendiums = true) {
         console.error('Crash in getInstalledPowers():', error);
     }
 
-    powers.disciplines = disciplines;
-    //powers.disciplinepaths = disciplinepaths;
-    powers.arts = arts;
-    powers.edges = edges;
-    powers.lores = lores;
-    powers.arcanoi = arcanois;
-    powers.hekau = hekaus;
-    powers.numina = numinas;
+    const byName = (a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+
+    powers.disciplines = disciplines.sort(byName);
+    //powers.disciplinepaths = disciplinepaths.sort(byName);
+    powers.arts = arts.sort(byName);
+    powers.edges = edges.sort(byName);
+    powers.lores = lores.sort(byName);
+    powers.arcanoi = arcanois.sort(byName);
+    powers.hekau = hekaus.sort(byName);
+    powers.numina = numinas.sort(byName);
 
     return powers;
 }

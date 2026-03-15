@@ -620,7 +620,7 @@ export class WoDActor extends Actor {
                 if (actor.permission < 3) {
                     return;
                 }
-
+                
                 updateData = foundry.utils.duplicate(actor);
 
                 if ((actor.type != CONFIG.worldofdarkness.sheettype.vampire) && (actor.type != "PC")) {
@@ -724,6 +724,30 @@ export class WoDActor extends Actor {
                 console.log(actor);
             }
         }    
+    }
+
+    /**
+     * When embedded items are updated, recalculate actor totals once (e.g. after batch update from _setItems).
+     * @override
+     */
+    _onUpdateDescendantDocuments(parent, collection, documents, changes, options, userId) {
+        super._onUpdateDescendantDocuments(parent, collection, documents, changes, options, userId);
+
+        if (this.type === "PC") return;
+        if (this.permission < 3) return;
+        if (collection !== "items" || !documents?.length) return;
+
+        (async () => {
+            try {
+                let actorData = foundry.utils.duplicate(this);
+                actorData = await calculateTotals(actorData);
+                actorData.system.settings.isupdated = true;
+                await this.update(actorData);
+            } catch (err) {
+                ui.notifications.error(`Cannot update Actor ${this?.name} after item change. Please check console for details.`);
+                console.error(err);
+            }
+        })();
     }
 
     async _setAbilityMaxValue(actorData) {
@@ -1384,6 +1408,7 @@ export class WoDActor extends Actor {
         const actor = this;
 
         const items = actor?.items || [];
+        const updates = [];
 
         // bonus item correctly active if connected item has changed active status
         const bonuses = items.filter(item => item.type === "Bonus" && item.system.parentid != -1);
@@ -1395,36 +1420,36 @@ export class WoDActor extends Actor {
             }
 
             if (parentItem.system.isactive != bonus.system.isactive) {
-                const item = await actor.getEmbeddedDocument("Item", bonus._id);
-                let bonusData = foundry.utils.duplicate(item);
-                bonusData.system.isactive = parentItem.system.isactive;
-                await item.update(bonusData);
+                updates.push({
+                    _id: bonus._id,
+                    system: { isactive: parentItem.system.isactive }
+                });
             }
         }
 
         // secondary skills to correct max value.
+        const defaultAbilityMax = parseInt(actor.system.settings.abilities.defaultmaxvalue);
         const abilities = items.filter(item => item.type === "Ability" || (item.type === "Trait" && (item.system.type === "wod.types.talentsecondability" || item.system.type === "wod.types.skillsecondability" || item.system.type === "wod.types.knowledgesecondability")));
         for (const ability of abilities) {
-            if (ability.system.max != parseInt(actor.system.settings.abilities.defaultmaxvalue)) {
-                const item = await actor.getEmbeddedDocument("Item", ability._id);
-                let itemData = foundry.utils.duplicate(item);
-                itemData.system.max = parseInt(actor.system.settings.abilities.defaultmaxvalue)
-                await item.update(itemData);
+            if (ability.system.max != defaultAbilityMax) {
+                updates.push({
+                    _id: ability._id,
+                    system: { max: defaultAbilityMax }
+                });
             }
         }
 
-        const powers = items.filter(item => item.type == "Power");
-        
         // Update powers based on secondaryabilityid
-        const updates = [];
+        const defaultPowerMax = parseInt(actor.system.settings.powers.defaultmaxvalue);
+        const powers = items.filter(item => item.type == "Power");
         for (const power of powers) {
             let needsUpdate = false;
             let itemData = foundry.utils.duplicate(power);
-            
+
             if (power.system.secondaryabilityid === "") {
                 // If secondaryabilityid is empty, set max to defaultmaxvalue
-                if (power.system.max != parseInt(actor.system.settings.powers.defaultmaxvalue)) {
-                    itemData.system.max = parseInt(actor.system.settings.powers.defaultmaxvalue);
+                if (power.system.max != defaultPowerMax) {
+                    itemData.system.max = defaultPowerMax;
                     needsUpdate = true;
                 }
             } else {
@@ -1435,13 +1460,13 @@ export class WoDActor extends Actor {
                     needsUpdate = true;
                 }
             }
-            
+
             if (needsUpdate) {
                 updates.push(itemData);
             }
         }
-        
-        // Perform all updates in a single batch
+
+        // Perform all item updates in a single batch
         if (updates.length > 0) {
             await actor.updateEmbeddedDocuments("Item", updates);
         }

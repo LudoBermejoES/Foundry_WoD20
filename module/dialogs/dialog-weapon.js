@@ -677,9 +677,9 @@ export class DialogWeapon extends FormApplication {
             const numberOfSuccesses = await DiceRoller(weaponRoll);   
             
             // DEBUGGING: Logga värden för att identifiera problem
-            console.log("Attack roll - numberOfSuccesses:", numberOfSuccesses);
-            console.log("Attack roll - this.object.rolldamage:", this.object.rolldamage);
-            console.log("Attack roll - item.system.damage:", item.system.damage);
+            //console.log("Attack roll - numberOfSuccesses:", numberOfSuccesses);
+            //console.log("Attack roll - this.object.rolldamage:", this.object.rolldamage);
+            //console.log("Attack roll - item.system.damage:", item.system.damage);
             
             if ((numberOfSuccesses > 0) && (this.object.rolldamage)) {
                 // add number of successes to Damage roll
@@ -692,8 +692,8 @@ export class DialogWeapon extends FormApplication {
             }
             else {
                 // DEBUGGING: Logga varför damage inte triggas
-                console.log("Damage roll not triggered - numberOfSuccesses:", numberOfSuccesses, 
-                           "rolldamage:", this.object.rolldamage);
+                //console.log("Damage roll not triggered - numberOfSuccesses:", numberOfSuccesses, 
+                //           "rolldamage:", this.object.rolldamage);
             }
         } 
         else {

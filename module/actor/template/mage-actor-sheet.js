@@ -32,10 +32,10 @@ export default class MageActorSheet extends MortalActorSheet {
 
 		data.actor.system.listdata.rotes = rotes.sort((a, b) => a.name.localeCompare(b.name));
 
-		if (data.actor.type == CONFIG.worldofdarkness.sheettype.mage) {
-			console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.mage})`);
-			console.log(data.actor);
-		}
+		// if (data.actor.type == CONFIG.worldofdarkness.sheettype.mage) {
+		// 	console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.mage})`);
+		// 	console.log(data.actor);
+		// }
 
 		return data;
 	}

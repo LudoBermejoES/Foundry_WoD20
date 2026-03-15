@@ -131,8 +131,8 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 			data.item.system.details = await foundry.applications.ux.TextEditor.implementation.enrichHTML(data.item.system.details, {async: true});
 		}
 
-		console.log(`${data.item.name} - (${data.item.type})`);
-		console.log(data.item);
+		// console.log(`${data.item.name} - (${data.item.type})`);
+		// console.log(data.item);
 		
 		return data;
 	}

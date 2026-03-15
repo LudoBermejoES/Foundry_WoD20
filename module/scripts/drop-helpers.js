@@ -1031,7 +1031,7 @@ export default class DropHelper {
     static async ImportAdvantage(actor, advantage) {
         if (actor.system.advantages[advantage.system.id] !== undefined) {
             // TODO: finns redan
-            console.log(`Installing Splat | Advantage ${advantage.name} already exists.`);
+            console.log(`WoD |Installing Splat | Advantage ${advantage.name} already exists.`);
 
             return false;
         }
@@ -1070,7 +1070,7 @@ export default class DropHelper {
             );
             
             if (existingFeature) {
-                console.log(`Installing Splat | Feature ${feature.name} already exists (itemuuid: ${feature.uuid}).`);
+                console.log(`WoD | Installing Splat | Feature ${feature.name} already exists (itemuuid: ${feature.uuid}).`);
                 return false;
             }
         }
@@ -1114,7 +1114,7 @@ export default class DropHelper {
             );
             
             if (existingFeature) {
-                console.log(`Installing Splat | Power ${power.name} already exists (itemuuid: ${power.uuid}).`);
+                console.log(`WoD | Installing Splat | Power ${power.name} already exists (itemuuid: ${power.uuid}).`);
                 return false;
             }
         }
@@ -1150,7 +1150,7 @@ export default class DropHelper {
         // search in the pack worldofdarkness.lunarshapeshifting for the full uuid
         // If ability.uuid begins with Item, it's in the world, so search game.items for the uuid or _id.
         if (actor.system.abilities[ability.system.id] !== undefined) {
-            console.log(`Installing Splat | Ability ${ability.name} already exists.`);
+            console.log(`WoD |Installing Splat | Ability ${ability.name} already exists.`);
 
             return false;
         }

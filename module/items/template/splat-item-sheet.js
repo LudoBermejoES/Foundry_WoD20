@@ -117,8 +117,8 @@ export default class SplatItemSheet extends HandlebarsApplicationMixin(WoDItemSh
 
         data.item = item;
 
-        console.log(`${data.item.name} - (${data.item.type})`);
-        console.log(data.item);
+        // console.log(`${data.item.name} - (${data.item.type})`);
+        // console.log(data.item);
 
         return {
             ...data

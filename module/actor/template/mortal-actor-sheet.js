@@ -112,10 +112,10 @@ export default class MortalActorSheet extends foundry.appv1.sheets.ActorSheet {
 			}
 		}
 
-		if (data.actor.type == CONFIG.worldofdarkness.sheettype.mortal) {
-			console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.mortal})`);
-			console.log(data.actor);
-		}
+		// if (data.actor.type == CONFIG.worldofdarkness.sheettype.mortal) {
+		// 	console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.mortal})`);
+		// 	console.log(data.actor);
+		// }
 
 		return data;
 	}	

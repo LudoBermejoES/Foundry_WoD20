@@ -20,10 +20,10 @@ export default class MummyActorSheet extends MortalActorSheet {
 	async getData() {
 		const data = await super.getData();
 
-		if (data.actor.type == CONFIG.worldofdarkness.sheettype.mummy) {
-			console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.mummy})`);
-			console.log(data.actor);
-		}
+		// if (data.actor.type == CONFIG.worldofdarkness.sheettype.mummy) {
+		// 	console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.mummy})`);
+		// 	console.log(data.actor);
+		// }
 
 		return data;
 	}

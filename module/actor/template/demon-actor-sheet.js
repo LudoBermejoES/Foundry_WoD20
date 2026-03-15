@@ -44,10 +44,10 @@ export default class DemonActorSheet extends MortalActorSheet {
 
 		data.actor.system.listdata.forms = forms;
 
-		if (data.actor.type == CONFIG.worldofdarkness.sheettype.demon) {
-			console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.demon})`);
-			console.log(data.actor);
-		}
+		// if (data.actor.type == CONFIG.worldofdarkness.sheettype.demon) {
+		// 	console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.demon})`);
+		// 	console.log(data.actor);
+		// }
 
 		return data;
 	}

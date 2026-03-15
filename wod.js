@@ -383,10 +383,7 @@ Hooks.once("init", async function() {
 	// Initialize the alterations to the settings sidebar
 	RenderSettings();
 
-	game.worldofdarkness = {
-		powers: await WoDSetup.getInstalledPowers(game.data.items, true)
-	};
-
+	game.worldofdarkness = {};
 	game.worldofdarkness.bio = templates.SetupBio();
 	game.worldofdarkness.abilities = templates.SetupAbilities();
 	
@@ -445,57 +442,6 @@ Hooks.once("init", async function() {
 /* ------------------------------------ */
 Hooks.once("setup", function () {
     // Do anything after initialization but before ready
-
-	
-
-	/* CONFIG.fontDefinitions["Mortal"] = {
-		editor: true,
-		fonts: [{
-			urls: ["systems/worldofdarkness/assets/fonts/times.ttf"]
-		}]
-	};
-	CONFIG.fontDefinitions["Changeling"] = {
-		editor: true,
-		fonts: [{
-			urls: ["systems/worldofdarkness/assets/fonts/Umb000.ttf"]
-		}]
-	};
-	CONFIG.fontDefinitions["Vampire"] = {
-		editor: true,
-		fonts: [{
-			urls: ["systems/worldofdarkness/assets/fonts/percexp.ttf"]
-		}]
-	};
-	CONFIG.fontDefinitions["Mage"] = {
-		editor: true,
-		fonts: [{
-			urls: ["systems/worldofdarkness/assets/fonts/visit.TTF"]
-		}]
-	};
-	CONFIG.fontDefinitions["Werewolf"] = {
-		editor: true,
-		fonts: [{
-			urls: ["systems/worldofdarkness/assets/fonts/werewolf.ttf"]
-		}]
-	};
-	CONFIG.fontDefinitions["Hunter"] = {
-		editor: true,
-		fonts: [{
-			urls: ["systems/worldofdarkness/assets/fonts/hunter.ttf"]
-		}]
-	};
-	CONFIG.fontDefinitions["Demon"] = {
-		editor: true,
-		fonts: [{
-			urls: ["systems/worldofdarkness/assets/fonts/demon.ttf"]
-		}]
-	};
-	CONFIG.fontDefinitions["Wraith"] = {
-		editor: true,
-		fonts: [{
-			urls: ["systems/worldofdarkness/assets/fonts/Mat_____.ttf"]
-		}]
-	}; */
 });
 
 /* ------------------------------------ */
@@ -503,35 +449,31 @@ Hooks.once("setup", function () {
 /* ------------------------------------ */
 Hooks.once("ready", async function () {
     // Do anything once the system is ready
+	// Load installed powers (must run in "ready" when game.packs is available)
+	game.worldofdarkness.powers = await WoDSetup.getInstalledPowers(game.items.contents, true);
+
 	const installedVersion = game.settings.get('worldofdarkness', 'worldVersion');
   	const systemVersion = game.data.system.version;	
 	const test = false;
 
-	// Register status effects (måste ske innan CONFIG.Actor.documentClass sätts)
+	// Handle token icons for shapeforms. Since these are dynamic and can be added by users, we need to register them as status effects so that they can be used as token icons.
 	if (!CONFIG.statusEffects || !Array.isArray(CONFIG.statusEffects)) {
 		CONFIG.statusEffects = [];
 	}
 	
-	// Registrera generisk status effect för shapeform ikoner
-	// Denna används för PC Actor shape changes - ikonen uppdateras dynamiskt i ActiveEffect
 	CONFIG.statusEffects.push({
 		id: "wod_shapeform_icon",
 		name: "Shapeform Icon",
 		img: "systems/worldofdarkness/assets/img/shapes/form_homid.svg" // Fallback ikon
 	});
 	
-	// Hämta alla unika shapeform ikoner från PC actors i world
-	// Detta säkerställer att alla ikoner är registrerade vid init
 	if (game.actors) {
 		const uniqueIcons = new Set();
 		const iconToName = new Map();
 		
-		// Gå igenom alla actors
 		for (const actor of game.actors) {
-			// Endast PC Actors
-			if (actor.type !== "PC" && actor.type !== "pc") continue;
+			if (actor.type !== "PC") continue;
 			
-			// Hitta alla shapeform items
 			const shapeforms = actor.items.filter(item => 
 				item.type === "Trait" && 
 				item.system?.type === "wod.types.shapeform" &&
@@ -539,12 +481,12 @@ Hooks.once("ready", async function () {
 				item.system.icon.trim() !== ""
 			);
 			
-			// Samla unika ikoner
+			// Gather all unique icons
 			for (const shapeform of shapeforms) {
 				const iconUrl = shapeform.system.icon.trim();
 				if (iconUrl.toLowerCase().endsWith('.svg')) {
 					uniqueIcons.add(iconUrl);
-					// Spara shapeform namn för denna ikon (använd första hittade)
+
 					if (!iconToName.has(iconUrl)) {
 						iconToName.set(iconUrl, shapeform.name || "Shapeform");
 					}
@@ -552,16 +494,13 @@ Hooks.once("ready", async function () {
 			}
 		}
 		
-		// Registrera varje unik ikon som en status effect
-		// Använd hash av URL:en som del av ID för att göra det unikt
+		// Register all unique icons as status effects
 		for (const iconUrl of uniqueIcons) {
-			// Skapa unikt ID baserat på icon URL (använd sista delen av sökvägen)
 			const urlParts = iconUrl.split('/');
 			const fileName = urlParts[urlParts.length - 1].replace('.svg', '');
-			const statusId = `wod_shapeform_${fileName}`;
-			
-			// Kontrollera om den redan finns
+			const statusId = `wod_shapeform_${fileName}`;			
 			const exists = CONFIG.statusEffects.find(s => s.id === statusId);
+
 			if (!exists) {
 				CONFIG.statusEffects.push({
 					id: statusId,

@@ -163,7 +163,7 @@ export default class WoDItemSheetV2 extends HandlebarsApplicationMixin(foundry.a
             type: "Sort"
         }
 
-        console.log(data);
+        //console.log(data);
 
         event.dataTransfer.setData('text/plain', JSON.stringify(data))
     }

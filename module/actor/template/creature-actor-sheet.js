@@ -47,10 +47,10 @@ export default class CreatureActorSheet extends MortalActorSheet {
 
 		data.actor.system.listdata.forms = forms;
 
-		if (data.actor.type == CONFIG.worldofdarkness.sheettype.creature) {
-			console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.creature})`);
-			console.log(data.actor);
-		}
+		// if (data.actor.type == CONFIG.worldofdarkness.sheettype.creature) {
+		// 	console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.creature})`);
+		// 	console.log(data.actor);
+		// }
 
 		return data;
 	}

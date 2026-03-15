@@ -102,7 +102,7 @@ export default class TokenHelper {
 
     static async _applyEffect(token, form, active) {
         if (await token.document.toggleActiveEffect(this._getEffectData(form), {active: active})) {
-            console.log("Turning on " + form);
+            console.log("WoD | Turning on " + form);
         }
         else {
             console.log("Turning off " + form);
@@ -111,10 +111,10 @@ export default class TokenHelper {
 
     static async _applyActorEffect(actor, form, active) {
         if (await actor.toggleActiveEffect(this._getEffectData(form), {active: active})) {
-            console.log("Turning on " + form);
+            console.log("WoD | Turning on " + form);
         }
         else {
-            console.log("Turning off " + form);
+            console.log("WoD | Turning off " + form);
         }
     }
 }

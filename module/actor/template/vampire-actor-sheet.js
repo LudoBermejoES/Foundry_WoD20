@@ -25,10 +25,10 @@ export default class VampireActorSheet extends MortalActorSheet {
 
 		const data = await super.getData();
 
-		if (data.actor.type == CONFIG.worldofdarkness.sheettype.vampire) {
-			console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.vampire})`);
-			console.log(data.actor);
-		}
+		// if (data.actor.type == CONFIG.worldofdarkness.sheettype.vampire) {
+		// 	console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.vampire})`);
+		// 	console.log(data.actor);
+		// }
 
 		return data;
 	}
@@ -189,45 +189,38 @@ async function calculteMaxDiscipline(selectedGeneration) {
 	return disciplineMax;
 }
 
-async function keepAbilitiesDisciplinesCorrect(disciplineMax, actor) {	
+async function keepAbilitiesDisciplinesCorrect(disciplineMax, actor) {
+	const updates = [];
+	const parsedMax = parseInt(disciplineMax);
+
 	for (const item of actor.items) {
 		// secondary abilities
 		if ((item.type == "Trait") && ((item.system.type == "wod.types.talentsecondability") || (item.system.type == "wod.types.skillsecondability") || (item.system.type == "wod.types.knowledgesecondability"))) {
-			const itemData = foundry.utils.duplicate(item);
-
-			if (itemData.system.max != parseInt(disciplineMax)) {
-				itemData.system.max = parseInt(disciplineMax);
-				await item.update(itemData);
+			if (item.system.max != parsedMax) {
+				updates.push({ _id: item.id, system: { max: parsedMax } });
 			}
 		}
 		// disciplines and paths
 		if ((item.type == "Power") && ((item.system.type == "wod.types.discipline") /*|| (item.system.type == "wod.types.disciplinepath") */)) {
-			const itemData = foundry.utils.duplicate(item);
-
-			if (itemData.system.max != parseInt(disciplineMax)) {
-				itemData.system.max = parseInt(disciplineMax);
-				await item.update(itemData);
-			}			
-		}		
+			if (item.system.max != parsedMax) {
+				updates.push({ _id: item.id, system: { max: parsedMax } });
+			}
+		}
 		// disipline powers and path powers
 		if ((item.type == "Power") && (item.system.type == "wod.types.disciplinepower") /*|| (item.system.type == "wod.types.disciplinepathpower") */) {
-			const itemData = foundry.utils.duplicate(item);
-
-			if (itemData.system.max != 0) {
-				itemData.system.value = 0;
-				itemData.system.max = 0;
-				await item.update(itemData);
+			if (item.system.max != 0) {
+				updates.push({ _id: item.id, system: { value: 0, max: 0 } });
 			}
 		}
 		// rituals
 		if ((item.type == "Power") && (item.system.type == "wod.types.ritual")) {
-			const itemData = foundry.utils.duplicate(item);
-
-			if (itemData.system.max != 0) {
-				itemData.system.value = 0;
-				itemData.system.max = 0;
-				await item.update(itemData);
+			if (item.system.max != 0) {
+				updates.push({ _id: item.id, system: { value: 0, max: 0 } });
 			}
 		}
+	}
+
+	if (updates.length > 0) {
+		await actor.updateEmbeddedDocuments("Item", updates);
 	}
 }

@@ -40,10 +40,10 @@ export default class WerewolfActorSheet extends MortalActorSheet {
 
 		data.actor.system.settings.presentform = presentform;
 
-		if (data.actor.type == CONFIG.worldofdarkness.sheettype.werewolf) {
-			console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.werewolf})`);
-			console.log(data.actor);
-		}
+		// if (data.actor.type == CONFIG.worldofdarkness.sheettype.werewolf) {
+		// 	console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.werewolf})`);
+		// 	console.log(data.actor);
+		// }
 
 		return data;
 	}

@@ -23,10 +23,10 @@ export default class WraithActorSheet extends MortalActorSheet {
 
 		data.actor.system.listdata.health = await calculateHealth(this.actor, CONFIG.worldofdarkness.sheettype.wraith);
 
-		if (data.actor.type == CONFIG.worldofdarkness.sheettype.wraith) {
-			console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.wraith})`);
-			console.log(data.actor);
-		}
+		// if (data.actor.type == CONFIG.worldofdarkness.sheettype.wraith) {
+		// 	console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.wraith})`);
+		// 	console.log(data.actor);
+		// }
 
 		return data;
 	}

@@ -14,7 +14,7 @@ import { DiceRollContainer } from "../scripts/roll-dice.js";
  * @returns {Object} View model for template
  */
 function buildViewModel(item, state, attackResult = null) {
-    console.log("WoD DEBUG | buildViewModel called with state:", state, "and attackResult:", attackResult);
+    //console.log("WoD DEBUG | buildViewModel called with state:", state, "and attackResult:", attackResult);
 
     const attack = item.system?.attack ?? {};
     const damage = item.system?.damage ?? {};
@@ -416,7 +416,7 @@ export class DialogWeaponV2 extends HandlebarsApplicationMixin(ApplicationV2) {
         const item = await this.actor.getEmbeddedDocument("Item", o._id);
 
         if (!item) {
-            console.log("WoD DEBUG | Item " + o._id + " not found on actor " + this.actor.name +" existing attack roll");
+            //console.log("WoD DEBUG | Item " + o._id + " not found on actor " + this.actor.name +" existing attack roll");
             return;
         }
         if (o.dice2 === "custom" && o.secondaryabilityid) {
@@ -428,18 +428,18 @@ export class DialogWeaponV2 extends HandlebarsApplicationMixin(ApplicationV2) {
         const numberOfSuccesses = await DiceRoller(weaponRoll);
         const damageRollable = item.system?.damage?.isrollable !== false;
 
-        console.log("WoD DEBUG | Attack roll resulted in", numberOfSuccesses, "successes");
+        //console.log("WoD DEBUG | Attack roll resulted in", numberOfSuccesses, "successes");
 
         if (damageRollable === true) {
-            console.log("WoD DEBUG | Damage roll is set to be rolled after successful attack");
+            //console.log("WoD DEBUG | Damage roll is set to be rolled after successful attack");
         }
         else {
-            console.log("WoD DEBUG | Damage roll is not set to be rolled after successful attack");
-            console.log("WoD DEBUG | Damage rollable value:", damageRollable);
+            //console.log("WoD DEBUG | Damage roll is not set to be rolled after successful attack");
+            //console.log("WoD DEBUG | Damage rollable value:", damageRollable);
         }
 
         if (numberOfSuccesses > 0 && damageRollable) {
-            console.log("WoD DEBUG | Damage roll to be rolled");
+            //console.log("WoD DEBUG | Damage roll to be rolled");
 
             this.weaponState = "damage";
             this.attackResult = {
@@ -450,7 +450,7 @@ export class DialogWeaponV2 extends HandlebarsApplicationMixin(ApplicationV2) {
             this.object = buildViewModel(this.item, this.weaponState, this.attackResult);
             await this.render();
         } else {
-            console.log("WoD DEBUG | No damage roll to be rolled");
+            //console.log("WoD DEBUG | No damage roll to be rolled");
             this.close();
         }
     }
@@ -481,7 +481,7 @@ export class DialogWeaponV2 extends HandlebarsApplicationMixin(ApplicationV2) {
         weaponRoll.systemText = "";
 
         if ((o.numberoftargets > 1) && (o.modename === "spray")) {
-            console.log("WoD DEBUG | Spray attack with", o.numberoftargets, "targets");
+            //console.log("WoD DEBUG | Spray attack with", o.numberoftargets, "targets");
 
             let numberTargets = o.numberoftargets;
             const maxnumberTargets = parseInt(o.extraSuccesses) + 1;
@@ -507,7 +507,7 @@ export class DialogWeaponV2 extends HandlebarsApplicationMixin(ApplicationV2) {
             await DiceRoller(weaponRoll);
         } 
         else {
-            console.log("WoD DEBUG | Damage roll with", o.attributeValue, "attribute dice,", o.abilityValue, "ability dice,", o.bonus, "bonus, and", o.extraSuccesses, "extra successes");
+            //console.log("WoD DEBUG | Damage roll with", o.attributeValue, "attribute dice,", o.abilityValue, "ability dice,", o.bonus, "bonus, and", o.extraSuccesses, "extra successes");
 
             const numDices = parseInt(o.attributeValue) + parseInt(o.abilityValue) + parseInt(o.bonus) + parseInt(o.extraSuccesses);
             weaponRoll.numDices = numDices;

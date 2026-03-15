@@ -2782,6 +2782,12 @@ export  const updates = async () => {
     if (newfunctions == "") {
         newfunctions += 'Issues fixed in version:<br />';
 
+        if (_compareVersion(installedVersion, '6.0.12')) {
+            newfunctions += '<li>[General] Updated language for Bazilian Portuguese.</li>';
+            newfunctions += '<li>[General] Improved on handling actor/item updates.</li>';
+            newfunctions += '<li>[General] Fixed problem with powers e.g disciplines being read from compendiums and then listed as you create items.</li>';
+        }
+
         if (_compareVersion(installedVersion, '6.0.11')) {
             newfunctions += '<li>[General] Fixed issue where weapons did not save their era correctly.</li>';
             newfunctions += '<li>[PC Actor] Fixed issue where using other template than a modern one would cause the setup to fail.</li>';

@@ -55,10 +55,10 @@ export default class ChangelingActorSheet extends MortalActorSheet {
 			data.actor.system.listdata.powers.arts.realms = realms.sort((a, b) => a.label.localeCompare(b.label));
 		}
 
-		if (data.actor.type == CONFIG.worldofdarkness.sheettype.changeling) {
-			console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.changeling})`);
-			console.log(data.actor);
-		}
+		// if (data.actor.type == CONFIG.worldofdarkness.sheettype.changeling) {
+		// 	console.log(`${data.actor.name} - (${CONFIG.worldofdarkness.sheettype.changeling})`);
+		// 	console.log(data.actor);
+		// }
 
 		return data;
 	}

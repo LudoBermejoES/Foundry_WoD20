@@ -277,8 +277,8 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 		
 		data.actor = actor;
 
-		console.log(`${data.actor.name} - (${data.actor.type} / ${this.splat})`);
-		console.log(data.actor);
+		// console.log(`${data.actor.name} - (${data.actor.type} / ${this.splat})`);
+		// console.log(data.actor);
 
 		return {
 			...data
