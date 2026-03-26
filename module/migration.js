@@ -2782,6 +2782,10 @@ export  const updates = async () => {
     if (newfunctions == "") {
         newfunctions += 'Issues fixed in version:<br />';
 
+        if (_compareVersion(installedVersion, '6.0.13')) {
+            newfunctions += '<li>[VtM] Fixed bug creating combination disciplines.</li>';
+        }
+
         if (_compareVersion(installedVersion, '6.0.12')) {
             newfunctions += '<li>[General] Updated language for Bazilian Portuguese.</li>';
             newfunctions += '<li>[General] Improved on handling actor/item updates.</li>';
