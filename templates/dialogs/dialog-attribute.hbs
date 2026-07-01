@@ -6,7 +6,7 @@
 
     <div class="dialog-area">
 
-        {{#if (ne object.typeform "bio")}}
+        {{#if (and (ne object.typeform "bio") (ne object.typeform "ability"))}}
             {{#if (hasSpeciality object actorData.type)}}
                 <div class="infobox">
                     <div class="bioInformationArea floating-label-group">

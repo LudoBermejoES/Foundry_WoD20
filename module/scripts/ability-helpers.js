@@ -85,15 +85,16 @@ export default class AbilityHelper {
 	}
 
 	static async EditAbility(actor, id) {
-		let item;
+		let item = actor.system.abilities?.[id];
 
-		if ((CONFIG.worldofdarkness.talents[id] == undefined) && (CONFIG.worldofdarkness.skills[id] == undefined) && (CONFIG.worldofdarkness.knowledges[id] == undefined)) {
+		if (item === undefined) {
 			item = await actor.getEmbeddedDocument("Item", id);
 		}
-		else {
-			item = actor.system.abilities[id];
-		}	
-		
+
+		if (!item) {
+			return;
+		}
+
 		const ability = new AbilityDialog.Ability(item);
 		let abilityUse = new AbilityDialog.DialogAbility(actor, ability);
 		abilityUse.render(true);

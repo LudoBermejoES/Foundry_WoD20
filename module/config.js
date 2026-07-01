@@ -187,6 +187,7 @@ wod.talents = {
     intuition: "wod.abilities.intuition",
     kenning: "wod.abilities.kenning",
     leadership: "wod.abilities.leadership",
+    persuasion: "wod.abilities.persuasion",
     primalurge: "wod.abilities.primalurge",
     streetwise: "wod.abilities.streetwise",
     subterfuge: "wod.abilities.subterfuge"

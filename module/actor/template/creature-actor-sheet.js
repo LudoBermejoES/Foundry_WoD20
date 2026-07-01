@@ -141,30 +141,30 @@ export default class CreatureActorSheet extends MortalActorSheet {
 	}
 
 	async _onsheetChange(event) {
-		event.preventDefault();
-
-		const element = event.currentTarget;
-		const dataset = element.dataset;
-
-		const source = dataset.source;
-		const actorData = foundry.utils.duplicate(this.actor);
+		const source = event.currentTarget.dataset.source;
 
 		if (source == "setpowermaxsetting") {
-			let attribute = dataset.attribute;
-			let value = 0;
+			event.preventDefault();
 
+			const element = event.currentTarget;
+			const actorData = foundry.utils.duplicate(this.actor);
+
+			let value = 0;
 			try {
-				value = parseInt(element.value);	
+				value = parseInt(element.value);
 			} catch (error) {
 				value = 0;
-			}		
+			}
 
 			//actorData.system.attributes[attribute].bonus = value;
+
+			actorData.system.settings.isupdated = false;
+			await this.actor.update(actorData);
+			this.render();
+			return;
 		}
 
-		actorData.system.settings.isupdated = false;
-		await this.actor.update(actorData);
-		this.render();
+		return super._onsheetChange(event);
 	}
 
 	async _assignToCreature(fields, value) {

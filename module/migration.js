@@ -2819,7 +2819,12 @@ export  const updates = async () => {
     }
 
     if (newfunctions == "") {
-        newfunctions += 'Issues fixed in version:<br />';        
+        newfunctions += 'Issues fixed in version:<br />';     
+        
+        if (_compareVersion(installedVersion, '7.1.4')) {
+            newfunctions += '<li>Bug caused problem to set speciality on certain abilities. <a href="https://github.com/JohanFalt/Foundry_WoD20/issues/1424">[#1424]</a></li>';
+            newfunctions += '<li>[Creature] A bug where the creature sheet would not update health levels correctly after changes in its setting->combat.</li>';
+        }
 
         if (_compareVersion(installedVersion, '7.1.3')) {
              newfunctions += '<li>[MtA] Fixed issue with the quintessence and paradox advantage on PC actors. It now reads the set label of quintessence and paradox, so if it is renamed this is visible on the sheet.</li>';
