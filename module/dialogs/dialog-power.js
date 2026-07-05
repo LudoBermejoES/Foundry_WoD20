@@ -21,6 +21,14 @@ export class BasePower {
         this.type = item.system["type"];
         this.dice1 = item.system["dice1"];
         this.dice2 = item.system["dice2"];
+
+        if (typeof this.dice1 === "string" && this.dice1 !== "") {
+            this.dice1 = this.dice1.toLowerCase();
+        }
+        if (typeof this.dice2 === "string" && this.dice2 !== "") {
+            this.dice2 = this.dice2.toLowerCase();
+        }
+
         this.bonus = parseInt(item.system["bonus"]);
         this.difficulty = parseInt(item.system["difficulty"]);
         this.description = item.system["description"];
@@ -332,17 +340,20 @@ export class DialogPower extends FormApplication {
         else if ((this.actor.system?.attributes != undefined) && (this.actor.system.attributes[data.object.dice1]?.value != undefined)) {
             await this._handleDice1Attribute(data, attributeSpeciality);
         }
-            else if ((this.actor.type == "PC") && this.actor.api && data.object.dice1 && data.object.dice1 !== "") {
-                const abilityItem = this.actor.api.getAbility(data.object.dice1);
-                if (abilityItem) {
-                    this._handleDice1AbilityPC(data, actortype, abilitySpeciality);
+        else if ((this.actor.type == "PC") && this.actor.api && data.object.dice1 && data.object.dice1 !== "") {
+            const abilityItem = this.actor.api.getAbility(data.object.dice1);
+            if (abilityItem) {
+                this._handleDice1AbilityPC(data, actortype, abilitySpeciality);
+            }
+            else {
+                const advantage = this.actor.api.getAdvantage(data.object.dice1);
+                if (advantage && advantage.system?.roll != undefined) {
+                    this._handleDice1AdvantagePC(data, attributeSpeciality);
                 }
             }
+        }
         else if ((this.actor.system?.abilities != undefined) && (this.actor.system.abilities[data.object.dice1]?.value != undefined)) {
             this._handleDice1AbilityLegacy(data, actortype, attributeSpeciality);
-        }
-        else if ((this.actor.type == "PC") && ((this.actor.system?.advantages != undefined) && (this.actor.system.advantages[data.object.dice1]?.system?.roll != undefined))) {
-            this._handleDice1AdvantagePC(data, attributeSpeciality);
         }
         else if (this.actor.system.advantages[data.object.dice1]?.roll != undefined) {
             this._handleDice1AdvantageLegacy(data, attributeSpeciality);
@@ -372,6 +383,12 @@ export class DialogPower extends FormApplication {
                 const abilityItem = this.actor.api.getAbility(data.object.dice2);
                 if (abilityItem) {
                     this._handleDice2AbilityPC(data, actortype, abilitySpeciality);
+                }
+                else {
+                    const advantage = this.actor.api.getAdvantage(data.object.dice2);
+                    if (advantage && advantage.system?.roll != undefined) {
+                        this._handleDice2VirtuePC(data);
+                    }
                 }
             }
             else if ((this.actor.system?.abilities != undefined) && (this.actor.system.abilities[data.object.dice2]?.value != undefined)) {

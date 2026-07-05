@@ -580,10 +580,12 @@ export default class PCActorAPI {
             throw new Error("advantageId must be a string");
         }
 
+        const normalizedId = advantageId.toLowerCase();
+
         // Try to find by system.id first (most common use case)
         const advantageById = this.actor.items.find(item => 
             item.type === "Advantage" && 
-            item.system?.id === advantageId
+            (item.system?.id === advantageId || item.system?.id === normalizedId)
         );
 
         if (advantageById) {

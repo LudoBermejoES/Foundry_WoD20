@@ -2819,9 +2819,14 @@ export  const updates = async () => {
     }
 
     if (newfunctions == "") {
-        newfunctions += 'Issues fixed in version:<br />';     
+        newfunctions += 'Issues fixed in version:<br />';      
         
+        if (_compareVersion(installedVersion, '7.1.5')) {
+            newfunctions += '<li>[PC Actor VtM] Fixed issue with discipline powers that rolled advantages causing the dice pool to be 0.</li>';
+        }
+
         if (_compareVersion(installedVersion, '7.1.4')) {
+            newfunctions += '<li>[PC Actor VtM] Fixed issue with discipline powers that rolled advantages causing the dice pool to be 0.</li>';
             newfunctions += '<li>Bug caused problem to set speciality on certain abilities. <a href="https://github.com/JohanFalt/Foundry_WoD20/issues/1424">[#1424]</a></li>';
             newfunctions += '<li>[Creature] A bug where the creature sheet would not update health levels correctly after changes in its setting->combat.</li>';
         }
@@ -2842,91 +2847,6 @@ export  const updates = async () => {
              newfunctions += '<li>Fixed bug causing you not to be able to remove untyped gear. <a href="https://github.com/JohanFalt/Foundry_WoD20/issues/1411">[#1411]</a></li>';
              newfunctions += '<li>[DtF] Fixed bug causing an Earthbound not to be able to connect their lore powers to lores. <a href="https://github.com/JohanFalt/Foundry_WoD20/issues/1410">[#1410]</a></li>';
         }
-
-        // if (_compareVersion(installedVersion, '6.0.13')) {
-        //     newfunctions += '<li>[VtM] Fixed bug creating combination disciplines.</li>';
-        // }
-
-        // if (_compareVersion(installedVersion, '6.0.12')) {
-        //     newfunctions += '<li>[General] Updated language for Bazilian Portuguese.</li>';
-        //     newfunctions += '<li>[General] Improved on handling actor/item updates.</li>';
-        //     newfunctions += '<li>[General] Fixed problem with powers e.g disciplines being read from compendiums and then listed as you create items.</li>';
-        // }
-
-        // if (_compareVersion(installedVersion, '6.0.11')) {
-        //     newfunctions += '<li>[General] Fixed issue where weapons did not save their era correctly.</li>';
-        //     newfunctions += '<li>[PC Actor] Fixed issue where using other template than a modern one would cause the setup to fail.</li>';
-        // }
-
-        // if (_compareVersion(installedVersion, '6.0.10')) {
-        //     newfunctions += '<li>[General] Description and system was not visible on items if user was set as observer. <a href="https://github.com/JohanFalt/Foundry_WoD20/issues/1362">[#1362]</a></li>';
-        //     newfunctions += '<li>[General] You can now set higher max values on attributes that the general max value in attribute settings.</li>';
-        //     newfunctions += '<li>[General] Minor dark mode fixes.</li>';            
-        //     newfunctions += '<li>[General] If no virtues where visible, do not show the virtue box on PC actors.</li>';
-        //     newfunctions += '<li>[General] PC actors could not clear health levels with right click.</li>';
-        //     newfunctions += '<li>[General] PC actors other traits with rolls did not display the sheets advantages.</li>';
-        //     newfunctions += '<li>[General] Fixed graphical issue with chat display of sparying damage.</li>';
-        //     newfunctions += '<li>[General] Rebuilt weapon dialog for attacking and damage.</li>';
-        //     newfunctions += '<li>[MtA] Could not set PC actor sphere to technocracy versions.</li>';
-        //     newfunctions += '<li>[MtA] PC Actor did not show resonance value correctly.</li>';            
-        // }
-
-        // if (_compareVersion(installedVersion, '6.0.9')) {
-        //     newfunctions += '<li>[General] Fixed problem that caused secondary abilities max value to not be updated correctly.</li>';
-        //     newfunctions += '<li>[WtA] Fixed graphical problems of showing attributes and abilities higher than five.</li>';
-        //     newfunctions += '<li>[VtM] Fixed problem that caused vampire actors not able to roll virtues.</li>';
-        // }
-
-        // if (_compareVersion(installedVersion, '6.0.8')) {
-        //     newfunctions += '<li>[General] What was before known as Splat items and referred as such is now called "Template".</li>';
-        //     newfunctions += '<li>[General] Improved on the presentation on a PC actor shapes.</li>';
-        //     newfunctions += '<li>[General] Fixed problem if you tried update a pc actor in a compendium.</li>';
-        //     newfunctions += '<li>[General] Bonus to soak was not calculated correctly.</li>';
-        //     newfunctions += '<li>[WtA] On PC actor auspice was displayed twice.</li>';
-        //     newfunctions += '<li>[VtM] Fixed a problem where Discipline rating was hidden on the sheet.</li>';
-        // }
-
-        // if (_compareVersion(installedVersion, '6.0.7')) {
-        //     newfunctions += '<li>[General] Fixed update of total values on PC actors.</li>';
-        //     newfunctions += '<li>[MtA] Fixed spelling error of numen.</li>';
-        //     newfunctions += '<li>[MtA] Fixed alignment of power section on PC actor.</li>';
-        // }
-
-        // if (_compareVersion(installedVersion, '6.0.6')) {
-        //     newfunctions += '<li>[General] Fixed switching eras.</li>';
-        //     newfunctions += '<li>[General] Fixed problem causing you not to be able to alter a secondary ability name.</li>';
-        //     newfunctions += '<li>[General] Wound penalty was not shown correctly on sheet.</li>';
-        //     newfunctions += '<li>[General] Fixed problem that prevented you from rolling an other trait.</li>';
-        //     newfunctions += '<li>[WtA] Fixed serious problem to werewolves shape bonuses that was caused by update between v5 and v6. All werewolves shapes has been recreated.</li>';
-        //     newfunctions += '<li>[WtO] Vitality on orpheus sheets now has temporary values.</li>';
-        // }
-
-        // if (_compareVersion(installedVersion, '6.0.5')) {
-        //     newfunctions += '<li>[General] Fixed problem creating secondary abilities.</li>';
-        //     newfunctions += '<li>[General] Fixed problem updating secondary abilities.</li>';
-        //     newfunctions += '<li>[PC actor] Fixed problem showing 5th edition attributes.</li>'; 
-        //     newfunctions += '<li>[PC actor] Generation value not shown on locked sheet.</li>'; 
-        //     newfunctions += '<li>[PC actor] Fixed problem handling generation shifts that cause max values to be altered.</li>';            
-        // }
-
-        // if (_compareVersion(installedVersion, '6.0.4')) {
-        //     newfunctions += '<li>[PC actor] Fixed more dark mode problems.</li>'; 
-        //     newfunctions += '<li>[PC actor] Fixed a problem that caused some of the items added by drag and drop could not be removed.</li>';
-        //     newfunctions += '<li>[PC actor] Fixed a viewing problem with shapes that used a fixed value bonus.</li>';
-        // }
-
-        // if (_compareVersion(installedVersion, '6.0.2')) {
-        //     newfunctions += '<li>[PC actor] Added so you can give a shape on PC actor a token image, this causes you to be able to shift token image based on what shape the actor has.</li>'; 
-        //     newfunctions += '<li>[PC actor] Fixed dark mode problem on the items ability, advantage and spheres used by PC actor.</li>';
-        //     newfunctions += '<li>[PC actor] Fixed a problem with removing old virtues on PC actors.</li>';
-        //     newfunctions += '<li>[PC actor] Fixed alignment problems PC actor macro meny.</li>';
-        //     newfunctions += '<li>[PC actor] Fixed problem to change actor image on PC actor.</li>';             
-        // }
-
-        // if (_compareVersion(installedVersion, '6.0.1')) {
-        //      newfunctions += '<li>[General] Fixed dark mode problem on message wizard.</li>';
-        //      newfunctions += '<li>[PC actor] Fixed problems to open a newly created PC actor.</li>';
-        // }
     }
 
     game.settings.set('worldofdarkness', 'worldVersion', migrationVersion);

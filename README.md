@@ -1,5 +1,7 @@
 ![](https://img.shields.io/badge/Foundry-v14-informational)
 
+![](https://img.shields.io/github/downloads/JohanFalt/Foundry_WoD20/v7.1.5/v7.1.5.zip)
+
 ![](https://img.shields.io/github/downloads/JohanFalt/Foundry_WoD20/v7.1.4/v7.1.4.zip)
 
 ![](https://img.shields.io/github/downloads/JohanFalt/Foundry_WoD20/v7.1.3/v7.1.3.zip)
@@ -114,3 +116,4 @@ Release CHANGELOG can be found [HERE](https://github.com/JohanFalt/Foundry_WoD20
 
 # Requests or Problems
 Please report any requests or problems you have at [Issues](https://github.com/JohanFalt/Foundry_WoD20/issues).
+
