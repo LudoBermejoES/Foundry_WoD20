@@ -18,15 +18,15 @@ export class WerewolfFrenzy {
         if (actor.type == "PC") {
             this.rank = actor.system.advantages.rank?.system?.permanent ?? 1;
 
-            this.isCrinos = !!actor?.items?.find(item => 
-                item.type === "Trait" && 
-                item.system?.type === "wod.types.shapeform" && 
-                item.name === "Crinos" && 
-                item.system?.isactive
+            this.isCrinos = !!actor?.items?.find(
+                (item) =>
+                    item.type === "Trait" &&
+                    item.system?.type === "wod.types.shapeform" &&
+                    item.name === "Crinos" &&
+                    item.system?.isactive,
             );
             this.hasAuspice = actor.system.bio.splatfields.auspice.value;
-        }
-        else {
+        } else {
             this.rank = actor.system.renown.rank;
 
             this.isCrinos = actor.system.shapes.crinos.isactive;
@@ -35,12 +35,10 @@ export class WerewolfFrenzy {
 
         if (this.rank == 6) {
             this.successesRequired = 6;
-        }
-        else if (this.rank == 5) {
+        } else if (this.rank == 5) {
             this.successesRequired = 5;
-        }
-        else {
-            this.successesRequired = 4;     
+        } else {
+            this.successesRequired = 4;
         }
     }
 }
@@ -50,40 +48,40 @@ export class VampireFrenzy {
         this.canRoll = false;
         this.close = false;
         this.rageBonus = 0;
-        this.totalDifficulty = 6;   
+        this.totalDifficulty = 6;
         this.type = data.type.toLowerCase();
         this.numSuccesses = 0;
         this.sheettype = "vampireDialog";
     }
 }
 
-
 export class DialogCheckFrenzy extends FormApplication {
     constructor(actor, frenzy) {
-        super(frenzy, {submitOnChange: true, closeOnSubmit: false});
+        super(frenzy, { submitOnChange: true, closeOnSubmit: false });
         this.actor = actor;
         this.isDialog = true;
-        
+
         this.options.title = `${this.actor.name} - ${game.i18n.localize("wod.dialog.checkfrenzy.headline")}`;
     }
 
     /**
-        * Extend and override the default options used by the WoD Actor Sheet
-        * @returns {Object}
-    */
+     * Extend and override the default options used by the WoD Actor Sheet
+     * @returns {Object}
+     */
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
             classes: ["wod20 wod-dialog checkfrenzy-dialog"],
-            template: "systems/worldofdarkness/templates/dialogs/dialog-checkfrenzy.hbs",
+            template:
+                "systems/worldofdarkness/templates/dialogs/dialog-checkfrenzy.hbs",
             closeOnSubmit: false,
             submitOnChange: true,
-            resizable: true
+            resizable: true,
         });
     }
 
     getData() {
-        const data = super.getData();       
-        
+        const data = super.getData();
+
         data.config = CONFIG.worldofdarkness;
         data.actorData = this.actor.system;
 
@@ -93,24 +91,18 @@ export class DialogCheckFrenzy extends FormApplication {
     activateListeners(html) {
         super.activateListeners(html);
 
-        html
-            .find('.dialog-difficulty-button')
-            .click(this._setDifficulty.bind(this));
+        html.find(".dialog-difficulty-button").click(
+            this._setDifficulty.bind(this),
+        );
 
-        html
-            .find('.dialog-moon-button')
-            .click(this._setMoon.bind(this));
+        html.find(".dialog-moon-button").click(this._setMoon.bind(this));
 
-        html
-            .find('.actionbutton')
-            .click(this._checkFrenzy.bind(this));
+        html.find(".actionbutton").click(this._checkFrenzy.bind(this));
 
-        html
-            .find('.closebutton')
-            .click(this._closeForm.bind(this));
+        html.find(".closebutton").click(this._closeForm.bind(this));
     }
 
-    async _updateObject(event, formData){
+    async _updateObject(event, formData) {
         if (this.object.close) {
             this.close();
             return;
@@ -122,8 +114,7 @@ export class DialogCheckFrenzy extends FormApplication {
 
         if (this.object.type == CONFIG.worldofdarkness.splat.werewolf) {
             this.object.canRoll = this._calculateDifficulty(false);
-        }
-        else if (this.object.type == CONFIG.worldofdarkness.splat.vampire) {
+        } else if (this.object.type == CONFIG.worldofdarkness.splat.vampire) {
             this.object.canRoll = false;
         }
 
@@ -132,16 +123,16 @@ export class DialogCheckFrenzy extends FormApplication {
 
     close() {
         // do something for 'on close here'
-        super.close()
+        super.close();
     }
 
     _setDifficulty(event) {
         const element = event.currentTarget;
         const parent = $(element.parentNode);
         const steps = parent.find(".dialog-difficulty-button");
-        const index = element.value;   
+        const index = element.value;
 
-        this.object.totalDifficulty = parseInt(index);     
+        this.object.totalDifficulty = parseInt(index);
         steps.removeClass("active");
 
         steps.each(function (i) {
@@ -155,11 +146,11 @@ export class DialogCheckFrenzy extends FormApplication {
         const element = event.currentTarget;
         const parent = $(element.parentNode);
         const steps = parent.find(".dialog-moon-button");
-        const index = element.value;   
+        const index = element.value;
 
         this.object.selectedMoon = index;
 
-        this.object.canRoll = this._calculateDifficulty(false); 
+        this.object.canRoll = this._calculateDifficulty(false);
 
         steps.removeClass("active");
 
@@ -168,7 +159,7 @@ export class DialogCheckFrenzy extends FormApplication {
                 $(this).addClass("active");
             }
         });
-    }    
+    }
 
     /* clicked on check Frenzy */
     async _checkFrenzy(event) {
@@ -180,63 +171,98 @@ export class DialogCheckFrenzy extends FormApplication {
         try {
             if (this.actor.type !== "PC") {
                 frenzyBonus = parseInt(this.actor.system.advantages.rage.bonus);
-            }            
-        }
-        catch (e) {
-            frenzyBonus = 0
+            }
+        } catch (e) {
+            frenzyBonus = 0;
         }
 
         if (this.actor.type == "PC") {
             if (this.object.type == CONFIG.worldofdarkness.splat.vampire) {
-                this.object.canRoll = this.object.totalDifficulty > -1 ? true : false;
-                template.push(`${game.i18n.localize("wod.dialog.numbersuccesses")}: ${this.object.numSuccesses}`);
+                this.object.canRoll =
+                    this.object.totalDifficulty > -1 ? true : false;
+                template.push(
+                    `${game.i18n.localize("wod.dialog.numbersuccesses")}: ${this.object.numSuccesses}`,
+                );
                 const selfcontrol = this.actor.api?.getAdvantage("selfcontrol");
-                numDices = parseInt(selfcontrol?.system?.roll ?? 0) + frenzyBonus + parseInt(this.object.rageBonus);            
+                numDices =
+                    parseInt(selfcontrol?.system?.roll ?? 0) +
+                    frenzyBonus +
+                    parseInt(this.object.rageBonus);
             }
             if (this.object.type == CONFIG.worldofdarkness.splat.werewolf) {
                 this.object.canRoll = this._calculateDifficulty(true);
-                template.push(`${game.i18n.localize("wod.dialog.neededsuccesses")}: ${this.object.successesRequired}`);            
+                template.push(
+                    `${game.i18n.localize("wod.dialog.neededsuccesses")}: ${this.object.successesRequired}`,
+                );
                 const rage = this.actor.api?.getAdvantage("rage");
-                numDices = parseInt(rage?.system?.roll ?? 0) + frenzyBonus + parseInt(this.object.rageBonus);     
-                
-                if(this.object.numSuccesses)  {
-                    extrainfo.push(`${game.i18n.localize("wod.dialog.numbersuccesses")}: ${this.object.numSuccesses}`);
+                numDices =
+                    parseInt(rage?.system?.roll ?? 0) +
+                    frenzyBonus +
+                    parseInt(this.object.rageBonus);
+
+                if (this.object.numSuccesses) {
+                    extrainfo.push(
+                        `${game.i18n.localize("wod.dialog.numbersuccesses")}: ${this.object.numSuccesses}`,
+                    );
                 }
+            }
+        } else {
+            if (this.object.type == CONFIG.worldofdarkness.splat.werewolf) {
+                this.object.canRoll = this._calculateDifficulty(true);
+                template.push(
+                    `${game.i18n.localize("wod.dialog.neededsuccesses")}: ${this.object.successesRequired}`,
+                );
+                numDices =
+                    parseInt(this.actor.system.advantages.rage.roll) +
+                    frenzyBonus +
+                    parseInt(this.object.rageBonus);
+
+                if (this.object.numSuccesses) {
+                    extrainfo.push(
+                        `${game.i18n.localize("wod.dialog.numbersuccesses")}: ${this.object.numSuccesses}`,
+                    );
+                }
+            } else if (
+                this.object.type == CONFIG.worldofdarkness.splat.vampire
+            ) {
+                this.object.canRoll =
+                    this.object.totalDifficulty > -1 ? true : false;
+                template.push(
+                    `${game.i18n.localize("wod.dialog.numbersuccesses")}: ${this.object.numSuccesses}`,
+                );
+                numDices =
+                    parseInt(
+                        this.actor.system.advantages.virtues.selfcontrol.roll,
+                    ) +
+                    frenzyBonus +
+                    parseInt(this.object.rageBonus);
             }
         }
-        else {
-            if (this.object.type == CONFIG.worldofdarkness.splat.werewolf) {
-                this.object.canRoll = this._calculateDifficulty(true);
-                template.push(`${game.i18n.localize("wod.dialog.neededsuccesses")}: ${this.object.successesRequired}`);            
-                numDices = parseInt(this.actor.system.advantages.rage.roll) + frenzyBonus + parseInt(this.object.rageBonus);     
-                
-                if(this.object.numSuccesses)  {
-                    extrainfo.push(`${game.i18n.localize("wod.dialog.numbersuccesses")}: ${this.object.numSuccesses}`);
-                }
-            }
-            else if (this.object.type == CONFIG.worldofdarkness.splat.vampire) {
-                this.object.canRoll = this.object.totalDifficulty > -1 ? true : false;
-                template.push(`${game.i18n.localize("wod.dialog.numbersuccesses")}: ${this.object.numSuccesses}`);
-                numDices = parseInt(this.actor.system.advantages.virtues.selfcontrol.roll) + frenzyBonus + parseInt(this.object.rageBonus);            
-            }
-        }              
-        
+
         if (await BonusHelper.CheckFrenzyDiff(this.actor)) {
             const mod = await BonusHelper.GetFrenzyDiff(this.actor);
 
             this.object.totalDifficulty += mod;
-            extrainfo.push(game.i18n.localize("wod.labels.bonus.frenzydiffchat") + ` ${mod}`);
+            extrainfo.push(
+                game.i18n.localize("wod.labels.bonus.frenzydiffchat") +
+                    ` ${mod}`,
+            );
         }
         if (await BonusHelper.CheckFrenzyBuff(this.actor)) {
             const mod = await BonusHelper.GetFrenzyBuff(this.actor);
 
             numDices += mod;
-            extrainfo.push(game.i18n.localize("wod.labels.bonus.frenzybonuschat") + ` ${mod}`);
+            extrainfo.push(
+                game.i18n.localize("wod.labels.bonus.frenzybonuschat") +
+                    ` ${mod}`,
+            );
         }
 
-        if (this.object.canRoll) {            
+        if (this.object.canRoll) {
             const frenzyRoll = new DiceRollContainer(this.actor);
-            frenzyRoll.action = game.i18n.localize("wod.dialog.checkfrenzy.headline");
+            frenzyRoll.action = game.i18n.localize(
+                "wod.dialog.checkfrenzy.headline",
+            );
             frenzyRoll.dicetext = template;
             frenzyRoll.extraInfo = extrainfo;
             frenzyRoll.bonus = frenzyBonus;
@@ -244,14 +270,45 @@ export class DialogCheckFrenzy extends FormApplication {
             frenzyRoll.numDices = numDices;
             frenzyRoll.woundpenalty = 0;
             frenzyRoll.usewillpower = false;
-            frenzyRoll.difficulty = parseInt(this.object.totalDifficulty);       
+            frenzyRoll.difficulty = parseInt(this.object.totalDifficulty);
 
             this.object.numSuccesses += await DiceRoller(frenzyRoll);
         }
 
+        // Check if frenzy check failed and automatically set frenzy condition
+        if (this.object.type == CONFIG.worldofdarkness.splat.werewolf) {
+            if (this.object.numSuccesses < this.object.successesRequired) {
+                // Failed frenzy check - activate frenzy
+                await this.actor.update({
+                    "system.conditions.isfrenzy": true,
+                });
+                extrainfo.push(
+                    game.i18n.localize("wod.combat.conditions.frenzy"),
+                );
+            }
+        } else if (this.object.type == CONFIG.worldofdarkness.splat.vampire) {
+            // For vampires, frenzy is triggered if they get 0 or fewer successes
+            if (this.object.numSuccesses <= 0) {
+                await this.actor.update({
+                    "system.conditions.isfrenzy": true,
+                });
+                extrainfo.push(
+                    game.i18n.localize("wod.combat.conditions.frenzy"),
+                );
+            }
+        }
+
         if (this.object.type == CONFIG.worldofdarkness.splat.werewolf) {
             if (this.object.numSuccesses >= this.object.successesRequired) {
-                this.object.close = true;
+                await this.close();
+            }
+        } else if (this.object.type == CONFIG.worldofdarkness.splat.vampire) {
+            // For vampires, if they get 5+ successes, close dialog and deactivate frenzy
+            if (this.object.numSuccesses >= 5) {
+                await this.actor.update({
+                    "system.conditions.isfrenzy": false,
+                });
+                await this.close();
             }
         }
     }
@@ -259,69 +316,74 @@ export class DialogCheckFrenzy extends FormApplication {
     /* clicked to close form */
     _closeForm(event) {
         this.object.close = true;
-    }    
+    }
 
     _calculateDifficulty(showMessage) {
         let baseDifficulty = -1;
         let difficulty = -1;
 
         if (this.object.selectedMoon == "new") {
-            if ((this.object.hasAuspice == "wod.bio.auspicename.ragabash") || (this.object.isCrinos)) {
+            if (
+                this.object.hasAuspice == "wod.bio.auspicename.ragabash" ||
+                this.object.isCrinos
+            ) {
                 baseDifficulty = 7;
-            }
-            else {
+            } else {
                 baseDifficulty = 8;
             }
-        }
-        else if (this.object.selectedMoon == "crescent") {
-            if ((this.object.hasAuspice == "wod.bio.auspicename.theurge") || (this.object.isCrinos)) {
+        } else if (this.object.selectedMoon == "crescent") {
+            if (
+                this.object.hasAuspice == "wod.bio.auspicename.theurge" ||
+                this.object.isCrinos
+            ) {
                 baseDifficulty = 6;
-            }
-            else {
+            } else {
                 baseDifficulty = 7;
             }
-        }
-        else if (this.object.selectedMoon == "half") {
-            if ((this.object.hasAuspice == "wod.bio.auspicename.philodox") || (this.object.isCrinos)) {
+        } else if (this.object.selectedMoon == "half") {
+            if (
+                this.object.hasAuspice == "wod.bio.auspicename.philodox" ||
+                this.object.isCrinos
+            ) {
                 baseDifficulty = 5;
-            }
-            else {
+            } else {
                 baseDifficulty = 6;
             }
-        }
-        else if (this.object.selectedMoon == "gibbous") {
-            if ((this.object.hasAuspice == "wod.bio.auspicename.galliard") || (this.object.isCrinos)) {
+        } else if (this.object.selectedMoon == "gibbous") {
+            if (
+                this.object.hasAuspice == "wod.bio.auspicename.galliard" ||
+                this.object.isCrinos
+            ) {
                 baseDifficulty = 4;
-            }
-            else {
+            } else {
                 baseDifficulty = 5;
             }
-        }
-        else if (this.object.selectedMoon == "full") {
-            if ((this.object.hasAuspice == "wod.bio.auspicename.ahroun") || (this.object.isCrinos)) {
+        } else if (this.object.selectedMoon == "full") {
+            if (
+                this.object.hasAuspice == "wod.bio.auspicename.ahroun" ||
+                this.object.isCrinos
+            ) {
                 baseDifficulty = 3;
-            }
-            else {
+            } else {
                 baseDifficulty = 4;
             }
-        }
-        else {
+        } else {
             this.object.totalDifficulty = 0;
 
             if (showMessage) {
-                ui.notifications.warn(game.i18n.localize("wod.dialog.checkfrenzy.nomoonphase"));
+                ui.notifications.warn(
+                    game.i18n.localize("wod.dialog.checkfrenzy.nomoonphase"),
+                );
             }
 
             return false;
-        }				
+        }
 
         if (this.object.rank == 3) {
             difficulty = baseDifficulty + 1;
-        }
-        else if (this.object.rank >= 4) {
+        } else if (this.object.rank >= 4) {
             difficulty = baseDifficulty + 2;
-        }
-        else {
+        } else {
             difficulty = baseDifficulty;
         }
 

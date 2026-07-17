@@ -3,7 +3,7 @@
 
     <div class="info-container info-box splatFont" style="text-align: left;">
 
-            {{#if (eq actor.system.settings.variantsheet config.sheettype.vampire)}}
+            {{#if (eq actor.system.settings.variantsheet "vampire")}}
                 <div class="condition">
                     <div class="condition-checkbox" data-area="frenzycheck">
                         <input class="item-active pointer" name="system.conditions.isfrenzy" type="checkbox" {{isChecked actor.system.conditions.isfrenzy}} />
@@ -11,7 +11,7 @@
                     </div>                
                 </div>
             {{/if}}
-            {{#if (eq actor.system.settings.variantsheet config.sheettype.werewolf)}}
+            {{#if (eq actor.system.settings.variantsheet "werewolf")}}
                 <div class="condition">
                     <div class="condition-checkbox" data-area="frenzycheck">
                         <input class="item-active pointer" name="system.conditions.isfrenzy" type="checkbox" {{isChecked actor.system.conditions.isfrenzy}} />
@@ -19,7 +19,7 @@
                     </div>                
                 </div>
             {{/if}}    
-            {{#if (eq actor.system.settings.variantsheet config.sheettype.changingbreed)}}
+            {{#if (eq actor.system.settings.variantsheet "changingbreed")}}
                 {{#if (eqAnyNot actor.system.changingbreed "Ananasi" "Nuwisha")}}
                     <div class="condition">
                         <div class="condition-checkbox" data-area="frenzycheck">

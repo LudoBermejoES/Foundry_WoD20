@@ -9,6 +9,7 @@ export class Soak {
 
         this.difficulty = difficulty;
         this.bonus = 0;
+        this.incomingDamage = 0;
         this.damageKey = "bashing";
         this.attributeValue = 0;
         this.attributeBonus = 0;
@@ -17,14 +18,14 @@ export class Soak {
 
         if (actor.type === "PC") {
             this.useChimerical = actor.system.settings.usechimerical;
-        }
-        else {
-            if (actor.system.listdata.settings.haschimericalhealth != undefined) {
-                this.useChimerical = actor.system.listdata.settings.haschimericalhealth;
+        } else {
+            if (
+                actor.system.listdata.settings.haschimericalhealth != undefined
+            ) {
+                this.useChimerical =
+                    actor.system.listdata.settings.haschimericalhealth;
             }
         }
-
-        
 
         this.sheettype = "";
     }
@@ -32,63 +33,82 @@ export class Soak {
 
 export class DialogSoakRoll extends FormApplication {
     constructor(actor, roll) {
-        super(roll, {submitOnChange: true, closeOnSubmit: false});
-        this.actor = actor;    
-        this.isDialog = true;   
+        super(roll, { submitOnChange: true, closeOnSubmit: false });
+        this.actor = actor;
+        this.isDialog = true;
         this.options.title = `${this.actor.name}`;
     }
 
     /**
-        * Extend and override the default options used by the WoD Actor Sheet
-        * @returns {Object}
-    */
+     * Extend and override the default options used by the WoD Actor Sheet
+     * @returns {Object}
+     */
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
             classes: ["wod20 wod-dialog soak-dialog"],
-            template: "systems/worldofdarkness/templates/dialogs/dialog-soak.hbs",
+            template:
+                "systems/worldofdarkness/templates/dialogs/dialog-soak.hbs",
             closeOnSubmit: false,
             submitOnChange: true,
-            resizable: true
+            resizable: true,
         });
     }
 
     getData() {
         const data = super.getData();
-        data.actorData = this.actor.system;  
-        data.actorData.type = this.actor.type; 
+        data.actorData = this.actor.system;
+        data.actorData.type = this.actor.type;
         data.config = CONFIG.worldofdarkness;
 
         // Determine sheettype for dialog CSS classes
         let actortype = this.actor.type.toLowerCase();
-        
+
         // For PC actors, use splat or variantsheet to determine type
         if (this.actor.type === "PC") {
-            if (this.actor?.system?.settings?.splat && this.actor.system.settings.splat !== "") {
+            if (
+                this.actor?.system?.settings?.splat &&
+                this.actor.system.settings.splat !== ""
+            ) {
                 actortype = this.actor.system.settings.splat.toLowerCase();
-            }
-            else if (this.actor?.system?.settings?.variantsheet && this.actor.system.settings.variantsheet !== "") {
-                actortype = this.actor.system.settings.variantsheet.toLowerCase();
+            } else if (
+                this.actor?.system?.settings?.variantsheet &&
+                this.actor.system.settings.variantsheet !== ""
+            ) {
+                actortype =
+                    this.actor.system.settings.variantsheet.toLowerCase();
             }
         }
 
-        if ((actortype != CONFIG.worldofdarkness.sheettype.changingbreed.toLowerCase()) && (actortype != CONFIG.worldofdarkness.splat.changingbreed.toLowerCase())) {
+        if (
+            actortype !=
+                CONFIG.worldofdarkness.sheettype.changingbreed.toLowerCase() &&
+            actortype !=
+                CONFIG.worldofdarkness.splat.changingbreed.toLowerCase()
+        ) {
             data.object.sheettype = actortype + "Dialog";
-        }
-        else {
+        } else {
             data.object.sheettype = "werewolfDialog";
         }
 
         if (data.object.damageKey != "") {
             if (data.object.soaktype == "normal") {
-                data.object.attributeValue = parseInt(data.actorData.soak[data.object.damageKey]);
-                data.object.attributeBonus = parseInt(data.actorData.settings.soak[data.object.damageKey].bonus);
+                data.object.attributeValue = parseInt(
+                    data.actorData.soak[data.object.damageKey],
+                );
+                data.object.attributeBonus = parseInt(
+                    data.actorData.settings.soak[data.object.damageKey].bonus,
+                );
+            } else if (data.object.soaktype == "chimerical") {
+                data.object.attributeValue = parseInt(
+                    data.actorData.soak.chimerical[data.object.damageKey],
+                );
+                data.object.attributeBonus = parseInt(
+                    data.actorData.settings.soak.chimerical[
+                        data.object.damageKey
+                    ].bonus,
+                );
             }
-            else if (data.object.soaktype == "chimerical") {
-                data.object.attributeValue = parseInt(data.actorData.soak.chimerical[data.object.damageKey]);
-                data.object.attributeBonus = parseInt(data.actorData.settings.soak.chimerical[data.object.damageKey].bonus);
-            }
-        }
-        else {
+        } else {
             data.object.attributeValue = 0;
             data.object.attributeBonus = 0;
         }
@@ -101,21 +121,17 @@ export class DialogSoakRoll extends FormApplication {
     activateListeners(html) {
         super.activateListeners(html);
 
-        html
-            .find('.dialog-difficulty-button')
-            .click(this._setDifficulty.bind(this));   
-            
-        html
-            .find('.dialog-attribute-button')
-            .click(this._setDamageType.bind(this));
+        html.find(".dialog-difficulty-button").click(
+            this._setDifficulty.bind(this),
+        );
 
-        html
-            .find('.actionbutton')
-            .click(this._soakRoll.bind(this));
+        html.find(".dialog-attribute-button").click(
+            this._setDamageType.bind(this),
+        );
 
-        html
-            .find('.closebutton')
-            .click(this._closeForm.bind(this));
+        html.find(".actionbutton").click(this._soakRoll.bind(this));
+
+        html.find(".closebutton").click(this._closeForm.bind(this));
     }
 
     async _updateObject(event, formData) {
@@ -124,16 +140,17 @@ export class DialogSoakRoll extends FormApplication {
             return;
         }
 
-        event.preventDefault();              
-        
+        event.preventDefault();
+
         try {
             this.object.bonus = parseInt(formData["bonus"]);
-        }
-        catch {
+            this.object.incomingDamage = parseInt(formData["incomingDamage"]);
+        } catch {
+            this.object.incomingDamage = 0;
             this.object.bonus = 0;
         }
 
-        this.object.canRoll = this.object.damageKey != "" ? true : false;  
+        this.object.canRoll = this.object.damageKey != "" ? true : false;
         this.object.useWillpower = formData["useWillpower"];
 
         this.getData();
@@ -141,17 +158,17 @@ export class DialogSoakRoll extends FormApplication {
 
     close() {
         // do something for 'on close here'
-        super.close()
+        super.close();
     }
 
     _setDifficulty(event) {
         const element = event.currentTarget;
         const parent = $(element.parentNode);
         const steps = parent.find(".dialog-difficulty-button");
-        const index = parseInt(element.value);   
+        const index = parseInt(element.value);
 
-        this.object.difficulty = index;   
-        this.object.canRoll = this.object.damageKey != "" ? true : false;         
+        this.object.difficulty = index;
+        this.object.canRoll = this.object.damageKey != "" ? true : false;
 
         if (index < 0) {
             return;
@@ -170,7 +187,7 @@ export class DialogSoakRoll extends FormApplication {
         const element = event.currentTarget;
         const parent = $(element.parentNode);
         const steps = parent.find(".dialog-attribute-button");
-        const key = element.value;        
+        const key = element.value;
 
         if (key == "") {
             steps.removeClass("active");
@@ -193,21 +210,26 @@ export class DialogSoakRoll extends FormApplication {
     }
 
     /* clicked to roll */
-    _soakRoll(event) {
+    async _soakRoll(event) {
         if (this.object.close) {
             this.close();
             return;
         }
 
-        this.object.canRoll = this.object.damageKey != "" ? true : false;     
+        this.object.canRoll = this.object.damageKey != "" ? true : false;
 
         if (!this.object.canRoll) {
-            ui.notifications.warn(game.i18n.localize("wod.dialog.soak.missingdamage"));
+            ui.notifications.warn(
+                game.i18n.localize("wod.dialog.soak.missingdamage"),
+            );
             return;
         }
 
         let template = [];
-        let numDices = parseInt(this.object.attributeValue) + parseInt(this.object.bonus) + parseInt(this.object.attributeBonus);        
+        let numDices =
+            parseInt(this.object.attributeValue) +
+            parseInt(this.object.bonus) +
+            parseInt(this.object.attributeBonus);
         let damage = `${game.i18n.localize(CONFIG.worldofdarkness.damageTypes[this.object.damageKey])}`;
         damage += ` (${this.object.attributeValue})`;
 
@@ -216,7 +238,7 @@ export class DialogSoakRoll extends FormApplication {
         }
 
         if (this.object.soaktype == "chimerical") {
-            damage += ` ${game.i18n.localize('wod.health.chimerical')}`;
+            damage += ` ${game.i18n.localize("wod.health.chimerical")}`;
         }
 
         template.push(damage);
@@ -225,21 +247,28 @@ export class DialogSoakRoll extends FormApplication {
         soakRoll.action = game.i18n.localize("wod.dice.rollingsoak");
         soakRoll.attribute = "stamina";
         soakRoll.dicetext = template;
-        soakRoll.bonus = parseInt(this.object.bonus);
+        soakRoll.bonus = this.object.bonus;
         soakRoll.origin = "soak";
         soakRoll.numDices = numDices;
         soakRoll.woundpenalty = 0;
-        soakRoll.difficulty = this.object.difficulty;     
+        soakRoll.difficulty = this.object.difficulty;
         soakRoll.usewillpower = this.object.useWillpower;
-        
-        DiceRoller(soakRoll);
 
-        this.object.close = true;
+        const successes = await DiceRoller(soakRoll);
+        const damageAfterSoak = Math.max(
+            0,
+            this.object.incomingDamage - successes,
+        );
+        await this.actor.api.modifyHealth(
+            this.object.damageKey,
+            damageAfterSoak,
+        );
+
+        this.close();
     }
 
     /* clicked to close form */
     _closeForm(event) {
-        this.object.close = true;
-    }    
-
+        this.close();
+    }
 }

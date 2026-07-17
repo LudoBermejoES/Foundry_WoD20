@@ -4,7 +4,7 @@
     <div class="info-container">
 
         <div class="pullLeft info-box splatFont">
-            {{#if (eq actor.type config.sheettype.vampire)}}
+            {{#if (eq actor.system.settings.variantsheet "vampire")}}
                 <div class="condition clearareaBox" data-area="frenzycheck">
                     <div class="pullLeft condition-checkbox">
                         <input name="system.conditions.isfrenzy" type="checkbox" {{isChecked data.system.conditions.isfrenzy}} />
