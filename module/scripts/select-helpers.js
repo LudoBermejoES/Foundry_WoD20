@@ -229,6 +229,11 @@ export default class SelectHelper {
                 group: game.i18n.localize("wod.games.changeling")
             },
             {
+                value: "wod.types.relic", 
+                label: game.i18n.localize("wod.types.relic"), 
+                group: game.i18n.localize("wod.games.demon")
+            },
+            {
                 value: "wod.types.device", 
                 label: game.i18n.localize("wod.gear.device"), 
                 group: game.i18n.localize("wod.games.mage")
@@ -330,6 +335,20 @@ export default class SelectHelper {
                 value: "wod.types.othertraits", 
                 label: game.i18n.localize("wod.types.othertraits"), 
                 group: game.i18n.localize("wod.labels.other")
+            }];
+
+            listData.PlacementList = [
+            {
+                value: "", 
+                label: "- " + game.i18n.localize("wod.labels.select") + " -"
+            },
+            {
+                value: "feature", 
+                label: game.i18n.localize("TYPES.Item.Feature")
+            },
+            {
+                value: "power", 
+                label: game.i18n.localize("TYPES.Item.Power")
             }];
         }
 
@@ -881,13 +900,14 @@ export default class SelectHelper {
             // Changing Breeds (Fera) override Breed/Auspice/Tribe lists
             if ((data.type == CONFIG.worldofdarkness.sheettype.changingbreed) && (data.system?.changingbreed != undefined)) {
                 const feraLists = this.GetChangingBreedLists(data.system.changingbreed);
+
                 if (feraLists.BreedList) listData.BreedList = feraLists.BreedList;
                 if (feraLists.AuspiceList) listData.AuspiceList = feraLists.AuspiceList;
                 if (feraLists.TribeList) listData.TribeList = feraLists.TribeList;
             }
-            //else if ((data.type == CONFIG.worldofdarkness.sheettype.changingbreed) && (data.system.settings.variant != undefined)) {
             else if ((data.type === "PC") && (data.system.settings.splat === CONFIG.worldofdarkness.splat.changingbreed) && (data.system.settings.variant != undefined)) {
                 const feraLists = this.GetChangingBreedLists(data.system.settings.variant);
+                
                 if (feraLists.BreedList) listData.BreedList = feraLists.BreedList;
                 if (feraLists.AuspiceList) listData.AuspiceList = feraLists.AuspiceList;
                 if (feraLists.TribeList) listData.TribeList = feraLists.TribeList;
@@ -907,7 +927,6 @@ export default class SelectHelper {
 
             for (const sphere in CONFIG.worldofdarkness.allSpheres) {
                 const data = {
-                    //value: CONFIG.worldofdarkness.allSpheres[sphere],
                     value: sphere,
                     label: game.i18n.localize(CONFIG.worldofdarkness.allSpheres[sphere]),
                     group: game.i18n.localize("wod.bio.mage.tradition")
@@ -954,12 +973,20 @@ export default class SelectHelper {
                 listData.AffinityRealmList = this.GetChangelingAffinityRealmList(data);
             }
 
-            if (data.type == CONFIG.worldofdarkness.sheettype.hunter) {
+            if ((data.type == "PC") && (data.system.settings.splat === CONFIG.worldofdarkness.splat.hunter)) {
+                listData.CreedList = this.GetHunterCreedList();
+                listData.PrimaryVirtueList = this.GetHunterPrimaryVirtueList();
+            }
+            else if ((data.type !== "PC") && (data.type == CONFIG.worldofdarkness.sheettype.hunter)) {
                 listData.CreedList = this.GetHunterCreedList();
                 listData.PrimaryVirtueList = this.GetHunterPrimaryVirtueList();
             }
 
-            if (data.type == CONFIG.worldofdarkness.sheettype.demon) {
+            if ((data.type == "PC") && (data.system.settings.splat === CONFIG.worldofdarkness.splat.demon)) {
+                listData.HouseList = this.GetDemonHouseList();
+                listData.FactionList = this.GetDemonFactionList();
+            }
+            else if ((data.type !== "PC") && (data.type == CONFIG.worldofdarkness.sheettype.demon)) {
                 listData.HouseList = this.GetDemonHouseList();
                 listData.FactionList = this.GetDemonFactionList();
             }

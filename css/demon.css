@@ -1,132 +1,257 @@
-.demon:not(.noSplatFont) nav,
-.demon:not(.noSplatFont) .splatFont,
-.demonDialog:not(.noSplatFont) .splatFont,
-.demonItem:not(.noSplatFont) .splatFont {
+.wod20.demon:not(.noSplatFont) nav,
+.wod20.demon:not(.noSplatFont) .splatFont,
+.wod20.demon:not(.noSplatFont) nav,
+.wod20.demon:not(.noSplatFont) .splatFont,
+.wod20.demonDialog:not(.noSplatFont) .splatFont,
+.wod20.demonItem:not(.noSplatFont) .splatFont {
 	font-family: "demon", var(--main-font);
 }
 
-.demonDialog,
-.demon,
-.demonItem {
+.wod20.demon.window-app .window-content,
+.wod20.demon.wod-sheet .window-content {
+	font-family: var(--main-demon-font);
+}
+
+.wod20.demon button:not(.header-control),
+.wod20.demon input,
+.wod20.demon select {
+	font-family: var(--main-demon-font);
+}
+
+.wod20.demon.wod-item .infobox {
+	font-family: var(--main-demon-font);
+	min-height: 36px;
+}
+
+.wod20.demon.wod-dialog .infobox {
+	font-family: var(--main-demon-font);
+	min-height: 36px;
+}
+
+.wod20.demon.wod-sheet.noSplatFont .sheet-headline,
+.wod20.demon.wod-sheet.noSplatFont .headlineGroup {
+	font-family: var(--main-demon-font);
+}
+
+.wod20.demonDialog,
+.wod20.demon,
+.wod20.demonItem {
   --main-full-color: var(--main-demon-color);
   --main-mid-color: var(--main-demon-mid-color);
   --main-dim-color: var(--main-demon-dim-color);
   --color-shadow-primary: var(--main-demon-color);
 
-  /* Splat-specific font-size defaults (tweak per splat if needed) */
+  /* Splat-specific font-size defaults (aligned with exalted) */
   --wod-font-xxs: 0.4375rem;   /* 7px */
   --wod-font-xs: 0.625rem;     /* 10px */
-  --wod-font-sm: 0.75rem;      /* 12px */
   --wod-font-md: 0.875rem;     /* 14px */
   --wod-font-base: 1rem;       /* 16px */
   --wod-font-lg: 1.125rem;     /* 18px */
   --wod-font-xl: 1.25rem;      /* 20px */
   --wod-font-xxl: 1.5rem;      /* 24px */
 
-  /* Overrides to preserve current hard-coded sizes in this splat */
-  --wod-font-sheet-headline: 1.625rem; /* 26px (.sheet-headline) */
-  --wod-font-headline-tabs: 1.625rem; /* 26px (.headlineTabs) */
-  --wod-font-headline-text: 1rem; /* 16px (.headlineText) */
-  --wod-font-headline-group: 0.875rem; /* 14px (.headlineGroup) */
-  --wod-font-dialog-headline-group: 1.625rem; /* 26px (dialog .headlineGroup) */
-  --wod-font-dialog-headline: 1.25rem; /* 20px (dialog .headline) */
+  --wod-font-sheet-headline: 2.25rem; /* 36px (.sheet-headline) */
+  --wod-font-second-headline-tabs: 1.5625rem; /* 25px */
+  --wod-font-sheet-banner-text: 1.625rem; /* 26px (.splatFont.sheet-headline span) */
+  --wod-font-sm: 1rem; /* 16px (.headlineList) */
+  --wod-font-sheet-headline-variant: 1.625rem; /* 26px (.sheet-headline-variant) */
+  --wod-font-experience-value: 1.125rem; /* 18px (.experienceValue) */
 } 
 
-.demon {
+.wod20.demon {
     --sheet-background-color: var(--demon-page-background);
 }
   
-.demon .modern {  
-    --main-wod-banner: var(--demon-banner-background);
-    --main-wod-banner-small: var(--demon-banner-small-background); 
+.wod20.demon .modern {  
+    --main-wod-banner: none;
+    --main-wod-banner-small: none;
 }
 
-.wod-sheet.demon:not(.minimized) {
+.wod20.wod-sheet.wod20.demon:not(.minimized) {
     min-height: 950px;
 }
 
-.demon:not(.noSplatFont) .sheet-headline {
+.wod20.demon:not(.noSplatFont) .sheet-headline {
     font-size: var(--wod-font-sheet-headline);
 }
 
-.demon.demon:not(.noSplatFont) .sheet-banner {
+.wod20.demon.wod20.demon:not(.noSplatFont) .sheet-banner {
     height: 40px;
 }
 
-.demon:not(.noSplatFont) .headlineTabs {
-    font-size: var(--wod-font-headline-tabs);
-    line-height: 26px;
+.wod20.demon:not(.noSplatFont) .splatFont.sheet-headline span.sheet-banner-text {
+  font-family: "demon", var(--main-font);
+  font-size: var(--wod-font-sheet-banner-text);
 }
 
-.demon:not(.noSplatFont) .headlineText {
-    font-size: var(--wod-font-headline-text);
-}
-
-.demon:not(.noSplatFont) .headlineGroup {
-    font-size: var(--wod-font-headline-group);
-}
-
-.demon:not(.noSplatFont) .sheet-banner .sheet-banner-text {
-    font-size: var(--wod-font-dialog-headline);
+.wod20.demon:not(.noSplatFont) .sheet-banner .sheet-banner-text {
     position: relative;
     top: 16px;
 }
 
-.demon.demon:not(.noSplatFont) .sheet-banner-small .sheet-banner-text {
-    font-size: var(--wod-font-headline-text);
+.wod20.demon:not(.noSplatFont) .sheet-banner-small .sheet-banner-text {
+    font-size: var(--wod-font-sheet-banner-text);
 }
 
-.demonDialog:not(.noSplatFont) .headlineGroup {
-    font-size: var(--wod-font-dialog-headline-group);
+.wod20.demon:not(.noSplatFont) .headlineList,
+.wod20.demon:not(.noSplatFont) .headlineRow {
+    font-family: var(--main-demon-font);
+    font-size: var(--wod-font-sm);
 }
 
-.demonDialog:not(.noSplatFont) .headline {
-    font-size: var(--wod-font-dialog-headline);
+.wod20.demon .sheet-headline-variant {
+    font-size: var(--wod-font-sheet-headline-variant);
 }
 
-.demon:not(.noSplatFont) .experienceValue {
-    font-family: var(--main-font);
-}
-
-.demon:not(.noSplatFont) .headlineList,
-.demon:not(.noSplatFont) .headlineRow {
-    font-family: var(--main-font);
-    font-size: var(--wod-font-md);
-    font-weight: bold;
+.wod20.demon .experienceValue {
+    font-family: var(--main-demon-font);
+    font-size: var(--wod-font-experience-value);
+    line-height: 23px;
 }
 
 /* CORE */
 
-.demon .ability-headlineWidth {
+.wod20.demon .ability-headlineWidth {
 	width: 	110px;
+}
+
+.wod20.demon .attribute-rowheight {
+  height: 21px;
 }
 
 /* COMBAT */
 
-.demon .combat-armor-itemlist .width-valuebox {
+.wod20.demon .combat-armor-itemlist .width-valuebox {
     width: 60px;
+}
+
+.wod20.demon .combat-natural-itemlist .width-namebox,
+.wod20.demon .combat-melee-itemlist .width-namebox,
+.wod20.demon .combat-ranged-itemlist .width-namebox,
+.wod20.demon .combat-armor-itemlist .width-namebox,
+.wod20.demon .gear-itemlist .width-namebox,
+.wod20.demon .feature-itemlist .width-namebox,
+.wod20.demon .description-itemlist .width-namebox {
+    margin-left: 5px;
 }
 
 /* POWER */
 
-.demon .item-row-area.mainpower-row .power-itemlist .width-namebox {
+.wod20.demon .item-row-area.mainpower-row .power-itemlist .width-namebox {
     font-size: var(--wod-font-md);
     width: 260px;
+    margin-left: 5px;
 }
 
-.demon .item-row-area.power-row .power-itemlist .width-namebox {
+.wod20.demon .item-row-area.power-row .power-itemlist .width-namebox {
     width: 230px;
 }
 
 /* SETTINGS */
 
-.demon .secondHeadlineTabs {
+.wod20.demon .secondHeadlineTabs {
     width: 25%;
 }
 
-.demon:not(.noSplatFont) .secondHeadlineTabs {
-    font-size: var(--wod-font-headline-text);
-} 
+.wod20.demon .secondHeadlineTabs:not(.noSplatFont) {
+    font-size: var(--wod-font-second-headline-tabs);
+}
+
+/* PC actor: no splat banner images */
+.wod20.pc-actor.demon .sheet-banner,
+.wod20.pc-actor.demon .sheet-banner-small {
+  background: none;
+  height: auto;
+}
+
+.wod20.pc-actor.demon:not(.noSplatFont) .sheet-banner .sheet-banner-text {
+  position: static;
+  top: auto;
+  font-size: var(--wod-font-sheet-banner-text);
+  font-family: "demon", var(--main-font);
+}
+
+.wod20.pc-actor.demon:not(.noSplatFont) .sheet-banner-small .sheet-banner-text {
+  font-family: "demon", var(--main-font);
+  font-size: var(--wod-font-sheet-banner-text);
+}
+
+/* ===== LOW TORMENT (de 4 första) – änglalikt, gyllene, lugnt ===== */
+.wod20 .power-forms-list .item-row-area.feature-itemlist:nth-of-type(-n+8),
+.wod20 .power-forms-list .description:nth-of-type(-n+8) {
+    border-left: 3px solid #d4af37;
+    background: linear-gradient(90deg, rgba(212, 175, 55, 0.10), transparent 60%);
+    transition: background 0.2s ease;
+}
+
+.wod20 .power-forms-list .item-row-area.feature-itemlist:nth-of-type(-n+8) .largeBox {
+    color: #b8860b;
+    text-shadow: 0 0 4px rgba(212, 175, 55, 0.45);
+}
+
+.wod20 .power-forms-list .item-row-area.feature-itemlist:nth-of-type(-n+8)::before {
+    /*content: "\f072";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;*/
+    color: #d4af37;
+    margin-right: 4px;
+    opacity: 0.8;
+}
+
+/* ===== HIGH TORMENT (de 4 sista) – demoniskt, sprucket, rött ===== */
+.wod20 .power-forms-list .item-row-area.feature-itemlist:nth-of-type(n+9),
+.wod20 .power-forms-list .description:nth-of-type(n+9) {
+    border-left: 3px solid #8b0000;
+    background: linear-gradient(90deg, rgba(139, 0, 0, 0.12), transparent 60%);
+}
+
+.wod20 .power-forms-list .item-row-area.feature-itemlist:nth-of-type(n+9) .largeBox {
+    color: #ff4d4d;
+    text-shadow: 0 0 5px rgba(139, 0, 0, 0.6);
+}
+
+.wod20 .power-forms-list .item-row-area.feature-itemlist:nth-of-type(n+9)::before {
+    /*content: "\f06d";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;*/
+    color: #8b0000;
+    margin-right: 4px;
+    opacity: 0.9;
+}
+
+/* ===== Visuell avdelare mellan grupp 4 och 5 ===== */
+.wod20 .power-forms-list .item-row-area.feature-itemlist:nth-of-type(9) {
+    position: relative;
+    margin-top: 10px;
+}
+
+.wod20 .power-forms-list .item-row-area.feature-itemlist:nth-of-type(9)::after {
+    content: "High Torment";
+    position: absolute;
+    top: -18px;
+    left: 0;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #8b0000;
+    background: linear-gradient(90deg, rgba(139,0,0,0.15), transparent);
+    padding: 1px 6px;
+    border-radius: 2px 2px 0 0;
+}
+
+.wod20 .power-forms-list .item-row-area.feature-itemlist:nth-of-type(1)::after {
+    content: "Low Torment";
+    position: absolute;
+    top: -18px;
+    left: 0;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #b8860b;
+    background: linear-gradient(90deg, rgba(212,175,55,0.15), transparent);
+    padding: 1px 6px;
+    border-radius: 2px 2px 0 0;
+}
 
 @media all and (max-height : 1024px)
 {

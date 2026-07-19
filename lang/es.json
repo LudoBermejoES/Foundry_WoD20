@@ -86,6 +86,7 @@
 			"nonotuse": "No usar",
 			"alwaysuse": "Usar siempre",
 			"usewithspeciality": "Usar sólo en especializadas",
+			"usewithoutspeciality": "Usar sin especialidad",
 			"rulesettings": "Configuración de reglas (sistemas de juego)",
 			"rulesettingshint": "Todas las configuraciones de reglas reunidas.",
 			"permissionsettings": "Configuración de permisos",
@@ -126,7 +127,12 @@
 			"demonsettingshint": "Configuración de Mundo para Demonio: la Caída.",
 			"demoncreateforms": "Crear Formas Apocalípticas automáticamente",
 			"demoncreateformshint": "Al crear una ficha de Demonio, generar las Formas Apocalípticas automáticamente para el actor.",
-			"demonsystemsettings": "Configuración de la lista de Habilidades",
+			"demonevocationtorment": "Resolver efectos de Tormento de Lore",
+			"demonevocationtormenthint": "Tras una tirada de Lore exitosa, indicar en el chat cuando se aplica el efecto de Alto Tormento. Elige el reglamento o desactiva la función.",
+			"demonevocationtormentoff": "No usar",
+			"demonevocationtormentcore": "Libro básico",
+			"demonevocationtormentplayersguide": "Errata del Players Guide",
+			"demonsystemsettings": "Configuración de la lista de Habilidades (demon actor only)",
 			"demonsystemsettingshint": "¿De qué edición procede la lista de Habilidades?",
 			"demonsettingasbook": "Según el libro",
 			"demonsettingas20th": "Adaptado al 20 aniversario",
@@ -174,7 +180,11 @@
 			"orderhint": "Drag the items into the order you want them presented on the sheet.",
 			"splatitem": "Template Item",
 			"splatfields": "Existing template fields",
-			"notinstalled": "None installed"
+			"notinstalled": "None installed",
+			"successesdamage": "Los éxitos se suman al daño",
+			"successesdamagehint": "Si está activado, el número excedente de éxitos de la tirada de ataque se añadirá como dados de bonificación a la tirada de daño.",
+			"virtueslimit": "Las virtudes siguen el límite máximo de rasgo de Generación",
+			"virtueslimithint": "Si está activado, el valor máximo de las virtudes se limitará al valor máximo de rasgo permitido por la generación del personaje."
 		},
 		"types": {
 			"mortal": "Mortal",
@@ -949,6 +959,7 @@
 			"lethal": "Letal",
 			"aggravated": "Agravado",
 			"soak": "Absor.",
+			"chimericalsoak": "Absorción quimérica",
 			"penalty": "Penalizador por heridas",
 			"chimerical": "Quimérico",
 			"normal": "Normal"
@@ -1537,7 +1548,8 @@
 				"tokenhint": "Choose what icon that will be displayed on the token when this shapeform is active.",
 				"tokenimage": "Imagen del token",
 				"tokenimagehint": "La imagen que mostrará el token cuando esta forma esté activa. Deje vacío para usar la imagen predeterminada del actor.",
-				"clearimage": "Clear selected image"
+				"clearimage": "Clear selected image",
+				"usesoaksettings": "Usar ajustes de absorción de la forma"
 			},
 			"feature": {
 				"trivial": "Trivial",
@@ -1650,7 +1662,8 @@
 				"biodone": "Done",
 				"bioneedkey": "Enter a field id before adding.",
 				"biokeyinvalid": "Field id cannot contain spaces or dots.",
-				"biokeyexists": "A field with id \"{key}\" already exists."
+				"biokeyexists": "A field with id \"{key}\" already exists.",
+				"usechimerical": "Usar daño quimérico"
 			},
 			"new": {
 				"create": "Crear objeto",
@@ -1970,9 +1983,14 @@
 			"rollingremainactivetext": "Cada éxito sana un nivel de Salud, de cualquier tipo de daño. Sin importar cuanto daño ha sanado, el personaje entra en Frenesí Rabioso. Un hombre lobo gana una Cicatriz de batalla cada vez que permanece activo con éxito.",
 			"addedautosucc": "La tirada añade {0} éxitos automáticos",
 			"usingwillpower": "Usando Fuerza de Voluntad",
+			"nowillpower": "¡{name} no tiene Fuerza de Voluntad temporal restante!",
 			"favored": "Tirada predilecta",
 			"bonusdices": "Bonus dices",
-			"nobotchpossible": "No botch possible on this roll"
+			"nobotchpossible": "No botch possible on this roll",
+			"unsoakeddamage": "Daño no absorbido: {unsoaked} ({incoming})",
+			"evocation": {
+				"highchat": "¡Efecto de Alto Tormento activado!"
+			}
 		},
 		"dialog": {
 			"save": "Guardar",
@@ -2092,7 +2110,8 @@
 			},
 			"soak": {
 				"missingdamage": "Debes seleccionar un tipo de daño",
-				"selectdamage": "Selecciona tipo de daño"
+				"selectdamage": "Selecciona tipo de daño",
+				"incomingdamage": "Daño entrante"
 			},
 			"power": {
 				"availrealms": "Reinos disponibles",

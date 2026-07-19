@@ -147,4 +147,117 @@ export default class CombatHelper {
 	
 		return false;
 	}
+
+	/**
+	 * How much damage of a given type can still be applied to the health track.
+	 * Empty boxes can always be filled.
+	 * Excess bashing upgrades existing bashing → lethal (V20/W20 Applying Damage).
+	 * Excess aggravated converts existing bashing/lethal → aggravated when the track is full.
+	 * Excess lethal past a full track is not converted here (death/torpor elsewhere).
+	 *
+	 * @param {{bashing?: number, lethal?: number, aggravated?: number}} damage
+	 * @param {string} damageType - "bashing" | "lethal" | "aggravated"
+	 * @param {number} maxLevels
+	 * @returns {number}
+	 */
+	static GetApplicableDamageCapacity(damage, damageType, maxLevels) {
+		const bashing = parseInt(damage?.bashing) || 0;
+		const lethal = parseInt(damage?.lethal) || 0;
+		const aggravated = parseInt(damage?.aggravated) || 0;
+		const max = Math.max(0, parseInt(maxLevels) || 0);
+		const empty = Math.max(0, max - bashing - lethal - aggravated);
+
+		if (damageType === "bashing") {
+			// Fill empty as bashing, then upgrade every bashing box (including newly filled) to lethal.
+			return empty + (bashing + empty);
+		}
+
+		if (damageType === "aggravated") {
+			// Fill empty, then convert any remaining bashing/lethal boxes to aggravated.
+			return empty + bashing + lethal;
+		}
+
+		// Lethal only fills empty boxes; further damage is death/torpor, not an upgrade.
+		return empty;
+	}
+
+	/**
+	 * Apply damage per V20/W20 Applying Damage.
+	 * 1. Fill empty health levels with the incoming type.
+	 * 2. Excess bashing upgrades existing bashing wounds to lethal.
+	 * 3. Excess aggravated converts existing lethal, then bashing, to aggravated
+	 *    (aggravated is marked above lesser wounds).
+	 * Excess lethal when the track is full is discarded here (death/torpor elsewhere).
+	 * Mutates `damage` in place.
+	 *
+	 * @param {{bashing: number, lethal: number, aggravated: number}} damage
+	 * @param {string} damageType - "bashing" | "lethal" | "aggravated"
+	 * @param {number} amount
+	 * @param {number} maxLevels
+	 * @returns {number} number of damage units applied (fills + upgrades)
+	 */
+	static ApplyDamageWithOverflow(damage, damageType, amount, maxLevels) {
+		let bashing = parseInt(damage?.bashing) || 0;
+		let lethal = parseInt(damage?.lethal) || 0;
+		let aggravated = parseInt(damage?.aggravated) || 0;
+		let remaining = Math.max(0, parseInt(amount) || 0);
+		let applied = 0;
+		const max = Math.max(0, parseInt(maxLevels) || 0);
+
+		if (remaining <= 0 || max <= 0) {
+			return 0;
+		}
+
+		// 1. Fill empty health levels with the incoming type.
+		const empty = Math.max(0, max - bashing - lethal - aggravated);
+		if (empty > 0) {
+			const fill = Math.min(remaining, empty);
+			if (damageType === "bashing") {
+				bashing += fill;
+			}
+			else if (damageType === "lethal") {
+				lethal += fill;
+			}
+			else {
+				aggravated += fill;
+			}
+			remaining -= fill;
+			applied += fill;
+		}
+
+		// 2. Excess bashing upgrades existing bashing → lethal (least-severe wounds).
+		if (damageType === "bashing" && remaining > 0 && bashing > 0) {
+			const n = Math.min(remaining, bashing);
+			bashing -= n;
+			lethal += n;
+			remaining -= n;
+			applied += n;
+		}
+
+		// 3. Excess aggravated converts lethal, then bashing, to aggravated.
+		if (damageType === "aggravated" && remaining > 0) {
+			if (lethal > 0) {
+				const n = Math.min(remaining, lethal);
+				lethal -= n;
+				aggravated += n;
+				remaining -= n;
+				applied += n;
+			}
+			if (remaining > 0 && bashing > 0) {
+				const n = Math.min(remaining, bashing);
+				bashing -= n;
+				aggravated += n;
+				remaining -= n;
+				applied += n;
+			}
+		}
+
+		// Any leftover (lethal overflow, or aggravated when all boxes are already aggravated)
+		// is not applied to the track — books resolve that as death/torpor/Final Death.
+
+		damage.bashing = bashing;
+		damage.lethal = lethal;
+		damage.aggravated = aggravated;
+		return applied;
+	}
 }

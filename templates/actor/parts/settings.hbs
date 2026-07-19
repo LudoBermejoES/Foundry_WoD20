@@ -92,19 +92,21 @@
 				</div>
 			</div>
 
-			<div class="space">
-				<div class="clearareaBox">
-					<div class="pullLeft headlineNormal" style="line-height: 26px;">{{localize "wod.labels.settings.attributesmaxrating"}}</div>
-					<div class="pullLeft settings-verticalcenter bold">
-						{{#if locked}}
-							<input class="sheet-infoValues half" type="text" value="{{actor.system.settings.attributes.defaultmaxvalue}}" data-dtype="Number" readonly />
-						{{else}}
-							<input class="sheet-infoValues half editable" type="text" name="system.settings.attributes.defaultmaxvalue" value="{{actor.system.settings.attributes.defaultmaxvalue}}" data-dtype="Number" autofocus required />
-						{{/if}}
-					</div>				
+			{{#if (ne actor.system.settings.splat "vampire")}}
+				<div class="space">
+					<div class="clearareaBox">
+						<div class="pullLeft headlineNormal" style="line-height: 26px;">{{localize "wod.labels.settings.attributesmaxrating"}}</div>
+						<div class="pullLeft settings-verticalcenter bold">
+							{{#if locked}}
+								<input class="sheet-infoValues half" type="text" value="{{actor.system.settings.attributes.defaultmaxvalue}}" data-dtype="Number" readonly />
+							{{else}}
+								<input class="sheet-infoValues half editable" type="text" name="system.settings.attributes.defaultmaxvalue" value="{{actor.system.settings.attributes.defaultmaxvalue}}" data-dtype="Number" autofocus required />
+							{{/if}}
+						</div>				
+					</div>
+					<div class="clearareaBox information-area">{{localize "wod.labels.settings.maxattribute"}}</div>
 				</div>
-				<div class="clearareaBox information-area">{{localize "wod.labels.settings.maxattribute"}}</div>
-			</div>
+			{{/if}}
 
 			<div class="headlineGroup splatFont">{{localize 'wod.abilities.abilities'}}</div>
 
@@ -112,19 +114,21 @@
 				{{> "systems/worldofdarkness/templates/actor/parts/stats_abilities.hbs" showheadline=false useroll=false showvalues=false showvisibleicon=true}}
 			</div>
 
-			<div class="space">
-				<div class="clearareaBox">
-					<div class="pullLeft headlineNormal" style="line-height: 26px;">{{localize "wod.labels.settings.abilitiesmaxrating"}}</div>
-					<div class="pullLeft settings-verticalcenter bold">
-						{{#if locked}}
-							<input class="sheet-infoValues half" type="text" value="{{actor.system.settings.abilities.defaultmaxvalue}}" data-dtype="Number" readonly />
-						{{else}}
-							<input class="sheet-infoValues half editable" type="text" name="system.settings.abilities.defaultmaxvalue" value="{{actor.system.settings.abilities.defaultmaxvalue}}" data-dtype="Number" autofocus required />
-						{{/if}}
-					</div>				
+			{{#if (ne actor.system.settings.splat "vampire")}}
+				<div class="space">
+					<div class="clearareaBox">
+						<div class="pullLeft headlineNormal" style="line-height: 26px;">{{localize "wod.labels.settings.abilitiesmaxrating"}}</div>
+						<div class="pullLeft settings-verticalcenter bold">
+							{{#if locked}}
+								<input class="sheet-infoValues half" type="text" value="{{actor.system.settings.abilities.defaultmaxvalue}}" data-dtype="Number" readonly />
+							{{else}}
+								<input class="sheet-infoValues half editable" type="text" name="system.settings.abilities.defaultmaxvalue" value="{{actor.system.settings.abilities.defaultmaxvalue}}" data-dtype="Number" autofocus required />
+							{{/if}}
+						</div>				
+					</div>
+					<div class="clearareaBox information-area">{{localize "wod.labels.settings.maxability"}}</div>
 				</div>
-				<div class="clearareaBox information-area">{{localize "wod.labels.settings.maxability"}}</div>
-			</div>
+			{{/if}}
 
 			<div class="headlineGroup splatFont">{{localize 'wod.advantages.advantages'}}</div>
 			<div class="clearareaBox information-area">{{localize "wod.settings.orderhint"}}</div>

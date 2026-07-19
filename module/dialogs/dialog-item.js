@@ -42,10 +42,12 @@ export class DialogItem extends FormApplication {
 		});
 	}
 
-    constructor(actor, item) {
+    constructor(actor, item, options = {}) {
         super(item, {submitOnChange: true, closeOnSubmit: false});
         this.actor = actor;
         this.isDialog = true;
+        this.onRollComplete = options.onRollComplete;
+        this._rollCompleted = false;
         
         this.options.title = `${this.actor.name}`;
     }
@@ -266,9 +268,8 @@ export class DialogItem extends FormApplication {
         this.render();
     }
 
-    close() {
-        // do something for 'on close here'
-        super.close()
+    close(options) {
+        super.close(options);
     }
 
     _setDifficulty(event) {
@@ -295,7 +296,7 @@ export class DialogItem extends FormApplication {
         });
     }
     
-    _rollPower(event) {
+    async _rollPower(event) {
         if (this.object.close) {
             this.close();
             return;
@@ -321,6 +322,7 @@ export class DialogItem extends FormApplication {
         const numDices = parseInt(this.object.attributeValue) + parseInt(this.object.abilityValue) + parseInt(this.object.bonus);
         let specialityText = "";
         this.object.close = true;
+        this._rollCompleted = true;
 
         if (this.object.useSpeciality) {
             specialityText = this.object.specialityText;
@@ -350,7 +352,13 @@ export class DialogItem extends FormApplication {
         dialogRoll.systemText = this.object.details;  
         dialogRoll.usewillpower = this.object.useWillpower;
         
-        DiceRoller(dialogRoll);
+        const successes = await DiceRoller(dialogRoll);
+
+        if (this.onRollComplete) {
+            await this.onRollComplete(successes);
+        }
+
+        this.close();
     }
 
     /* clicked to close form */

@@ -119,13 +119,36 @@ export async function calculateTotals(updateData) {
 	updateData.system.soak.lethal = 0;
 	updateData.system.soak.aggravated = 0;
 
-	if (updateData.system.settings.soak.bashing.isrollable) {
+	const soakRollable = {
+		bashing: updateData.system.settings.soak.bashing.isrollable,
+		lethal: updateData.system.settings.soak.lethal.isrollable,
+		aggravated: updateData.system.settings.soak.aggravated.isrollable
+	};
+
+	if (updateData.type === "PC" && actor) {
+		const activeShape = actor.items.find(i =>
+			i.type === "Trait" &&
+			i.system?.type === "wod.types.shapeform" &&
+			i.system?.isactive &&
+			i.system?.usesoaksettings
+		);
+
+		if (activeShape?.system?.soak) {
+			for (const damage of Object.keys(CONFIG.worldofdarkness.damageTypes)) {
+				if (activeShape.system.soak[damage]?.isrollable !== undefined) {
+					soakRollable[damage] = activeShape.system.soak[damage].isrollable;
+				}
+			}
+		}
+	}
+
+	if (soakRollable.bashing) {
 		updateData.system.soak.bashing = updateData.system.attributes.stamina.total;
 	}
-	if (updateData.system.settings.soak.lethal.isrollable) {
+	if (soakRollable.lethal) {
 		updateData.system.soak.lethal = updateData.system.attributes.stamina.total;
 	}
-	if (updateData.system.settings.soak.aggravated.isrollable) {
+	if (soakRollable.aggravated) {
 		updateData.system.soak.aggravated = updateData.system.attributes.stamina.total;
 	}	
 

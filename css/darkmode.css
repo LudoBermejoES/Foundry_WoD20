@@ -173,6 +173,11 @@
     background: transparent;
 }
 
+.wod-theme-dark.wod20.pc-actor .pc-power-shapes .sheet-banner .sheet-banner-text {
+    background: var(--darkmode-area10-background);
+    border-radius: 10px;
+}
+
 .wod20.wod-theme-dark .item-notice,
 .wod20.wod-theme-dark .item-create,
 .wod20.wod-theme-dark .fa-toggle-on {

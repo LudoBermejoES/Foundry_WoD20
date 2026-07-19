@@ -142,6 +142,27 @@
             {{/if}}
         {{/each}}
 
+        {{#if actor.system.settings.hasapocalypticforms}}
+            {{> "systems/worldofdarkness/templates/actor/parts/power_apocalypticforms.hbs" apocalypticforms=apocalypticforms actor=actor config=config}}
+        {{/if}}
+
+        {{#if (gt powertraits.length 0)}}
+
+            <div class="sheet-area flex-columns">
+                <div class="headlineRow headlineList splatFont feature-itemlist">
+                    <div class="largeBox">{{localize "TYPES.Item.Feature"}}</div>                
+                </div>
+
+                {{#each powertraits as |item id|}}
+
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.othertraits" deletetitle="wod.labels.remove.othertraits" showtype=false}}
+
+                {{/each}}
+                
+            </div>
+
+        {{/if}}
+
     </div>
 
 </section>

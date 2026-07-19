@@ -190,6 +190,7 @@ export class WoDActor extends Actor {
             const powers = (this?.items || []).filter(item => item.type === "Power" && item.system.secondaryabilityid === "");
             const allpowers = (this?.items || []).filter(item => item.type === "Power" || item.type === "Sphere" || item.type === "Realm" || item.type === "Rote");
             const shapes = actorData.items.filter(item => item.type === "Trait" && (item.system.type === "wod.types.shapeform"));
+            const apocalypticforms = actorData.items.filter(item => item.type === "Trait" && (item.system.type === "wod.types.apocalypticform"));
             const resonances = actorData.items.filter(item => item.type === "Trait" && item.system?.type === "wod.types.resonance");            
 
             // Normalization: Set ability max values
@@ -419,13 +420,16 @@ export class WoDActor extends Actor {
             actorData.system.settings.hasgifts = false;
             actorData.system.settings.hasrites = false;
             actorData.system.settings.hasshapes = false;
+            actorData.system.settings.hasapocalypticforms = false;
             actorData.system.settings.hasspheres = false;
             actorData.system.settings.hasrotes = false;
             actorData.system.settings.hasnuminas = false;
             actorData.system.settings.hasrealms = false;
+            actorData.system.settings.haslores = false;
+            actorData.system.settings.hasedges = false;
 
             for (const power of allpowers) {
-                if (power.system.type === "wod.types.discipline") {
+                if (power.system.type === "wod.types.discipline" || power.system.type === "wod.types.disciplinepower") {
                     actorData.system.settings.hasdisciplines = true;
                 }
                 if (power.system.type === "wod.types.combination") {
@@ -440,7 +444,13 @@ export class WoDActor extends Actor {
                 if (power.system.type === "wod.types.rite") {
                     actorData.system.settings.hasrites = true;
                 }
-                if (power.system.type === "wod.types.numina") {
+                if (power.system.type === "wod.types.lore" || power.system.type === "wod.types.lorepower") {
+                    actorData.system.settings.haslores = true;
+                }
+                if (power.system.type === "wod.types.edge" || power.system.type === "wod.types.edgepower") {
+                    actorData.system.settings.hasedges = true;
+                }
+                if (power.system.type === "wod.types.numina" || power.system.type === "wod.types.numinapower") {
                     actorData.system.settings.hasnuminas = true;
                 }
                 if (power.type === "Sphere") {
@@ -455,6 +465,7 @@ export class WoDActor extends Actor {
             }            
 
             actorData.system.settings.hasshapes = shapes.length > 0;
+            actorData.system.settings.hasapocalypticforms = apocalypticforms.length > 0;
             actorData.system.settings.hasresonances = resonances.length > 0;
 
             if (itemList.length > 0) {

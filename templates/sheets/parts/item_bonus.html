@@ -2,7 +2,7 @@
 
     {{#if (eqAny data.system.type "wod.types.artpower" "wod.types.disciplinepower" "wod.types.combination" "wod.types.edgepower" "wod.types.lorepower" "wod.types.arcanoipower" "wod.types.hekaupower" "wod.types.numinapower" "wod.types.gift" "wod.types.charm" "wod.types.horror" "wod.types.stain" "wod.types.exaltedcharm" "wod.types.power")}}
 
-        <div class="dialog-area">
+        <div class="dialog-area" data-drop-area="bonus">
             <div class="clearareaBox">
                 <div class="pullLeft"><i class="icon fa-solid fa-square-plus item-create pointer" title="{{localize 'wod.labels.add.bonus'}}" aria-hidden="true" data-type="bonus"></i></div>
                 <div class="pullLeft sheet-banner-text">{{localize "wod.dialog.bonus.bonuses"}}</div>		
@@ -46,7 +46,7 @@
 
     {{#if (ne data.system.type "wod.types.talen")}}
 
-        <div class="dialog-area">
+        <div class="dialog-area" data-drop-area="bonus">
             <div class="clearareaBox">
                 <div class="pullLeft"><i class="icon fa-solid fa-square-plus item-create pointer" title="{{localize 'wod.labels.add.bonus'}}" aria-hidden="true" data-type="bonus"></i></div>
                 <div class="pullLeft sheet-banner-text">{{localize "wod.dialog.bonus.bonuses"}}</div>		

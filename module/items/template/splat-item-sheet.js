@@ -463,15 +463,17 @@ export default class SplatItemSheet extends HandlebarsApplicationMixin(WoDItemSh
 
 
     async _onDropItem(event, data) {
-        await super._onDropItem(event, data);
+        const droppedItem = await Item.implementation.fromDropData(data);
 
-        const droppedItem = await Item.implementation.fromDropData(data);  
-        let update = false;      
+        if (droppedItem.type === "Bonus") {
+            return super._onDropItem(event, data);
+        }
 
         if (checkItemValues(droppedItem) === false) {
             return;
         }
 
+        let update = false;
         let itemCopy = droppedItem.toObject();
         itemCopy.uuid = droppedItem.uuid;
         const itemData = foundry.utils.duplicate(this.item);
@@ -491,10 +493,34 @@ export default class SplatItemSheet extends HandlebarsApplicationMixin(WoDItemSh
             update = true;
         }
 
-        if ((droppedItem.type === "Trait") && (droppedItem.system.type === "wod.types.shapeform")) {
-            itemCopy.system.order = itemData.system.features.length;
-            itemData.system.features.push(itemCopy);            
-            update = true;
+        if (droppedItem.type === "Trait") {
+            if (droppedItem.system.type === "wod.types.shapeform") {
+                itemCopy.system.order = itemData.system.features.length;
+                itemData.system.features.push(itemCopy);            
+                update = true;
+            }
+
+            if (droppedItem.system.type === "wod.types.apocalypticform") {
+                itemCopy.system.order = itemData.system.features.length;
+                itemData.system.features.push(itemCopy);            
+                update = true;
+            }
+
+            if (droppedItem.system.type === "wod.types.othertraits") {
+                if (droppedItem.system.placement === "feature") {
+                    itemCopy.system.order = itemData.system.features.length;
+                    itemData.system.features.push(itemCopy);
+                }
+                else if (droppedItem.system.placement === "power") {
+                    itemCopy.system.order = itemData.system.powers.length;
+                    itemData.system.powers.push(itemCopy);
+                }
+                else {
+                    return;
+                }
+
+                update = true;
+            }
         }
 
         if ((droppedItem.type === "Sphere") || (droppedItem.type === "Realm") || (droppedItem.type === "Power")) {

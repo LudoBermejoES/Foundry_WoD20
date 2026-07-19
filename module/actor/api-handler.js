@@ -609,6 +609,10 @@ export default class PCActorAPI {
      * @param {Object} options - Modification options
      * @param {boolean} options.heal - If true, treat amount as healing (default: false)
      * @returns {Promise<Object>} Updated health data
+     *
+     * Adding damage follows V20/W20 Applying Damage: fill empty boxes; excess
+     * bashing upgrades bashing to lethal; excess aggravated converts bashing/lethal
+     * to aggravated. Further lethal overflow is not converted (death/torpor separately).
      */
     async modifyHealth(damageType, amount, options = {}) {
         this._validatePCActor();
@@ -630,19 +634,26 @@ export default class PCActorAPI {
 
         // Get current health damage
         const actorData = foundry.utils.duplicate(this.actor);
-        let currentDamage = parseInt(actorData.system.health.damage[damageType]) || 0;
 
         // Apply modification
         if (heal) {
-            // Healing: subtract from damage
+            let currentDamage = parseInt(actorData.system.health.damage[damageType]) || 0;
             currentDamage = Math.max(0, currentDamage - Math.abs(amount));
+            actorData.system.health.damage[damageType] = currentDamage;
         } else {
-            // Damage: add to current damage
-            currentDamage = Math.max(0, currentDamage + amount);
+            let maxLevels = parseInt(actorData.system.traits?.health?.totalhealthlevels?.max) || 0;
+            if (maxLevels <= 0) {
+                for (const level in CONFIG.worldofdarkness.woundLevels) {
+                    maxLevels += parseInt(actorData.system.health?.[level]?.total) || 0;
+                }
+            }
+            CombatHelper.ApplyDamageWithOverflow(
+                actorData.system.health.damage,
+                damageType,
+                Math.abs(amount),
+                maxLevels
+            );
         }
-
-        // Update health damage
-        actorData.system.health.damage[damageType] = currentDamage;
 
         // Ensure values don't go negative
         if (parseInt(actorData.system.health.damage.bashing) < 0) {

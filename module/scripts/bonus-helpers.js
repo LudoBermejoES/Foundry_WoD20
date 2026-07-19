@@ -1,6 +1,167 @@
 import * as BonusDialog from "../dialogs/dialog-bonus.js";
 
 export default class BonusHelper {
+
+    /** Power system types that expose the embedded bonus list on item sheets. */
+    static POWER_TYPES_WITH_BONUSES = [
+        "wod.types.artpower",
+        "wod.types.disciplinepower",
+        "wod.types.combination",
+        "wod.types.edgepower",
+        "wod.types.lorepower",
+        "wod.types.arcanoipower",
+        "wod.types.hekaupower",
+        "wod.types.numinapower",
+        "wod.types.gift",
+        "wod.types.charm",
+        "wod.types.horror",
+        "wod.types.stain",
+        "wod.types.exaltedcharm",
+        "wod.types.power"
+    ];
+
+    /**
+     * Normalize embedded bonuslist data to a safe array.
+     * @param {*} bonuslist
+     * @returns {object[]}
+     */
+    static asBonuslist(bonuslist) {
+        return Array.isArray(bonuslist) ? bonuslist : [];
+    }
+
+    /**
+     * Whether an item document supports embedded bonuses in system.bonuslist.
+     * Mirrors templates/sheets/parts/item_bonus.html visibility rules.
+     * @param {Item} item
+     * @returns {boolean}
+     */
+    static supportsEmbeddedBonuses(item) {
+        if (!item?.system || !Array.isArray(item.system.bonuslist)) {
+            return false;
+        }
+
+        const itemType = item.type;
+        const systemType = item.system.type ?? "";
+
+        if (itemType === "Power") {
+            return this.POWER_TYPES_WITH_BONUSES.includes(systemType);
+        }
+
+        if (["Rote", "Fetish", "Item", "Trait", "Feature"].includes(itemType)) {
+            return systemType !== "wod.types.talen";
+        }
+
+        return false;
+    }
+
+    /**
+     * Convert a world/compendium Bonus item into a bonuslist entry.
+     * @param {Item} bonusItem
+     * @param {boolean} [defaultIsActive=false]
+     * @returns {object}
+     */
+    static bonusItemToListEntry(bonusItem, defaultIsActive = false) {
+        const src = bonusItem.system ?? {};
+        let settingtype = src.settingtype ?? "";
+
+        if (src.type === "soak_buff" && settingtype === "") {
+            settingtype = "all";
+        }
+
+        const value = src.type === "movement_buff"
+            ? (parseFloat(src.value) || 0)
+            : (parseInt(src.value) || 0);
+
+        return {
+            name: bonusItem.name ?? "",
+            settingtype,
+            type: src.type ?? "",
+            value,
+            isactive: src.isactive ?? defaultIsActive
+        };
+    }
+
+    /**
+     * Append a dropped Bonus item to a target item's bonuslist.
+     * @param {Item} targetItem
+     * @param {Item} bonusItem
+     * @returns {Promise<{success: boolean, reason?: string, entry?: object}>}
+     */
+    static async applyDroppedBonus(targetItem, bonusItem) {
+        if (bonusItem.type !== "Bonus") {
+            return { success: false, reason: "notbonus" };
+        }
+
+        if (targetItem.id === bonusItem.id || targetItem._id === bonusItem._id) {
+            return { success: false, reason: "self" };
+        }
+
+        if (!this.supportsEmbeddedBonuses(targetItem)) {
+            return { success: false, reason: "unsupported" };
+        }
+
+        if (!bonusItem.system?.type) {
+            return { success: false, reason: "incomplete" };
+        }
+
+        const itemData = foundry.utils.duplicate(targetItem);
+        if (!Array.isArray(itemData.system.bonuslist)) {
+            itemData.system.bonuslist = [];
+        }
+
+        const entry = this.bonusItemToListEntry(
+            bonusItem,
+            targetItem.system.isactive ?? false
+        );
+        itemData.system.bonuslist.push(entry);
+
+        await targetItem.update(itemData);
+
+        const actor = targetItem.actor;
+        if (actor) {
+            await actor.update({ "system.settings.isupdated": false });
+        }
+
+        return { success: true, entry };
+    }
+
+    /**
+     * Handle dropping a Bonus item onto an item sheet.
+     * @param {Item} targetItem
+     * @param {Item} droppedItem
+     * @returns {Promise<boolean|null>} true/false when handled, null if not a Bonus drop
+     */
+    static async handleBonusDropOnItem(targetItem, droppedItem) {
+        if (droppedItem.type !== "Bonus") {
+            return null;
+        }
+
+        if (!targetItem.isOwner) {
+            return false;
+        }
+
+        const result = await this.applyDroppedBonus(targetItem, droppedItem);
+
+        if (!result.success) {
+            const reasonKeys = {
+                unsupported: "wod.labels.drop.bonusnounsupported",
+                incomplete: "wod.labels.drop.bonusincomplete",
+                self: "wod.labels.drop.bonusself",
+                notbonus: "wod.labels.drop.bonusnounsupported"
+            };
+            const key = reasonKeys[result.reason] ?? "wod.labels.drop.bonusnounsupported";
+            ui.notifications.warn(game.i18n.localize(key));
+            return false;
+        }
+
+        let message = game.i18n.localize("wod.labels.drop.bonusadded");
+        message = message.replace("{1}", droppedItem.name);
+        message = message.replace("{2}", targetItem.name);
+        ui.notifications.info(message);
+
+        return true;
+    }
+
     /**
      * Retrieves all bonus items from a list that match a specific parent id
      * @param {Array} itemList - The list of items to search through
@@ -313,7 +474,7 @@ export default class BonusHelper {
 			if ((i.type == "Bonus") && (i.system.isactive) && (i.system.type == "attribute_diff") && (i.system.settingtype == attribute)) {
 				return true;
 			}
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -345,7 +506,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -377,7 +538,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -409,7 +570,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -441,7 +602,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -473,7 +634,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -517,7 +678,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -568,7 +729,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -607,7 +768,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -634,7 +795,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -669,7 +830,7 @@ export default class BonusHelper {
                 }
             }			
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -703,7 +864,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -730,7 +891,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -757,7 +918,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -784,7 +945,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -816,7 +977,7 @@ export default class BonusHelper {
 				return true;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -850,7 +1011,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}   
             
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -884,7 +1045,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -916,7 +1077,7 @@ export default class BonusHelper {
 				return i.system.value;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -950,7 +1111,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -984,7 +1145,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -1018,7 +1179,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -1061,7 +1222,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                continue;
             } 
 
@@ -1111,7 +1272,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -1152,7 +1313,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -1181,7 +1342,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -1217,7 +1378,7 @@ export default class BonusHelper {
                 bonus += parseInt(i.system.value);
             }
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -1247,7 +1408,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -1276,7 +1437,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -1305,7 +1466,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -1339,7 +1500,7 @@ export default class BonusHelper {
 				bonus += parseInt(i.system.value);
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 
@@ -1373,7 +1534,7 @@ export default class BonusHelper {
 				bonus += parseFloat(i.system.value) || 0;
 			}
 
-            if (i.system.bonuslist === undefined) {
+            if (!Array.isArray(i.system.bonuslist)) {
                 continue;
             } 
 

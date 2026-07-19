@@ -12,6 +12,12 @@ export const datapowertab = {
         changeling: {
             primary: ["arts"],
         },
+        demon: {
+            primary: ["lores", "rituals"],
+        },
+        hunter: {
+            primary: ["edges"],
+        },
         mortal: {
             primary: [],
         },
@@ -25,6 +31,8 @@ export const datapowertab = {
             "rotes",
             "resonances",
             "arts",
+            "lores",
+            "edges",
             "numinas"
         ],
         unsorted: {

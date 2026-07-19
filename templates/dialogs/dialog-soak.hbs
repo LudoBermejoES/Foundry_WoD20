@@ -19,12 +19,14 @@
         
     </div>
 
-{{localize "wod.dialog.dicepool"}}
     <div class="dialog-area">
-        <div class="headline splatFont">{{localize "wod.dialog.soak.incomingDamage"}}</div>
+        <div class="headline splatFont">{{localize "wod.dialog.soak.incomingdamage"}}</div>
         <div class="dialog-valueBox">
             <input class="editable" type="text" name="incomingDamage" value="{{object.incomingDamage}}" />
         </div>
+    </div>
+
+    <div class="dialog-area">
         {{#if object.useChimerical}} 
             <div class="headline splatFont">{{localize "wod.dialog.soak.selectdamage"}} - {{localize 'wod.health.normal'}}</div>
         {{else}}
@@ -48,7 +50,6 @@
         </div>
     {{/if}}
 
-    
     <div class="dialog-area">
         <div class="headline splatFont">{{localize "wod.labels.bonus.headline"}}</div>
         <div class="dialog-valueBox">

@@ -173,15 +173,15 @@ export default class CreateHelper {
 		await this.SetAbilities(actorCopy, "orpheus", era);
 		actorCopy.system.abilities.technology.type = "skill";		
 		
-		AbilityHelper.CreateAbility_nowait(actor, "wod.types.talentsecondability", "Intrigue", parseInt(actor.system.settings.abilities.defaultmaxvalue));
-		AbilityHelper.CreateAbility_nowait(actor, "wod.types.othertraits", "Dead-Eyes", 0);
-		AbilityHelper.CreateAbility_nowait(actor, "wod.types.othertraits", "Detect Nature Group", 0);
-		AbilityHelper.CreateAbility_nowait(actor, "wod.types.othertraits", "Incorporeal & Invisible", 0);
-		AbilityHelper.CreateAbility_nowait(actor, "wod.types.othertraits", "Manifest", 0);
-		AbilityHelper.CreateAbility_nowait(actor, "wod.types.othertraits", "Misery Loves Company", 0);
-		AbilityHelper.CreateAbility_nowait(actor, "wod.types.othertraits", "Sense Lifeline", 0);
-		AbilityHelper.CreateAbility_nowait(actor, "wod.types.othertraits", "Sever the Strand", 0);
-		AbilityHelper.CreateAbility_nowait(actor, "wod.types.othertraits", "Thievery", 0);
+		AbilityHelper.CreateTrait_nowait(actor, "wod.types.talentsecondability", "Intrigue", parseInt(actor.system.settings.abilities.defaultmaxvalue));
+		AbilityHelper.CreateTrait_nowait(actor, "wod.types.othertraits", "Dead-Eyes", 0);
+		AbilityHelper.CreateTrait_nowait(actor, "wod.types.othertraits", "Detect Nature Group", 0);
+		AbilityHelper.CreateTrait_nowait(actor, "wod.types.othertraits", "Incorporeal & Invisible", 0);
+		AbilityHelper.CreateTrait_nowait(actor, "wod.types.othertraits", "Manifest", 0);
+		AbilityHelper.CreateTrait_nowait(actor, "wod.types.othertraits", "Misery Loves Company", 0);
+		AbilityHelper.CreateTrait_nowait(actor, "wod.types.othertraits", "Sense Lifeline", 0);
+		AbilityHelper.CreateTrait_nowait(actor, "wod.types.othertraits", "Sever the Strand", 0);
+		AbilityHelper.CreateTrait_nowait(actor, "wod.types.othertraits", "Thievery", 0);
 
 		return actorCopy;
 	}
@@ -1303,6 +1303,44 @@ export default class CreateHelper {
 		}
 	}
 
+	static CreateItemGear(kind, actor) {
+		const configs = {
+			treasure: { itemType: "Item", systemType: "wod.types.treasure", iscontainter: false },
+			relic: { itemType: "Item", systemType: "wod.types.relic", iscontainter: false },
+			device: { itemType: "Item", systemType: "wod.types.device", iscontainter: false },
+			talisman: { itemType: "Item", systemType: "wod.types.talisman", iscontainter: false },
+			periapt: { itemType: "Item", systemType: "wod.types.periapt", iscontainter: true },
+			matrix: { itemType: "Item", systemType: "wod.types.matrix", iscontainter: true },
+			trinket: { itemType: "Item", systemType: "wod.types.trinket", iscontainter: false },
+			fetish: { itemType: "Fetish", systemType: "wod.types.fetish", iscontainter: false, isrollable: true },
+			talen: { itemType: "Fetish", systemType: "wod.types.talen", iscontainter: false, isrollable: true },
+		};
+
+		const config = configs[kind];
+		if (!config) return undefined;
+
+		const system = {
+			level: 1,
+			type: config.systemType,
+			ismagical: true,
+			iscontainter: config.iscontainter,
+			era: actor.system.settings.era,
+			description: "",
+			details: "",
+			bonuslist: [],
+		};
+
+		if (config.isrollable !== undefined) {
+			system.isrollable = config.isrollable;
+		}
+
+		return {
+			name: game.i18n.localize(`wod.labels.new.${kind}`),
+			type: config.itemType,
+			system,
+		};
+	}
+
 	static async CreateItemPower(type, setting) {
 		let itemData = undefined;
 
@@ -1804,6 +1842,21 @@ export default class CreateHelper {
 	}
 
 	/**
+	 * PC actors with a Faith advantage can add Demon powers (lores, etc.)
+	 * @param {Actor} actor
+	 * @returns {boolean}
+	 */
+	static actorHasFaith(actor) {
+		if (!actor || actor.type !== "PC") {
+			return false;
+		}
+
+		return actor.items.some(item =>
+			item.type === "Advantage" && item.system?.id === "faith"
+		);
+	}
+
+	/**
 	 * Hämtar lokaliserat label för ett spel
 	 * @param {string} gameName - Game-namn (t.ex. "werewolf", "vampire")
 	 * @returns {string} Lokaliserat label
@@ -2046,6 +2099,89 @@ export default class CreateHelper {
 					}
 				}
 			},
+			lore: {
+				game: "demon",
+				button: {
+					label: game.i18n.localize("wod.types.lore"),
+					callback: async () => {
+						let itemData = {
+							name: game.i18n.localize("wod.labels.new.lore"),
+							type: "Power",
+							system: {
+								game: "demon",
+								type: "wod.types.lore"
+							}
+						};
+
+						await this.CreateItem(actor, itemData);
+						return;
+					}
+				}
+			},
+			lorepower: {
+				game: "demon",
+				button: {
+					label: game.i18n.localize("wod.types.lorepower"),
+					callback: async () => {
+						let itemData = {
+							name: game.i18n.localize("wod.labels.new.lorepower"),
+							type: "Power",
+							system: {
+								game: "demon",
+								level: 1,
+								type: "wod.types.lorepower"
+							}
+						};
+
+						await this.CreateItem(actor, itemData);
+						return;
+					}
+				}
+			},
+			demonritual: {
+				game: "demon",
+				button: {
+					label: game.i18n.localize("wod.types.ritual"),
+					callback: async () => {
+						let itemData = {
+							name: game.i18n.localize("wod.labels.new.ritual"),
+							type: "Power",
+							system: {
+								game: "demon",
+								level: 1,
+								type: "wod.types.ritual"
+							}
+						};
+
+						await this.CreateItem(actor, itemData);
+						return;
+					}
+				}
+			},
+			edge: {
+				game: "hunter",
+				button: {
+					label: game.i18n.localize("wod.types.edge"),
+					callback: async () => {
+						let itemData = await this.CreateItemPower("edge", "hunter");
+
+						await this.CreateItem(actor, itemData);
+						return;
+					}
+				}
+			},
+			edgepower: {
+				game: "hunter",
+				button: {
+					label: game.i18n.localize("wod.types.edgepower"),
+					callback: async () => {
+						let itemData = await this.CreateItemPower("edgepower", "hunter");
+
+						await this.CreateItem(actor, itemData);
+						return;
+					}
+				}
+			},
 			shapeform: {
 				game: null, // "other"
 				button: {
@@ -2096,6 +2232,13 @@ export default class CreateHelper {
 			delete allButtons.art;
 			delete allButtons.artpower;
 		}
+
+		// Demon powers (lores) kräver Faith-advantage på PC actor
+		if (!this.actorHasFaith(actor)) {
+			delete allButtons.lore;
+			delete allButtons.lorepower;
+			delete allButtons.demonritual;
+		}
 		
 		// Gruppera buttons efter game
 		const categories = {};
@@ -2144,161 +2287,20 @@ export default class CreateHelper {
 
 	/* Create the buttons for create Gear Items */
 	static async CreateButtonsGear(actor) {
-		return {
-			treasure: {
-				label: game.i18n.localize("wod.types.treasure"),
+		const kinds = ["treasure", "relic", "device", "talisman", "periapt", "matrix", "trinket", "fetish", "talen"];
+		const buttons = {};
+
+		for (const kind of kinds) {
+			buttons[kind] = {
+				label: game.i18n.localize(`wod.types.${kind}`),
 				callback: async () => {
-					let itemData = {
-						name: game.i18n.localize("wod.labels.new.treasure"),
-						type: "Item",
-						system: {
-							level: 1,
-							type: "wod.types.treasure",
-							ismagical: true,
-							iscontainter: false,
-							era: actor.system.settings.era
-						}
-					};
-
+					const itemData = this.CreateItemGear(kind, actor);
 					await this.CreateItem(actor, itemData);
-					return;
 				}
-			},
-			device: {
-				label: game.i18n.localize("wod.types.device"),
-				callback: async () => {
-					let itemData = {
-						name: game.i18n.localize("wod.labels.new.device"),
-						type: "Item",
-						system: {
-							level: 1,
-							type: "wod.types.device",
-							ismagical: true,
-							iscontainter: false,
-							era: actor.system.settings.era
-						}
-					};
-
-					await this.CreateItem(actor, itemData);
-					return;
-				}
-			},
-			talisman: {
-				label: game.i18n.localize("wod.types.talisman"),
-				callback: async () => {
-					let itemData = {
-						name: game.i18n.localize("wod.labels.new.talisman"),
-						type: "Item",
-						system: {
-							level: 1,
-							type: "wod.types.talisman",
-							ismagical: true,
-							iscontainter: false,
-							era: actor.system.settings.era
-						}
-					};
-
-					await this.CreateItem(actor, itemData);
-					return;
-				}
-			},
-			periapt: {
-				label: game.i18n.localize("wod.types.periapt"),
-				callback: async () => {
-					let itemData = {
-						name: game.i18n.localize("wod.labels.new.periapt"),
-						type: "Item",
-						system: {
-							level: 1,
-							type: "wod.types.periapt",
-							ismagical: true,
-							iscontainter: true,
-							era: actor.system.settings.era
-						}
-					};
-
-					await this.CreateItem(actor, itemData);
-					return;
-				}
-			},
-			matrix: {
-				label: game.i18n.localize("wod.types.matrix"),
-				callback: async () => {
-					let itemData = {
-						name: game.i18n.localize("wod.labels.new.matrix"),
-						type: "Item",
-						system: {
-							level: 1,
-							type: "wod.types.matrix",
-							ismagical: true,
-							iscontainter: true,
-							era: actor.system.settings.era
-						}
-					};
-
-					await this.CreateItem(actor, itemData);
-					return;
-				}
-			},
-			trinket: {
-				label: game.i18n.localize("wod.types.trinket"),
-				callback: async () => {
-					let itemData = {
-						name: game.i18n.localize("wod.labels.new.trinket"),
-						type: "Item",
-						system: {
-							level: 1,
-							type: "wod.types.trinket",
-							ismagical: true,
-							iscontainter: false,
-							era: actor.system.settings.era
-						}
-					};
-
-					await this.CreateItem(actor, itemData);
-					return;
-				}
-			},
-			fetish: {
-				label: game.i18n.localize("wod.types.fetish"),
-				callback: async () => {
-					let itemData = {
-						name: `${game.i18n.localize("wod.labels.new.fetish")}`,
-						type: "Fetish",
-						system: {
-							level: 1,
-							type: "wod.types.fetish",
-							isrollable: true,
-							ismagical: true,
-							era: actor.system.settings.era
-						}
-					};
-
-					await this.CreateItem(actor, itemData);
-					return;
-				}
-			},
-			talen: {
-				label: game.i18n.localize("wod.types.talen"),
-				callback: async () => {
-					let itemData = {
-						name: `${game.i18n.localize("wod.labels.new.talen")}`,
-						type: "Fetish",
-						system: {
-							level: 1,
-							type: "wod.types.talen",
-							isrollable: true,
-							ismagical: true,
-							era: actor.system.settings.era
-						}
-					};
-
-					await this.CreateItem(actor, itemData);
-					return;
-				}
-			}
-
+			};
 		}
+
+		return buttons;
 	}
 
 	/* Create the buttons for create Note Items */

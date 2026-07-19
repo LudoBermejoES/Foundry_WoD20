@@ -41,9 +41,13 @@
 						data-value="{{ability.system.value}}" 
 						data-name="system.value">
 
-						{{#numLoop ability.system.max}}					
-							<span class="{{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} resource-value-step" data-action="editDot" data-type="{{../../config.sheettype.mortal}}" data-index="{{this}}" data-itemid="{{ability._id}}" data-ability="core"></span>					
-						{{/numLoop}}
+						{{> "systems/worldofdarkness/templates/actor/parts/stat_value_dots.hbs"
+							max=ability.system.max
+							value=ability.system.value
+							locked=../locked
+							name="system.value"
+							itemid=ability._id
+							dotType=../config.sheettype.mortal}}
 
 						{{#if (eq ../locked false)}}
 							<div class="pullRight speciality-ability-icon {{getSpecialityIcon ability}}">
@@ -111,9 +115,13 @@
 						data-value="{{ability.system.value}}" 
 						data-name="system.value">
 
-						{{#numLoop ability.system.max}}					
-							<span class="{{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} resource-value-step" data-action="editDot" data-type="{{../../config.sheettype.mortal}}" data-index="{{this}}" data-itemid="{{ability._id}}" data-ability="core"></span>					
-						{{/numLoop}}
+						{{> "systems/worldofdarkness/templates/actor/parts/stat_value_dots.hbs"
+							max=ability.system.max
+							value=ability.system.value
+							locked=../locked
+							name="system.value"
+							itemid=ability._id
+							dotType=../config.sheettype.mortal}}
 
 						{{#if (eq ../locked false)}}
 							<div class="pullRight speciality-ability-icon {{getSpecialityIcon ability}}">
@@ -178,9 +186,13 @@
 						data-value="{{ability.system.value}}" 
 						data-name="system.value">
 
-						{{#numLoop ability.system.max}}					
-							<span class="{{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} resource-value-step" data-action="editDot" data-type="{{../../config.sheettype.mortal}}" data-index="{{this}}" data-itemid="{{ability._id}}" data-ability="core"></span>					
-						{{/numLoop}}
+						{{> "systems/worldofdarkness/templates/actor/parts/stat_value_dots.hbs"
+							max=ability.system.max
+							value=ability.system.value
+							locked=../locked
+							name="system.value"
+							itemid=ability._id
+							dotType=../config.sheettype.mortal}}
 
 						{{#if (eq ../locked false)}}
 							<div class="pullRight speciality-ability-icon {{getSpecialityIcon ability}}">

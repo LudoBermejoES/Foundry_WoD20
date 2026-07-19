@@ -86,6 +86,7 @@
 			"nonotuse": "Não usar",
 			"alwaysuse": "Sempre usar",
 			"usewithspeciality": "Usar com especialidade",
+			"usewithoutspeciality": "Usar sem especialidade",
 			"rulesettings": "Configurações de Regras",
 			"rulesettingshint": "Todas as configurações reunidas sobre regras.",
 			"permissionsettings": "Configurações de Permissões",
@@ -126,7 +127,12 @@
 			"demonsettingshint": "Configurações do mundo usadas em Demônio: A Queda.",
 			"demoncreateforms": "Criar formas apocalípticas automaticamente",
 			"demoncreateformshint": "Ao criar uma ficha de demônio, crie as formas apocalípticas automaticamente no ator.",
-			"demonsystemsettings": "Configuração de lista de Habilidades",
+			"demonevocationtorment": "Resolver efeitos de Tormento de Lore",
+			"demonevocationtormenthint": "Após uma rolagem de Lore bem-sucedida, indicar no chat quando o efeito de Alto Tormento se aplica. Escolha o conjunto de regras ou desative a função.",
+			"demonevocationtormentoff": "Não usar",
+			"demonevocationtormentcore": "Livro básico",
+			"demonevocationtormentplayersguide": "Errata do Players Guide",
+			"demonsystemsettings": "Configuração de lista de Habilidades (demon actor only)",
 			"demonsystemsettingshint": "De acordo com qual configuração a lista de habilidades é retirada",
 			"demonsettingasbook": "De acordo com o livro",
 			"demonsettingas20th": "De acordo com 20ª ed MdT",
@@ -174,7 +180,11 @@
 			"orderhint": "Drag the items into the order you want them presented on the sheet.",
 			"splatitem": "Item de modelo",
 			"splatfields": "Campos de modelo existentes",
-			"notinstalled": "Nenhum instalado"
+			"notinstalled": "Nenhum instalado",
+			"successesdamage": "Sucessos adicionam ao dano",
+			"successesdamagehint": "Se ativado, o número excedente de sucessos da rolagem de ataque será adicionado como dados de bônus à rolagem de dano.",
+			"virtueslimit": "Virtudes seguem o limite máximo de traço da Geração",
+			"virtueslimithint": "Se ativado, o valor máximo das virtudes será limitado ao valor máximo de traço permitido pela geração do personagem."
 		},
 		"types": {
 			"mortal": "Mortal",
@@ -949,6 +959,7 @@
 			"lethal": "Letal",
 			"aggravated": "Agravado",
 			"soak": "Absorver",
+			"chimericalsoak": "Absorção quimérica",
 			"penalty": "Penalidade da Ferida",
 			"chimerical": "Quimérico",
 			"normal": "Normal"
@@ -1537,7 +1548,8 @@
 				"tokenhint": "Escolha qual ícone será exibido no token quando esta forma estiver ativa.",
 				"tokenimage": "Imagem do token",
 				"tokenimagehint": "A imagem que o token exibirá quando esta forma estiver ativa. Deixe vazio para usar a imagem padrão do ator.",
-				"clearimage": "Limpar imagem selecionada"
+				"clearimage": "Limpar imagem selecionada",
+				"usesoaksettings": "Usar configurações de absorção da forma"
 			},
 			"feature": {
 				"trivial": "Trivial",
@@ -1650,7 +1662,8 @@
 				"biodone": "Done",
 				"bioneedkey": "Enter a field id before adding.",
 				"biokeyinvalid": "Field id cannot contain spaces or dots.",
-				"biokeyexists": "A field with id \"{key}\" already exists."
+				"biokeyexists": "A field with id \"{key}\" already exists.",
+				"usechimerical": "Usar dano quimérico"
 			},
 			"new": {
 				"create": "Criar item",
@@ -1970,9 +1983,14 @@
 			"rollingremainactivetext": "Cada sucesso cura um nível de saúde de qualquer tipo de dano. Não importa quanto dano seja curado, o personagem entra em frenesi. Um lobisomem ganha uma Cicatriz de Batalha sempre que permanece ativo com sucesso.",
 			"addedautosucc": "A rolagem adiciona {0} sucessos automáticos",
 			"usingwillpower": "Usando Força de Vontade",
+			"nowillpower": "{name} não tem Força de Vontade temporária restante!",
 			"favored": "É uma rolagem favorável",
 			"bonusdices": "Dados de bônus",
-			"nobotchpossible": "Falha crítica impossível nesta rolagem"
+			"nobotchpossible": "Falha crítica impossível nesta rolagem",
+			"unsoakeddamage": "Dano não absorvido: {unsoaked} ({incoming})",
+			"evocation": {
+				"highchat": "Efeito de Alto Tormento ativado!"
+			}
 		},
 		"dialog": {
 			"save": "Salvar",
@@ -2092,7 +2110,8 @@
 			},
 			"soak": {
 				"missingdamage": "Você precisa selecionar um tipo de dano",
-				"selectdamage": "Selecione o tipo de dano"
+				"selectdamage": "Selecione o tipo de dano",
+				"incomingdamage": "Dano recebido"
 			},
 			"power": {
 				"availrealms": "Reinos Disponíveis",

@@ -1,4 +1,5 @@
 import ItemHelper from "./item-helpers.js";
+import BonusHelper from "./bonus-helpers.js";
 import { calculateTotals } from "./totals.js";
 
 export default class DropHelper {
@@ -56,10 +57,8 @@ export default class DropHelper {
         }
 
         if (droppedItem.type === "Sphere") {
-            ui.notifications.warn(game.i18n.localize("wod.labels.drop.dropsphere"));
-
             itemData.system.isremovable = true;
-            return;
+            update = true;
         }
 
         if (droppedItem.type === "Realm") {
@@ -971,9 +970,10 @@ export default class DropHelper {
             itemData.system.parentid = await ItemHelper.GetPowerId(itemData, destinationActor);
         }        
 
-        if (itemData.system.bonuslist.length > 0) {
-            for (let i = 0; i <= itemData.system.bonuslist.length - 1; i++) {
-                itemData.system.bonuslist[i].isactive = false;
+        const bonuslist = BonusHelper.asBonuslist(itemData.system.bonuslist);
+        if (bonuslist.length > 0) {
+            for (let i = 0; i <= bonuslist.length - 1; i++) {
+                bonuslist[i].isactive = false;
             }
         }
 
@@ -1126,10 +1126,15 @@ export default class DropHelper {
     }
 
     static async ImportPower(actor, power) {
+        // Splat templates may store Trait items (e.g. othertraits with placement power) in system.powers
+        if (power.type === "Trait") {
+            return this.ImportFeatures(actor, power);
+        }
+
         if (power.uuid) {
             const existingFeature = actor.items.find(i => 
                 i.type === power.type && 
-                i.system.itemuuid === power.uuid
+                i.system.settings?.itemuuid === power.uuid
             );
             
             if (existingFeature) {
@@ -1148,7 +1153,7 @@ export default class DropHelper {
 
             if (item !== false) {
                 const loadedData = foundry.utils.duplicate(item);
-                mergedData =this.PopulatePower(loadedData, power);
+                mergedData = await this.PopulatePower(loadedData, power);
             }
         }
 
@@ -1158,14 +1163,14 @@ export default class DropHelper {
 
             if (item !== undefined) {
                 const loadedData = foundry.utils.duplicate(item);
-                mergedData = this.PopulatePower(loadedData, power);
+                mergedData = await this.PopulatePower(loadedData, power);
             }
         }
 
         // if not in world use what you got
         if (mergedData === undefined) {
             console.warn(`WoD | Installing Splat | Power ${power.name} not found in compendium or world.`);
-            mergedData = this.PopulatePower(power, power);
+            mergedData = await this.PopulatePower(power, power);
         }
 
         return mergedData;
@@ -1417,12 +1422,16 @@ export default class DropHelper {
     }
 
     static async PopulatePower(loadedData, power) {
+        if (loadedData.type === "Trait" || !loadedData.system?.settings) {
+            return this.PopulateFeature(loadedData, power);
+        }
+
         loadedData.system.settings.iscreated = true;
         loadedData.system.settings.isvisible = true;
         
         loadedData.system.settings.itemuuid = power.uuid;
         loadedData.system.settings.version = game.system.version;
-        loadedData.system.settings.order = power.system.settings.order;
+        loadedData.system.settings.order = power.system.settings?.order ?? power.system.order;
 
         return loadedData;
     }
@@ -1582,12 +1591,12 @@ export default class DropHelper {
             // Handle features/shapes (Trait items with type wod.types.shapeform)
             if (data.list === "system.features") {
                 if (item.type !== "Trait") return false;
-                // Filter for shapeforms only
-                return item.system.type === "wod.types.shapeform";
+                return (item.system.type === "wod.types.shapeform" || item.system.type === "wod.types.apocalypticform" || item.system.type === "wod.types.othertraits");
             }
             // Handle powers/spheres
             if (data.list === "system.powers") {
-                return (item.type === "Sphere" || item.type === "Power" || item.type === "Realm");
+                if (item.type === "Sphere" || item.type === "Power" || item.type === "Realm") return true;
+                return item.type === "Trait" && item.system.type === "wod.types.othertraits" && item.system.placement === "power";
             }
             // Add more types here as needed
             return false;

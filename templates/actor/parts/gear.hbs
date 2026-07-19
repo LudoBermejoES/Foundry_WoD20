@@ -69,11 +69,17 @@
 							<div class="dragrow headlineNormal gear-itemlist" data-itemid="{{item._id}}">
 								<div class="width-iconbox draggable"><i class="icon fa-solid fa-grip-vertical"></i></div>
 
-								<div class="width-namebox {{#if item.system.isrollable}}vrollable{{/if}}" 
+								{{#if item.system.isrollable}}
+									<div class="width-namebox vrollable pointer"
 										data-type="{{../actor.type}}"
 										data-object="{{item.type}}"
 										data-rollitem="true"
-										data-itemid="{{item._id}}">{{item.name}}</div>
+										data-itemid="{{item._id}}"
+										title="{{item.name}}"
+										data-action="rollDice">{{item.name}}</div>
+								{{else}}
+									<div class="width-namebox">{{item.name}}</div>
+								{{/if}}
 
 								<div class="width-mediumbox">{{localize item.system.type}}</div>
 
@@ -113,6 +119,10 @@
 
 								{{#if (eq item.system.type "wod.types.treasure")}}
 									{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.treasure" deletetitle="wod.labels.remove.treasure"}}
+								{{else if (eq item.system.type "wod.types.relic")}}
+									{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.relic" deletetitle="wod.labels.remove.relic"}}
+								{{else if (eq item.system.type "wod.types.device")}}
+									{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.device" deletetitle="wod.labels.remove.device"}}
 								{{else if (eq item.system.type "wod.types.device")}}
 									{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.device" deletetitle="wod.labels.remove.device"}}
 								{{else if (eq item.system.type "wod.types.talisman")}}

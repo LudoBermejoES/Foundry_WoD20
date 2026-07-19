@@ -6,6 +6,8 @@
  * - `getPowerDice2List(itemData)` -> `listData.Dice2List`
  *
  * Returns arrays with optional `group` for optgroup support.
+ * When the item is owned by a PC actor, Dice1List also includes that actor's
+ * rollable Advantage items whose `system.id` is not already in the list.
  */
 
 import { selectPlaceholder } from "./utils.js";
@@ -137,6 +139,10 @@ export function getPowerDice1List(itemData) {
     list.push({ value: "banality", label: game.i18n.localize("wod.advantages.banality"), group: advGroup });
   }
 
+  if (type === "wod.types.relic") {
+    list.push({ value: "faith", label: game.i18n.localize("wod.advantages.faith"), group: advGroup });
+  }
+
   if (type === "wod.types.device" || type === "wod.types.talisman" || type === "wod.types.trinket") {
     list.push({ value: "arete", label: game.i18n.localize("wod.advantages.arete"), group: advGroup });
   }
@@ -159,6 +165,26 @@ export function getPowerDice1List(itemData) {
     list.push({ value: "selfcontrol", label: game.i18n.localize("wod.advantages.virtue.selfcontrol"), group: virtueGroup });
     list.push({ value: "selfcontrol", label: game.i18n.localize("wod.advantages.virtue.instinct"), group: virtueGroup });
     list.push({ value: "courage", label: game.i18n.localize("wod.advantages.virtue.courage"), group: virtueGroup });
+  }
+
+  // Owned by a PC: append rollable advantages on the actor that are not already selectable
+  if (actor?.type === "PC") {
+    const existingValues = new Set(list.map((entry) => entry.value));
+    const advantages = actor.items.filter(
+      (item) => item.type === "Advantage" && item.system?.settings?.useroll
+    );
+
+    for (const advantage of advantages) {
+      const id = advantage.system?.id;
+      if (!id || existingValues.has(id)) continue;
+
+      list.push({
+        value: id,
+        label: game.i18n.localize(advantage.system.label) || advantage.name,
+        group: advGroup
+      });
+      existingValues.add(id);
+    }
   }
 
   return list;

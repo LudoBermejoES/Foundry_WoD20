@@ -31,7 +31,10 @@
             </div>
         {{/if}}
 
+        {{#if showtype}}
         <div class="largeBox">{{localize item.system.type}}</div>
+        {{/if}}
+
         {{#if item.system.isrollable}}
             <div class="width-namebox">{{shorten (localize (getAttributes item.system.dice1)) 10}}</div>
             <div class="width-abilitybox">{{shorten (localize (getAbility item.system.dice2 actor)) 10}}</div>
@@ -46,8 +49,6 @@
             <div class="width-valuebox">
                 {{#if (gt item.system.level 0)}}
                     {{item.system.level}}
-                {{else if (ne item.system.level 0)}}
-                    {{localize item.system.level}}
                 {{else}}
                     &nbsp;
                 {{/if}}

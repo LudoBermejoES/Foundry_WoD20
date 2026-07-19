@@ -12,12 +12,13 @@ export class BasePower {
         this.abilityValue = 0;
         this.abilityName = "";
 
+        this.bonus = 0;
+
         this.hasSpeciality = false;
         this.specialityText = "";
 
         this._id = item["_id"];
         this.name = item["name"];
-        //this.type = item["type"];
         this.type = item.system["type"];
         this.dice1 = item.system["dice1"];
         this.dice2 = item.system["dice2"];
@@ -915,6 +916,13 @@ export class DialogPower extends FormApplication {
         this.object.useSpeciality = formData["specialty"];          // om ändrad???
         this.object.useWillpower = formData["useWillpower"];
 
+        try {
+            this.object.bonus = parseInt(formData["bonus"]);
+        }
+        catch {
+            this.object.bonus = 0;
+        }
+
         if (this.object.useSpeciality && CONFIG.worldofdarkness.usespecialityReduceDiff && !this.object.usedReducedDiff) {
             this.object.difficulty -= parseInt(CONFIG.worldofdarkness.specialityReduceDiff);
             this.object.usedReducedDiff = true;
@@ -1128,7 +1136,9 @@ export class DialogPower extends FormApplication {
         powerRoll.attribute = this.object.dice1;     
         powerRoll.ability = this.object.abilityKey;   
         powerRoll.origin = "power";
+        powerRoll.powerType = this.object.type;
         powerRoll.numDices = numDices;
+        powerRoll.bonus = parseInt(this.object.bonus);
         powerRoll.numSpecialDices = numSpecialDices;
         powerRoll.specialDiceText = specialDiceText;
         powerRoll.woundpenalty = parseInt(woundPenaltyVal);

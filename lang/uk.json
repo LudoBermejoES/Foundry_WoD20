@@ -86,6 +86,7 @@
 			"nonotuse": "Не використовувати",
 			"alwaysuse": "Завжди використовувати",
 			"usewithspeciality": "Використовувати зі спеціалізацією",
+			"usewithoutspeciality": "Використовувати без спеціалізації",
 			"rulesettings": "Налаштування правил",
 			"rulesettingshint": "Всі зібрані налаштування щодо правил.",
 			"permissionsettings": "Налаштування дозволів",
@@ -126,7 +127,12 @@
 			"demonsettingshint": "Налаштування світу, що використовуються в Демони: Падіння.",
 			"demoncreateforms": "Автоматично створювати апокаліптичні форми",
 			"demoncreateformshint": "При створенні аркуша демона автоматично створювати апокаліптичні форми на акторі.",
-			"demonsystemsettings": "Налаштування списку здібностей",
+			"demonevocationtorment": "Визначати ефекти Муки Lore",
+			"demonevocationtormenthint": "Після успішного кидка Lore зазначати в чаті, коли діє високий ефект Муки. Оберіть правила або вимкніть функцію.",
+			"demonevocationtormentoff": "Не використовувати",
+			"demonevocationtormentcore": "Основна книга",
+			"demonevocationtormentplayersguide": "Errata Players Guide",
+			"demonsystemsettings": "Налаштування списку здібностей (demon actor only)",
 			"demonsystemsettingshint": "Згідно з яким налаштуванням береться список здібностей",
 			"demonsettingasbook": "Згідно з книгою",
 			"demonsettingas20th": "Згідно з 20-м виданням WoD",
@@ -174,7 +180,11 @@
 			"orderhint": "Перетягніть предмети в порядок, у якому ви хочете їх відобразити на аркуші.",
 			"splatitem": "Template Item",
 			"splatfields": "Існуючі поля template",
-			"notinstalled": "Не встановлено"
+			"notinstalled": "Не встановлено",
+			"successesdamage": "Успіхи додаються до шкоди",
+			"successesdamagehint": "Якщо увімкнено, надлишкова кількість успіхів з кидка атаки буде додана як бонусні кубики до кидка шкоди.",
+			"virtueslimit": "Чесноти підпорядковуються максимальному ліміту риси Покоління",
+			"virtueslimithint": "Якщо увімкнено, максимальне значення чеснот буде обмежене максимальним значенням риси, дозволеним поколінням персонажа."
 		},
 		"types": {
 			"mortal": "Mortal",
@@ -949,6 +959,7 @@
 			"lethal": "Lethal",
 			"aggravated": "Aggravated",
 			"soak": "Soak",
+			"chimericalsoak": "Химеричне поглинання",
 			"penalty": "Wound penalty",
 			"chimerical": "Chimerical",
 			"normal": "Normal"
@@ -1537,7 +1548,8 @@
 				"tokenhint": "Choose what icon that will be displayed on the token when this shapeform is active.",
 				"tokenimage": "Зображення токена",
 				"tokenimagehint": "Зображення, яке буде відображатися на токені, коли ця форма активна. Залиште порожнім, щоб використовувати зображення за замовчуванням актора.",
-				"clearimage": "Clear selected image"
+				"clearimage": "Clear selected image",
+				"usesoaksettings": "Використовувати налаштування поглинання форми"
 			},
 			"feature": {
 				"trivial": "Trivial",
@@ -1650,7 +1662,8 @@
 				"biodone": "Done",
 				"bioneedkey": "Enter a field id before adding.",
 				"biokeyinvalid": "Field id cannot contain spaces or dots.",
-				"biokeyexists": "A field with id \"{key}\" already exists."
+				"biokeyexists": "A field with id \"{key}\" already exists.",
+				"usechimerical": "Використовувати химеричну шкоду"
 			},
 			"new": {
 				"create": "Create item",
@@ -1970,9 +1983,14 @@
 			"rollingremainactivetext": "Кожен успіх лікує один рівень здоров'я будь-якого типу шкоди. Незалежно від того, скільки шкоди виліковано, персонаж входить у берсеркську лютість. Перевертень отримує Бойовий шрам щоразу, коли успішно залишається активним.",
 			"addedautosucc": "Кидок додає {0} автоматичних успіхів",
 			"usingwillpower": "Використання Сили Волі",
+			"nowillpower": "{name} не має тимчасової Сили Волі!",
 			"favored": "Є переважним кидком",
 			"bonusdices": "Бонусні кубики",
-			"nobotchpossible": "Провал неможливий на цьому кидку"
+			"nobotchpossible": "Провал неможливий на цьому кидку",
+			"unsoakeddamage": "Непоглинута шкода: {unsoaked} ({incoming})",
+			"evocation": {
+				"highchat": "Спрацював ефект високої Муки!"
+			}
 		},
 		"dialog": {
 			"save": "Зберегти",
@@ -2092,7 +2110,8 @@
 			},
 			"soak": {
 				"missingdamage": "Вам потрібно вибрати тип шкоди",
-				"selectdamage": "Виберіть тип шкоди"
+				"selectdamage": "Виберіть тип шкоди",
+				"incomingdamage": "Вхідна шкода"
 			},
 			"power": {
 				"availrealms": "Доступні Реальності",

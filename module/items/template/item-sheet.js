@@ -1,12 +1,17 @@
 import ActionHelper from "../../scripts/action-helpers.js";
 import BonusHelper from "../../scripts/bonus-helpers.js"
 import SelectHelper from "../../scripts/select-helpers.js"
+import { calculateTotals } from "../../scripts/totals.js";
 
 export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 	
 	static get defaultOptions() {
 		return foundry.utils.mergeObject(super.defaultOptions, {
-			classes: [`wod20 wod-item`]
+			classes: [`wod20 wod-item`],
+			dragDrop: [{
+				dragSelector: null,
+				dropSelector: null
+			}]
 		});
 	}
 
@@ -135,10 +140,61 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 			data.item.system.details = await foundry.applications.ux.TextEditor.implementation.enrichHTML(data.item.system.details, {async: true});
 		}
 
+		if (data.item.system?.type === "wod.types.shapeform") {
+			const icon = (data.item.system.icon ?? "").trim();
+			const tokenimage = (data.item.system.tokenimage ?? "").trim();
+
+			data.hasShapeIcon = icon.length > 0;
+			data.hasShapeTokenImage = tokenimage.length > 0;
+			data.shapeIconDisplay = data.hasShapeIcon ? icon : "icons/svg/mystery-man.svg";
+			if (data.hasShapeTokenImage) {
+				data.shapeTokenDisplay = tokenimage;
+			}
+			else if (data.hasActor && data.actor?.img) {
+				data.shapeTokenDisplay = data.actor.img;
+			}
+			else {
+				data.shapeTokenDisplay = "icons/svg/mystery-man.svg";
+			}
+		}
+
 		console.log(`${data.item.name} - (${data.item.type})`);
 		console.log(data.item);
-		
+
 		return data;
+	}
+
+	/** @override */
+	_canDragDrop(_selector) {
+		return this.isEditable;
+	}
+
+	/** @override */
+	async _onDrop(event) {
+		const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
+
+		if (data.type === "Item" || (typeof data.uuid === "string" && (data.uuid.startsWith("Item.") || data.uuid.startsWith("Compendium.")))) {
+			if (data.type !== "Item") {
+				data.type = "Item";
+			}
+			return this._onDropItem(event, data);
+		}
+
+		return super._onDrop(event);
+	}
+
+	async _onDropItem(event, data) {
+		const droppedItem = await Item.implementation.fromDropData(data);
+
+		if (droppedItem.type !== "Bonus") {
+			return super._onDrop(event);
+		}
+
+		const handled = await BonusHelper.handleBonusDropOnItem(this.item, droppedItem);
+		if (handled) {
+			this.render();
+		}
+		return handled;
 	}
 
 	/** @override */
@@ -190,6 +246,57 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 		html
 			.find(".image-clear")
 			.click(this._onImageClear.bind(this));
+
+		if (this.item.type === "Trait" && this.item.system.type === "wod.types.shapeform") {
+			html
+				.find(".switch")
+				.click(this._switchSetting.bind(this));
+		}
+	}
+
+	async _switchSetting(event) {
+		event.preventDefault();
+
+		if (this.item.type !== "Trait" || this.item.system.type !== "wod.types.shapeform") {
+			return;
+		}
+
+		if (this.locked) {
+			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+			return;
+		}
+
+		const dataset = event.currentTarget.dataset;
+		const source = dataset.source;
+		const type = dataset.switchtype;
+		const itemData = foundry.utils.duplicate(this.item);
+
+		if (source === "usesoaksettings") {
+			itemData.system.usesoaksettings = !itemData.system.usesoaksettings;
+		}
+		else if (source === "soak") {
+			itemData.system.soak ??= {
+				bashing: { isrollable: true },
+				lethal: { isrollable: false },
+				aggravated: { isrollable: false }
+			};
+			itemData.system.soak[type].isrollable = !itemData.system.soak[type].isrollable;
+		}
+		else {
+			return;
+		}
+
+		await this.item.update(itemData);
+
+		const parentActor = this.item.actor;
+		if (parentActor?.type === "PC") {
+			let actorData = foundry.utils.duplicate(parentActor);
+			actorData = await calculateTotals(actorData);
+			actorData.system.settings.isupdated = false;
+			await parentActor.update(actorData);
+		}
+
+		this.render();
 	}
 
 	async _onToggleLocked(event) {
@@ -356,6 +463,9 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 				isactive: this.item.system.isactive
 			}
 
+			if (!Array.isArray(itemData.system.bonuslist)) {
+				itemData.system.bonuslist = [];
+			}
 			itemData.system.bonuslist.push(bonus);			
 		}
 
@@ -390,6 +500,9 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 
 		if (type == "bonus") {
 			const itemData = foundry.utils.duplicate(this.item);
+			if (!Array.isArray(itemData.system.bonuslist)) {
+				itemData.system.bonuslist = [];
+			}
 			itemData.system.bonuslist.splice(itemId, 1);
 			await this.item.update(itemData);
 		}
@@ -405,12 +518,15 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 	_onImageClear(event) {
 		event.preventDefault();
 
-		const imageField = $(event.currentTarget).data("image-field");
+		if (this.locked) {
+			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+			return;
+		}
 
-		const itemData = foundry.utils.duplicate(this.item);
-		itemData[imageField] = "";
-		this.item.update(itemData);
-		this.render();
+		const imageField = $(event.currentTarget).data("image-field");
+		const update = {};
+		foundry.utils.setProperty(update, imageField, "");
+		this.item.update(update);
 	}
 
 	_onDotCounterChange(event) {

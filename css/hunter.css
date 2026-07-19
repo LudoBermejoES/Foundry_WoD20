@@ -1,22 +1,6 @@
 .hunter {
     --sheet-background-color: var(--hunter-page-background);
-
-    /* Splat-specific font-size defaults (tweak per splat if needed) */
-    --wod-font-xxs: 0.4375rem;   /* 7px */
-    --wod-font-xs: 0.625rem;     /* 10px */
-    --wod-font-md: 0.875rem;     /* 14px */
-    --wod-font-base: 1rem;       /* 16px */
-    --wod-font-lg: 1.125rem;     /* 18px */
-    --wod-font-xl: 1.25rem;      /* 20px */
-    --wod-font-xxl: 1.5rem;      /* 24px */
-
-    /* Overrides to preserve current hard-coded sizes in this splat */
-    --wod-font-sheet-headline: 1.875rem; /* 30px */
-    --wod-font-headline-tabs: 1.75rem; /* 28px (.headlineTabs) */
-    --wod-font-headline-group: 1.75rem; /* 28px (dialog .headlineGroup) */
-    --wod-font-headline: 1.125rem; /* 18px (dialog .headline) */
-    --wod-font-second-headline-tabs: 1.625rem; /* 26px */
-} 
+}
   
 .hunter .modern {  
     --main-wod-banner: var(--hunter-banner-background);
@@ -30,6 +14,22 @@
   --main-mid-color: var(--main-hunter-mid-color);
   --main-dim-color: var(--main-hunter-dim-color);
   --color-shadow-primary: var(--main-hunter-color);
+
+  /* Splat-specific font-size defaults (aligned with exalted) */
+  --wod-font-xxs: 0.4375rem;   /* 7px */
+  --wod-font-xs: 0.625rem;     /* 10px */
+  --wod-font-md: 0.875rem;     /* 14px */
+  --wod-font-base: 1rem;       /* 16px */
+  --wod-font-lg: 1.125rem;     /* 18px */
+  --wod-font-xl: 1.25rem;      /* 20px */
+  --wod-font-xxl: 1.5rem;      /* 24px */
+
+  --wod-font-sheet-headline: 2.25rem; /* 36px (.sheet-headline) */
+  --wod-font-second-headline-tabs: 1.5625rem; /* 25px */
+  --wod-font-sheet-banner-text: 1.625rem; /* 26px (.splatFont.sheet-headline span) */
+  --wod-font-sm: 1rem; /* 16px (.headlineList) */
+  --wod-font-sheet-headline-variant: 1.625rem; /* 26px (.sheet-headline-variant) */
+  --wod-font-experience-value: 1.125rem; /* 18px (.experienceValue) */
 }
 
 .hunter:not(.noSplatFont) nav,
@@ -39,43 +39,58 @@
 	font-family: "hunter", var(--main-font);
 }
 
+.wod20.hunter.window-app .window-content,
+.wod20.hunter.wod-sheet .window-content {
+	font-family: var(--main-hunter-font);
+}
+
+.wod20.hunter button:not(.header-control),
+.wod20.hunter input,
+.wod20.hunter select {
+	font-family: var(--main-hunter-font);
+}
+
+.hunter.wod-item .infobox {
+	font-family: var(--main-hunter-font);
+	min-height: 36px;
+}
+
+.hunter.wod-dialog .infobox {
+	font-family: var(--main-hunter-font);
+	min-height: 36px;
+}
+
+.hunter.wod-sheet.noSplatFont .sheet-headline,
+.hunter.wod-sheet.noSplatFont .headlineGroup {
+	font-family: var(--main-hunter-font);
+}
+
 .hunter:not(.noSplatFont) .sheet-headline {
   font-size: var(--wod-font-sheet-headline);
 }
 
-.hunter:not(.noSplatFont) .headlineTabs {
-  font-size: var(--wod-font-headline-tabs);
-  line-height: 28px;
+.hunter:not(.noSplatFont) .splatFont.sheet-headline span.sheet-banner-text {
+  font-family: "hunter", var(--main-font);
+  font-size: var(--wod-font-sheet-banner-text);
 }
 
-.hunterDialog:not(.noSplatFont) .headlineGroup {
-  font-size: var(--wod-font-headline-group);
+.hunter:not(.noSplatFont) .headlineList,
+.hunter:not(.noSplatFont) .headlineRow {
+  font-family: var(--main-hunter-font);
+  font-size: var(--wod-font-sm);
 }
 
-.hunterDialog:not(.noSplatFont) .headline {
-  font-size: var(--wod-font-headline);
+.hunter .sheet-headline-variant {
+  font-size: var(--wod-font-sheet-headline-variant);
 }
 
-.hunter:not(.noSplatFont) .headlineList {
-  font-size: var(--wod-font-lg);
-  font-weight: normal;
+.hunter .experienceValue {
+  font-family: var(--main-hunter-font);
+  font-size: var(--wod-font-experience-value);
+  line-height: 23px;
 }
 
-.hunter:not(.noSplatFont) .sheet-headline {
-  font-size: var(--wod-font-sheet-headline);
-} 
-
-/* CORE */
-
-.hunter .sheet-banner-small {
-  background-size: 95%;
-}
-
-/* CORE end */
-
-/* SETTINGS */
-
-.hunter:not(.noSplatFont) .secondHeadlineTabs {
+.hunter .secondHeadlineTabs:not(.noSplatFont) {
   font-size: var(--wod-font-second-headline-tabs);
 }
 
@@ -83,4 +98,36 @@
   width: 25%;
 }
 
-/* SETTINGS end */
+/* CORE */
+
+.hunter .sheet-banner-small {
+  background-size: 95%;
+}
+
+.wod20.hunter .attribute-rowheight {
+  height: 21px;
+}
+
+.wod20.hunter .combat-natural-itemlist .width-namebox,
+.wod20.hunter .combat-melee-itemlist .width-namebox,
+.wod20.hunter .combat-ranged-itemlist .width-namebox,
+.wod20.hunter .combat-armor-itemlist .width-namebox,
+.wod20.hunter .gear-itemlist .width-namebox,
+.wod20.hunter .feature-itemlist .width-namebox,
+.wod20.hunter .description-itemlist .width-namebox {
+    margin-left: 5px;
+}
+
+/* CORE end */
+
+/* POWER */
+
+.wod20.hunter .item-row-area.mainpower-row .power-itemlist .width-namebox {
+    font-size: var(--wod-font-md);
+    width: 260px;
+    margin-left: 5px;
+}
+
+.wod20.hunter .item-row-area.power-row .power-itemlist .width-namebox {
+    width: 230px;
+}

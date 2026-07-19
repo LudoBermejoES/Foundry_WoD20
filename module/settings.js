@@ -212,6 +212,7 @@ export const systemSettings = function() {
         choices: {
 			"never": game.i18n.localize('wod.settings.nonotuse'),
 			"speciality": game.i18n.localize('wod.settings.usewithspeciality'),
+			"nospeciality": game.i18n.localize('wod.settings.usewithoutspeciality'),
             "always": game.i18n.localize('wod.settings.alwaysuse'),
 		}
 	});
@@ -286,6 +287,20 @@ export const systemSettings = function() {
 		config: false,
 		default: false,
 		type: Boolean,
+	});
+
+    game.settings.register("worldofdarkness", "demonEvocationTorment", {
+		name: game.i18n.localize('wod.settings.demonevocationtorment'),
+		hint: game.i18n.localize('wod.settings.demonevocationtormenthint'),
+		scope: "world",
+		config: false,
+		default: "off",
+		type: String,
+		choices: {
+			"off": game.i18n.localize('wod.settings.demonevocationtormentoff'),
+			"core": game.i18n.localize('wod.settings.demonevocationtormentcore'),
+			"playersguide": game.i18n.localize('wod.settings.demonevocationtormentplayersguide')
+		}
 	});
 
     game.settings.register("worldofdarkness", "demonSystemSettings", {
@@ -1006,7 +1021,7 @@ export class Demon extends FormApplication {
         if (hasPermission) {
             for (let s of game.settings.settings.values()) {
                 // Exclude settings the user cannot change
-                if ((s.key == "demonSystemSettings") || (s.key == "demonCreateForms")) {
+                if ((s.key == "demonSystemSettings") || (s.key == "demonCreateForms") || (s.key == "demonEvocationTorment")) {
                     // Update setting data
                     const setting = foundry.utils.duplicate(s);
 
@@ -1054,10 +1069,11 @@ export class Demon extends FormApplication {
     async _updateObject(event, formData) {
         for (let [k, v] of Object.entries(foundry.utils.flattenObject(formData))) {
             let s = game.settings.settings.get(k);
-            let current = game.settings.get("worldofdarkness", s.key);
+            if (!s) continue;
 
+            let current = game.settings.get(s.namespace, s.key);
             if (v !== current) {
-                await game.settings.set("worldofdarkness", s.key, v);
+                await game.settings.set(s.namespace, s.key, v);
             }
         }
     }

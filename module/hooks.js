@@ -3,17 +3,36 @@
  * All hooks are registered here to keep wod.js cleaner
  */
 
+// Resolve classList for AppV1 (element[0]) and AppV2 (sheet.classList / element) sheets
+function getSheetClassList(sheet) {
+	if (sheet.classList) return sheet.classList;
+	const el = sheet.element?.[0] ?? sheet.element;
+	return el?.classList;
+}
+
 // Helper function to clear language and theme classes
 function clearHTML(sheet) {
-	sheet.element[0].classList.remove("langDE");
-	sheet.element[0].classList.remove("langES");
-	sheet.element[0].classList.remove("langIT");
-	sheet.element[0].classList.remove("langFR");
-	sheet.element[0].classList.remove("langPT");
-	sheet.element[0].classList.remove("langSV");
-	sheet.element[0].classList.remove("langEN");
-	sheet.element[0].classList.remove("noSplatFont");
-	sheet.element[0].classList.remove("wod-theme-dark");
+	const classList = getSheetClassList(sheet);
+	if (!classList) return;
+
+	classList.remove("langDE");
+	classList.remove("langES");
+	classList.remove("langIT");
+	classList.remove("langFR");
+	classList.remove("langPT");
+	classList.remove("langSV");
+	classList.remove("langEN");
+	classList.remove("noSplatFont");
+	classList.remove("wod-theme-dark");
+
+	classList.remove("mortal");
+	classList.remove("mage");
+	classList.remove("vampire");
+	classList.remove("werewolf");
+	classList.remove("changeling");
+	classList.remove("demon");
+	classList.remove("hunter");
+	classList.remove("wraith");
 }
 
 // Helper function to construct option groups for select elements
@@ -64,6 +83,8 @@ export function registerHooks(constants, isTablet) {
 
 		clearHTML(sheet);
 
+		const splat = (sheet.splat || sheet.actor?.system?.settings?.splat || "").toLowerCase();
+
 		// adding the means to control the CSS by what language is used.
 		if (CONFIG.language == "de") {
 			sheet.classList.add("langDE");
@@ -84,75 +105,62 @@ export function registerHooks(constants, isTablet) {
 			sheet.classList.add("langEN");
 		}
 
-		if (sheet.splat.toLowerCase() == "mortal") {
+		if (splat == "mortal") {
 			sheet.classList.add("mortal");
-			sheet.classList.remove("wraith");
-			sheet.classList.remove("mage");
-			sheet.classList.remove("vampire");
-			sheet.classList.remove("werewolf");
-			sheet.classList.remove("changeling");
 
 			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
 				sheet.classList.remove(variant);
 			}
 		}
-		if (sheet.splat.toLowerCase() == "vampire") {
+		if (splat == "vampire") {
 			sheet.classList.add("vampire");
-			sheet.classList.remove("mortal");
-			sheet.classList.remove("wraith");
-			sheet.classList.remove("mage");		
-			sheet.classList.remove("werewolf");
-			sheet.classList.remove("changeling");
 
 			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
 				sheet.classList.remove(variant);
 			}
 		}
-		if ((sheet.splat.toLowerCase() == "werewolf") || (sheet.splat.toLowerCase() == "changingbreed")) {
+		if ((splat == "werewolf") || (splat == "changingbreed")) {
 			sheet.classList.add("werewolf");
-			sheet.classList.remove("mortal");
-			sheet.classList.remove("wraith");
-			sheet.classList.remove("mage");		
-			sheet.classList.remove("vampire");
-			sheet.classList.remove("changeling");
 
 			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
 				sheet.classList.remove(variant);
 			}
 		}
-		if (sheet.splat.toLowerCase() == "mage") {
+		if (splat == "mage") {
 			sheet.classList.add("mage");
-			sheet.classList.remove("mortal");
-			sheet.classList.remove("wraith");
-			sheet.classList.remove("werewolf");		
-			sheet.classList.remove("vampire");
-			sheet.classList.remove("changeling");
 
 			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
 				sheet.classList.remove(variant);
 			}
 		} 
 
-		if (sheet.splat.toLowerCase() == "changeling") {
+		if (splat == "changeling") {
 			sheet.classList.add("changeling");
-			sheet.classList.remove("mortal");
-			sheet.classList.remove("wraith");
-			sheet.classList.remove("werewolf");		
-			sheet.classList.remove("vampire");
-			sheet.classList.remove("mage");
 
 			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
 				sheet.classList.remove(variant);
 			}
 		}
 
-		if (sheet.splat.toLowerCase() == "wraith") {
+		if (splat == "demon") {
+			sheet.classList.add("demon");
+
+			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
+				sheet.classList.remove(variant);
+			}
+		}
+		
+		if (splat == "hunter") {
+			sheet.classList.add("hunter");
+
+			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
+				sheet.classList.remove(variant);
+			}
+		}
+
+
+		if (splat == "wraith") {
 			sheet.classList.add("wraith");
-			sheet.classList.remove("mortal");
-			sheet.classList.remove("changeling");
-			sheet.classList.remove("werewolf");		
-			sheet.classList.remove("vampire");
-			sheet.classList.remove("mage");
 
 			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
 				sheet.classList.remove(variant);
@@ -180,73 +188,131 @@ export function registerHooks(constants, isTablet) {
 
 		clearHTML(sheet);
 
+		const classList = getSheetClassList(sheet);
+		if (!classList) return;
+
 		if (isTablet) {
 			//ui.notifications.info("tabet"); 
 		}
 
 		// adding the means to control the CSS by what language is used.
 		if (CONFIG.language == "de") {
-			sheet.element[0].classList.add("langDE");
+			classList.add("langDE");
 		}
 		else if (CONFIG.language == "es") {
-			sheet.element[0].classList.add("langES");
+			classList.add("langES");
 		}
 		else if (CONFIG.language == "it") {
-			sheet.element[0].classList.add("langIT");
+			classList.add("langIT");
 		}
 		else if (CONFIG.language == "fr") {
-			sheet.element[0].classList.add("langFR");
+			classList.add("langFR");
 		}
 		else if (CONFIG.language == "pt-BR") {
-			sheet.element[0].classList.add("langPT");
+			classList.add("langPT");
 		}
 		else {
-			sheet.element[0].classList.add("langEN");
+			classList.add("langEN");
 		}
 
-		if (sheet.object.type.toLowerCase() == "mortal") {
-			sheet.element[0].classList.add("mortal");
-			sheet.element[0].classList.remove("wraith");
-			sheet.element[0].classList.remove("mage");
-			sheet.element[0].classList.remove("vampire");
-			sheet.element[0].classList.remove("werewolf");
-			sheet.element[0].classList.remove("changeling");
+		const actorType = sheet.object.type.toLowerCase();
+
+		if (actorType == "mortal") {
+			classList.add("mortal");
 
 			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
-				sheet.element[0].classList.remove(variant);
+				classList.remove(variant);
 			}
 
 			if (sheet.object.system.settings.variantsheet != "") {
-				sheet.element[0].classList.remove("mortal");
-				sheet.element[0].classList.add(sheet.object.system.settings.variant);
-				sheet.element[0].classList.add(sheet.object.system.settings.variantsheet.toLowerCase());
+				classList.remove("mortal");
+				classList.add(sheet.object.system.settings.variant);
+				classList.add(sheet.object.system.settings.variantsheet.toLowerCase());
 			}
 		}
 
-		if (sheet.object.type.toLowerCase() == "creature") {
-			sheet.element[0].classList.add("creature");
-			sheet.element[0].classList.remove("wraith");
-			sheet.element[0].classList.remove("mage");
-			sheet.element[0].classList.remove("vampire");
-			sheet.element[0].classList.remove("werewolf");
-			sheet.element[0].classList.remove("changeling");
-			sheet.element[0].classList.remove("demon");
+		if (actorType == "creature") {
+			classList.add("creature");
 
 			if (sheet.object.system.settings.variantsheet != "") {
-				sheet.element[0].classList.remove("creature");
-				sheet.element[0].classList.add(sheet.object.system.settings.variantsheet.toLowerCase());
+				classList.remove("creature");
+				classList.add(sheet.object.system.settings.variantsheet.toLowerCase());
 			}
+		}
+
+		if (actorType == "vampire") {
+			classList.add("vampire");
+
+			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
+				classList.remove(variant);
+			}
+		}
+
+		if ((actorType == "werewolf") || (actorType == "changingbreed")) {
+			classList.add("werewolf");
+
+			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
+				classList.remove(variant);
+			}
+		}
+
+		if (actorType == "mage") {
+			classList.add("mage");
+
+			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
+				classList.remove(variant);
+			}
+		}
+
+		if (actorType == "changeling") {
+			classList.add("changeling");
+
+			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
+				classList.remove(variant);
+			}
+		}
+
+		if (actorType == "demon") {
+			classList.add("demon");
+
+			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
+				classList.remove(variant);
+			}
+		}
+
+		if (actorType == "hunter") {
+			classList.add("hunter");
+
+			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
+				classList.remove(variant);
+			}
+		}
+
+		if (actorType == "wraith") {
+			classList.add("wraith");
+
+			for (const variant in CONFIG.worldofdarkness.variant.mortal) {
+				classList.remove(variant);
+			}
+		}
+
+		if (actorType == "mummy") {
+			classList.add("mummy");
+		}
+
+		if (actorType == "exalted") {
+			classList.add("exalted");
 		}
 
 		if (game.settings.get('worldofdarkness', 'useSplatFonts') === false) {
-			sheet.element[0].classList.add("noSplatFont");
+			classList.add("noSplatFont");
 		}
 		else if (!sheet.object.system.settings.usesplatfont) {
-			sheet.element[0].classList.add("noSplatFont");
+			classList.add("noSplatFont");
 		}
 
 		if (CONFIG.worldofdarkness.darkmode) {
-			sheet.element[0].classList.add("wod-theme-dark");
+			classList.add("wod-theme-dark");
 		}	
 	});
 

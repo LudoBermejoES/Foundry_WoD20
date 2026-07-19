@@ -8,6 +8,7 @@ import SphereHelper from "../../scripts/sphere-helpers.js";
 import ItemHelper from "../../scripts/item-helpers.js";
 import SelectHelper from "../../scripts/select-helpers.js"
 import CombatHelper from "../../scripts/combat-helpers.js";
+import BonusHelper from "../../scripts/bonus-helpers.js";
 
 
 import { calculateHealth } from "../../scripts/health.js";
@@ -1142,9 +1143,10 @@ export default class MortalActorSheet extends foundry.appv1.sheets.ActorSheet {
 			let itemData = foundry.utils.duplicate(item);
 			itemData.system.isactive = active;
 
-			if (itemData.system.bonuslist.length > 0) {
-				for (let i = 0; i <= itemData.system.bonuslist.length - 1; i++) {
-					itemData.system.bonuslist[i].isactive = active;
+			const bonuslist = BonusHelper.asBonuslist(itemData.system.bonuslist);
+			if (bonuslist.length > 0) {
+				for (let i = 0; i <= bonuslist.length - 1; i++) {
+					bonuslist[i].isactive = active;
 				}
 			}
 
@@ -1230,6 +1232,9 @@ export default class MortalActorSheet extends foundry.appv1.sheets.ActorSheet {
 				isactive: item.system.isactive
 			}
 
+			if (!Array.isArray(itemData.system.bonuslist)) {
+				itemData.system.bonuslist = [];
+			}
 			itemData.system.bonuslist.push(bonus);
 			await item.update(itemData);
 

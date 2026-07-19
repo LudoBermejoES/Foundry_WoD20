@@ -1,0 +1,12 @@
+<div class="sheet-area flex-columns power-forms-list">
+
+    <div class="headlineRow headlineList splatFont feature-itemlist">
+        <div class="largeBox">{{localize 'wod.advantages.apocalypticforms'}}</div>                
+    </div>
+
+    <div>
+		{{#each apocalypticforms as |form index|}}
+            {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=form locked=../locked edittitle="wod.labels.edit.apocalypticform" deletetitle="wod.labels.remove.apocalypticform" showtype=false}}
+		{{/each}}
+    </div>
+</div>

@@ -86,6 +86,7 @@
 			"nonotuse": "Nicht verwenden",
 			"alwaysuse": "Immer verwenden",
 			"usewithspeciality": "Verwendung mit Spezialität",
+			"usewithoutspeciality": "Verwendung ohne Spezialität",
 			"rulesettings": "Regel Einstellungen",
 			"rulesettingshint": "Alle gesammelten Einstellungen über Regeln",
 			"permissionsettings": "Berechtigungseinstellungen",
@@ -126,7 +127,12 @@
 			"demonsettingshint": "Welten, die in Dämonen die Gefallenen verwendet werden.",
 			"demoncreateforms": "Apokalyptische Formen automatisch erstellen",
 			"demoncreateformshint": "Beim Erstellen eines Dämonenbogens werden die apokalyptischen Formen automatisch auf dem Charakter erstellt.",
-			"demonsystemsettings": "Einstellung der Fähigkeitsliste",
+			"demonevocationtorment": "Lore-Torment-Effekte auswerten",
+			"demonevocationtormenthint": "Nach einem erfolgreichen Lore-Wurf im Chat vermerken, wenn der High-Torment-Effekt gilt. Wähle das Regelwerk oder deaktiviere die Funktion.",
+			"demonevocationtormentoff": "Nicht verwenden",
+			"demonevocationtormentcore": "Grundregelwerk",
+			"demonevocationtormentplayersguide": "Players Guide Errata",
+			"demonsystemsettings": "Einstellung der Fähigkeitsliste (demon actor only)",
 			"demonsystemsettingshint": "Aus welchem Setting stammt die Liste der Fähigkeiten?",
 			"demonsettingasbook": "Dem Buch zufolge",
 			"demonsettingas20th": "Laut V20",
@@ -174,7 +180,11 @@
 			"orderhint": "Drag the items into the order you want them presented on the sheet.",
 			"splatitem": "Template Item",
 			"splatfields": "Existing template fields",
-			"notinstalled": "None installed"
+			"notinstalled": "None installed",
+			"successesdamage": "Erfolge addieren zum Schaden",
+			"successesdamagehint": "Wenn aktiviert, werden überschüssige Erfolge aus dem Angriffswurf als Bonuswürfel zum Schadenswurf addiert.",
+			"virtueslimit": "Tugenden folgen dem maximalen Eigenschaftswert der Generation",
+			"virtueslimithint": "Wenn aktiviert, wird der Maximalwert der Tugenden auf den maximalen Eigenschaftswert begrenzt, den die Generation des Charakters erlaubt."
 		},
 		"types": {
 			"mortal": "Sterbliche",
@@ -949,6 +959,7 @@
 			"lethal": "Tödlicher Schaden",
 			"aggravated": "Schwer heilbarer Schaden",
 			"soak": "Absorb.",
+			"chimericalsoak": "Chimärische Absorption",
 			"penalty": "Strafe für Verwundung",
 			"chimerical": "Chimärisch",
 			"normal": "Normal"
@@ -1537,7 +1548,8 @@
 				"tokenhint": "Choose what icon that will be displayed on the token when this shapeform is active.",
 				"tokenimage": "Token Bild",
 				"tokenimagehint": "Das Bild, das der Token anzeigen wird, wenn diese Form aktiv ist. Leer lassen, um das Standardbild des Akteurs zu verwenden.",
-				"clearimage": "Clear selected image"
+				"clearimage": "Clear selected image",
+				"usesoaksettings": "Form-Soak-Einstellungen verwenden"
 			},
 			"feature": {
 				"trivial": "Trivial",
@@ -1650,7 +1662,8 @@
 				"biodone": "Done",
 				"bioneedkey": "Enter a field id before adding.",
 				"biokeyinvalid": "Field id cannot contain spaces or dots.",
-				"biokeyexists": "A field with id \"{key}\" already exists."
+				"biokeyexists": "A field with id \"{key}\" already exists.",
+				"usechimerical": "Chimärischen Schaden verwenden"
 			},
 			"new": {
 				"create": "Gegenstand erstellen",
@@ -1970,9 +1983,14 @@
 			"rollingremainactivetext": "Jeder Erfolg heilt eine Stufe Lebenspunkte von jeder Art von Schaden. Unabhängig davon, wie viel Schaden geheilt wird, gerät der Charakter in einen Berserkerrausch. Ein Werwolf erhält eine Kampfnarbe, wenn er erfolgreich aktiv bleibt.",
 			"addedautosucc": "Der Wurf addiert {0} automatische Erfolge",
 			"usingwillpower": "nutze Willenskraft",
+			"nowillpower": "{name} hat keine temporäre Willenskraft mehr!",
 			"favored": "Ist ein bevorzugter Wurf",
 			"bonusdices": "Bonus dices",
-			"nobotchpossible": "No botch possible on this roll"
+			"nobotchpossible": "No botch possible on this roll",
+			"unsoakeddamage": "Nicht absorbierter Schaden: {unsoaked} ({incoming})",
+			"evocation": {
+				"highchat": "High-Torment-Effekt ausgelöst!"
+			}
 		},
 		"dialog": {
 			"save": "speichern",
@@ -2092,7 +2110,8 @@
 			},
 			"soak": {
 				"missingdamage": "Sie müssen eine Schadensart auswählen",
-				"selectdamage": "wähle Schadensart"
+				"selectdamage": "wähle Schadensart",
+				"incomingdamage": "Eingehender Schaden"
 			},
 			"power": {
 				"availrealms": "verfügbare Reiche",

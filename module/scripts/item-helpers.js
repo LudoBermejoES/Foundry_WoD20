@@ -937,6 +937,20 @@ export default class ItemHelper {
 					localizeKey: "wod.power.arts",
 					condition: actor.system.settings.hasrealms && context.arts?.length
 				},
+				lores: {
+					id: "lores",
+					template: "hierarchical",
+					data: { items: context.lores },
+					localizeKey: "wod.power.lores",
+					condition: actor.system.settings.haslores && context.lores?.length
+				},
+				edges: {
+					id: "edges",
+					template: "hierarchical",
+					data: { items: context.edges },
+					localizeKey: "wod.power.edges",
+					condition: actor.system.settings.hasedges && context.edges?.length
+				},
 				numinas: {
 					id: "numinas",
 					template: "hierarchical",
@@ -1037,6 +1051,30 @@ export default class ItemHelper {
 				data: { items: context.unsortedarts },
 				localizeKey: "wod.power.unsortedarts",
 				sortAction: "SortArtPower",
+				condition: true
+			});
+		}
+
+		if (context.unsortedlores?.length) {
+			sections.push({
+				id: "unsortedlores",
+				priority: config.unsorted?.priority || 99,
+				template: "unsorted",
+				data: { items: context.unsortedlores },
+				localizeKey: "wod.power.unsortedlores",
+				sortAction: "SortLorePower",
+				condition: true
+			});
+		}
+
+		if (context.unsortededges?.length) {
+			sections.push({
+				id: "unsortededges",
+				priority: config.unsorted?.priority || 99,
+				template: "unsorted",
+				data: { items: context.unsortededges },
+				localizeKey: "wod.power.unsortededges",
+				sortAction: "SortEdgePower",
 				condition: true
 			});
 		}

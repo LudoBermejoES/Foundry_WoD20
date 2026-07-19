@@ -26,9 +26,18 @@
             </div>
         {{/if}}
 
-        <div class="clearareaBox infobox dialog-checkbox">
-            <div class="pullLeft"><input name="useWillpower" type="checkbox" {{isChecked object.useWillpower}} /></div>
-            <div class="pullLeft"><label for="useWillpower" class="dialog-casting-type-label">{{localize "wod.labels.usewillpower"}}</label></div>
+        {{#if (ne object.sheettype "hunterDialog")}}
+            <div class="clearareaBox infobox dialog-checkbox">
+                <div class="pullLeft"><input name="useWillpower" type="checkbox" {{isChecked object.useWillpower}} /></div>
+                <div class="pullLeft"><label for="useWillpower" class="dialog-casting-type-label">{{localize "wod.labels.usewillpower"}}</label></div>
+            </div>
+        {{/if}}
+
+        <div class="dialog-area">
+            <div class="headline splatFont">{{localize "wod.labels.bonus.headline"}}</div>
+            <div class="dialog-valueBox">
+                <input class="editable" type="text" name="bonus" value="{{object.bonus}}" autofocus />
+            </div>
         </div>
 
         {{!-- TODO: Only legacy actors --}}
@@ -39,11 +48,11 @@
                         {{localize "wod.dialog.power.nopower"}}
                     {{/if}}
                     {{#if (gt config.powerAbilities.length 0)}}
-                    <div class="dialog-secondaryability-buttons">
-                    {{#each config.powerAbilities as |ability key|}}
-                        <button id="secondaryability" class="button fullSplatColor pointer dialog-secondaryability-button {{#if (eq ../object.secondaryabilityid ability._id)}}active{{/if}}" value="{{ability._id}}">{{ability.name}}</button>
-                    {{/each}}
-                    </div>
+                        <div class="dialog-secondaryability-buttons">
+                            {{#each config.powerAbilities as |ability key|}}
+                                <button id="secondaryability" class="button fullSplatColor pointer dialog-secondaryability-button {{#if (eq ../object.secondaryabilityid ability._id)}}active{{/if}}" value="{{ability._id}}">{{ability.name}}</button>
+                            {{/each}}
+                        </div>
                     {{/if}}
                 </div>
             </div>

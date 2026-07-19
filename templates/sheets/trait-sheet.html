@@ -63,6 +63,15 @@
 							<span class="floating-label">{{localize "wod.labels.type"}}</span>
 						</div>					
 					{{/if}}
+
+					{{#if (eq data.system.type "wod.types.othertraits")}}
+						<div class="infobox bioInformationArea floating-label-group">
+							<select class="sheet-infoValues editable" name="system.placement" data-dtype="String">
+								{{selectOptions listData.PlacementList selected=data.system.placement localize=true}}
+							</select>
+							<span class="floating-label">LANG: Placement</span>
+						</div>
+					{{/if}}
 				{{/if}}
 
 				{{#if (eqAnyNot data.system.type "wod.types.talentsecondability" "wod.types.skillsecondability" "wod.types.knowledgesecondability" "wod.types.othertraits" "wod.types.apocalypticform" "wod.types.shapeform" "wod.types.aspect" "")}}
@@ -103,20 +112,88 @@
 
 			{{#if (eq data.system.type "wod.types.shapeform")}}
 				<div class="dialog-area">
-					<div>
-						<div class="splatFont">{{localize "wod.labels.trait.token"}}</div>
-						<img class="profile-img pointer shape-image" src="{{data.system.icon}}" data-edit="system.icon" />	
-						<div class="image-clear pointer" data-image-field="system.icon">{{localize "wod.labels.trait.clearimage"}}</div>
-						<div class="information-area">{{localize "wod.labels.trait.tokenhint"}}</div>
-					</div>
-					
-					<div>
-						<div class="splatFont">{{localize "wod.labels.trait.tokenimage"}}</div>
-						<img class="profile-img pointer shape-image" src="{{data.system.tokenimage}}" data-edit="system.tokenimage" />
-						<div class="image-clear pointer" data-image-field="system.tokenimage">{{localize "wod.labels.trait.clearimage"}}</div>
-						<div class="information-area">{{localize "wod.labels.trait.tokenimagehint"}}</div>					
+					<div class="shape-details-container shape-image-editor">
+
+						<div class="shape-panel">
+							<div class="splatFont">{{localize "wod.labels.trait.token"}}</div>
+							<div class="shape-panel-image">
+								<img class="profile-img pointer shape-image{{#unless hasShapeIcon}} shape-image-empty{{/unless}}" src="{{shapeIconDisplay}}" data-edit="system.icon" />
+							</div>
+							{{#if hasShapeIcon}}
+								<div class="image-clear pointer" data-image-field="system.icon">{{localize "wod.labels.trait.clearimage"}}</div>
+							{{/if}}
+							<div class="information-area">{{localize "wod.labels.trait.tokenhint"}}</div>
+						</div>
+
+						<div class="shape-panel">
+							<div class="splatFont">{{localize "wod.labels.trait.tokenimage"}}</div>
+							<div class="shape-panel-image">
+								<img class="profile-img pointer shape-image{{#unless hasShapeTokenImage}} shape-image-empty{{/unless}}" src="{{shapeTokenDisplay}}" data-edit="system.tokenimage" />
+							</div>
+							{{#if hasShapeTokenImage}}
+								<div class="image-clear pointer" data-image-field="system.tokenimage">{{localize "wod.labels.trait.clearimage"}}</div>
+							{{/if}}
+							<div class="information-area">{{localize "wod.labels.trait.tokenimagehint"}}</div>
+						</div>
+
 					</div>
 				</div>
+
+				{{#if (or (not hasActor) (and hasActor (eq actor.type "PC")))}}				
+					<div class="dialog-area">
+						<div class="flex-columns">
+
+							<div class="flex-rows">
+								<div class="switch settings-leftwidth settings-verticalcenter splatFont bold centerText pointer" data-source="usesoaksettings">
+									{{#if data.system.usesoaksettings}}
+										<i class="pointer fa-solid fa-toggle-on"></i>
+									{{else}}
+										<i class="pointer fa-solid fa-toggle-off"></i>
+									{{/if}}
+								</div>
+								<label for="system.usesoaksettings" class="headlineNormal settings-verticalcenter">{{localize "wod.labels.trait.usesoaksettings"}}</label>	
+							</div>							
+
+							{{#if data.system.usesoaksettings}}
+
+								<div class="flex-rows">
+									<div class="switch settings-leftwidth settings-verticalcenter splatFont bold centerText pointer" data-switchtype="bashing" data-source="soak">
+										{{#if data.system.soak.bashing.isrollable}}
+											<i class="pointer fa-solid fa-toggle-on"></i>
+										{{else}}
+											<i class="pointer fa-solid fa-toggle-off"></i>
+										{{/if}}
+									</div>
+									<label for="system.soak.bashing.isrollable" class="headlineNormal settings-verticalcenter">{{localize "wod.health.bashing"}}</label>	
+								</div>
+								<div class="flex-rows">
+									<div class="switch settings-leftwidth settings-verticalcenter splatFont bold centerText pointer" data-switchtype="lethal" data-source="soak">
+										{{#if data.system.soak.lethal.isrollable}}
+											<i class="pointer fa-solid fa-toggle-on"></i>
+										{{else}}
+											<i class="pointer fa-solid fa-toggle-off"></i>
+										{{/if}}
+									</div>
+									<label for="system.soak.lethal.isrollable" class="headlineNormal settings-verticalcenter">{{localize "wod.health.lethal"}}</label>	
+								</div>
+								<div class="flex-rows">
+									<div class="switch settings-leftwidth settings-verticalcenter splatFont bold centerText pointer" data-switchtype="aggravated" data-source="soak">
+										{{#if data.system.soak.aggravated.isrollable}}
+											<i class="pointer fa-solid fa-toggle-on"></i>
+										{{else}}
+											<i class="pointer fa-solid fa-toggle-off"></i>
+										{{/if}}
+									</div>
+									<label for="system.soak.aggravated.isrollable" class="headlineNormal settings-verticalcenter">{{localize "wod.health.aggravated"}}</label>	
+								</div>
+
+							{{/if}}
+
+							<div class="information-area">LANG: With this setting you are able to override the actor setting of when soak is allowed.</div>
+
+						</div>
+					</div>
+				{{/if}}
 			{{/if}}
 
 			{{#if (eq data.system.type "wod.types.apocalypticform")}}			

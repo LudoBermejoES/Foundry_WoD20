@@ -86,6 +86,7 @@
 			"nonotuse": "Ne pas utiliser",
 			"alwaysuse": "Toujours utiliser",
 			"usewithspeciality": "Utiliser avec une spécialité",
+			"usewithoutspeciality": "Utiliser sans spécialité",
 			"rulesettings": "Paramètres des règles de jeu",
 			"rulesettingshint": "Ensemble des paramètres pour les règles de jeu",
 			"permissionsettings": "Paramètres d'autorisation",
@@ -126,7 +127,12 @@
 			"demonsettingshint": "World settings used in Demon the Fallen.",
 			"demoncreateforms": "Create apocalyptic forms automatically",
 			"demoncreateformshint": "When creating a demon sheet create the apocalyptic forms automatically on the actor.",
-			"demonsystemsettings": "Ability list setting",
+			"demonevocationtorment": "Résoudre les effets de Tourment des Lores",
+			"demonevocationtormenthint": "Après un jet de Lore réussi, indiquer dans le chat lorsque l'effet de Tourment élevé s'applique. Choisissez le règlement ou désactivez la fonction.",
+			"demonevocationtormentoff": "Ne pas utiliser",
+			"demonevocationtormentcore": "Livre de base",
+			"demonevocationtormentplayersguide": "Errata du Players Guide",
+			"demonsystemsettings": "Ability list setting (demon actor only)",
 			"demonsystemsettingshint": "According to what setting are the list of abilities taken from",
 			"demonsettingasbook": "According to book",
 			"demonsettingas20th": "According to 20th ed WoD",
@@ -174,7 +180,11 @@
 			"orderhint": "Drag the items into the order you want them presented on the sheet.",
 			"splatitem": "Template Item",
 			"splatfields": "Existing template fields",
-			"notinstalled": "None installed"
+			"notinstalled": "None installed",
+			"successesdamage": "Les succès s'ajoutent aux dégâts",
+			"successesdamagehint": "Si activé, le nombre excédentaire de succès du jet d'attaque sera ajouté comme dés bonus au jet de dégâts.",
+			"virtueslimit": "Les vertus suivent la limite maximale de trait de Génération",
+			"virtueslimithint": "Si activé, la valeur maximale des vertus sera limitée à la valeur maximale de trait autorisée par la génération du personnage."
 		},
 		"types": {
 			"mortal": "Mortel",
@@ -949,6 +959,7 @@
 			"lethal": "Létal",
 			"aggravated": "Aggravé",
 			"soak": "Absorption",
+			"chimericalsoak": "Absorption chimérique",
 			"penalty": "Pénalité de blessure",
 			"chimerical": "Chimérique",
 			"normal": "Normal"
@@ -1537,7 +1548,8 @@
 				"tokenhint": "Choose what icon that will be displayed on the token when this shapeform is active.",
 				"tokenimage": "Image du token",
 				"tokenimagehint": "L'image que le token affichera lorsque cette forme est active. Laissez vide pour utiliser l'image par défaut de l'acteur.",
-				"clearimage": "Clear selected image"
+				"clearimage": "Clear selected image",
+				"usesoaksettings": "Utiliser les paramètres d'absorption de la forme"
 			},
 			"feature": {
 				"trivial": "Trivial",
@@ -1650,7 +1662,8 @@
 				"biodone": "Done",
 				"bioneedkey": "Enter a field id before adding.",
 				"biokeyinvalid": "Field id cannot contain spaces or dots.",
-				"biokeyexists": "A field with id \"{key}\" already exists."
+				"biokeyexists": "A field with id \"{key}\" already exists.",
+				"usechimerical": "Utiliser les dégâts chimériques"
 			},
 			"new": {
 				"create": "Create item",
@@ -1970,9 +1983,14 @@
 			"rollingremainactivetext": "Chaque succès guérit un niveau de santé de n'importe quel type de dégâts. Quelle que soit la quantité de dégâts soignés, le personnage entre dans une frénésie berserk. Un loup-garou gagne une cicatrice de combat chaque fois qu'il réussit à rester actif.",
 			"addedautosucc": "Le jet ajoute {0} succès automatiques",
 			"usingwillpower": "Using Willpower",
+			"nowillpower": "{name} has no temporary Willpower left!",
 			"favored": "Is a favored roll",
 			"bonusdices": "Bonus dices",
-			"nobotchpossible": "No botch possible on this roll"
+			"nobotchpossible": "No botch possible on this roll",
+			"unsoakeddamage": "Dégâts non absorbés : {unsoaked} ({incoming})",
+			"evocation": {
+				"highchat": "Effet de Tourment élevé déclenché !"
+			}
 		},
 		"dialog": {
 			"save": "Sauver",
@@ -2092,7 +2110,8 @@
 			},
 			"soak": {
 				"missingdamage": "Choisissez un type de dégâts",
-				"selectdamage": "Sélectionnez un type de dégât"
+				"selectdamage": "Sélectionnez un type de dégât",
+				"incomingdamage": "Dégâts entrants"
 			},
 			"power": {
 				"availrealms": "Royaumes Disponibles",

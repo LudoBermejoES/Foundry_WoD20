@@ -1,4 +1,5 @@
 import ActionHelper from "../../scripts/action-helpers.js";
+import BonusHelper from "../../scripts/bonus-helpers.js";
 import { ActionEdit } from "../../scripts/item-actions.js";
 import { ActionRemove } from "../../scripts/item-actions.js";
 import { ActionSwitch } from "../../scripts/item-actions.js";
@@ -49,11 +50,29 @@ export default class WoDItemSheetV2 extends HandlebarsApplicationMixin(foundry.a
             {
                 dragSelector: '[data-drag]',
                 dropSelector: '[data-drop-area]'
+            },
+            {
+                dragSelector: null,
+                dropSelector: null
             }
         ]
     }
 
-    #createDragDropHandlers() {}
+    #createDragDropHandlers() {
+        return this.options.dragDrop.map((d) => {
+            d.permissions = {
+                dragstart: this._canDragStart.bind(this),
+                drop: this._canDragDrop.bind(this)
+            };
+
+            d.callbacks = {
+                dragstart: this._onDragStart.bind(this),
+                dragover: this._onDragOver.bind(this),
+                drop: this._onDrop.bind(this)
+            };
+            return new foundry.applications.ux.DragDrop.implementation(d);
+        });
+    }
 
     splat = "";
 
@@ -85,11 +104,17 @@ export default class WoDItemSheetV2 extends HandlebarsApplicationMixin(foundry.a
         data.isCharacter = this.isCharacter;
         data.isGM = this.isGM;     
 
-        console.log("Context data:", this.item);
+        console.log(`${this.item.name} - (${this.item.type}`);
+		console.log(this.item);
 
         return {
             ...data
         }
+    }
+
+    async _onRender(context, options) {
+        await super._onRender(context, options);
+        this.#dragDrop.forEach((d) => d.bind(this.element));
     }
 
     static async onSubmitItemForm (event, form, formData) {
@@ -178,11 +203,17 @@ export default class WoDItemSheetV2 extends HandlebarsApplicationMixin(foundry.a
     _onDragOver() { }
 
     async _onDrop(event) {
-        const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event)
+        const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
 
-        // Handle different data types
+        if (data.type === "Item" || (typeof data.uuid === "string" && (data.uuid.startsWith("Item.") || data.uuid.startsWith("Compendium.")))) {
+            if (data.type !== "Item") {
+                data.type = "Item";
+            }
+            return this._onDropItem(event, data);
+        }
+
         switch (data.type) {
-            case 'Sort': 
+            case 'Sort':
                 return this._onSortingItem(event, data);
         }
     }
@@ -214,9 +245,18 @@ export default class WoDItemSheetV2 extends HandlebarsApplicationMixin(foundry.a
         this.render();
     }
 
-    async _onDropItem (event, data) {
-        const dataset = event.target.dataset;
-        const item = await Item.implementation.fromDropData(data)
+    async _onDropItem(event, data) {
+        const droppedItem = await Item.implementation.fromDropData(data);
+        const handled = await BonusHelper.handleBonusDropOnItem(this.item, droppedItem);
+
+        if (handled !== null) {
+            if (handled) {
+                this.render();
+            }
+            return handled;
+        }
+
+        return false;
     }
 
     setSphereName(sphere, istechnocracy) {

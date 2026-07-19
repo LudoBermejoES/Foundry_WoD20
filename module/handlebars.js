@@ -2,6 +2,10 @@ import BonusHelper from "./scripts/bonus-helpers.js";
 import ItemHelper from "./scripts/item-helpers.js";
 import Functions from "./functions.js";
 
+function getMeaningfulBonuses(bonuslist) {
+	return BonusHelper.asBonuslist(bonuslist).filter(bonus => bonus?.type);
+}
+
 /**
  * Registers all Handlebars helpers used throughout the system.
  * This function registers over 50 Handlebars helpers for various template operations.
@@ -673,7 +677,9 @@ export const registerHandlebarsHelpers = function () {
 						</div>`; 
 				}
 
-				if (itempowers[p].system.bonuslist.length > 0) {
+				const powerBonuses = BonusHelper.asBonuslist(itempowers[p].system.bonuslist);
+
+				if (powerBonuses.length > 0) {
 					let id = `collapsiblehekaubonus${p}`;
 					let typeid = `${powername}${p}`;
 	
@@ -689,11 +695,11 @@ export const registerHandlebarsHelpers = function () {
 
 				listhtml += `<div class="hide bonuses ${powername}${p}" data-area="${powername}bonus${p}">`;		// ----- BONUS START
 
-				for (const b in itempowers[p].system.bonuslist) {
+				for (const bonus of powerBonuses) {
 					listhtml += `<div class="clearareaBox">
-									<div class="pullLeft bonus-power-name headlineNormal">${itempowers[p].system.bonuslist[b].name}</div>
-									<div class="pullLeft headlineNormal" style="width: 200px;">${game.i18n.localize(CONFIG.worldofdarkness.bonus[itempowers[p].system.bonuslist[b].type])}</div>
-									<div class="pullLeft headlineNormal">${itempowers[p].system.bonuslist[b].value}</div>
+									<div class="pullLeft bonus-power-name headlineNormal">${bonus.name}</div>
+									<div class="pullLeft headlineNormal" style="width: 200px;">${game.i18n.localize(CONFIG.worldofdarkness.bonus[bonus.type])}</div>
+									<div class="pullLeft headlineNormal">${bonus.value}</div>
 								</div>`;
 				}
 
@@ -752,12 +758,14 @@ export const registerHandlebarsHelpers = function () {
 
 		let detailshtml = "";
 
-		if ((detail != "") || (bonuses != undefined)) {
+		const meaningfulBonuses = getMeaningfulBonuses(bonuses);
+
+		if ((detail != "") || (meaningfulBonuses.length > 0)) {
 			detailshtml = `<h3>${game.i18n.localize("wod.labels.power.system")}</h3> ${detail}`;
 
-			if ((bonuses != undefined) && (bonuses.length > 0)) {
+			if (meaningfulBonuses.length > 0) {
 				detailshtml += "<table><tr><td>"+game.i18n.localize("wod.labels.type")+"</td><td>"+game.i18n.localize("wod.effects.area")+"</td><td>"+game.i18n.localize("wod.labels.modifier")+"</td><tr>";
-				for (const bonus of bonuses) {
+				for (const bonus of meaningfulBonuses) {
 					detailshtml += "<tr><td>" + game.i18n.localize(CONFIG.worldofdarkness.bonus[bonus.type]) + "</td><td>" + game.i18n.localize(getAbility(actor, game.i18n.localize(getAttributes(bonus.settingtype)))) + "</td><td>" + bonus.value + "</td></tr>";
 				}
 				detailshtml += "</table>";
@@ -797,7 +805,7 @@ export const registerHandlebarsHelpers = function () {
 		}		
 
 		if(item?.type === "Rote") return true;
-		if (item?.system?.bonuslist?.length > 0) return true;
+		if (getMeaningfulBonuses(item?.system?.bonuslist).length > 0) return true;
 		if (description !== "") return true;
 		if (details !== "") return true;	
 
@@ -812,17 +820,18 @@ export const registerHandlebarsHelpers = function () {
 		}
 
 		let detailshtml = "";
+		const meaningfulBonuses = getMeaningfulBonuses(bonuses);
 
-		if ((detail !== "") || (bonuses?.length > 0)) {
+		if ((detail !== "") || (meaningfulBonuses.length > 0)) {
 			detailshtml = `<div class="headlineList">${game.i18n.localize("wod.labels.power.system")}</div><div class="tooltipText">${detail}</div>`;
 
-			if (bonuses?.length > 0) {
+			if (meaningfulBonuses.length > 0) {
 				detailshtml += `<div class="headlineRow description-itemlist">
 									<div class="width-namebox">${game.i18n.localize("wod.labels.type")}</div>
 									<div class="width-namebox">${game.i18n.localize("wod.effects.area")}</div>
 									<div class="width-valuebox">${game.i18n.localize("wod.labels.modifier")}</div>
 								</div>`;
-				for (const bonus of bonuses) {
+				for (const bonus of meaningfulBonuses) {
 					detailshtml += `<div class="item-row-area description-itemlist">
 										<div class="width-namebox tooltipText">${game.i18n.localize(CONFIG.worldofdarkness.bonus[bonus.type])}</div>
 										<div class="width-namebox tooltipText">${game.i18n.localize(getAbility(actor, game.i18n.localize(getAttributes(bonus.settingtype))))}</div>
@@ -1313,12 +1322,13 @@ export const registerHandlebarsHelpers = function () {
 	 * @return {Array} - array of bonus objects sorted by type
 	 */
 	Handlebars.registerHelper("getShapeformAttributeBonuses", function (shapeformItem) {
-		if (!shapeformItem?.system?.bonuslist || shapeformItem.system.bonuslist.length === 0) {
+		const bonuslist = BonusHelper.asBonuslist(shapeformItem?.system?.bonuslist);
+		if (bonuslist.length === 0) {
 			return [];
 		}
 
 		// Filter for attribute bonuses only (attribute_buff and attribute_diff)
-		const attributeBonuses = shapeformItem.system.bonuslist.filter(b => 
+		const attributeBonuses = bonuslist.filter(b => 
 			b.type === "attribute_buff" || b.type === "attribute_diff" || b.type === "attribute_fixed_value"
 		);
 

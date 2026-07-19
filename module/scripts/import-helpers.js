@@ -1,6 +1,9 @@
 const DISCIPLINES_COMPENDIUM = "world.disciplines";
+const APOCALYPTIC_FORMS_JSON = "systems/worldofdarkness/data/demon/apocalyptic-form-abilities.json";
 
 export default class ItemHelper {
+
+    static _apocalypticFormsCache = null;
 
     /**
      * Hämtar disciplines.json och returnerar listan av disciplin-id i ordning.
@@ -134,5 +137,50 @@ export default class ItemHelper {
             ui.notifications.error(`Failed to create disciplines: ${error.message}`);
             throw error;
         }
+    }
+
+    /**
+     * Läser apocalyptic-form-abilities.json (cachad efter första anropet).
+     * @returns {Promise<Object>}
+     */
+    static async GetApocalypticFormCatalog() {
+        if (!ItemHelper._apocalypticFormsCache) {
+            const res = await fetch(APOCALYPTIC_FORMS_JSON);
+            if (!res.ok) {
+                throw new Error(`Failed to load ${APOCALYPTIC_FORMS_JSON}: ${res.status}`);
+            }
+            ItemHelper._apocalypticFormsCache = await res.json();
+        }
+        return ItemHelper._apocalypticFormsCache;
+    }
+
+    /**
+     * Hämtar en apocalyptic form från JSON-katalogen och returnerar Trait-itemdata.
+     * Sparar inget i världen eller kompendium — använd returvärdet för senare skapande.
+     * @param {string} key - Nyckel i katalogen (t.ex. "armor", "claws_teeth")
+     * @returns {Promise<Object>} Item-dokumentdata redo för Item.create / createEmbeddedDocuments
+     */
+    static async CreateApocalypticForm(key) {
+        const catalog = await ItemHelper.GetApocalypticFormCatalog();
+        const entry = catalog.abilities?.find(ability => ability.key === key);
+
+        if (!entry) {
+            throw new Error(`Apocalyptic form "${key}" not found.`);
+        }
+
+        const itemData = foundry.utils.duplicate(entry.item);
+
+        if (!itemData.system) {
+            itemData.system = {};
+        }
+
+        itemData.system.iscreated = true;
+        itemData.system.version = game.system?.version ?? "";
+
+        if (!itemData.system.description && entry.mechanics?.summary) {
+            itemData.system.description = `<p>${entry.mechanics.summary}</p>`;
+        }
+
+        return itemData;
     }
 }

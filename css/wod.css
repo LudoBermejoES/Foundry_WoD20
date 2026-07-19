@@ -45,13 +45,25 @@
 }
 
 @font-face {
+  font-family: "hunter_normal";
+  src: url("../assets/fonts/exalted/frizquadratatt.ttf") format("truetype");
+}
+
+@font-face {
   font-family: "hunter";
-  src: url("../assets/fonts/hunter.ttf") format("truetype");
+  /* src: url("../assets/fonts/hunter.ttf") format("truetype"); */
+  src: url("../assets/fonts/exalted/SevenSerifICG-Bold.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "demon_normal";
+  src: url("../assets/fonts/exalted/frizquadratatt.ttf") format("truetype");
 }
 
 @font-face {
   font-family: "demon";
-  src: url("../assets/fonts/Demon_LushUs_v2.otf") format("truetype");
+  /* src: url("../assets/fonts/Demon_LushUs_v2.otf") format("opentype"); */
+  src: url("../assets/fonts/exalted/SevenSerifICG-Bold.ttf") format("truetype");
 }
 
 @font-face {
@@ -176,6 +188,8 @@
   --mummy-banner-small-background: url('../assets/img/graphics/sand.png');
 
   --main-exalted-font: "exalted_normal", Verdana, Helvetica, sans-serif;
+  --main-demon-font: "demon_normal", Verdana, Helvetica, sans-serif;
+  --main-hunter-font: "hunter_normal", Verdana, Helvetica, sans-serif;
 
   --main-exalted-color: rgb(169, 44, 38);
   --main-exalted-mid-color: rgba(169,44,38, 0.4);
@@ -220,16 +234,29 @@
   position: relative;
 }
 
+.wod20.wod-item.application {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wod20.wod-item.application section .tabs-container {
+  flex-shrink: 0;
+}
+
 .wod20 section.tab {
   overflow-y: auto;
   margin-left: 50px;  
   min-height: 700px;
 }
 
-.wod20.wod-item section.tab {
-  margin-left: 0px;  
+.wod20.wod-item.application section.tab {
+  margin-left: 0px;
   margin-top: 10px;
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  overflow-y: auto;
 }
 
 .wod20 .shape-selector-active {
@@ -392,9 +419,28 @@
   border: 2px groove var(--color-border-light-highlight) !important;
 }
 
-.wod-dialog .window-content,
+.wod-dialog .window-content {
+  background: var(--main-dialog-background);
+}
+
 .wod-item .window-content {
   background: var(--main-dialog-background);
+}
+
+.wod20.wod-item.application .window-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.wod20.wod-item.application .item-header {
+  flex-shrink: 0;
+}
+
+.wod20.wod-item:not(.application) .window-content {
+  overflow-y: auto;
 }
 
 .wod20 .rule-dialog select,
@@ -2213,6 +2259,45 @@ input.sheet-infoWidth {
   padding-left: 0; 
   margin-right: 0;
   border-radius: 10px;
+  object-fit: cover;
+}
+
+.wod20.wod-item .shape-image-editor .shape-image {
+  width: 100px;
+  height: 100px;
+  margin-top: 0;
+  margin-right: 0;
+  padding-left: 0;
+}
+
+.wod20.wod-item .shape-image-editor .shape-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.wod20.wod-item .shape-image-editor .shape-panel .information-area {
+  margin-top: 6px;
+}
+
+.wod20.wod-item .shape-image.shape-image-empty {
+  object-fit: contain;
+  padding: 14px;
+  background: var(--main-dim-color, #ececec);
+  border-style: dashed;
+  opacity: 0.65;
+}
+
+.wod20.wod-item .shape-image-editor .image-clear {
+  font-size: var(--wod-font-sm);
+  margin-top: 4px;
+  text-align: center;
+}
+
+.wod20.wod-item .settings-soak-toggle-label {
+  width: 175px;
+  flex: 0 0 175px;
 }
 
 .wod20 .shape-panel-image {
@@ -2222,6 +2307,33 @@ input.sheet-infoWidth {
 }
 
 /* PC actor power_shapes.hbs only – do not affect legacy werewolf shapechange tab */
+/* Layout only; splat banner image comes from .sheet-banner (PC demon uses small banner in demon.css). */
+.wod20.pc-actor .pc-power-shapes > div > .sheet-banner {
+  height: auto;
+  min-height: 36px;
+  padding: 4px 0 8px;
+  margin-top: 0;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wod20.pc-actor .pc-power-shapes .sheet-banner .sheet-banner-text {
+  position: static;
+  top: auto;
+  display: inline-block;
+  width: auto;
+  padding: 0 12px;
+  font-size: var(--wod-font-xl);
+  font-weight: var(--headline-normal-weight);
+  line-height: 1.2;
+  background: var(--sheet-background-color);
+  border-radius: 33%;
+  color: inherit;
+  opacity: 1;
+}
+
 /* Whole panel is the visual unit; selected form indicated by panel, not title background */
 .wod20 .pc-power-shapes .shape-panel {
   border: 2px solid transparent;
@@ -2261,13 +2373,14 @@ input.sheet-infoWidth {
   font-size: var(--wod-font-base);
   /* font-weight: 600; */
   line-height: 1.3;
-  text-align: left;
+  text-align: center;
   padding: 2px 4px;
   cursor: pointer;
   border-radius: 4px;
   background-color: transparent;
   color: inherit;
   transition: background-color 0.15s ease;
+
 }
 
 .wod20 .pc-power-shapes .shape-panel-title:hover {
@@ -2336,9 +2449,29 @@ input.sheet-infoWidth {
   width: 12px;
 }
 
+.wod20 .resource-value .supernaturalAttribute.resource-value-input {
+  width: 2em;
+  height: 12px;
+}
+
 .wod20 .difficulty-value .resource-value-step.active,
 .wod20 .resource-value .resource-value-step.active {
   background-color: #121212;
+}
+
+.wod20 .resource-value .resource-value-input {
+  width: 2.5em;
+  height: 14px;
+  padding: 0 2px;
+  text-align: center;
+  border: 1px solid #121212;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.wod20 .locked .resource-value .resource-value-input {
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 .wod20 .resource-value-static .resource-value-static-step {

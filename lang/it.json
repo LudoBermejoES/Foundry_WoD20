@@ -86,6 +86,7 @@
 			"nonotuse": "Non usare",
 			"alwaysuse": "Usare sempre",
 			"usewithspeciality": "Usare con specializzazione",
+			"usewithoutspeciality": "Usare senza specializzazione",
 			"rulesettings": "Impostazioni regole",
 			"rulesettingshint": "Tutte le impostazioni riguardanti le regole del sistema",
 			"permissionsettings": "Impostazioni permessi",
@@ -126,7 +127,12 @@
 			"demonsettingshint": "World settings used in Demon the Fallen.",
 			"demoncreateforms": "Create apocalyptic forms automatically",
 			"demoncreateformshint": "When creating a demon sheet create the apocalyptic forms automatically on the actor.",
-			"demonsystemsettings": "Ability list setting",
+			"demonevocationtorment": "Risolvi gli effetti di Tormento dei Lore",
+			"demonevocationtormenthint": "Dopo un tiro di Lore riuscito, indica in chat quando si applica l'effetto di Alto Tormento. Scegli il regolamento o disattiva la funzione.",
+			"demonevocationtormentoff": "Non usare",
+			"demonevocationtormentcore": "Manuale base",
+			"demonevocationtormentplayersguide": "Errata del Players Guide",
+			"demonsystemsettings": "Ability list setting (demon actor only)",
 			"demonsystemsettingshint": "According to what setting are the list of abilities taken from",
 			"demonsettingasbook": "According to book",
 			"demonsettingas20th": "According to 20th ed WoD",
@@ -174,7 +180,11 @@
 			"orderhint": "Drag the items into the order you want them presented on the sheet.",
 			"splatitem": "Template Item",
 			"splatfields": "Existing template fields",
-			"notinstalled": "None installed"
+			"notinstalled": "None installed",
+			"successesdamage": "I successi si aggiungono al danno",
+			"successesdamagehint": "Se abilitato, il numero eccedente di successi del tiro di attacco verrà aggiunto come dadi bonus al tiro dei danni.",
+			"virtueslimit": "Le virtù seguono il limite massimo di tratto della Generazione",
+			"virtueslimithint": "Se abilitato, il valore massimo delle virtù sarà limitato al valore massimo di tratto consentito dalla generazione del personaggio."
 		},
 		"types": {
 			"mortal": "Mortale",
@@ -949,6 +959,7 @@
 			"lethal": "Letali",
 			"aggravated": "Aggravati",
 			"soak": "Assorb.",
+			"chimericalsoak": "Assorbimento chimerico",
 			"penalty": "Penalità",
 			"chimerical": "Chimerico",
 			"normal": "Normale"
@@ -1537,7 +1548,8 @@
 				"tokenhint": "Choose what icon that will be displayed on the token when this shapeform is active.",
 				"tokenimage": "Immagine del token",
 				"tokenimagehint": "L'immagine che il token visualizzerà quando questa forma è attiva. Lascia vuoto per usare l'immagine predefinita dell'attore.",
-				"clearimage": "Clear selected image"
+				"clearimage": "Clear selected image",
+				"usesoaksettings": "Usa impostazioni assorbimento della forma"
 			},
 			"feature": {
 				"trivial": "Insignificante",
@@ -1650,7 +1662,8 @@
 				"biodone": "Done",
 				"bioneedkey": "Enter a field id before adding.",
 				"biokeyinvalid": "Field id cannot contain spaces or dots.",
-				"biokeyexists": "A field with id \"{key}\" already exists."
+				"biokeyexists": "A field with id \"{key}\" already exists.",
+				"usechimerical": "Usa danno chimerico"
 			},
 			"new": {
 				"create": "Create item",
@@ -1970,9 +1983,14 @@
 			"rollingremainactivetext": "Ogni successo guarisce un livello di salute di ogni tipo. Dopo il personaggio entra in uan frenesia berserk. Un Licantropo guadagna una Cicatrice di battaglia ogni volta che riesce a rimanere attivo.",
 			"addedautosucc": "Il tiro aggiunge {0} successi automatici",
 			"usingwillpower": "Using Willpower",
+			"nowillpower": "{name} has no temporary Willpower left!",
 			"favored": "Is a favored roll",
 			"bonusdices": "Bonus dices",
-			"nobotchpossible": "No botch possible on this roll"
+			"nobotchpossible": "No botch possible on this roll",
+			"unsoakeddamage": "Danno non assorbito: {unsoaked} ({incoming})",
+			"evocation": {
+				"highchat": "Effetto di Alto Tormento attivato!"
+			}
 		},
 		"dialog": {
 			"save": "Salva",
@@ -2092,7 +2110,8 @@
 			},
 			"soak": {
 				"missingdamage": "Seleziona la gravità del danno",
-				"selectdamage": "Selezione gravità danno"
+				"selectdamage": "Selezione gravità danno",
+				"incomingdamage": "Danno in arrivo"
 			},
 			"power": {
 				"availrealms": "Reami disponibili",

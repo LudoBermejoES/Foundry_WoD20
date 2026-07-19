@@ -86,6 +86,7 @@ Hooks.once("init", async function() {
 	CONFIG.worldofdarkness.successesToDamageRolls = game.settings.get('worldofdarkness', 'successesToDamageRolls');
 	CONFIG.worldofdarkness.specialityLevel = game.settings.get('worldofdarkness', 'specialityLevel');
 	CONFIG.worldofdarkness.demonSystemSettings = game.settings.get('worldofdarkness', 'demonSystemSettings');
+	CONFIG.worldofdarkness.demonEvocationTorment = game.settings.get('worldofdarkness', 'demonEvocationTorment');
 	CONFIG.worldofdarkness.hunteredgeSettings = game.settings.get('worldofdarkness', 'hunteredgeSettings');
 	CONFIG.worldofdarkness.wererwolfrageSettings = game.settings.get('worldofdarkness', 'wererwolfrageSettings');
 	CONFIG.worldofdarkness.virtuesLimit = game.settings.get('worldofdarkness', 'virtuesLimit');
@@ -490,12 +491,12 @@ Hooks.once("ready", async function () {
 			// Gather all unique icons
 			for (const shapeform of shapeforms) {
 				const iconUrl = shapeform.system.icon.trim();
-				if (iconUrl.toLowerCase().endsWith('.svg')) {
-					uniqueIcons.add(iconUrl);
+				if (!iconUrl || iconUrl === "icons/svg/mystery-man.svg") continue;
+				if (!iconUrl.toLowerCase().endsWith(".svg")) continue;
+				uniqueIcons.add(iconUrl);
 
-					if (!iconToName.has(iconUrl)) {
-						iconToName.set(iconUrl, shapeform.name || "Shapeform");
-					}
+				if (!iconToName.has(iconUrl)) {
+					iconToName.set(iconUrl, shapeform.name || "Shapeform");
 				}
 			}
 		}

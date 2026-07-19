@@ -7,6 +7,7 @@ import SelectHelper from "../../scripts/select-helpers.js";
 import { OnSquareCounterChange } from "../../scripts/action-helpers.js";
 import { OnSquareCounterClear } from "../../scripts/action-helpers.js";
 import { OnDotCounterChange } from "../../scripts/action-helpers.js";
+import { OnStatValueChange } from "../../scripts/action-helpers.js";
 import { OnActorSwitch } from "../../scripts/action-helpers.js";
 import { OnUseMacro } from "../../scripts/action-helpers.js";
 
@@ -216,6 +217,7 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 
 		// Check viewBiotabPermission
 		let viewBiotabPermission = "full";
+
 		if (!game.user.isGM && !this.actor.isOwner) {
 			if (this.actor.limited) {
 				viewBiotabPermission = CONFIG.worldofdarkness.limitedSeeFullActor;
@@ -226,12 +228,14 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 
 		// Filter tabs based on permission
 		const filteredTabs = {};
+
 		if (viewBiotabPermission === "full") {
 			// User has full access, include all tabs
 			for (const [key, tab] of Object.entries(tabs)) {
 				filteredTabs[key] = tab;
 			}
-		} else {
+		} 
+		else {
 			// User has limited access, only show bio tab
 			if (tabs.bio) {
 				filteredTabs.bio = tabs.bio;
@@ -250,7 +254,8 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 			if (tab.id === "powers") {
 				// Power icon depends on actor's splat type (discipline for vampire, gift for werewolf, etc.)
 				tab.icon = game.worldofdarkness.icons[this.splat][getPowertype(this.actor)];
-			} else {
+			} 
+			else {
 				// For other tabs, use the icon from tabs definition or fallback to default
 				if (tab.id === "feature") {
 					tab.icon = game.worldofdarkness.icons[this.splat].note;
@@ -433,6 +438,9 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 		
 		// Highlight dot/box UI based on current values
 		ActionHelper.SetupDotCounters_v2(element);
+
+		// Numeric input for high-max attributes and abilities
+		this._bindStatValueInputs(element);
 
 		// right-click health boxes - use event delegation
 		this._bindHealthContextMenu(element);
@@ -881,6 +889,23 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 	}
 
 	/**
+	 * Numeric value inputs for attributes/abilities with max > 6.
+	 * @param {HTMLElement} root
+	 */
+	_bindStatValueInputs(root) {
+		const inputs = root.querySelectorAll?.(".resource-value-input");
+		if (!inputs?.length) return;
+
+		inputs.forEach(el => {
+			if (el.dataset.valueBound) return;
+			el.dataset.valueBound = "true";
+			el.addEventListener("change", (event) => {
+				OnStatValueChange.call(this, event, event.currentTarget);
+			});
+		});
+	}
+
+	/**
 	 * Quintessence wheel right-click (contextmenu) for paradox.
 	 * Binds contextmenu event listeners to quintessence wheel elements for handling paradox wheel interactions.
 	 * @param {HTMLElement} root - The root element to search for quintessence wheel elements
@@ -1146,6 +1171,8 @@ export const preparePowersContext = async function (context, actor) {
 	// Core power categories
 	context.disciplines = ItemHelper.GetPowersByType(actor, "wod.types.discipline", true);
 	context.arts = ItemHelper.GetPowersByType(actor, "wod.types.art", true);
+	context.lores = ItemHelper.GetPowersByType(actor, "wod.types.lore", true);
+	context.edges = ItemHelper.GetPowersByType(actor, "wod.types.edge", true);
 	
 	context.combinations = ItemHelper.GetPowersByType(actor, "wod.types.combination", true);
 	context.rituals = ItemHelper.GetPowersByType(actor, "wod.types.ritual", true);
@@ -1158,10 +1185,15 @@ export const preparePowersContext = async function (context, actor) {
 	// Unsorted powers (no parent or missing parent reference)
 	const disciplinePowers = ItemHelper.GetPowersByType(actor, "wod.types.disciplinepower");
 	const artPowers = ItemHelper.GetPowersByType(actor, "wod.types.artpower");
+	const lorePowers = ItemHelper.GetPowersByType(actor, "wod.types.lorepower");
+	const edgePowers = ItemHelper.GetPowersByType(actor, "wod.types.edgepower");
 	const numinaPowers = ItemHelper.GetPowersByType(actor, "wod.types.numinapower");
 
 	context.unsorteddisciplines = disciplinePowers.filter(power => lacksParent(power, context.disciplines));
 	context.unsortedarts = artPowers.filter(power => lacksParent(power, context.arts));
+	context.unsortedlores = lorePowers.filter(power => lacksParent(power, context.lores));
+	context.unsortededges = edgePowers.filter(power => lacksParent(power, context.edges));
+	
 	context.unsortednuminas = numinaPowers.filter(power => lacksParent(power, context.numinas));
 
 	// Gifts grouped by rank
@@ -1173,6 +1205,23 @@ export const preparePowersContext = async function (context, actor) {
 	// Shapes remain Traits but follow the same ordering logic
 	const allShapes = actor?.items.filter(item => item.type === "Trait" && item.system.type === "wod.types.shapeform" && item.system.isvisible);
 	context.shapes = allShapes.sort((a, b) => {
+		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
+		const orderB = b.system.order !== undefined ? Number(b.system.order) : 999;
+		if (orderA !== orderB) return orderA - orderB;
+		return a.name.localeCompare(b.name);
+	});
+
+	const allApocalypticForms = actor?.items.filter(item =>
+    item.type === "Trait" && item.system.type === "wod.types.apocalypticform");
+	context.apocalypticforms = allApocalypticForms.sort((a, b) => {
+		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
+		const orderB = b.system.order !== undefined ? Number(b.system.order) : 999;
+		if (orderA !== orderB) return orderA - orderB;
+		return a.name.localeCompare(b.name);
+	});
+
+	const allPowerTraits = actor?.items.filter(item => item.type === "Trait" && item.system.type === "wod.types.othertraits" && item.system.placement === "power");
+	context.powertraits = allPowerTraits.sort((a, b) => {
 		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
 		const orderB = b.system.order !== undefined ? Number(b.system.order) : 999;
 		if (orderA !== orderB) return orderA - orderB;
@@ -1226,7 +1275,15 @@ export const prepareFeatureContext = async function (context, actor) {
 	context.bloodbounds = ItemHelper.GetItemType(actor, "Feature", "wod.types.bloodbound");
 	context.boons 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.boon");
 	context.oaths 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.oath");
-	context.othertraits = ItemHelper.GetItemType(actor, "Trait", "wod.types.othertraits");	
+
+	const allFeatureTraits = actor?.items.filter(item => item.type === "Trait" && item.system.type === "wod.types.othertraits" && item.system.placement === "feature");
+	context.othertraits = allFeatureTraits.sort((a, b) => {
+		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
+		const orderB = b.system.order !== undefined ? Number(b.system.order) : 999;
+		if (orderA !== orderB) return orderA - orderB;
+		return a.name.localeCompare(b.name);
+	});
+	//context.othertraits = ItemHelper.GetItemType(actor, "Trait", "wod.types.othertraits");	
 
   	return context;
 }
@@ -1301,6 +1358,31 @@ export const prepareSettingsContext = async function (context, actor) {
 	// Shapes remain Traits but follow the same ordering logic
 	const allShapes = actor?.items.filter(item => item.type === "Trait" && item.system.type === "wod.types.shapeform");
 	context.shapes = allShapes.sort((a, b) => {
+		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
+		const orderB = b.system.order !== undefined ? Number(b.system.order) : 999;
+		if (orderA !== orderB) return orderA - orderB;
+		return a.name.localeCompare(b.name);
+	});
+
+	const allApocalypticForms = actor?.items.filter(item =>
+    item.type === "Trait" && item.system.type === "wod.types.apocalypticform");
+	context.apocalypticforms = allApocalypticForms.sort((a, b) => {
+		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
+		const orderB = b.system.order !== undefined ? Number(b.system.order) : 999;
+		if (orderA !== orderB) return orderA - orderB;
+		return a.name.localeCompare(b.name);
+	});
+
+	const allPowerTraits = actor?.items.filter(item => item.type === "Trait" && item.system.type === "wod.types.othertraits" && item.system.placement === "power");
+	context.powertraits = allPowerTraits.sort((a, b) => {
+		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
+		const orderB = b.system.order !== undefined ? Number(b.system.order) : 999;
+		if (orderA !== orderB) return orderA - orderB;
+		return a.name.localeCompare(b.name);
+	});
+
+	const allFeatureTraits = actor?.items.filter(item => item.type === "Trait" && item.system.type === "wod.types.othertraits" && item.system.placement === "feature");
+	context.featuretraits = allFeatureTraits.sort((a, b) => {
 		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
 		const orderB = b.system.order !== undefined ? Number(b.system.order) : 999;
 		if (orderA !== orderB) return orderA - orderB;

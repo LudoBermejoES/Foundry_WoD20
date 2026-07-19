@@ -35,9 +35,13 @@
 							<span class="attribute-total">{{attribute.total}}</span>
 						{{/if}}
 
-						{{#numLoop attribute.max}}							
-							<span class=" {{#if (gt attribute.max 5)}}supernaturalAttribute{{/if}} resource-value-step" data-action="editDot" data-type="{{../../config.splat.mortal}}" data-index="{{this}}"></span>							
-						{{/numLoop}}
+						{{> "systems/worldofdarkness/templates/actor/parts/stat_value_dots.hbs"
+							max=attribute.max
+							value=attribute.value
+							locked=../locked
+							name=(concat "system.attributes." key ".value")
+							statKey=key
+							dotType=../config.splat.mortal}}
 						
 						{{#if (gte attribute.value 4)}}
 							{{#if (not ../locked)}}

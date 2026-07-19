@@ -938,6 +938,57 @@ export const OnDotCounterChange = async function (event, target) {
 	});
 }
 
+export const OnStatValueChange = async function (event, target) {
+	event.preventDefault();
+
+	if (!target) return;
+
+	if (this.locked) {
+		ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+		target.value = target.dataset.value ?? "";
+		return;
+	}
+
+	const raw = String(target.value ?? "").trim();
+	if (raw === "" || !/^\d+$/.test(raw)) {
+		ui.notifications.warn(game.i18n.localize("wod.system.invalidstatvalue"));
+		target.value = target.dataset.value ?? "";
+		return;
+	}
+
+	const newValue = parseInt(raw, 10);
+	const max = Number(target.dataset.max ?? 0);
+	const currentValue = Number(target.dataset.value ?? 0);
+
+	if (newValue < 0 || newValue > max) {
+		ui.notifications.warn(game.i18n.format("wod.system.invalidstatrange", { max }));
+		target.value = String(currentValue);
+		return;
+	}
+
+	if (newValue === currentValue) return;
+
+	const path = (target.dataset.name || "").split(".");
+	const itemid = target.dataset.itemid;
+
+	if (itemid) {
+		const item = await this.actor.getEmbeddedDocument("Item", itemid);
+		const itemData = foundry.utils.duplicate(item);
+		setNested(itemData, path, newValue);
+		await item.update(itemData);
+	}
+	else {
+		let actorData = foundry.utils.duplicate(this.actor);
+		setNested(actorData, path, newValue);
+		actorData = await calculateTotals(actorData);
+		actorData.system.settings.isupdated = false;
+		await this.actor.update(actorData);
+	}
+
+	target.dataset.value = String(newValue);
+	target.value = String(newValue);
+}
+
 export const OnUseMacro = async function (event, target) {
 	event.preventDefault();
 	if (!target) return;
@@ -1077,7 +1128,7 @@ export const OnItemActive = async function (event, target) {
 		active = true;
 	}
 
-	if (itemData.system.bonuslist.length > 0) {
+	if (Array.isArray(itemData.system.bonuslist) && itemData.system.bonuslist.length > 0) {
 		for (let i = 0; i <= itemData.system.bonuslist.length - 1; i++) {
 			itemData.system.bonuslist[i].isactive = active;
 		}
@@ -1133,7 +1184,7 @@ export const OnItemSwitch = async function (event, target) {
 
 	foundry.utils.setProperty(itemData, path, !current);
 
-	if (itemData.system?.bonuslist?.length > 0) {
+	if (Array.isArray(itemData.system.bonuslist) && itemData.system.bonuslist.length > 0) {
 		let isactive = false;
 
 		if (itemData.system.isactive !== undefined) {
@@ -1479,6 +1530,104 @@ export const OnHandleImbalance = async function (event, target) {
 	this.render();
 };
 
+/** @type {Set<string>} */
+const SHAPE_TOKEN_PLACEHOLDER_IMAGES = new Set([
+	"icons/svg/mystery-man.svg"
+]);
+
+/**
+ * Return a shapeform token texture URL only when one is explicitly configured.
+ * @param {string|undefined|null} url
+ * @returns {string|null}
+ */
+function _resolveShapeTokenImageUrl(url) {
+	const trimmed = (url ?? "").trim();
+	if (!trimmed || SHAPE_TOKEN_PLACEHOLDER_IMAGES.has(trimmed)) return null;
+	return trimmed;
+}
+
+/**
+ * Return a shapeform overlay icon URL (system.icon) when configured for token status display.
+ * @param {string|undefined|null} url
+ * @returns {string|null}
+ */
+function _resolveShapeformIconUrl(url) {
+	const trimmed = (url ?? "").trim();
+	if (!trimmed || SHAPE_TOKEN_PLACEHOLDER_IMAGES.has(trimmed)) return null;
+	if (!trimmed.toLowerCase().endsWith(".svg")) return null;
+	return trimmed;
+}
+
+/** @param {string} iconUrl */
+function _shapeformStatusIdFromIconUrl(iconUrl) {
+	const fileName = iconUrl.split("/").pop().replace(".svg", "");
+	return `wod_shapeform_${fileName}`;
+}
+
+/** @param {Actor} actor */
+function _getActorEffectsArray(actor) {
+	if (!actor.effects) return [];
+	if (actor.effects instanceof foundry.utils.Collection) return Array.from(actor.effects.values());
+	if (Array.isArray(actor.effects)) return actor.effects;
+	if (actor.effects.size !== undefined) return Array.from(actor.effects);
+	return [];
+}
+
+/** @param {unknown} statuses */
+function _getShapeformStatusKeys(statuses) {
+	if (!statuses) return [];
+	const keys = [];
+	if (statuses instanceof Set) {
+		statuses.forEach(key => {
+			if (typeof key === "string" && key.startsWith("wod_shapeform_")) keys.push(key);
+		});
+	} else if (Array.isArray(statuses)) {
+		statuses.forEach(key => {
+			if (typeof key === "string" && key.startsWith("wod_shapeform_")) keys.push(key);
+		});
+	} else if (typeof statuses === "object") {
+		Object.keys(statuses).forEach(key => {
+			if (key.startsWith("wod_shapeform_") && /** @type {Record<string, unknown>} */ (statuses)[key]) keys.push(key);
+		});
+	}
+	return keys;
+}
+
+/** @param {ActiveEffect} effect */
+function _isShapeformIconEffect(effect) {
+	if (effect.flags?.worldofdarkness?.shapeformIcon === true) return true;
+	return _getShapeformStatusKeys(effect.statuses).length > 0;
+}
+
+/** @param {ActiveEffect} effect @param {string} statusId */
+function _effectHasShapeformStatusId(effect, statusId) {
+	return _getShapeformStatusKeys(effect.statuses).includes(statusId);
+}
+
+/** @param {string} statusId @param {string} iconUrl @param {string} name */
+function _registerShapeformStatusEffect(statusId, iconUrl, name) {
+	if (!Array.isArray(CONFIG.statusEffects)) {
+		CONFIG.statusEffects = [];
+	}
+	const existing = CONFIG.statusEffects.find(s => s.id === statusId);
+	if (existing) {
+		existing.img = iconUrl;
+		existing.name = name;
+		return;
+	}
+	CONFIG.statusEffects.push({
+		id: statusId,
+		name,
+		img: iconUrl
+	});
+}
+
+/** @param {Actor} actor */
+async function _removeShapeformIconEffects(actor) {
+	const effects = _getActorEffectsArray(actor).filter(_isShapeformIconEffect);
+	await Promise.all(effects.map(effect => effect.delete()));
+}
+
 /**
  * Uppdatera token ikon baserat på aktiv shapeform för PC Actors
  * @param {Actor} actor - The actor to update token icon for
@@ -1486,157 +1635,53 @@ export const OnHandleImbalance = async function (event, target) {
  */
 async function _updateShapeformTokenIcon(actor, shapeformItem) {
 	if (!actor || !shapeformItem || (actor.type !== "PC" && actor.type !== "pc")) return;
-	
-	const iconUrl = shapeformItem?.system?.icon?.trim();
-	const isSvg = iconUrl?.toLowerCase().endsWith('.svg');
-	
-	// Create unique status ID based on icon URL
-	let statusId = "wod_shapeform_icon";
-	if (isSvg) {
-		const fileName = iconUrl.split('/').pop().replace('.svg', '');
-		statusId = `wod_shapeform_${fileName}`;
-		
-		// Register status effect dynamically if it doesn't exist
-		if (!Array.isArray(CONFIG.statusEffects)) {
-			CONFIG.statusEffects = [];
-		}
-		if (!CONFIG.statusEffects.find(s => s.id === statusId)) {
-			CONFIG.statusEffects.push({
-				id: statusId,
-				name: shapeformItem.name || "Shapeform",
-				img: iconUrl
-			});
-		}
-	}
-	
-	// Helper function to convert effects to array
-	const getEffectsArray = () => {
-		if (!actor.effects) return [];
-		if (actor.effects instanceof foundry.utils.Collection) return Array.from(actor.effects.values());
-		if (Array.isArray(actor.effects)) return actor.effects;
-		if (actor.effects.size !== undefined) return Array.from(actor.effects);
-		return [];
-	};
-	
-	// Helper function to find shapeform status keys in an effect
-	const getShapeformStatusKeys = (statuses) => {
-		if (!statuses) return [];
-		const keys = [];
-		if (statuses instanceof Set) {
-			statuses.forEach(key => {
-				if (typeof key === 'string' && key.startsWith('wod_shapeform_')) keys.push(key);
-			});
-		} else if (Array.isArray(statuses)) {
-			statuses.forEach(key => {
-				if (typeof key === 'string' && key.startsWith('wod_shapeform_')) keys.push(key);
-			});
-		} else if (typeof statuses === 'object') {
-			Object.keys(statuses).forEach(key => {
-				if (key.startsWith('wod_shapeform_') && statuses[key]) keys.push(key);
-			});
-		}
-		return keys;
-	};
-	
-	// Remove all existing shapeform icons
-	const effectsArray = getEffectsArray();
-	const activeShapeformStatuses = new Set();
-	
-	for (const effect of effectsArray) {
-		getShapeformStatusKeys(effect.statuses).forEach(key => activeShapeformStatuses.add(key));
-	}
-	
-	// Deactivate existing status effects
-	if (actor.toggleStatusEffect && activeShapeformStatuses.size > 0) {
-		await Promise.all(Array.from(activeShapeformStatuses).map(async (statusKey) => {
-			try {
-				await actor.toggleStatusEffect(statusKey, {active: false});
-			} catch (error) {
-				// Fallback: Remove effect directly if toggleStatusEffect fails
-				const effect = effectsArray.find(e => {
-					if (!e.statuses) return false;
-					const keys = getShapeformStatusKeys(e.statuses);
-					return keys.includes(statusKey);
-				});
-				if (effect) await effect.delete();
-			}
-		}));
+
+	const iconUrl = _resolveShapeformIconUrl(shapeformItem?.system?.icon);
+	const effectsArray = _getActorEffectsArray(actor);
+
+	if (!iconUrl) {
+		await _removeShapeformIconEffects(actor);
 	} else {
-		// Fallback: Remove effects via flags
-		const effectsToDelete = effectsArray.filter(e => e.flags?.worldofdarkness?.shapeformIcon === true);
-		await Promise.all(effectsToDelete.map(e => e.delete()));
-	}
-	
-	// Create new icon if URL exists and is SVG
-	if (isSvg) {
-		try {
-			// Update CONFIG.statusEffects with correct icon
-			const statusEffect = CONFIG.statusEffects.find(s => s.id === statusId);
-			if (statusEffect && statusEffect.img !== iconUrl) {
-				statusEffect.img = iconUrl;
-				statusEffect.name = shapeformItem.name || "Shapeform";
-			}
-			
-			// Create ActiveEffect
-			if (actor.toggleStatusEffect) {
-				await actor.toggleStatusEffect(statusId, {active: true});
-				
-				// Update icon if it differs
-				const updatedEffects = getEffectsArray();
-				const createdEffect = updatedEffects.find(e => {
-					if (!e || !e.statuses) return false;
-					
-					// If statuses is an array
-					if (Array.isArray(e.statuses)) {
-						return e.statuses.includes(statusId);
-					}
-					// If statuses is an object
-					if (typeof e.statuses === 'object') {
-						return e.statuses[statusId] === true;
-					}
-					return false;
-				});
-				
-				// Check that createdEffect exists and has update method before calling it
-				if (createdEffect && typeof createdEffect.update === 'function' && createdEffect.icon !== iconUrl) {
-					await createdEffect.update({icon: iconUrl});
-				}
-			} else {
-				// Fallback: Create ActiveEffect directly
-				await actor.createEmbeddedDocuments("ActiveEffect", [{
-					name: shapeformItem.name || "Shapeform",
-					icon: iconUrl,
-					statuses: { [statusId]: true },
-					disabled: false,
-					origin: actor.uuid,
-					flags: { 
-						worldofdarkness: { 
-							shapeformIcon: true,
-							shapeformId: shapeformItem._id 
-						} 
-					}
-				}]);
-			}
-		} catch (error) {
-			console.error("Failed to create shapeform icon status effect:", error);
-			// Fallback: Try to create ActiveEffect directly
+		const statusId = _shapeformStatusIdFromIconUrl(iconUrl);
+		const effectName = shapeformItem.name || "Shapeform";
+		_registerShapeformStatusEffect(statusId, iconUrl, effectName);
+
+		const matching = effectsArray.filter(effect => _effectHasShapeformStatusId(effect, statusId));
+		const stale = effectsArray.filter(effect => _isShapeformIconEffect(effect) && !_effectHasShapeformStatusId(effect, statusId));
+
+		await Promise.all(stale.map(effect => effect.delete()));
+
+		if (matching.length === 0) {
 			try {
 				await actor.createEmbeddedDocuments("ActiveEffect", [{
-					name: shapeformItem.name || "Shapeform",
-					icon: iconUrl,
-					statuses: { [statusId]: true },
+					name: effectName,
+					img: iconUrl,
+					statuses: [statusId],
+					showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS,
 					disabled: false,
 					origin: actor.uuid,
-					flags: { 
-						worldofdarkness: { 
+					flags: {
+						worldofdarkness: {
 							shapeformIcon: true,
-							shapeformId: shapeformItem._id 
-						} 
+							shapeformId: shapeformItem._id
+						}
 					}
 				}]);
-			} catch (fallbackError) {
-				console.error("Fallback ActiveEffect creation also failed:", fallbackError);
+			} catch (error) {
+				console.error("Failed to create shapeform icon ActiveEffect:", error);
 			}
+		} else {
+			const activeEffect = matching[0];
+			const updates = {};
+			if (activeEffect.img !== iconUrl) updates.img = iconUrl;
+			if (activeEffect.name !== effectName) updates.name = effectName;
+			if (activeEffect.showIcon !== CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS) {
+				updates.showIcon = CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS;
+			}
+			if (Object.keys(updates).length > 0) {
+				await activeEffect.update(updates);
+			}
+			await Promise.all(matching.slice(1).map(effect => effect.delete()));
 		}
 	}
 	
@@ -1647,16 +1692,12 @@ async function _updateShapeformTokenIcon(actor, shapeformItem) {
 	}
 	
 	// ============================================
-	// NEW: Token Image update
+	// Token Image update (only when shape has tokenimage set)
 	// ============================================
-	// Get tokenimage, fallback to actor.img if not set
-	const tokenImageUrl = shapeformItem?.system?.tokenimage?.trim() || actor.img;
-	
-	// Update all tokens on scene that belong to this actor
-	if (canvas?.ready && canvas.tokens) {
+	const tokenImageUrl = _resolveShapeTokenImageUrl(shapeformItem?.system?.tokenimage);
+	if (tokenImageUrl && canvas?.ready && canvas.tokens) {
 		const tokens = canvas.tokens.placeables.filter(token => token.document.actorId === actor.id);
-		
-		// Update each token's image
+
 		await Promise.all(tokens.map(async (token) => {
 			try {
 				await token.document.update({
@@ -1668,65 +1709,107 @@ async function _updateShapeformTokenIcon(actor, shapeformItem) {
 				console.error(`Failed to update token image for token ${token.id}:`, error);
 			}
 		}));
-		
-		// Redraw tokens to show changes
+
 		tokens.forEach(token => token.draw());
 	}
 }
 
-export const OnFormActivate = async function (event, target) {
-	event.preventDefault();
+function _getActorSplat(actor) {
+	let splatname = "";
+	if (actor.system?.settings?.variantsheet && actor.system.settings.variantsheet !== "") {
+		splatname = actor.system.settings.variantsheet.toLowerCase();
+	} else if (actor.system?.settings?.splat && actor.system.settings.splat !== "") {
+		splatname = actor.system.settings.splat.toLowerCase();
+	} else if (actor.system?.settings?.game && actor.system.settings.game !== "") {
+		splatname = actor.system.settings.game.toLowerCase();
+	} else {
+		splatname = actor.type.toLowerCase();
+	}
+	return (splatname === "pc" ? "mortal" : splatname);
+}
 
-	// Don’t activate when clicking edit or expand (whole panel is the form selector)
-	if (event?.target?.closest?.(".shape-panel-header-actions")) return;
+function _needsShapeformRoll(actor, shapeform) {
+	if (actor.type !== "PC") return false;
+	if (_getActorSplat(actor) === CONFIG.worldofdarkness.splat.werewolf) return false;
+	if (shapeform.system?.isactive) return false;
+	return shapeform.system?.isrollable === true;
+}
 
-	const itemid = target.getAttribute('data-itemid');
-	const item = await this.actor.getEmbeddedDocument("Item", itemid);	
+function _promptShapeformRoll(actor, shapeform) {
+	return new Promise((resolve) => {
+		let resolved = false;
+		const resolveOnce = (value) => {
+			if (resolved) return;
+			resolved = true;
+			resolve(value);
+		};
+
+		const shapeformData = foundry.utils.duplicate(shapeform);
+		const magicitem = new ItemDialog.Magicitem(shapeformData);
+		const dialog = new ItemDialog.DialogItem(actor, magicitem, {
+			onRollComplete: (successes) => resolveOnce(successes > 0)
+		});
+
+		const originalClose = dialog.close.bind(dialog);
+		dialog.close = (...args) => {
+			if (!dialog._rollCompleted) {
+				resolveOnce(false);
+			}
+			return originalClose(...args);
+		};
+
+		dialog.render(true);
+	});
+}
+
+async function _applyShapeformActivation(sheet, itemid) {
+	const item = await sheet.actor.getEmbeddedDocument("Item", itemid);
 	const itemData = foundry.utils.duplicate(item);
 	itemData.system.isactive = true;
 
-	if (itemData.system.bonuslist.length > 0) {
-		(itemData.system.bonuslist || []).forEach(bonus => {
+	const bonuslist = BonusHelper.asBonuslist(itemData.system.bonuslist);
+	if (bonuslist.length > 0) {
+		bonuslist.forEach(bonus => {
 			if (bonus) bonus.isactive = true;
 		});
 	}
 
 	await item.update(itemData);
 
-	const forms = this.actor.items.filter(item => item.system.type === "wod.types.shapeform" && item._id != itemid);
-	
-	for (const item of forms) {
-		if (item.system.isactive) {
-			const formData = foundry.utils.duplicate(item);
+	const forms = sheet.actor.items.filter(item => item.system.type === "wod.types.shapeform" && item._id != itemid);
+
+	for (const formItem of forms) {
+		if (formItem.system.isactive) {
+			const formData = foundry.utils.duplicate(formItem);
 			formData.system.isactive = false;
 
-			if (formData.system.bonuslist.length > 0) {
-				(formData.system.bonuslist || []).forEach(bonus => {
+			const formBonuslist = BonusHelper.asBonuslist(formData.system.bonuslist);
+			if (formBonuslist.length > 0) {
+				formBonuslist.forEach(bonus => {
 					if (bonus) bonus.isactive = false;
 				});
 			}
 
-			await item.update(formData);
+			await formItem.update(formData);
 		}
 	}
 
-	// Update token icon for PC Actors
-	await _updateShapeformTokenIcon(this.actor, item);
+	const activatedForm = sheet.actor.items.get(itemid);
+	await _updateShapeformTokenIcon(sheet.actor, activatedForm);
 
-	// Check if any form is active after update
-	const activeForm = this.actor.items.find(item => 
+	const activeForm = sheet.actor.items.find(item =>
 		item.system.type === "wod.types.shapeform" && item.system.isactive
 	);
 
-	// If no form is active, reset token images to actor's default image
 	if (!activeForm) {
-		if (canvas?.ready && canvas.tokens) {
-			const tokens = canvas.tokens.placeables.filter(token => token.document.actorId === this.actor.id);
+		const actorPortraitUrl = _resolveShapeTokenImageUrl(sheet.actor.img);
+		if (actorPortraitUrl && canvas?.ready && canvas.tokens) {
+			const tokens = canvas.tokens.placeables.filter(token => token.document.actorId === sheet.actor.id);
 			await Promise.all(tokens.map(async (token) => {
 				try {
 					await token.document.update({
 						texture: {
-							src: this.actor.img
+							src: actorPortraitUrl
 						}
 					});
 				} catch (error) {
@@ -1737,11 +1820,35 @@ export const OnFormActivate = async function (event, target) {
 		}
 	}
 
-	let actorData = foundry.utils.duplicate(this.actor);
+	let actorData = foundry.utils.duplicate(sheet.actor);
 	actorData = await calculateTotals(actorData);
 	actorData.system.settings.isupdated = false;
-	await this.actor.update(actorData);
-	this.render();
+	await sheet.actor.update(actorData);
+	sheet.render();
+}
+
+export const OnFormActivate = async function (event, target) {
+	event.preventDefault();
+
+	if (this.actor.type !== "PC") return;
+
+	// Don’t activate when clicking edit or expand (whole panel is the form selector)
+	if (event?.target?.closest?.(".shape-panel-header-actions")) return;
+
+	const itemid = target.getAttribute('data-itemid');
+	const item = await this.actor.getEmbeddedDocument("Item", itemid);
+
+	if (item.system?.isactive) return;
+
+	if (_needsShapeformRoll(this.actor, item)) {
+		const success = await _promptShapeformRoll(this.actor, item);
+		if (!success) {
+			ui.notifications.warn(game.i18n.localize("wod.dialog.shapeform.failed"));
+			return;
+		}
+	}
+
+	await _applyShapeformActivation(this, itemid);
 }
 
 export const OnPowerClear = async function (event, target) {

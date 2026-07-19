@@ -47,7 +47,7 @@ export default class AbilityHelper {
 		}		
 	}
 
-	static CreateAbility_nowait(actor, abilitytype, abilitynamn, maxvalue, ismeleeweapon, israngedeweapon) {
+	static CreateTrait_nowait(actor, abilitytype, abilitynamn, maxvalue, ismeleeweapon, israngedeweapon) {
 		const items = actor.items.filter(item => item.type === "Trait" && item.system.type === abilitytype && item.name === abilitynamn);
 
 		if (items.length > 0) {

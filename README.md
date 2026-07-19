@@ -1,16 +1,8 @@
 ![](https://img.shields.io/badge/Foundry-v14-informational)
 
+![](https://img.shields.io/github/downloads/JohanFalt/Foundry_WoD20/v7.2.0/v7.2.0.zip)
+
 ![](https://img.shields.io/github/downloads/JohanFalt/Foundry_WoD20/v7.1.5/v7.1.5.zip)
-
-![](https://img.shields.io/github/downloads/JohanFalt/Foundry_WoD20/v7.1.4/v7.1.4.zip)
-
-![](https://img.shields.io/github/downloads/JohanFalt/Foundry_WoD20/v7.1.3/v7.1.3.zip)
-
-![](https://img.shields.io/github/downloads/JohanFalt/Foundry_WoD20/v7.1.2/v7.1.2.zip)
-
-![](https://img.shields.io/github/downloads/JohanFalt/Foundry_WoD20/v7.1.1/v7.1.1.zip)
-
-![](https://img.shields.io/github/downloads/JohanFalt/Foundry_WoD20/v7.1.0/v7.1.0.zip)
 
 ![](https://img.shields.io/github/downloads/JohanFalt/Foundry_WoD20/v7.0.0/v7.0.0.zip)
 
@@ -25,7 +17,6 @@
 ![](https://img.shields.io/github/downloads/JohanFalt/Foundry_WoD20/v4.2.12/v4.2.12.zip)
 
 
-
 # World of Darkness 20th ed
 This is a non-official (fan-made) system for Foundry VTT.
 
@@ -33,10 +24,11 @@ I would never require it by anyone or even expect someone to do but if you reall
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/johanfk)
 
-## Supported sheets
-For Vampire, Werewolf (Changing Breeds), Mage and Changeling use [PC actor](https://github.com/JohanFalt/Foundry_WoD20/wiki/PC-Actor).
 
-- Mortals (General, Orpheus, Sorcerer 20th ed, Autumn people, Enchanted, Ghoul, Kinfolk)
+## Supported sheets
+For Vampire (V20), Werewolf (Changing Breeds) (W20), Mage (M20), Changeling (C20), Demon (DtF) och Hunter (HtR) use [PC actor](https://github.com/JohanFalt/Foundry_WoD20/wiki/PC-Actor).
+
+- Mortals (General, Orpheus, Sorcerer 20th ed, Autumn people, Enchanted, Ghoul, Kinfolk, Thrall)
 - [Vampire the Masquerade (V20)](https://github.com/JohanFalt/Foundry_WoD20/wiki/Sheet:-Vampire-the-Masquerade) (General, Kindred of the East)
 - [Mage the Ascension (M20)](https://github.com/JohanFalt/Foundry_WoD20/wiki/Sheet:-Mage-the-Ascension)
 - [Werewolf the Apocalypse (W20)](https://github.com/JohanFalt/Foundry_WoD20/wiki/Sheet:-Werewolf-the-Apocalypse)
@@ -49,12 +41,14 @@ For Vampire, Werewolf (Changing Breeds), Mage and Changeling use [PC actor](http
 - [Changing Breeds](https://github.com/JohanFalt/Foundry_WoD20/wiki/Sheet:-Changing-Breed) (Ajaba, Ananasi, Baset, Corax, Gurahl, Kitsune, Mokolé, Nagah, Nuwisha, Ratkin, Rokea, Apis, Camazotz, Grondr)
 - Creatures (General, Chimera, Familiar, Construct, Spirit, War wolves, Anurana, Samsa, Kerasi, Yeren, Earthbound demon)
 
+
 ## Supported Eras
 - Mortals (Modern, Victorian Age, Dark Ages, Classical Age, Age of the Living Gods)
 - Vampire the Masquerade (Modern, Victorian Age, Dark Ages, Classical Age, Age of the Living Gods)
 - Mage the Ascension (Modern, Victorian Age)
 - Werewolf the Apocalypse (Modern, Wild West, Dark Ages, Savage Age)
 - All other (Modern)
+
 
 # Foundry VTT
 [Foundry page](https://foundryvtt.com/packages/worldofdarkness)
@@ -78,6 +72,7 @@ Systems I have checked to learn general structure and the typical "how do you do
 - https://github.com/Layman2501/wod20
 - https://gitlab.com/MarlQ/mta
 - https://github.com/StarWarsFoundryVTT/StarWarsFFG
+
 
 ## Translations
 
@@ -116,4 +111,3 @@ Release CHANGELOG can be found [HERE](https://github.com/JohanFalt/Foundry_WoD20
 
 # Requests or Problems
 Please report any requests or problems you have at [Issues](https://github.com/JohanFalt/Foundry_WoD20/issues).
-

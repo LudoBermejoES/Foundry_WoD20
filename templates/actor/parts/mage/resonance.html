@@ -19,7 +19,7 @@
                     <span class="resource-value-step" data-type="{{../../config.sheettype.mortal}}" data-itemid="{{item._id}}" data-index="{{this}}"></span>                
                 {{/numLoop}}
             </div>     
-            {{{getToolTip item.system.description item.system.details}}}
+            {{{getToolTip_v2 item.system.description item.system.details item.system.bonuslist ../actor}}}
             {{#if (eq ../locked false)}}                
                 <div class="pullLeft">
                     <a class="item-edit" title="{{localize 'wod.labels.edit.resonance'}}" data-type="Resonance" data-item-id="{{item._id}}"><i class="icon fa-solid fa-pen-to-square"></i></a>

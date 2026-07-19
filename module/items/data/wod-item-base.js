@@ -39,7 +39,11 @@ export class WoDItem extends Item {
 				
 				if ((data.type === "Advantage") && (options?.parent !== null) && (options?.parent !== undefined)) {
 					updates["system.settings.order"] = options.parent.items.filter(i => i.type === "Advantage").length;
-				}		
+				}
+
+				if (data.type === "Trait" && data.system?.type === "wod.types.shapeform") {
+					updates["system.usesoaksettings"] = false;
+				}
 
 				const imgUrl = _getImage(data);
 				if (imgUrl != "") {

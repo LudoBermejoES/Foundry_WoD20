@@ -1523,6 +1523,7 @@
 			},
 			"feature": {
 				"type": "",
+				"placement": "feature",
 				"level": "0",
 				"value": 0,
 				"max": 5
@@ -1720,12 +1721,24 @@
 			"ispower": false,
 			"isrollable": false,
 			"isfavorited": false,
+			"usesoaksettings": false,
 			"label": "",
 			"speciality": "",
 			"dice1": "",
 			"dice2": "",
 			"bonus": 0,
 			"difficulty": 6,
+			"soak": {
+				"bashing": { 
+					"isrollable": true 
+				},
+				"lethal": { 
+					"isrollable": false 
+				}, 
+				"aggravated": { 
+					"isrollable": false 
+				}
+			},	
 			"icon": "",
 			"tokenimage": ""
 		},
