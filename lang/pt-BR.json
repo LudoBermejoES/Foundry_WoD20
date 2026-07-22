@@ -187,6 +187,7 @@
 			"virtueslimithint": "Se ativado, o valor máximo das virtudes será limitado ao valor máximo de traço permitido pela geração do personagem."
 		},
 		"types": {
+			"maneuver": "Manobra de combate",
 			"mortal": "Mortal",
 			"werewolf": "Lobisomem",
 			"mage": "Mago",
@@ -1666,6 +1667,7 @@
 				"usechimerical": "Usar dano quimérico"
 			},
 			"new": {
+				"maneuver": "Nova manobra",
 				"create": "Criar item",
 				"notfound": "Tipo de item não existe",
 				"alreadyexists": "Já existe na ficha.",
@@ -1796,6 +1798,7 @@
 				"stain": "Adicionar mácula"
 			},
 			"edit": {
+				"maneuver": "Editar manobra",
 				"headline": "Editar",
 				"naturalweapon": "Editar arma natural",
 				"meleeweapon": "Editar arma corpo a corpo",
@@ -1854,6 +1857,7 @@
 				"realm": "Edit realm"
 			},
 			"remove": {
+				"maneuver": "Remover manobra",
 				"headline": "Remover",
 				"item": "Remover item",
 				"removing": "Removendo",

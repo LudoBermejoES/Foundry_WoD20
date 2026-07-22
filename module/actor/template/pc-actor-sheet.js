@@ -1252,6 +1252,8 @@ export const prepareCombatContext = async function (context, actor) {
 
 	context.powercombat		= actor.items.filter(item => item.type === "Power" && item.system.type === "wod.types.gift" && item.system.isactive);
 
+	context.maneuvers		= actor.items.filter(item => item.type === "Trait" && item.system.type === "wod.types.maneuver");
+
 	context.health = await calculateHealth(actor, CONFIG.worldofdarkness.sheettype.mortal);
 
   	return context;

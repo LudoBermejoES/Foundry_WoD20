@@ -187,6 +187,7 @@
 			"virtueslimithint": "Якщо увімкнено, максимальне значення чеснот буде обмежене максимальним значенням риси, дозволеним поколінням персонажа."
 		},
 		"types": {
+			"maneuver": "Бойовий прийом",
 			"mortal": "Mortal",
 			"werewolf": "Werewolf",
 			"mage": "Mage",
@@ -1666,6 +1667,7 @@
 				"usechimerical": "Використовувати химеричну шкоду"
 			},
 			"new": {
+				"maneuver": "Новий прийом",
 				"create": "Create item",
 				"notfound": "Item type does not exist",
 				"alreadyexists": "already exists on the sheet.",
@@ -1796,6 +1798,7 @@
 				"stain": "Add stain"
 			},
 			"edit": {
+				"maneuver": "Редагувати прийом",
 				"headline": "Edit",
 				"naturalweapon": "Edit natural weapon",
 				"meleeweapon": "Edit melee weapon",
@@ -1854,6 +1857,7 @@
 				"realm": "Edit realm"
 			},
 			"remove": {
+				"maneuver": "Вилучити прийом",
 				"headline": "Remove",
 				"item": "Remove item",
 				"removing": "Removing",

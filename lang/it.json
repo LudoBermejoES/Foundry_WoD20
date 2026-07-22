@@ -187,6 +187,7 @@
 			"virtueslimithint": "Se abilitato, il valore massimo delle virtù sarà limitato al valore massimo di tratto consentito dalla generazione del personaggio."
 		},
 		"types": {
+			"maneuver": "Manovra di combattimento",
 			"mortal": "Mortale",
 			"werewolf": "Licantropo",
 			"mage": "Mago",
@@ -1666,6 +1667,7 @@
 				"usechimerical": "Usa danno chimerico"
 			},
 			"new": {
+				"maneuver": "Nuova manovra",
 				"create": "Create item",
 				"notfound": "Item type does not exist",
 				"alreadyexists": "already exists on the sheet.",
@@ -1796,6 +1798,7 @@
 				"stain": "Add stain"
 			},
 			"edit": {
+				"maneuver": "Modifica manovra",
 				"headline": "Edit",
 				"naturalweapon": "Modifica Armi Naturali",
 				"meleeweapon": "Modifica Armi da Mischia",
@@ -1854,6 +1857,7 @@
 				"realm": "Edit realm"
 			},
 			"remove": {
+				"maneuver": "Rimuovi manovra",
 				"headline": "Remove",
 				"item": "Rimuovi Oggetto",
 				"removing": "Rimozione",

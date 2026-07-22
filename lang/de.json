@@ -187,6 +187,7 @@
 			"virtueslimithint": "Wenn aktiviert, wird der Maximalwert der Tugenden auf den maximalen Eigenschaftswert begrenzt, den die Generation des Charakters erlaubt."
 		},
 		"types": {
+			"maneuver": "Kampfmanöver",
 			"mortal": "Sterbliche",
 			"werewolf": "Werwolf",
 			"mage": "Magus",
@@ -1666,6 +1667,7 @@
 				"usechimerical": "Chimärischen Schaden verwenden"
 			},
 			"new": {
+				"maneuver": "Neues Manöver",
 				"create": "Gegenstand erstellen",
 				"notfound": "Gegenstands Typ existiert nicht",
 				"alreadyexists": "bereits auf dem Bogen vorhanden.",
@@ -1796,6 +1798,7 @@
 				"stain": "Makel hinzufügen"
 			},
 			"edit": {
+				"maneuver": "Manöver bearbeiten",
 				"headline": "Bearbeiten",
 				"naturalweapon": "Natürliche Waffe bearbeiten",
 				"meleeweapon": "Nahkampfwaffe bearbeiten",
@@ -1854,6 +1857,7 @@
 				"realm": "Edit realm"
 			},
 			"remove": {
+				"maneuver": "Manöver entfernen",
 				"headline": "Entfernen",
 				"item": "Gegenstand entfernen",
 				"removing": "Entfernen",

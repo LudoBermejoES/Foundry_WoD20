@@ -1,0 +1,58 @@
+<div class="headlineRow headlineList splatFont combat-melee-itemlist">
+    <div class="width-namebox">{{localize "wod.types.maneuver"}}</div>
+    <div class="width-smallbox">{{localize 'wod.combat.weapon.attr'}}</div>
+    <div class="width-abilitybox">{{localize 'wod.combat.weapon.ability'}}</div>
+    <div class="width-valuebox">{{localize 'wod.combat.weapon.diff'}}</div>
+</div>
+
+<div>
+
+    {{#each maneuvers as |item id|}}
+
+        <div class="item-row-area combat-melee-itemlist">
+            <div class="dragrow headlineNormal combat-melee-itemlist" data-itemid="{{item._id}}">
+                <div class="width-iconbox draggable"><i class="icon fa-solid fa-grip-vertical"></i></div>
+
+                {{#if item.system.isrollable}}
+                    <div class="width-namebox vrollable"
+                        data-type="{{../config.sheettype.mortal}}"
+                        data-object="Trait"
+                        data-rollitem="true"
+                        data-itemid="{{item._id}}"
+                        title="{{item.name}}"
+                        data-action="rollDice">
+                        {{shorten item.name 18}}
+                    </div>
+                {{else}}
+                    <div class="weapon-rolliconbox-empty">&nbsp;</div>
+                    <div class="combat-largeBox" title="{{item.name}}">{{shorten item.name 18}}&nbsp;</div>
+                {{/if}}
+
+                <div class="width-smallbox">{{#if item.system.dice1}}{{shorten (localize (getAttributes item.system.dice1)) 10}}{{else}}&nbsp;{{/if}}</div>
+                <div class="width-abilitybox">{{#if item.system.dice2}}{{shorten (localize (getAbility item.system.dice2 ../actor)) 10}}{{else}}&nbsp;{{/if}}</div>
+                <div class="width-valuebox">
+
+                    {{#if (eq item.system.difficulty "-1")}}
+                        {{localize "wod.labels.varies"}}
+                    {{else}}
+                        {{item.system.difficulty}}
+                    {{/if}}
+
+                </div>
+            </div>
+
+            <div class="iconBox">
+
+                {{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.maneuver" deletetitle="wod.labels.remove.maneuver" collapseclass="combat"}}
+
+            </div>
+        </div>
+        <div class="description" data-itemid="{{item._id}}">
+
+            {{{getToolTip_v2 item.system.description item.system.details item.system.bonuslist ../actor}}}
+
+        </div>
+
+    {{/each}}
+
+</div>

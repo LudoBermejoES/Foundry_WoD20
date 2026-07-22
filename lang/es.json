@@ -187,6 +187,7 @@
 			"virtueslimithint": "Si está activado, el valor máximo de las virtudes se limitará al valor máximo de rasgo permitido por la generación del personaje."
 		},
 		"types": {
+			"maneuver": "Maniobra de combate",
 			"mortal": "Mortal",
 			"werewolf": "Hombre Lobo",
 			"mage": "Mago",
@@ -1666,6 +1667,7 @@
 				"usechimerical": "Usar daño quimérico"
 			},
 			"new": {
+				"maneuver": "Nueva maniobra",
 				"create": "Crear objeto",
 				"notfound": "Este tipo de objeto no existe",
 				"alreadyexists": "Ya existe en la ficha",
@@ -1796,6 +1798,7 @@
 				"stain": "Añadir Mácula"
 			},
 			"edit": {
+				"maneuver": "Editar maniobra",
 				"headline": "Editar",
 				"naturalweapon": "Editar arma natural",
 				"meleeweapon": "Editar arma cuerpo a cuerpo",
@@ -1854,6 +1857,7 @@
 				"realm": "Edit realm"
 			},
 			"remove": {
+				"maneuver": "Quitar maniobra",
 				"headline": "Eliminar",
 				"item": "Quitar Objeto",
 				"removing": "Quitando",

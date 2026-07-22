@@ -189,6 +189,7 @@
 			"virtueslimithint": "If enabled, the maximum value of virtues will be limited to the maximum trait value allowed by the character's generation."
 		},
 		"types": {
+			"maneuver": "Combat Maneuver",
 			"mortal": "Mortal",
 			"werewolf": "Werewolf",
 			"mage": "Mage",
@@ -1670,6 +1671,7 @@
 				"usechimerical": "Use chimerical damage"
 			},
 			"new": {
+				"maneuver": "New maneuver",
 				"create": "Create item",
 				"notfound": "Item type does not exist",
 				"alreadyexists": "already exists on the sheet.",
@@ -1801,6 +1803,7 @@
 				"stain": "Add stain"
 			},
 			"edit": {
+				"maneuver": "Edit maneuver",
 				"headline": "Edit",
 				"naturalweapon": "Edit natural weapon",
 				"meleeweapon": "Edit melee weapon",
@@ -1859,6 +1862,7 @@
 				"realm": "Edit realm"
 			},
 			"remove": {
+				"maneuver": "Remove maneuver",
 				"headline": "Remove",
 				"item": "Remove item",
 				"removing": "Removing",

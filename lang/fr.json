@@ -187,6 +187,7 @@
 			"virtueslimithint": "Si activé, la valeur maximale des vertus sera limitée à la valeur maximale de trait autorisée par la génération du personnage."
 		},
 		"types": {
+			"maneuver": "Manœuvre de combat",
 			"mortal": "Mortel",
 			"werewolf": "Loup-Garou",
 			"mage": "Mage",
@@ -1666,6 +1667,7 @@
 				"usechimerical": "Utiliser les dégâts chimériques"
 			},
 			"new": {
+				"maneuver": "Nouvelle manœuvre",
 				"create": "Create item",
 				"notfound": "Ce type d'objet n'existe pas",
 				"alreadyexists": "already exists on the sheet.",
@@ -1796,6 +1798,7 @@
 				"stain": "Add stain"
 			},
 			"edit": {
+				"maneuver": "Modifier la manœuvre",
 				"headline": "Edit",
 				"naturalweapon": "Éditer Arme naturelle",
 				"meleeweapon": "Éditer Arme de mêlée",
@@ -1854,6 +1857,7 @@
 				"realm": "Edit realm"
 			},
 			"remove": {
+				"maneuver": "Retirer la manœuvre",
 				"headline": "Remove",
 				"item": "Enlever Objet",
 				"removing": "Retrait",

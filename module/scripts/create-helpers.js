@@ -1732,6 +1732,23 @@ export default class CreateHelper {
 
 	static async CreateButtonsCombat(actor) {
 		return {
+			maneuver: {
+				label: game.i18n.localize("wod.types.maneuver"),
+				callback: async () => {
+					let itemData = {
+						name: game.i18n.localize("wod.labels.new.maneuver"),
+						type: "Trait",
+						system: {
+							type: "wod.types.maneuver",
+							isrollable: true,
+							difficulty: 6
+						}
+					};
+
+					await this.CreateItem(actor, itemData);
+					return;
+				}
+			},
 			natural: {
 				label: game.i18n.localize("wod.types.naturalweapon"),
 				callback: async () => {

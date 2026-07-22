@@ -16,9 +16,15 @@
             </div>
         </div>
 
-        <div class="sheet-area flex-columns">    
+        <div class="sheet-area flex-columns">
             <div class="area-box">
                 {{> "systems/worldofdarkness/templates/actor/parts/combat_melee.hbs" actor=actor config=config locked=locked weapon_melee=weapon_melee}}
+            </div>
+        </div>
+
+        <div class="sheet-area flex-columns">
+            <div class="area-box">
+                {{> "systems/worldofdarkness/templates/actor/parts/combat_maneuvers.hbs" actor=actor config=config locked=locked maneuvers=maneuvers}}
             </div>
         </div>
 
