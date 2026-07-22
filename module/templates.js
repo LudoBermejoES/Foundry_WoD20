@@ -39,6 +39,7 @@ export const preloadHandlebarsTemplates = async function () {
 		"systems/worldofdarkness/templates/actor/parts/combat.hbs",
 			"systems/worldofdarkness/templates/actor/parts/combat_natural.hbs",
 			"systems/worldofdarkness/templates/actor/parts/combat_melee.hbs",
+			"systems/worldofdarkness/templates/actor/parts/combat_maneuvers.hbs",
 			"systems/worldofdarkness/templates/actor/parts/combat_ranged.hbs",
 			"systems/worldofdarkness/templates/actor/parts/combat_armor.hbs",
 			"systems/worldofdarkness/templates/actor/parts/combat_conditions.hbs",
