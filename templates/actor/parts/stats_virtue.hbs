@@ -1,7 +1,7 @@
 <div class="sheet-headline sheet-banner-small splatFont"><span class="sheet-banner-text">{{localize "wod.advantages.virtue.headline"}}</span></div>	
 
 {{#each virtues as |virtue id|}}
-	<div>
+	<div class="virtue-row">
 		<div class="pullLeft ability-headlineWidth headlineNormal {{#if virtue.system.settings.useroll}}vrollable{{/if}}" 
 			data-type="{{../config.sheettype.mortal}}"
 			data-key="{{virtue.system.id}}"

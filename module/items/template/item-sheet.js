@@ -48,6 +48,12 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 				itemData.name = game.i18n.localize(CONFIG.worldofdarkness.bonus[itemData.system.type]);
 				await this.item.update(itemData);
 			}
+
+			// Soak buff "all damage types" must persist as "all" (not empty string).
+			if ((itemData.system.type == "soak_buff") && (itemData.system.settingtype == "")) {
+				itemData.system.settingtype = "all";
+				await this.item.update(itemData);
+			}
 		}
 		if (itemData.type == "Fetish") {
 			if ((itemData.system.type == "wod.types.fetish") && (!itemData.system.isrollable)) {
@@ -388,7 +394,7 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
         const element = event.currentTarget;
         const parent = $(element.parentNode);
         const steps = parent.find(".dialog-attribute-button");
-        const attribute = element.value;
+        const attribute = element.value || element.dataset?.value || "";
 
 		steps.removeClass("active");
 

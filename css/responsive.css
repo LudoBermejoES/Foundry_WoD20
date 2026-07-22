@@ -107,13 +107,13 @@
   min-height: 900px;
 }
 
-.langDE.wod-sheet .sheet-inner-area,
-.langES.wod-sheet .sheet-inner-area,
-.langIT.wod-sheet .sheet-inner-area {
+.langDE.wod20 .sheet-inner-area,
+.langES.wod20 .sheet-inner-area,
+.langIT.wod20 .sheet-inner-area {
   width: 990px;
 }
 
-.langFR.wod-sheet .sheet-inner-area {
+.langFR.wod20 .sheet-inner-area {
   width: 950px;
 }
 
@@ -348,14 +348,14 @@
     min-width: 850px;
   }
 
-  .wod-sheet .sheet-inner-area {
+  .wod20 .sheet-inner-area {
     width: 800px;
   }
 
-  .langDE.wod-sheet .sheet-inner-area,
-  .langPT.wod-sheet .sheet-inner-area,
-  .langES.wod-sheet .sheet-inner-area,
-  .langIT.wod-sheet .sheet-inner-area {
+  .langDE.wod20 .sheet-inner-area,
+  .langPT.wod20 .sheet-inner-area,
+  .langES.wod20 .sheet-inner-area,
+  .langIT.wod20 .sheet-inner-area {
     padding-right: 45px;
   } 
 }

@@ -1361,6 +1361,21 @@ export default class BonusHelper {
     
 
     /**
+     * Whether a soak_buff settingtype counts as the requested damage type.
+     * For "all", both "all" and "" match (legacy/compendium data used empty for all types).
+     * @param {string} settingtype
+     * @param {string} damagetype
+     * @returns {boolean}
+     */
+    static matchesSoakBuffSetting(settingtype, damagetype) {
+        if (damagetype === "all" || damagetype === "") {
+            return settingtype === "all" || settingtype === "";
+        }
+
+        return settingtype === damagetype;
+    }
+
+    /**
      * Gets the total value of all active soak buff bonuses
      * @param {Object} actor - The actor to check
      * @param {string} damagetype - The damage type to get bonus for
@@ -1374,7 +1389,7 @@ export default class BonusHelper {
         }
 
         for (const i of actor.items) {
-            if ((i.type == "Bonus") && (i.system.isactive) && (i.system.type == "soak_buff") && (i.system.settingtype == damagetype)) {
+            if ((i.type == "Bonus") && (i.system.isactive) && (i.system.type == "soak_buff") && this.matchesSoakBuffSetting(i.system.settingtype, damagetype)) {
                 bonus += parseInt(i.system.value);
             }
 
@@ -1384,8 +1399,7 @@ export default class BonusHelper {
 
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
-                    //if ((i.type == "Bonus") && (i.system.isactive) && (i.system.type == "soak_buff") && (i.system.settingtype == damagetype)) {
-                    if ((i.system.bonuslist[x].type == "soak_buff") && (i.system.bonuslist[x].isactive) && (i.system.bonuslist[x].settingtype == damagetype)) {
+                    if ((i.system.bonuslist[x].type == "soak_buff") && (i.system.bonuslist[x].isactive) && this.matchesSoakBuffSetting(i.system.bonuslist[x].settingtype, damagetype)) {
                         bonus += parseInt(i.system.bonuslist[x].value);
                     }
 				}

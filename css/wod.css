@@ -302,6 +302,11 @@
   min-height: 900px;
 }
 
+.wod-sheet.pc-actor:not(.minimized) {
+  min-width: 1000px;
+  width: 1000px;
+}
+
 .wod-item:not(.minimized) {
   min-width: 650px;
   width: 650px;
@@ -371,10 +376,15 @@
 }
 
 
-.wod-sheet .sheet-inner-area {
+.wod20 .sheet-inner-area {
   padding-left: 45px;
   width: 830px;
   min-height: 500px;
+}
+
+.wod20.pc-actor .sheet-inner-area {
+  padding-left: 0px;
+  width: 850px;
 }
 
 .wod20 nav {
@@ -1004,6 +1014,10 @@ input.sheet-infoWidth {
   border-radius: 5px;
   margin-top: 5px;
   max-width: 400px;
+}
+
+.wod20 .virtue-row {
+  line-height: 23px;
 }
 
 /* END - General */

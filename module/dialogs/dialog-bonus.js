@@ -7,7 +7,7 @@ export class Bonus {
         this.bonusId = id;
         this.bonus = item.system.bonuslist[id];
 
-        if ((this.bonus.type == "soak_buff") &&(this.bonus.settingtype == "")) {
+        if ((this.bonus.type == "soak_buff") && ((this.bonus.settingtype == "") || (this.bonus.settingtype == undefined))) {
             this.bonus.settingtype = "all";
         }
 
@@ -165,6 +165,11 @@ export class DialogBonus extends FormApplication {
 
         if (source == "type") {
             this.object.bonus.value = 0;
+
+            // New soak buffs default to all damage types; persist as "all" (not "").
+            if (this.object.bonus.type == "soak_buff") {
+                this.object.bonus.settingtype = "all";
+            }
         }
         if ((this.object.bonus.name == "") && (source == "type")) {
             let name = "wod.labels.new.bonus";
@@ -254,9 +259,14 @@ export class DialogBonus extends FormApplication {
             ? (parseFloat(this.object.bonus.value) || 0)
             : (parseInt(this.object.bonus.value) || 0);
 
+        let settingtype = this.object.bonus.settingtype;
+        if ((this.object.bonus.type == "soak_buff") && ((settingtype == "") || (settingtype == undefined))) {
+            settingtype = "all";
+        }
+
         let bonus = {
             name: this.object.bonus.name,
-            settingtype: this.object.bonus.settingtype,
+            settingtype: settingtype,
             type: this.object.bonus.type,
             value: bonusValue,
             isactive: this.object.bonus.isactive
