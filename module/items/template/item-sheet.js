@@ -28,7 +28,15 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 	/** @override */
 	get template() {
 		let sheet = this.item.type;
-		sheet = sheet.toLowerCase().replace(" ", "");
+
+		// Combat maneuvers are a Trait subtype but use a dedicated sheet (no generic
+		// type <select>, which would otherwise clobber system.type on submit).
+		if ((this.item.type === "Trait") && (this.item.system?.type === "wod.types.maneuver")) {
+			sheet = "maneuver";
+		}
+		else {
+			sheet = sheet.toLowerCase().replace(" ", "");
+		}
 
 		return `systems/worldofdarkness/templates/sheets/${sheet}-sheet.html`;
 	}

@@ -141,6 +141,37 @@ export default class SelectHelper {
             listData.DamageAttribute = listData.AttackAttributes;
         }
 
+        // Combat maneuvers (Trait subtype): reuse the weapon Attribute pool + the
+        // combined melee/ranged Ability pool for the dice1/dice2 roll selects.
+        if ((data.type == "Trait") && (data.system?.type == "wod.types.maneuver")) {
+            listData.AttackAttributes = [{
+                value: "",
+                label: "- " + game.i18n.localize("wod.labels.none") + " -"
+            }];
+            listData.AttackAbilities = [{
+                value: "",
+                label: "- " + game.i18n.localize("wod.labels.select") + " -"
+            }];
+
+            for (const attribute in CONFIG.worldofdarkness.attackAttributes) {
+                listData.AttackAttributes.push({
+                    value: attribute,
+                    label: game.i18n.localize(CONFIG.worldofdarkness.attackAttributes[attribute])
+                });
+            }
+
+            const maneuverAbilities = {
+                ...CONFIG.worldofdarkness.attackMeleeAbilities,
+                ...CONFIG.worldofdarkness.attackRangedAbilities
+            };
+            for (const ability in maneuverAbilities) {
+                listData.AttackAbilities.push({
+                    value: ability,
+                    label: game.i18n.localize(maneuverAbilities[ability])
+                });
+            }
+        }
+
         if (data.type == "Feature") {
             listData.TypeList = [
             {
