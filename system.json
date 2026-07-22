@@ -2,7 +2,7 @@
     "id": "worldofdarkness",
     "title": "World of Darkness 20th edition",
     "description": "To play World of Darkness 20th ed. Support for all the larger and most of the smaller games of the gameline. Portions of the materials are the copyrights and trademarks of Paradox Interactive AB, and are used with permission. All rights reserved. For more information please visit worldofdarkness.com.",
-    "version": "7.2.0",
+    "version": "7.3.0",
     "compatibility": {
         "minimum": "14",
         "verified": "14",
