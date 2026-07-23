@@ -153,10 +153,10 @@
 					{{#if (eq object.bonus.type "soak_buff")}}
 						<div class="infobox headline splatFont">{{localize "wod.labels.damagetype"}}</div>
 						<div class="infobox  centerText">							
+							<button class="button fullSplatColor pointer dialog-attribute-button actionbutton {{#if (eqAny object.bonus.settingtype 'all' '')}}active{{/if}}" data-source="settingtype" data-value="all">{{localize "wod.health.all"}}</button>
 							<button class="button fullSplatColor pointer dialog-attribute-button actionbutton {{#if (eq object.bonus.settingtype 'bashing')}}active{{/if}}" data-source="settingtype" data-value="bashing">{{localize "wod.health.bashing"}}</button>
 							<button class="button fullSplatColor pointer dialog-attribute-button actionbutton {{#if (eq object.bonus.settingtype 'lethal')}}active{{/if}}" data-source="settingtype" data-value="lethal">{{localize "wod.health.lethal"}}</button>
 							<button class="button fullSplatColor pointer dialog-attribute-button actionbutton {{#if (eq object.bonus.settingtype 'aggravated')}}active{{/if}}" data-source="settingtype" data-value="aggravated">{{localize "wod.health.aggravated"}}</button>
-							<button class="button fullSplatColor pointer dialog-attribute-button actionbutton {{#if (eq object.bonus.settingtype 'all')}}active{{/if}}" data-source="settingtype" data-value="all">{{localize "wod.health.all"}}</button>
 						</div>
 					{{/if}}
 

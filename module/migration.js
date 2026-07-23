@@ -2627,7 +2627,7 @@ export  const updates = async () => {
 
         newfunctions += '<li>[PC Actor DtF] Added template items in compendium for Demon the Fallen.</li>';
         newfunctions += '<li>[PC Actor DtF] Added relic as gear items.</li>';
-        newfunctions += '<li>[PC Actor DtF] New world setting that handles low/high torment effects on lores.</li>';
+        newfunctions += '<li>[PC Actor DtF] New world setting that handles low/high torment effects on.</li>';
         newfunctions += '<li>[PC Actor HtR] Added template items in compendium for Hunter the Reckoning.</li>';
         newfunctions += '<li>[PC Actor] Improved design and fixed a few bugs regarding the shape handling.</li>';
         newfunctions += '<li>[PC Actor] Other traits can now be directed to power or note tab.</li>';
@@ -2641,7 +2641,14 @@ export  const updates = async () => {
     }
 
     if (newfunctions == "") {
-        newfunctions += 'Issues fixed in version:<br />';      
+        newfunctions += 'Issues fixed in version:<br />';    
+        
+        if (_compareVersion(installedVersion, '7.2.1')) {
+            newfunctions += '<li>[PC Actor] Fixed problems showing virtues correctly aligned on sheet.</li>';
+            newfunctions += '<li>[PC Actor] Fixed width problem that caused the graphics to be crushed at certain screen settings.</li>';
+            newfunctions += '<li>Fixed problems with soak bonuses that was not calculated correctly to stamina.</li>';
+            newfunctions += '<li>Fixed some translations.</li>';
+        }
         
         // if (_compareVersion(installedVersion, '7.1.5')) {
         //     newfunctions += '<li>[PC Actor VtM] Fixed issue with discipline powers that rolled advantages causing the dice pool to be 0.</li>';

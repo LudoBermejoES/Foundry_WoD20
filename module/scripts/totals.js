@@ -179,6 +179,8 @@ export async function calculateTotals(updateData) {
 	}	
 
 	//bonus soak
+	// GetSoakBuff("all") matches both settingtype "all" and "" — older/compendium soak
+	// bonuses often stored empty string as "all damage types"; the GUI now writes "all".
 	if (await BonusHelper.CheckSoakBuff(updateData)) {
 		let bonus = await BonusHelper.GetSoakBuff(updateData, "all");
 		const bashing = await BonusHelper.GetSoakBuff(updateData, "bashing");

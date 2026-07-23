@@ -1603,7 +1603,8 @@
 				"frenzybuffhint": "This bonus adds/subracts a value to frenzy rolls altering the total value by the selected amount.",
 				"frenzydiffhint": "This bonus changes the difficulty of any frenzy roll.",
 				"frenzydiffchat": "Frenzy difficulty modifier:",
-				"frenzybonuschat": "Frenzy dice bonus:"
+				"frenzybonuschat": "Frenzy dice bonus:",
+				"bonusvalue": "Bonus value"
 			},
 			"ability": {
 				"worldname": "Item name in world",
