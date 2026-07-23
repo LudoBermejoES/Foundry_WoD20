@@ -1484,6 +1484,7 @@
 			]
 		},
 		"Chantry": {
+			"locked": false,
 			"flavor": "tradition",
 			"rating": 1,
 			"tier": "safehouse",

@@ -24,7 +24,11 @@ export default class ChantryActorSheet extends foundry.appv1.sheets.ActorSheet {
 	constructor(actor, options) {
 		super(actor, options);
 
-		this.locked = true;
+		// Source of truth is the persisted system.locked field (defaults to false in
+		// template.json, so a newly-created Chantry is editable right away) rather than
+		// a transient in-memory flag - this is kept in sync from getData() on every render
+		// so the lock state survives closing/reopening the sheet.
+		this.locked = actor.system.locked ?? false;
 	}
 
 	/** @override */
@@ -35,6 +39,11 @@ export default class ChantryActorSheet extends foundry.appv1.sheets.ActorSheet {
 	/** @override */
 	async getData() {
 		const data = await super.getData();
+
+		// Keep the sheet-instance flag in sync with the persisted actor field on every
+		// render, so the lock/unlock button (and every locked-guard below) always reflects
+		// the actor's actual system.locked value.
+		this.locked = this.actor.system.locked ?? false;
 
 		data.config = CONFIG.worldofdarkness;
 		data.locked = this.locked;
@@ -97,15 +106,15 @@ export default class ChantryActorSheet extends foundry.appv1.sheets.ActorSheet {
 			.click(this._onTraitDotChange.bind(this));
 	}
 
-	/* Lock / unlock the sheet */
+	/* Lock / unlock the sheet - persisted on the actor (like ActionHelper.OnActorLock) so the
+	   state survives closing/reopening the sheet; the actor update automatically re-renders
+	   this sheet. */
 	async _onToggleLocked(event) {
 		event.preventDefault();
 
 		if (event.detail === 0) return; // detail === 0 means keyboard-triggered click
 
-		this.locked = !this.locked;
-
-		this._render();
+		await this.actor.update({ "system.locked": !this.actor.system.locked });
 	}
 
 	async _onsheetChange(event) {
