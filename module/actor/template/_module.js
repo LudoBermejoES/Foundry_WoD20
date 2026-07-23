@@ -13,3 +13,4 @@ export { default as MummyActorSheet } from "./mummy-actor-sheet.js";
 export { default as ExaltedActorSheet } from "./exalted-actor-sheet.js";
 export { default as ChangingBreedActorSheet } from "./changingbreed-actor-sheet.js";
 export { default as CreatureActorSheet } from "./creature-actor-sheet.js";
+export { default as ChantryActorSheet } from "./chantry-actor-sheet.js";

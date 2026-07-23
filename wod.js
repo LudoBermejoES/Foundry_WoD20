@@ -282,8 +282,14 @@ Hooks.once("init", async function() {
 		label: game.i18n.localize("wod.sheet.creature"),
 		types: ["Creature"],
 		makeDefault: true
-	});	
-	
+	});
+
+	foundry.documents.collections.Actors.registerSheet("WoD", actorSheets.ChantryActorSheet, {
+		label: game.i18n.localize("wod.sheets.chantry"),
+		types: ["Chantry"],
+		makeDefault: true
+	});
+
 	console.log("WoD | Actor Sheets Registered");
 	
 	// Register item application classes

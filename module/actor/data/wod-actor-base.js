@@ -57,6 +57,13 @@ export class WoDActor extends Actor {
             return;
         }
 
+        // Chantry/Construct actors have no health/attributes/advantages - they carry
+        // their own lean schema (flavor/rating/tier/pool/traits) and need none of the
+        // legacy-actor derived calculations below.
+        if (actorData.type === "Chantry") {
+            return;
+        }
+
         try {
             // Handle PC actors
             if (actorData.type === "PC") {
@@ -484,6 +491,12 @@ export class WoDActor extends Actor {
         await super._preCreate(data, options, user);
         const actor = this;
 
+        // Chantry/Construct actors have no "settings" block - skip the legacy
+        // splat-creation setup entirely.
+        if (data.type === "Chantry") {
+            return;
+        }
+
         try {
             let updates = {};
 
@@ -685,6 +698,12 @@ export class WoDActor extends Actor {
     async _onUpdate(updateData, options, user) {
         super._onUpdate(updateData, options, user);
 
+        // Chantry/Construct actors have no "settings" block and need none of the
+        // legacy-actor post-update normalization below.
+        if (this.type === "Chantry") {
+            return;
+        }
+
         if (this.type !== "PC") {
             let actor;
 
@@ -812,7 +831,7 @@ export class WoDActor extends Actor {
     _onUpdateDescendantDocuments(parent, collection, documents, changes, options, userId) {
         super._onUpdateDescendantDocuments(parent, collection, documents, changes, options, userId);
 
-        if (this.type === "PC") return;
+        if (this.type === "PC" || this.type === "Chantry") return;
         if (this.permission < 3) return;
         if (collection !== "items" || !documents?.length) return;
 

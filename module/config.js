@@ -13,7 +13,43 @@ wod.sheettype = {
     exalted: "Exalted",
     creature: "Creature",
     changingbreed: "Changing Breed",
-    spirit: "Spirit"
+    spirit: "Spirit",
+    chantry: "Chantry"
+}
+
+/*
+ * Chantry/Construct construction Traits - Power Pool Cost per dot.
+ * Source: m20-the-operative-dossier, "Estatus y el Constructo" table; cap rule (no single
+ * Trait may exceed 2x the Chantry/Construct's rating) is enforced by the sheet, not here.
+ */
+wod.chantry = {
+    traitcost: {
+        "allies": 2,
+        "arcane-cloaking": 2,
+        "backup": 2,
+        "cult-sympathizers": 2,
+        "enhancement": 4,
+        "elders": 2,
+        "integrated-effects": 2,
+        "library": 2,
+        "node": 3,
+        "reality-zone": 5,
+        "requisitions": 4,
+        "resources": 3,
+        "retainers": 2,
+        "spies": 2
+    },
+    flavors: [
+        "tradition",
+        "technocracy"
+    ],
+    tiers: [
+        "safehouse",
+        "sanctum",
+        "mystic",
+        "fortress",
+        "powercenter"
+    ]
 }
 
 wod.splat = {

@@ -4,6 +4,7 @@
 			"PC",
 			"Changeling",
 			"Changing Breed",
+			"Chantry",
 			"Creature",
 			"Demon",
 			"Exalted",
@@ -1481,6 +1482,32 @@
 				"mortal",
 				"creature"
 			]
+		},
+		"Chantry": {
+			"flavor": "tradition",
+			"rating": 1,
+			"tier": "safehouse",
+			"pool": {
+				"total": 10,
+				"spent": 0
+			},
+			"traits": {
+				"allies": 0,
+				"arcane-cloaking": 0,
+				"backup": 0,
+				"cult-sympathizers": 0,
+				"enhancement": 0,
+				"elders": 0,
+				"integrated-effects": 0,
+				"library": 0,
+				"node": 0,
+				"reality-zone": 0,
+				"requisitions": 0,
+				"resources": 0,
+				"retainers": 0,
+				"spies": 0
+			},
+			"notes": ""
 		}
 	},
 	"Item": {

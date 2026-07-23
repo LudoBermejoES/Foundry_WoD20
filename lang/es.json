@@ -11,6 +11,7 @@
 	"TYPES.Actor.Mummy": "Momia: la Resurrección",
 	"TYPES.Actor.Werewolf": "Hombre lobo: el Apocalipsis",
 	"TYPES.Actor.Creature": "Criaturas",
+	"TYPES.Actor.Chantry": "Capilla / Constructo",
 	"TYPES.Item.Bonus": "Bonus",
 	"TYPES.Item.Experience": "Puntos de Experiencia",
 	"TYPES.Item.Feature": "Característica",
@@ -61,6 +62,7 @@
 			"breed": "Ficha de Raza Cambiante",
 			"creature": "Ficha de criaturas",
 			"spirit": "Ficha de espíritu",
+			"chantry": "Ficha de Capilla / Constructo",
 			"items": "Ficha de objeto",
 			"powers": "Poderes",
 			"equipment": "Equipamiento",
@@ -188,6 +190,7 @@
 		},
 		"types": {
 			"maneuver": "Maniobra de combate",
+			"chantry": "Capilla / Constructo",
 			"mortal": "Mortal",
 			"werewolf": "Hombre Lobo",
 			"mage": "Mago",
@@ -1337,6 +1340,46 @@
 			"prop": "Objeto",
 			"scene": "Escena",
 			"time": "Tiempo"
+		},
+		"chantry": {
+			"headline": "Capilla / Constructo",
+			"flavor": "Tipo",
+			"rating": "Puntuación",
+			"tier": "Nivel",
+			"pool": "Reserva de Puntos",
+			"pooltotal": "Total",
+			"poolspent": "Gastados",
+			"notes": "Notas",
+			"traitsheadline": "Rasgos de Construcción",
+			"costperdot": "ptos/punto",
+			"overcap": "Este Rasgo supera el doble de la puntuación de la Capilla/Constructo.",
+			"flavors": {
+				"tradition": "Capilla (Tradición)",
+				"technocracy": "Constructo (Tecnocracia)"
+			},
+			"tiers": {
+				"safehouse": "Escondite/Piso Franco Seguro (10-20 puntos)",
+				"sanctum": "Santuario/Oficina Auxiliar Pequeños (21-30 puntos)",
+				"mystic": "Capilla Mística/Constructo Iluminado (30-70 puntos)",
+				"fortress": "Fortaleza (71-100 puntos)",
+				"powercenter": "Centro de Poder (101+ puntos)"
+			},
+			"traits": {
+				"allies": "Aliados",
+				"arcane-cloaking": "Arcano/Encubrimiento",
+				"backup": "Refuerzos",
+				"cult-sympathizers": "Culto/Simpatizantes",
+				"enhancement": "Mejora",
+				"elders": "Ancianos/Dirección",
+				"integrated-effects": "Efectos Integrados",
+				"library": "Biblioteca",
+				"node": "Nodo",
+				"reality-zone": "Zona de Realidad",
+				"requisitions": "Requerimientos",
+				"resources": "Recursos",
+				"retainers": "Criados",
+				"spies": "Espías"
+			}
 		},
 		"gear": {
 			"headline": "Equipo",

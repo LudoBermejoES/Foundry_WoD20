@@ -11,6 +11,7 @@
 	"TYPES.Actor.Mummy": "Mummy the Resurrection",
 	"TYPES.Actor.Werewolf": "Werewolf the Apocalypse",
 	"TYPES.Actor.Creature": "Creature sheet",
+	"TYPES.Actor.Chantry": "Chantry / Construct",
 	"TYPES.Item.Bonus": "Bonus",
 	"TYPES.Item.Experience": "Experience Points",
 	"TYPES.Item.Feature": "Feature",
@@ -63,6 +64,7 @@
 			"breed": "Changing breed sheet",
 			"creature": "Creature sheet",
 			"spirit": "Spirit sheet",
+			"chantry": "Chantry / Construct sheet",
 			"items": "Item sheet",
 			"powers": "Powers",
 			"equipment": "Equipment",
@@ -190,6 +192,7 @@
 		},
 		"types": {
 			"maneuver": "Combat Maneuver",
+			"chantry": "Chantry / Construct",
 			"mortal": "Mortal",
 			"werewolf": "Werewolf",
 			"mage": "Mage",
@@ -1340,6 +1343,46 @@
 			"prop": "Prop",
 			"scene": "Scene",
 			"time": "Time"
+		},
+		"chantry": {
+			"headline": "Chantry / Construct",
+			"flavor": "Flavor",
+			"rating": "Rating",
+			"tier": "Tier",
+			"pool": "Point Pool",
+			"pooltotal": "Total",
+			"poolspent": "Spent",
+			"notes": "Notes",
+			"traitsheadline": "Construction Traits",
+			"costperdot": "pts/dot",
+			"overcap": "This Trait exceeds twice the Chantry/Construct's rating.",
+			"flavors": {
+				"tradition": "Chantry (Tradition)",
+				"technocracy": "Construct (Technocracy)"
+			},
+			"tiers": {
+				"safehouse": "Safe House / Safehouse (10-20 points)",
+				"sanctum": "Sanctum / Small Field Office (21-30 points)",
+				"mystic": "Mystic Chantry / Enlightened Construct (30-70 points)",
+				"fortress": "Fortress (71-100 points)",
+				"powercenter": "Power Center (101+ points)"
+			},
+			"traits": {
+				"allies": "Allies",
+				"arcane-cloaking": "Arcane/Cloaking",
+				"backup": "Backup",
+				"cult-sympathizers": "Cult/Sympathizers",
+				"enhancement": "Enhancement",
+				"elders": "Elders/Management",
+				"integrated-effects": "Integrated Effects",
+				"library": "Library",
+				"node": "Node",
+				"reality-zone": "Reality Zone",
+				"requisitions": "Requisitions",
+				"resources": "Resources",
+				"retainers": "Retainers",
+				"spies": "Spies"
+			}
 		},
 		"gear": {
 			"headline": "Gear",

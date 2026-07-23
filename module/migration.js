@@ -152,7 +152,13 @@ export  const updates = async () => {
             continue;
         }
 
-        // handle Game settings  
+        // Chantry/Construct actors have no "settings"/"attributes"/"advantages"/
+        // "initiative" block - nothing here applies to them.
+        if (actor.type === "Chantry") {
+            continue;
+        }
+
+        // handle Game settings
         let totalinit = -1;
 
         const actorData = foundry.utils.duplicate(actor);
@@ -273,7 +279,10 @@ export  const updates = async () => {
  export const updateActor = async function(actor, migrationVersion) {
 
     if (actor.type == "PC") return;
-    
+
+    // Chantry/Construct actors have no "settings" block - nothing to migrate.
+    if (actor.type == "Chantry") return;
+
     let update = false;
     let found = false;
 
