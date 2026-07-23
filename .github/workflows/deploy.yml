@@ -1,0 +1,38 @@
+name: Deploy WoD System
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Plain JS/HBS/JSON system read directly by Foundry at load time — no
+      # build or test step, the committed tree IS the deployable artifact.
+      # Mirrors the repo to the systems directory, excluding repo-only
+      # material (matches the manual v7.3.x rsync's exclude set).
+      - name: Deploy to Foundry server
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_USER: ${{ secrets.SSH_USERNAME }}
+          REMOTE_PORT: ${{ secrets.SSH_PORT }}
+          SOURCE: './'
+          TARGET: '/var/www/foundrydata/Data/systems/worldofdarkness/'
+          EXCLUDE: '.git*, docs, *.md'
+          ARGS: '-rlgoDz --delete'
+
+      - name: Post-deploy reminder
+        run: |
+          echo "Files deployed to /var/www/foundrydata/Data/systems/worldofdarkness on the Foundry server."
+          echo "This is a SYSTEM change: Foundry only picks it up on process restart (systems load at startup)."
+          echo "This workflow does NOT restart Foundry. An operator must run 'pm2 restart foundryvtt' manually."
+          echo "Restarting is disruptive to all connected worlds/users on the shared test server."
