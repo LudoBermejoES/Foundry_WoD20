@@ -979,6 +979,13 @@ export default class ItemHelper {
 					localizeKey: "wod.power.gifts",
 					condition: actor.system.settings.hasgifts && context.gifts?.length
 				},
+				charms: {
+					id: "charms",
+					template: "simple",
+					data: { items: context.charms },
+					localizeKey: "wod.power.charms",
+					condition: actor.system.settings.hascharms && context.charms?.length
+				},
 				rites: {
 					id: "rites",
 					template: "simple",

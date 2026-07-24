@@ -615,6 +615,9 @@ export default class DropHelper {
             if (advantageData.system.group == "quintessence") {
                 actorData.system.settings.hasquintessence = true;
             }
+            if (advantageData.system.group == "essence") {
+                actorData.system.settings.hasessence = true;
+            }
         }
         
         // Import features
@@ -663,6 +666,10 @@ export default class DropHelper {
             if (powerData.type == "Sphere") {
                 actorData.system.settings.hasspheres = true;
                 powerData.system.settings.isremovable = false;
+            }
+
+            if (powerData.type == "Power" && powerData.system.type == "wod.types.charm") {
+                actorData.system.settings.hascharms = true;
             }
 
             itemlistData.push(powerData);
@@ -879,6 +886,7 @@ export default class DropHelper {
         actorData.system.settings.hasvirtue = false;
         actorData.system.settings.hasrenown = false;
         actorData.system.settings.hasquintessence = false;
+        actorData.system.settings.hasessence = false;
 
         // Reset power flags
         actorData.system.settings.hasdisciplines = false;
@@ -891,6 +899,7 @@ export default class DropHelper {
         actorData.system.settings.hasrotes = false;
         actorData.system.settings.hasresonances = false;
         actorData.system.settings.hasnuminas = false;
+        actorData.system.settings.hascharms = false;
 
         // Reset chimerical
         actorData.system.settings.usechimerical = false;

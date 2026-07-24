@@ -20,6 +20,7 @@ export default class settings extends foundry.abstract.DataModel {
             hasvirtue: new fields.BooleanField({initial: false}),
             hasrenown: new fields.BooleanField({initial: false}),
             hasquintessence: new fields.BooleanField({initial: false}),
+            hasessence: new fields.BooleanField({initial: false}),
 
             hasdisciplines: new fields.BooleanField({initial: false}),
             hascombinationdisciplines: new fields.BooleanField({initial: false}),
@@ -35,6 +36,7 @@ export default class settings extends foundry.abstract.DataModel {
             hasrealms: new fields.BooleanField({initial: false}),
             haslores: new fields.BooleanField({initial: false}),
             hasedges: new fields.BooleanField({initial: false}),
+            hascharms: new fields.BooleanField({initial: false}),
 
             version: new fields.StringField({...valueString}),
             era: new fields.StringField({initial: 'wod.era.modern', nullable: false}),

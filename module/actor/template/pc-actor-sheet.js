@@ -1174,6 +1174,8 @@ export const preparePowersContext = async function (context, actor) {
 	context.lores = ItemHelper.GetPowersByType(actor, "wod.types.lore", true);
 	context.edges = ItemHelper.GetPowersByType(actor, "wod.types.edge", true);
 	
+	context.charms = ItemHelper.GetPowersByType(actor, "wod.types.charm", true);
+
 	context.combinations = ItemHelper.GetPowersByType(actor, "wod.types.combination", true);
 	context.rituals = ItemHelper.GetPowersByType(actor, "wod.types.ritual", true);
 	context.rites = ItemHelper.GetPowersByType(actor, "wod.types.rite", true);

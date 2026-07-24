@@ -18,12 +18,15 @@ export const datapowertab = {
         hunter: {
             primary: ["edges"],
         },
+        creature: {
+            primary: ["charms"],
+        },
         mortal: {
             primary: [],
         },
         defaultOrder: [
             "disciplines",
-            "paths", 
+            "paths",
             "combinations",
             "rituals",
             "gifts",
@@ -33,7 +36,8 @@ export const datapowertab = {
             "arts",
             "lores",
             "edges",
-            "numinas"
+            "numinas",
+            "charms"
         ],
         unsorted: {
             priority: 99, 
