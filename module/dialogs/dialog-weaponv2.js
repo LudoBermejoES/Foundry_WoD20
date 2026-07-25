@@ -458,6 +458,32 @@ export class DialogWeaponV2 extends HandlebarsApplicationMixin(ApplicationV2) {
         const numberOfSuccesses = await DiceRoller(weaponRoll);
         const damageRollable = item.system?.damage?.isrollable !== false;
 
+        // --- wod20-combat-foundryvtt integration seam (additive only) ---
+        // Broadcast the resolved attack so the combat-cards MODULE (if installed)
+        // can post an interactive Dodge/Soak/Apply-damage card. Purely additive:
+        // it reads state and fires a hook; it changes no existing behaviour.
+        try {
+            const dmg = this.item.system?.damage ?? {};
+            let dmgType = dmg.type ?? "bashing";
+            if (this.item.system?.isnatural && this.item.actor) {
+                const overrideType = BonusHelper.GetDamageTypeOverride(this.item.actor, "natural");
+                if (overrideType !== "") dmgType = overrideType;
+            }
+            const dmgAttrVal = parseInt(this.actor.system?.attributes?.[dmg.attribute]?.total) || 0;
+            const extra = CONFIG.worldofdarkness.successesToDamageRolls ? Math.max(0, numberOfSuccesses - 1) : 0;
+            Hooks.callAll("wod20.attackRolled", {
+                actor: this.actor,
+                item: this.item,
+                roll: weaponRoll,
+                damageDice: dmgAttrVal + (parseInt(dmg.bonus) || 0) + extra,
+                damageType: dmgType,
+                successes: numberOfSuccesses,
+                targets: Array.from(game.user?.targets ?? [])
+            });
+        } catch (e) {
+            console.warn("WoD | wod20.attackRolled hook failed (weaponv2)", e);
+        }
+
         if (numberOfSuccesses > 0 && damageRollable) {
             this.weaponState = "damage";
             this.attackResult = {

@@ -684,8 +684,33 @@ export class DialogWeapon extends FormApplication {
                 await item.update(itemData);
             }
 
-            const numberOfSuccesses = await DiceRoller(weaponRoll);   
-            
+            const numberOfSuccesses = await DiceRoller(weaponRoll);
+
+            // --- wod20-combat-foundryvtt integration seam (additive only) ---
+            // Same additive hook as dialog-weaponv2.js: broadcast the resolved
+            // attack so the combat-cards MODULE can post an interactive card.
+            try {
+                const dmg = item.system?.damage ?? {};
+                let dmgType = dmg.type ?? "bashing";
+                if (item.system?.isnatural && this.actor) {
+                    const overrideType = BonusHelper.GetDamageTypeOverride(this.actor, "natural");
+                    if (overrideType !== "") dmgType = overrideType;
+                }
+                const dmgAttrVal = parseInt(this.actor.system?.attributes?.[dmg.attribute]?.total) || 0;
+                const extra = CONFIG.worldofdarkness.successesToDamageRolls ? Math.max(0, numberOfSuccesses - 1) : 0;
+                Hooks.callAll("wod20.attackRolled", {
+                    actor: this.actor,
+                    item,
+                    roll: weaponRoll,
+                    damageDice: dmgAttrVal + (parseInt(dmg.bonus) || 0) + extra,
+                    damageType: dmgType,
+                    successes: numberOfSuccesses,
+                    targets: Array.from(game.user?.targets ?? [])
+                });
+            } catch (e) {
+                console.warn("WoD | wod20.attackRolled hook failed (weapon)", e);
+            }
+
             // DEBUGGING: Logga värden för att identifiera problem
             //console.log("Attack roll - numberOfSuccesses:", numberOfSuccesses);
             //console.log("Attack roll - this.object.rolldamage:", this.object.rolldamage);
