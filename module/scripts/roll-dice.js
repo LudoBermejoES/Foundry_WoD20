@@ -572,6 +572,21 @@ export async function DiceRoller(diceRoll) {
     ChatMessage.applyMode(chatData);
     ChatMessage.create(chatData);
 
+    // --- wod20-combat-foundryvtt integration seam (additive only) ---
+    // Broadcast every completed roll's success count so the combat-cards MODULE
+    // can capture defense/soak results by (actor, origin). Purely additive:
+    // reads the already-counted `success`, fires a hook, changes no logic.
+    try {
+        Hooks.callAll("wod20.rollCompleted", {
+            actor: actor,
+            origin: diceRoll.origin,
+            action: diceRoll.action,
+            successes: parseInt(success) || 0
+        });
+    } catch (e) {
+        console.warn("WoD | wod20.rollCompleted hook failed", e);
+    }
+
     return success;
 }
 
