@@ -30,6 +30,11 @@ export class Resonance {
 
 export class OtherTrait {
     constructor(item) {
+        // Retain the full item so the roll can read combat-maneuver fields
+        // (system.damage, system.ismeleeweapon, system.israngedweapon) — used
+        // additively to fire the wod20.attackRolled combat-card hook.
+        this.item = item;
+
         this.attributeValue = parseInt(item.system["value"]);
         this.attributeName = item["name"];
 
@@ -332,7 +337,7 @@ export class DialogRoll extends FormApplication {
         });
     }
     
-    _rollPower(event) {
+    async _rollPower(event) {
         if (this.object.close) {
             this.close();
             return;
@@ -378,10 +383,33 @@ export class DialogRoll extends FormApplication {
         dialogRoll.difficulty = parseInt(this.object.difficulty);          
         dialogRoll.speciality = this.object.useSpeciality;
         dialogRoll.specialityText = specialityText;      
-        dialogRoll.systemText = this.object.details;  
+        dialogRoll.systemText = this.object.details;
         dialogRoll.usewillpower = this.object.useWillpower;
-        
-        DiceRoller(dialogRoll);
+
+        const successes = await DiceRoller(dialogRoll);
+
+        // --- wod20-combat-foundryvtt integration seam (additive only) ---
+        // Combat maneuvers (Patada, etc.) roll through this dialog and carry a
+        // structured system.damage. Fire the attack-card hook ONLY for a combat
+        // maneuver. Purely additive: captures the existing return, changes no logic.
+        const it = this.object?.item;
+        if (it && (it.system?.ismeleeweapon || it.system?.israngedweapon)) {
+            try {
+                const dmg = it.system?.damage ?? {};
+                const strTotal = parseInt(this.actor?.system?.attributes?.strength?.total) || 0;
+                Hooks.callAll("wod20.attackRolled", {
+                    actor: this.actor,
+                    item: it,
+                    roll: dialogRoll,
+                    damageDice: strTotal + (parseInt(dmg.bonus) || 0),
+                    damageType: dmg.type || "bashing",
+                    successes: parseInt(successes) || 0,
+                    targets: Array.from(game.user?.targets ?? [])
+                });
+            } catch (e) {
+                console.warn("WoD | wod20.attackRolled hook failed (maneuver)", e);
+            }
+        }
     }
 
     /* clicked to close form */
