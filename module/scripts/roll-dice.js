@@ -581,6 +581,8 @@ export async function DiceRoller(diceRoll) {
             actor: actor,
             origin: diceRoll.origin,
             action: diceRoll.action,
+            ability: diceRoll.ability,
+            attribute: diceRoll.attribute,
             successes: parseInt(success) || 0
         });
     } catch (e) {
