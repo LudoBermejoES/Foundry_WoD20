@@ -114,6 +114,16 @@ export class Damage {
         this.accuracy = parseInt(item.system.damage["bonus"]);
         this.difficulty = 6;
         this.damageType = item.system.damage["type"];
+
+        // Natural/unarmed weapons can have their damage type overridden by a
+        // damage_type_set bonus (e.g. the "Do" trait makes unarmed strikes lethal).
+        if (item.system.isnatural && item.actor) {
+            const overrideType = BonusHelper.GetDamageTypeOverride(item.actor, "natural");
+            if (overrideType !== "") {
+                this.damageType = overrideType;
+            }
+        }
+
         this.damageCode = game.i18n.localize(CONFIG.worldofdarkness.damageTypes[this.damageType]);
 
         this.hasburst = false;

@@ -394,5 +394,6 @@ wod.bonus = {
     attack_buff: "wod.labels.bonus.attackbuff",
     attack_diff: "wod.labels.bonus.attackdiff",
     frenzy_buff: "wod.labels.bonus.frenzybuff",
-    frenzy_diff: "wod.labels.bonus.frenzydiff"
+    frenzy_diff: "wod.labels.bonus.frenzydiff",
+    damage_type_set: "wod.labels.bonus.damagetypeset"
 }

@@ -30,6 +30,27 @@ export default class BonusHelper {
     }
 
     /**
+     * Effective numeric value of an embedded bonuslist entry.
+     * When entry.scale_with_rating is truthy the contribution scales with the
+     * owning item's dot rating (its system.value): rating * per-dot value.
+     * Otherwise the entry's static value is used. The supplied parser matches
+     * the branch it is used in (parseInt for most bonuses, parseFloat for movement).
+     * @param {Item} owningItem - the item that owns the bonuslist entry
+     * @param {object} entry - the bonuslist entry
+     * @param {(v:*) => number} [parse=parseInt] - numeric parser to use
+     * @returns {number}
+     */
+    static entryValue(owningItem, entry, parse = parseInt) {
+        const perDot = parse(entry?.value) || 0;
+
+        if (entry?.scale_with_rating) {
+            return (parseInt(owningItem?.system?.value) || 0) * perDot;
+        }
+
+        return perDot;
+    }
+
+    /**
      * Whether an item document supports embedded bonuses in system.bonuslist.
      * Mirrors templates/sheets/parts/item_bonus.html visibility rules.
      * @param {Item} item
@@ -1018,7 +1039,7 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x].type == "attribute_diff") && (i.system.bonuslist[x].isactive) && (i.system.bonuslist[x].settingtype == attribute)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1052,7 +1073,7 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x].type == "attribute_buff") && (i.system.bonuslist[x].isactive) && (i.system.bonuslist[x].settingtype == attribute)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1118,7 +1139,7 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x].type == "attribute_dice_buff") && (i.system.bonuslist[x].isactive) && (i.system.bonuslist[x].settingtype == attribute)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1152,7 +1173,7 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x].type == "attribute_auto_buff") && (i.system.bonuslist[x].isactive) && (i.system.bonuslist[x].settingtype == attribute)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1186,16 +1207,16 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x]?.type == "ability_diff") && (i.system.bonuslist[x]?.isactive) && (i.system.bonuslist[x]?.settingtype == ability)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
                     else if ((i.system.bonuslist[x]?.type == "ability_diff") && (i.system.bonuslist[x]?.isactive) && (i.system.bonuslist[x]?.settingtype == CONFIG.worldofdarkness.talents[ability])) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
                     else if ((i.system.bonuslist[x]?.type == "ability_diff") && (i.system.bonuslist[x]?.isactive) && (i.system.bonuslist[x]?.settingtype == CONFIG.worldofdarkness.skills[ability])) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
                     else if ((i.system.bonuslist[x]?.type == "ability_diff") && (i.system.bonuslist[x]?.isactive) && (i.system.bonuslist[x]?.settingtype == CONFIG.worldofdarkness.knowledges[ability])) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1229,16 +1250,16 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x].type == "ability_buff") && (i.system.bonuslist[x].isactive) && (i.system.bonuslist[x].settingtype == ability)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
                     else if ((i.system.bonuslist[x]?.type == "ability_buff") && (i.system.bonuslist[x]?.isactive) && (i.system.bonuslist[x]?.settingtype == CONFIG.worldofdarkness.talents[ability])) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
                     else if ((i.system.bonuslist[x]?.type == "ability_buff") && (i.system.bonuslist[x]?.isactive) && (i.system.bonuslist[x]?.settingtype == CONFIG.worldofdarkness.skills[ability])) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
                     else if ((i.system.bonuslist[x]?.type == "ability_buff") && (i.system.bonuslist[x]?.isactive) && (i.system.bonuslist[x]?.settingtype == CONFIG.worldofdarkness.knowledges[ability])) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1279,7 +1300,7 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x].type == "attack_buff") && (i.system.bonuslist[x].isactive) && (i.system.bonuslist[x].settingtype == weapontype)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1320,7 +1341,7 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x]?.type == "attack_diff") && (i.system.bonuslist[x]?.isactive) && (i.system.bonuslist[x]?.settingtype == weapontype)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1349,7 +1370,7 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x].type == "initiative_buff") && (i.system.bonuslist[x].isactive)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1400,7 +1421,7 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x].type == "soak_buff") && (i.system.bonuslist[x].isactive) && this.matchesSoakBuffSetting(i.system.bonuslist[x].settingtype, damagetype)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1429,7 +1450,7 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x].type == "soak_diff") && (i.system.bonuslist[x].isactive)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1458,7 +1479,7 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x].type == "frenzy_buff") && (i.system.bonuslist[x].isactive)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1487,7 +1508,7 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x]?.type == "frenzy_diff") && (i.system.bonuslist[x]?.isactive)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1521,7 +1542,7 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x].type == "health_buff") && (i.system.bonuslist[x].settingtype == healthlevel) && (i.system.bonuslist[x].isactive)) {
-                        bonus += parseInt(i.system.bonuslist[x].value);
+                        bonus += this.entryValue(i, i.system.bonuslist[x]);
                     }
 				}
 			}
@@ -1555,13 +1576,69 @@ export default class BonusHelper {
             if (i.system.bonuslist.length > 0) {
 				for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
                     if ((i.system.bonuslist[x].type == "movement_buff") && (i.system.bonuslist[x].isactive) && (i.system.bonuslist[x].settingtype == movementtype)) {
-                        bonus += parseFloat(i.system.bonuslist[x].value) || 0;
+                        bonus += this.entryValue(i, i.system.bonuslist[x], parseFloat);
                     }
 				}
 			}
 		}
 
         return bonus; 
+    }
+
+    /**
+     * Whether a damage_type_set settingtype applies to the given weapon class.
+     * A weapon class of "natural" also matches "brawl" entries (and vice versa),
+     * so an unarmed/natural attack picks up brawl-scoped overrides such as the
+     * "Do" trait making unarmed strikes lethal.
+     * @param {string} settingtype - the entry's settingtype
+     * @param {string} weaponclass - the weapon class to match against
+     * @returns {boolean}
+     */
+    static matchesDamageTypeSetting(settingtype, weaponclass) {
+        if (settingtype === weaponclass) {
+            return true;
+        }
+
+        return (settingtype === "natural" || settingtype === "brawl") &&
+            (weaponclass === "natural" || weaponclass === "brawl");
+    }
+
+    /**
+     * Gets the damage type override for a weapon class, if any active
+     * damage_type_set bonus applies. Scans both standalone Bonus items and
+     * embedded bonuslist entries (active only).
+     * @param {Object} actor - The actor to check
+     * @param {string} weaponclass - The weapon class to match (e.g. "natural")
+     * @returns {string} The overriding damage type (e.g. "lethal"), or "" if none
+     */
+    static GetDamageTypeOverride(actor, weaponclass) {
+        if (!actor?.items || weaponclass === "") {
+            return "";
+        }
+
+        for (const i of actor.items) {
+            if ((i.type == "Bonus") && (i.system.isactive) && (i.system.type == "damage_type_set") && this.matchesDamageTypeSetting(i.system.settingtype, weaponclass)) {
+                if (i.system.value) {
+                    return i.system.value;
+                }
+            }
+
+            if (!Array.isArray(i.system.bonuslist)) {
+                continue;
+            }
+
+            if (i.system.bonuslist.length > 0) {
+                for (let x = 0; x <= i.system.bonuslist.length - 1; x++) {
+                    if ((i.system.bonuslist[x].type == "damage_type_set") && (i.system.bonuslist[x].isactive) && this.matchesDamageTypeSetting(i.system.bonuslist[x].settingtype, weaponclass)) {
+                        if (i.system.bonuslist[x].value) {
+                            return i.system.bonuslist[x].value;
+                        }
+                    }
+                }
+            }
+        }
+
+        return "";
     }
 
     /**

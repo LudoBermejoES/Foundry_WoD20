@@ -22,7 +22,17 @@ function buildViewModel(item, state, attackResult = null) {
     const isRanged = item.type === "Ranged Weapon";
 
     if (state === "damage") {
-        const damageType = damage.type ?? "";
+        let damageType = damage.type ?? "";
+
+        // Natural/unarmed weapons can have their damage type overridden by a
+        // damage_type_set bonus (e.g. the "Do" trait makes unarmed strikes lethal).
+        if (item.system?.isnatural && item.actor) {
+            const overrideType = BonusHelper.GetDamageTypeOverride(item.actor, "natural");
+            if (overrideType !== "") {
+                damageType = overrideType;
+            }
+        }
+
         const extraSuccesses = attackResult != null ? (attackResult.extraSuccesses ?? 0) : 0;
         const numberoftargets = attackResult != null ? (attackResult.numberoftargets ?? 1) : 1;
         const modename = attackResult != null ? (attackResult.modename ?? "single") : "single";

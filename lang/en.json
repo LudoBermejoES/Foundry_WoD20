@@ -1649,6 +1649,8 @@
 				"frenzydiffhint": "This bonus changes the difficulty of any frenzy roll.",
 				"frenzydiffchat": "Frenzy difficulty modifier:",
 				"frenzybonuschat": "Frenzy dice bonus:",
+				"damagetypeset": "Damage type override",
+				"damagetypesethint": "This bonus overrides the damage type dealt by natural/unarmed attacks (for example, making unarmed strikes lethal).",
 				"bonusvalue": "Bonus value"
 			},
 			"ability": {
