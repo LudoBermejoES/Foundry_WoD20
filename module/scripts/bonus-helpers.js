@@ -1676,7 +1676,7 @@ export default class BonusHelper {
                         : (parseInt(bonusEntry.value) || 0);
                     
                     const itemData = {
-                        name: bonusEntry.name,
+                        name: bonusEntry.name || i.name || "Bonus",
                         type: "Bonus",
                         _id: i._id,
                         system: {
