@@ -547,13 +547,31 @@ export class DialogWeaponV2 extends HandlebarsApplicationMixin(ApplicationV2) {
             weaponRoll.difficulty = parseInt(o.difficulty) || 6;
             weaponRoll.bonus = parseInt(o.bonus) + parseInt(o.dodgebonus);
             await DiceRoller(weaponRoll);
-        } 
+            // TODO: spray multi-target damage not yet carried (per-target success
+            // counts differ) — no wod20.damageRolled fired for the spray path.
+        }
         else {
             const numDices = parseInt(o.attributeValue) + parseInt(o.abilityValue) + parseInt(o.bonus) + parseInt(o.extraSuccesses) + (parseInt(o.dodgebonus) || 0);
             weaponRoll.numDices = numDices;
             weaponRoll.difficulty = parseInt(o.difficulty) || 6;
             weaponRoll.bonus = parseInt(o.bonus) + parseInt(o.dodgebonus);
-            await DiceRoller(weaponRoll);
+
+            // --- wod20-combat-foundryvtt integration seam (additive only) ---
+            // Broadcast the resolved damage successes so the combat-cards MODULE
+            // can auto-fill the already-posted attack card. Purely additive:
+            // captures the existing DiceRoller return, changes no logic.
+            const dmgSuccesses = await DiceRoller(weaponRoll);
+            try {
+                Hooks.callAll("wod20.damageRolled", {
+                    actor: this.actor,
+                    item: this.item,
+                    damage: parseInt(dmgSuccesses) || 0,
+                    damageType: this.object?.damageType ?? "bashing",
+                    targets: Array.from(game.user?.targets ?? [])
+                });
+            } catch (e) {
+                console.warn("WoD | wod20.damageRolled hook failed (weaponv2)", e);
+            }
         }
         this.close();
     }
