@@ -103,6 +103,21 @@ export default class ActionHelper {
 					generalRollUse.render(true);
 				}
 				else {
+					// Combat maneuvers (Attribute + Ability pool) honour attribute
+					// and ability difficulty bonuses the same way Powers and weapons
+					// do — e.g. Do's -1 on Brawl applies to a Patada maneuver.
+					if (item.system.type == "wod.types.maneuver") {
+						if (await BonusHelper.CheckAttributeBonus(actor, item.system.dice1)) {
+							let bonus = await BonusHelper.GetAttributeBonus(actor, item.system.dice1);
+							item.system.difficulty = parseInt(item.system.difficulty) + parseInt(bonus);
+						}
+
+						if (await BonusHelper.CheckAbilityDiff(actor, item.system.dice2)) {
+							let bonus = await BonusHelper.GetAbilityDiff(actor, item.system.dice2);
+							item.system.difficulty = parseInt(item.system.difficulty) + parseInt(bonus);
+						}
+					}
+
 					const other = new TraitDialog.OtherTrait(item);
 					let generalRollUse = new TraitDialog.DialogRoll(actor, other);
 					generalRollUse.render(true);
