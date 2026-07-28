@@ -7,6 +7,11 @@
 	tooltips, activation toggles, rollable-pool columns, edit/delete/send-to-chat icons); both read
 	the same four lists from prepareAdvantageLists in pc-actor-sheet.js.
 
+	Only the Backgrounds column passes useroll=true: the books let a Trasfondo be rolled alone or with
+	an Attribute, while Merits/Flaws are point costs and the Other Traits column mixes Trait carriers
+	(which already roll their own dice1/dice2 pool from the Features tab) with Feature ones, so one
+	identical-looking row would need two behaviours. Deferred deliberately.
+
 	The create icon is data-origin="feature" -> CreateHelper.CreateButtonsNotev2, which offers
 	Background / Merit / Flaw / Other Trait. The stats tab's own icon is data-origin="core", which
 	offers abilities only, so this block needs its own. It deliberately does NOT carry the
@@ -27,7 +32,7 @@
 			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.backgrounds"}}</div>
 
 			{{#each backgrounds as |item id|}}
-				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config usedots=true}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config usedots=true useroll=true}}
 			{{/each}}
 		{{/if}}
 

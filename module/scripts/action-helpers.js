@@ -400,6 +400,26 @@ export default class ActionHelper {
 				return;
 			}
 
+			// used a Background (Advantages block on the Attributes tab)
+			// The pool the books describe is the Background alone, or an Attribute of the
+			// Storyteller's choosing plus the Background - so this reuses DialogGeneralRoll,
+			// the very dialog an ability name opens, with the ability slot pre-filled from the
+			// item and its Attribute picker left as the pool-composition step. abilityKey stays
+			// "" on purpose: a background Feature carries no system.id, so the resolution block
+			// at dialog-generalroll.js:210-280 must never run (api.getAbility only matches
+			// Ability items and would leave `ability` undefined for :247 to dereference).
+			if (dataset.object == "wod.types.background") {
+				const roll = new GeneralRoll("", "ability", actor);
+				roll.abilityName = item.name;
+				roll.abilityValue = parseInt(item.system.value) || 0;
+				roll.name = item.name;
+
+				let generalRollUse = new DialogGeneralRoll(actor, roll);
+				generalRollUse.render(true);
+
+				return;
+			}
+
 			ui.notifications.error("Item Roll missing function - " + dataset.object);
 
 			return;

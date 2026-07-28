@@ -11,10 +11,31 @@
 					system.level and leaves value at 0, while the character exporter hard-codes
 					level to "0" and writes the rating into system.value. The number is never
 					signed or negated - the Flaws heading is what marks it as points gained.
+	useroll=true	Backgrounds only - makes the row's NAME a roll target: vrollable plus
+					data-action="rollDice" + data-rollitem="true" + data-itemid +
+					data-object="wod.types.background", which reaches the background branch of
+					ActionHelper.RollDialog and opens the same DialogGeneralRoll an ability name
+					opens (rating pre-filled, Attribute picked in the dialog). Same parameter name
+					and meaning stats.hbs already passes to stats_abilities.hbs. Not gated on
+					locked - rolling mutates nothing, exactly as ability names are rollable on a
+					locked sheet. No data-type: RollDialog reads dataset.type only on the frenzy
+					path (action-helpers.js:475,478).
+
+	INVARIANT: the roll sits on the NAME div and editDot sits on the dot spans inside
+	.resource-value - two SIBLINGS, neither an ancestor of the other, with no data-action on any
+	ancestor of either. That is the whole reason a dot click cannot roll and a name click cannot
+	write a rating; ApplicationV2 dispatches to the nearest [data-action] ancestor and this system
+	overrides no dispatch. stats_abilities.hbs has the identical shape. Do not nest one inside the
+	other.
 --}}
 <div class="clearareaBox">
 
-	<div class="pullLeft ability-headlineWidth headlineNormal" title="{{item.name}}">{{shorten item.name 20}}</div>
+	<div class="pullLeft{{#if useroll}} vrollable{{/if}} ability-headlineWidth headlineNormal"
+		title="{{item.name}}"
+		{{#if useroll}}data-action="rollDice"
+		data-rollitem="true"
+		data-itemid="{{item._id}}"
+		data-object="wod.types.background"{{/if}}>{{shorten item.name 20}}</div>
 
 	{{#if usedots}}
 
