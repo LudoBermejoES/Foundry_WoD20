@@ -47,12 +47,15 @@
             </div>
         {{else}}
             <div class="width-valuebox">
-                {{#if (gt item.system.level 0)}}
-                    {{item.system.level}}
+                {{!-- pointValue, not gt: a merit/flaw's point value can be the book's own
+                      "1 a 5" / "1 o 3" / "1/2/3/4/5", which gt coerces to NaN and hides.
+                      Level only here - no system.value fallback, deliberately. --}}
+                {{#if (pointValue item.system.level)}}
+                    {{pointValue item.system.level}}
                 {{else}}
                     &nbsp;
                 {{/if}}
-            </div>                    
+            </div>
         {{/if}}
     </div>
     <div class="iconBox">

@@ -77,7 +77,11 @@
 								{{selectOptions listData.BoonTypes selected=data.system.level localize=false}}
 							</select>
 						{{else}}
-							<input class="sheet-infoValues editable" name="system.level" type="text" value="{{data.system.level}}" data-dtype="Number" autocomplete="off" autofocus required />						
+							{{!-- data-dtype MUST stay String: template.json declares system.level a String
+							      (as does the boon branch above), and a merit/flaw's point value can be
+							      "1 a 5" / "1 o 3" / "1/2/3/4/5". With data-dtype="Number" saving this
+							      sheet ran the value through Number() and destroyed it. --}}
+							<input class="sheet-infoValues editable" name="system.level" type="text" value="{{data.system.level}}" data-dtype="String" autocomplete="off" autofocus required />						
 						{{/if}}
 						<span class="floating-label">{{localize "wod.labels.power.level"}}</span>
 					</div>

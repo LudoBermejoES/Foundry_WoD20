@@ -11,6 +11,13 @@
 					system.level and leaves value at 0, while the character exporter hard-codes
 					level to "0" and writes the rating into system.value. The number is never
 					signed or negated - the Flaws heading is what marks it as points gained.
+					Both candidates go through the `pointValue` helper (module/handlebars.js), NOT
+					`gt`: the point value is not always a number - 88 merits/flaws carry the range,
+					either/or or tier list the book prints ("1 a 5", "1 o 3", "1/2/3/4/5") and core's
+					`gt` coerces those to NaN, which rendered an empty box. `pointValue` keeps the
+					0-shows-nothing rule for numeric values and passes any other string through
+					verbatim. Do NOT drop the system.value candidate - it is the character
+					exporter's only field.
 	useroll=true	Backgrounds only - makes the row's NAME a roll target: vrollable plus
 					data-action="rollDice" + data-rollitem="true" + data-itemid +
 					data-object="wod.types.background", which reaches the background branch of
@@ -57,10 +64,8 @@
 	{{else}}
 
 		<div class="pullRight notes-valueBox centerText headlineNormal">
-			{{#if (gt item.system.level 0)}}
-				{{item.system.level}}
-			{{else if (gt item.system.value 0)}}
-				{{item.system.value}}
+			{{#if (pointValue item.system.level item.system.value)}}
+				{{pointValue item.system.level item.system.value}}
 			{{else}}
 				&nbsp;
 			{{/if}}

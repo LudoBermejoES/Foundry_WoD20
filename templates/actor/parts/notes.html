@@ -27,7 +27,9 @@
                         {{/if}}
                     </div>
                     <div class="largeBox">{{localize item.system.type}}</div>
-                    <div class="width-valuebox">{{#if (gt item.system.level 0)}}{{item.system.level}}{{else}}&nbsp;{{/if}}</div>
+                    {{!-- pointValue, not gt: a merit/flaw's point value can be a non-numeric
+                          string the book prints ("1 a 5", "1 o 3", "1/2/3/4/5"). --}}
+                    <div class="width-valuebox">{{#if (pointValue item.system.level)}}{{pointValue item.system.level}}{{else}}&nbsp;{{/if}}</div>
 
 
                     

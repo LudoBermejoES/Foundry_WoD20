@@ -86,6 +86,49 @@ export const registerHandlebarsHelpers = function () {
 		return !found;
 	});
 
+	/**
+	 * A Feature's displayable point value, as a STRING ("" when there is nothing to show).
+	 *
+	 * Takes 1..N candidate fields in priority order and returns the first one worth showing; the
+	 * trailing Handlebars options hash is dropped the same way eqAny/neAny/eqAnyNot above do.
+	 *
+	 * Exists because a merit/flaw's point value is NOT always a number: the wod20-compendium-es
+	 * packs carry the cost exactly as the book prints it, which for 88 merits and flaws is a range
+	 * ("1 a 5"), an either/or ("1 o 3") or a tier list ("1/2/3/4/5"). Foundry core's `gt` helper
+	 * coerces numerically, so `gt "1 a 5" 0` is `NaN > 0` -> false and the value box rendered
+	 * blank. `gt` is core, not ours, so it cannot be fixed - only avoided. The 0-shows-nothing rule
+	 * is preserved for anything purely numeric, and the input really is mixed: template.json and
+	 * the packs supply a String, while the system's own create buttons supply a Number
+	 * (create-helpers.js writes `level: 1`).
+	 */
+	Handlebars.registerHelper('pointValue', function () {
+		for (let i = 0; i < arguments.length - 1; i++) {
+			const raw = arguments[i];
+
+			if (raw === null || raw === undefined) {
+				continue;
+			}
+
+			const value = String(raw).trim();
+
+			if (value === "") {
+				continue;
+			}
+
+			if (/^-?\d+(\.\d+)?$/.test(value)) {
+				if (Number(value) > 0) {
+					return value;
+				}
+
+				continue;			// "0" / 0 / "-1" -> nothing to show, try the next candidate
+			}
+
+			return value;			// anything else -> the book's own string, verbatim
+		}
+
+		return "";
+	});
+
 	Handlebars.registerHelper('le', function( a, b ){
 		var next =  arguments[arguments.length-1];
 		return (a <= b) ? next.fn(this) : next.inverse(this);
