@@ -28,6 +28,8 @@ export const preloadHandlebarsTemplates = async function () {
 			"systems/worldofdarkness/templates/actor/parts/stats_renown.hbs",	
 			"systems/worldofdarkness/templates/actor/parts/stats_quintessence.hbs",
 			"systems/worldofdarkness/templates/actor/parts/stats_groupedadvantages.hbs",
+			"systems/worldofdarkness/templates/actor/parts/stats_features.hbs",
+			"systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs",
 		"systems/worldofdarkness/templates/actor/parts/powers.hbs",
 			"systems/worldofdarkness/templates/actor/parts/power_listmainpower.hbs",
 			"systems/worldofdarkness/templates/actor/parts/power_listpower.hbs",

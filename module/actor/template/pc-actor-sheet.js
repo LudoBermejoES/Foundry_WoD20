@@ -1053,6 +1053,48 @@ export const prepareBioContext = async function (context, actor) {
   	return context;
 }
 
+/**
+ * Builds the four "advantage" lists - backgrounds, merits, flaws and other traits.
+ *
+ * This is the ONLY place these four predicates live. `_preparePartContext` hands every sheet part
+ * its own context object, so the Attributes tab's Advantages block (stats_features.hbs, prepared by
+ * prepareStatContext) and the Features tab (feature.hbs, prepared by prepareFeatureContext) each
+ * need the lists built for them. Both call this helper so the two views can never disagree about
+ * what an actor holds.
+ *
+ * @param {object} context 	The part context to populate.
+ * @param {Actor} actor 	The PC actor.
+ * @returns {object} 		The same context, with backgrounds / merits / flaws / othertraits set.
+ */
+export const prepareAdvantageLists = function (context, actor) {
+	context.backgrounds = ItemHelper.GetItemType(actor, "Feature", "wod.types.background");
+	context.merits 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.merit");
+	context.flaws 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.flaw");
+
+	// Other traits reach an actor on TWO different carriers and neither may be dropped:
+	//   - the system's own create button makes a Trait (CreateHelper.CreateButtonsNotev2), and
+	//   - the wod20-compendium-es exporter emits a Feature - "wod.types.othertraits" is its default
+	//     system.type for any Feature-mapped entity type, so clans, kith, houses, totems, banes,
+	//     derangements, martial arts, chantry traits, paradigms, practices, instruments and more
+	//     all arrive as Features.
+	// Reading only Trait (as this filter used to) meant every one of those compendium items
+	// rendered nowhere at all on a PC sheet. The system.placement check is kept: it is what
+	// separates a feature-tab other trait from the powers-tab one (see preparePowersContext).
+	const allFeatureTraits = (actor?.items ?? []).filter(item =>
+										((item.type === "Trait") || (item.type === "Feature"))
+										&& item.system.type === "wod.types.othertraits"
+										&& item.system.placement === "feature");
+
+	context.othertraits = allFeatureTraits.sort((a, b) => {
+		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
+		const orderB = b.system.order !== undefined ? Number(b.system.order) : 999;
+		if (orderA !== orderB) return orderA - orderB;
+		return a.name.localeCompare(b.name);
+	});
+
+	return context;
+}
+
 export const prepareStatContext = async function (context, actor) {
   	context.tab = context.tabs.stats;
 
@@ -1146,6 +1188,10 @@ export const prepareStatContext = async function (context, actor) {
 
 	// Set hasGroupedAdvantages flag
 	context.hasGroupedAdvantages = context.groupedadvantages.length > 0;
+
+	// Backgrounds / Other Traits / Merits / Flaws for the classic Advantages block at the bottom of
+	// this tab (stats_features.hbs). Same helper the Features tab uses - see prepareAdvantageLists.
+	prepareAdvantageLists(context, actor);
 
 	context.health = await calculateHealth(actor, CONFIG.worldofdarkness.sheettype.mortal);
 
@@ -1274,21 +1320,13 @@ export const prepareGearContext = async function (context, actor) {
 export const prepareFeatureContext = async function (context, actor) {
   	context.tab = context.tabs.feature;	
 
-	context.backgrounds = ItemHelper.GetItemType(actor, "Feature", "wod.types.background");
-	context.merits 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.merit");
-	context.flaws 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.flaw");
+	// backgrounds / merits / flaws / othertraits - shared with the Attributes tab's Advantages
+	// block, so the two views can never disagree. See prepareAdvantageLists.
+	prepareAdvantageLists(context, actor);
+
 	context.bloodbounds = ItemHelper.GetItemType(actor, "Feature", "wod.types.bloodbound");
 	context.boons 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.boon");
 	context.oaths 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.oath");
-
-	const allFeatureTraits = actor?.items.filter(item => item.type === "Trait" && item.system.type === "wod.types.othertraits" && item.system.placement === "feature");
-	context.othertraits = allFeatureTraits.sort((a, b) => {
-		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
-		const orderB = b.system.order !== undefined ? Number(b.system.order) : 999;
-		if (orderA !== orderB) return orderA - orderB;
-		return a.name.localeCompare(b.name);
-	});
-	//context.othertraits = ItemHelper.GetItemType(actor, "Trait", "wod.types.othertraits");	
 
   	return context;
 }

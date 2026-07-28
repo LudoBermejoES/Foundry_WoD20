@@ -1,0 +1,73 @@
+{{!--
+	The classic Advantages block from the printed sheet: Backgrounds | Other Traits | Merits, with
+	Flaws stacked directly beneath Merits in the same third column. Three .pullLeft columns at 33%,
+	the same shape stats_advantages.hbs uses one area above this one.
+
+	This is the at-a-glance summary. The Features tab stays the editorial view (descriptions,
+	tooltips, activation toggles, rollable-pool columns, edit/delete/send-to-chat icons); both read
+	the same four lists from prepareAdvantageLists in pc-actor-sheet.js.
+
+	The create icon is data-origin="feature" -> CreateHelper.CreateButtonsNotev2, which offers
+	Background / Merit / Flaw / Other Trait. The stats tab's own icon is data-origin="core", which
+	offers abilities only, so this block needs its own. It deliberately does NOT carry the
+	"createicon" class - that class is position:absolute and would land on top of the tab's icon.
+--}}
+<div class="clearareaBox area-box">
+
+	<div class="clearareaBox">
+		<div class="pullRight">
+			<i class="pointer icon item-create fa-solid fa-square-plus" title="{{localize "wod.labels.add.item"}}" aria-hidden="true" data-origin="feature" data-action="itemCreate"></i>
+		</div>
+	</div>
+
+	<!-- Backgrounds -->
+	<div class="pullLeft" style="width: 33%;">
+
+		{{#if (gt backgrounds.length 0)}}
+			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.backgrounds"}}</div>
+
+			{{#each backgrounds as |item id|}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config usedots=true}}
+			{{/each}}
+		{{/if}}
+
+		&nbsp;
+	</div>
+
+	<!-- Other traits -->
+	<div class="pullLeft" style="width: 33%;">
+
+		{{#if (gt othertraits.length 0)}}
+			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.othertraits"}}</div>
+
+			{{#each othertraits as |item id|}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config usedots=true}}
+			{{/each}}
+		{{/if}}
+
+		&nbsp;
+	</div>
+
+	<!-- Merits, then Flaws beneath them in the same column -->
+	<div class="pullLeft" style="width: 33%;">
+
+		{{#if (gt merits.length 0)}}
+			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.merits"}}</div>
+
+			{{#each merits as |item id|}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config usedots=false}}
+			{{/each}}
+		{{/if}}
+
+		{{#if (gt flaws.length 0)}}
+			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.flaws"}}</div>
+
+			{{#each flaws as |item id|}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config usedots=false}}
+			{{/each}}
+		{{/if}}
+
+		&nbsp;
+	</div>
+
+</div>

@@ -1,0 +1,50 @@
+{{!--
+	One row of the classic Advantages block on the Attributes tab (stats_features.hbs).
+
+	usedots=true	Backgrounds / Other Traits - an editable dot row driven by the item's own
+					system.value / system.max. No JavaScript of its own: SetupDotCounters_v2 fills
+					the dots at render time and OnDotCounterChange persists a click back to
+					system.value on the embedded item, both keyed on data-* attributes only.
+	usedots=false	Merits / Flaws - the item's point value, read from system.level and falling back
+					to system.value, because the two producers of these items disagree about which
+					field carries the number: the compendium exporter writes the cost/bonus into
+					system.level and leaves value at 0, while the character exporter hard-codes
+					level to "0" and writes the rating into system.value. The number is never
+					signed or negated - the Flaws heading is what marks it as points gained.
+--}}
+<div class="clearareaBox">
+
+	<div class="pullLeft ability-headlineWidth headlineNormal" title="{{item.name}}">{{shorten item.name 20}}</div>
+
+	{{#if usedots}}
+
+		<div class="pullRight resource-value"
+			data-itemid="{{item._id}}"
+			data-value="{{item.system.value}}"
+			data-name="system.value">
+
+			{{> "systems/worldofdarkness/templates/actor/parts/stat_value_dots.hbs"
+				max=item.system.max
+				value=item.system.value
+				locked=locked
+				name="system.value"
+				itemid=item._id
+				dotType=config.sheettype.mortal}}
+
+		</div>
+
+	{{else}}
+
+		<div class="pullRight notes-valueBox centerText headlineNormal">
+			{{#if (gt item.system.level 0)}}
+				{{item.system.level}}
+			{{else if (gt item.system.value 0)}}
+				{{item.system.value}}
+			{{else}}
+				&nbsp;
+			{{/if}}
+		</div>
+
+	{{/if}}
+
+</div>
