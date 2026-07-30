@@ -575,7 +575,16 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 		const itemId = icon.dataset.itemid;
 		const container = this.element || icon.closest(".app");
 		const targetRoot = container instanceof HTMLElement ? container : document;
-		const bonusDiv = targetRoot.querySelector(`.description[data-itemid="${itemId}"]`);
+
+		// Scope to the enclosing tab FIRST. AppV2 renders every tab into the DOM and only hides the
+		// inactive ones, so the same item can legitimately own a .description in two tabs at once —
+		// the Attributes tab summarises backgrounds/merits/flaws that the Features tab also lists.
+		// A sheet-wide querySelector returns the FIRST match in DOM order, which is the stats tab,
+		// so clicking the eye on the Features tab would silently expand a hidden copy and appear to
+		// do nothing. Falls back to the old sheet-wide lookup for any row not inside a [data-tab].
+		const tabScope = icon.closest("[data-tab]");
+		const bonusDiv = tabScope?.querySelector(`.description[data-itemid="${itemId}"]`)
+			?? targetRoot.querySelector(`.description[data-itemid="${itemId}"]`);
 
 		if (!bonusDiv) {
 			console.warn(`PC Actor: Could not find .description[data-itemid="${itemId}"]`);

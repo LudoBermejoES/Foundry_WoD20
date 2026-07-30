@@ -37,6 +37,27 @@
 --}}
 <div class="clearareaBox">
 
+	{{!-- The description eye, to the LEFT of the name. This block had no icon column at all, so
+	      the right-hand side is already spoken for by the dot row / point box.
+
+	      It is a SIBLING of the name div, never a child: the name carries
+	      data-action="rollDice" and ApplicationV2 dispatches to the nearest [data-action]
+	      ancestor, so an eye nested inside it would roll the Background on every click. The
+	      collapsible is bound by addEventListener in _bindCollapsibleButtons (it has no
+	      data-action of its own), which is why placing it here cannot disturb the invariant this
+	      file documents above.
+
+	      Not gated on `locked` — reading a description mutates nothing, the same reason the name
+	      stays rollable on a locked sheet, and the same choice list_icons.hbs makes by keeping its
+	      tooltip block outside its own locked check. --}}
+	{{#if (showToolTip item)}}
+		<i class="pullLeft pointer icon collapsible button fa-solid fa-eye"
+			title="{{localize 'wod.labels.show.description'}}"
+			data-itemid="{{item._id}}"></i>
+	{{else}}
+		<i class="pullLeft icon no-description-disabled fa-solid fa-eye"></i>
+	{{/if}}
+
 	<div class="pullLeft{{#if useroll}} vrollable{{/if}} ability-headlineWidth headlineNormal"
 		title="{{item.name}}"
 		{{#if useroll}}data-action="rollDice"
@@ -74,3 +95,15 @@
 	{{/if}}
 
 </div>
+{{!-- Outside .clearareaBox on purpose: the row is a float container, and a max-height:0 panel
+      inside it would be clipped by the floats rather than pushing the next row down. Same
+      placement power_realms.hbs / feature_item.hbs use. The data-itemid deliberately MATCHES the
+      Features tab's copy of this item — _handleCollapsibleClick scopes its lookup to the enclosing
+      [data-tab] precisely so the two cannot toggle each other. --}}
+{{#if (showToolTip item)}}
+	<div class="description" data-itemid="{{item._id}}">
+
+		{{{getToolTip_v2 item.system.description item.system.details item.system.bonuslist actor item}}}
+
+	</div>
+{{/if}}

@@ -32,7 +32,7 @@
 			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.backgrounds"}}</div>
 
 			{{#each backgrounds as |item id|}}
-				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config usedots=true useroll=true}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=true useroll=true}}
 			{{/each}}
 		{{/if}}
 
@@ -46,7 +46,7 @@
 			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.othertraits"}}</div>
 
 			{{#each othertraits as |item id|}}
-				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config usedots=true}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=true}}
 			{{/each}}
 		{{/if}}
 
@@ -60,7 +60,7 @@
 			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.merits"}}</div>
 
 			{{#each merits as |item id|}}
-				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config usedots=false}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=false}}
 			{{/each}}
 		{{/if}}
 
@@ -68,7 +68,7 @@
 			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.flaws"}}</div>
 
 			{{#each flaws as |item id|}}
-				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config usedots=false}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=false}}
 			{{/each}}
 		{{/if}}
 
