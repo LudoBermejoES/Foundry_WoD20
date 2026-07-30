@@ -29,11 +29,17 @@
 						{{/numLoop}}						
 						
 					</div>
-					{{#if (eq ../locked false)}}
-						<div class="iconBox">							
-							{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showedit=true item=realm locked=../locked edittitle="wod.labels.edit.realm" collapseclass="power"}}
-						</div>
-					{{/if}}
+					{{!-- showtooltip=true was missing here, so the eye never rendered and a Realm's
+					      rules text (2,100-3,400 chars from the book) was unreachable on the sheet,
+					      even though the .description div below has always been present and this
+					      include already passed collapseclass="power". The outer locked check is
+					      gone on purpose: list_icons.hbs gates showedit/showdelete on `locked`
+					      ITSELF and deliberately leaves the tooltip outside that gate, i.e.
+					      READING a description is meant to work on a locked sheet. Wrapping the
+					      whole iconBox defeated that. --}}
+					<div class="iconBox">
+						{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showedit=true showtooltip=true item=realm locked=../locked edittitle="wod.labels.edit.realm" collapseclass="power"}}
+					</div>
 				</div>	
 					
 			</div>

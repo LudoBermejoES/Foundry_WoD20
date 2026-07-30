@@ -587,14 +587,14 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 
 		if (isOpen) {
 			bonusDiv.style.maxHeight = "0";
-			icon.classList.remove("fa-compress");
-			icon.classList.add("fa-expand");
+			icon.classList.remove("fa-eye-slash");
+			icon.classList.add("fa-eye");
 			bonusDiv.classList.remove("collapsible-open");
 		} else {
 			bonusDiv.style.maxHeight = bonusDiv.scrollHeight + "px";
 			bonusDiv.classList.add("collapsible-open");
-			icon.classList.remove("fa-expand");
-			icon.classList.add("fa-compress");
+			icon.classList.remove("fa-eye");
+			icon.classList.add("fa-eye-slash");
 		}
 	}	
 
