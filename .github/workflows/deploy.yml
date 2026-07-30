@@ -3,62 +3,86 @@ name: Preflight & Deploy WoD System
 # CI + CD for the `worldofdarkness` Foundry SYSTEM, in ONE workflow.
 #
 # ===========================================================================
-# WHAT CHANGED ON 2026-07-30 AND WHY
+# THE ORDERING IS THE POINT OF THIS FILE
 # ===========================================================================
-# Before: this file had a single `deploy` job. Every push to main rsynced the
-# whole tree straight onto the live Foundry server, with NOTHING in front of it
-# — no test job, no manifest validation, no syntax check — and the only thing
-# checked afterwards was rsync's own exit code, which proves rsync ran, not that
-# the bytes Foundry will load are the bytes that were pushed. 17 deploys had run
-# that way (measured from `gh run list`, 2026-07-23 → 2026-07-28).
+# 2026-07-30, part 1 (commit a73035f) added the offline gate: before it, every
+# push to main rsynced the whole tree straight onto the live Foundry server with
+# NOTHING in front of it — no test job, no manifest validation, no syntax check —
+# and the only thing checked afterwards was rsync's own exit code, which proves
+# rsync ran, not that the bytes Foundry will load are the bytes that were pushed.
+# 17 deploys had run that way (measured from `gh run list`, 2026-07-23 →
+# 2026-07-28).
 #
-# This is a SYSTEM, not a content module: it supplies the data models, sheets and
-# templates for every actor in every world on that server. A malformed
-# system.json or one unparseable module/*.js does not degrade a feature, it takes
-# out every sheet in every world at once. The blast radius is the whole server,
-# so the gate has to be structural rather than an operator habit.
+# 2026-07-30, part 2 (this revision) closes the LevelDB corruption hazard the
+# first part explicitly left open, and RETRACTS the reasoning it left behind.
+# That reasoning said a system is "plain JS that Foundry re-reads on the next
+# restart", so stopping the server bought nothing. It was WRONG: this tree ships
+# 33 compiled LevelDB pack directories under packs/, and they were rsynced with
+# --delete under a live Foundry on every push.
 #
-# Now:
-#   preflight   offline validation of the committed tree (manifest + JS parse).
-#               Never touches the server. `deploy` declares `needs: preflight`,
-#               so a tree that fails here cannot reach the server at all.
-#   deploy      rsync (unchanged args and exclude set), then a per-file sha256
-#               comparison of what LANDED against what was PUSHED, plus a check
-#               that no excluded material reached the server.
+# rsync --delete replaces files by unlinking and recreating them. A Foundry
+# process holding a pack open keeps its descriptors pointing at the now DELETED
+# inodes: its writes go to an unlinked inode, its reads return the pre-deploy
+# tree, and on the next open LevelDB may run RepairDB — which DISCARDS THE DATA
+# AND KEEPS THE METADATA. It never surfaces as an error; it presents as
+# "compendium search returns nothing", and only a PROCESS RESTART recovers it (a
+# GM world reload does not). It destroyed all 86 packs of wod20-compendium-es on
+# 2026-07-27. On a SYSTEM the blast radius is every world on the server rather
+# than one module's content.
+#
+# Not theoretical here. Measured on the live server 2026-07-30, before this
+# revision:
+#   * all 32 non-empty pack dirs carried a LevelDB generation NEWER than the
+#     committed one (packs/lunarshapeshifting: server MANIFEST-001258 +
+#     001259.log vs this repo's MANIFEST-001226 + 001227.log) — i.e. the live
+#     process reopened and rewrote them after the last deploy;
+#   * the live Foundry (pid 2041202) held 128 open descriptors inside
+#     .../systems/worldofdarkness/packs, four per non-empty pack: the current
+#     *.log, LOCK, LOG and MANIFEST-*. An rsync --delete at that instant unlinks
+#     all 128 and rewinds every CURRENT to name an OLDER manifest than the one
+#     the running process is using;
+#   * LOCK is not tracked in git here, so --delete unlinks the running database's
+#     own lock file.
+#
+# So the sequence is now structural:
+#
+#   preflight            offline validation of the committed tree. Never touches
+#                        the server. `deploy` declares `needs: preflight`, so a
+#                        tree that fails here cannot reach the server at all.
+#   stop + VERIFY DOWN   pm2 stop, then poll ps AND port 30000 until both are
+#                        empty. pm2's exit code is printed and IGNORED — it has
+#                        lied in this project before. Timeout => FAIL, no rsync.
+#   rsync                re-asserts "down" over ssh immediately before the
+#                        transfer, closing the gap between the stop step and this
+#                        one (an operator, `pm2 resurrect` or a queued run could
+#                        have brought it back), and aborts before writing a byte.
+#   verify bytes         per-file sha256 of what LANDED vs what was PUSHED, while
+#                        Foundry is still DOWN — the only moment the two trees are
+#                        comparable, because Foundry mutates LOCK/LOG/WAL/MANIFEST
+#                        as soon as it opens a pack.
+#   start + VERIFY UP    process present, port listening, /api/status serving.
+#                        Runs with `if: always()`, so a failure above still brings
+#                        Foundry back — and says so LOUDLY if it cannot.
+#   post-start verify    ZERO deleted-inode descriptors inside the system
+#                        directory, i.e. the incident signature is measured to be
+#                        absent, and the restarted Foundry reports the system
+#                        version that was just pushed.
+#
+# A FAILED DEPLOY IS STRICTLY BETTER THAN A CORRUPTED ONE. Every gate fails the
+# job rather than proceeding on an assumption.
+#
+# THIS REPLACES A MANUAL STEP; IT DOES NOT ADD AN OUTAGE. A system change only
+# takes effect when the Foundry PROCESS restarts, so an operator `pm2 restart
+# foundryvtt` was already required after every deploy — the previous revision of
+# this file printed a reminder saying exactly that. Doing the restart here
+# REMOVES that manual step and closes the hazard at the same time. Connected
+# players are still dropped for the duration of the restart; that cost has not
+# changed, it has only moved into CI where it is bounded and verified.
 #
 # Branch protection is not available on this repo (private, no Pro), so the gate
 # has to be expressible inside the workflow itself — hence one workflow with two
 # jobs and `needs:`, rather than a separate CI workflow that would merely RACE
 # the deploy.
-#
-# ---------------------------------------------------------------------------
-# WHAT THIS WORKFLOW DELIBERATELY DOES NOT DO: STOP/START FOUNDRY
-# ---------------------------------------------------------------------------
-# A system change only takes effect when the Foundry PROCESS restarts (systems
-# are read at startup), i.e. `pm2 restart foundryvtt`. That restart is a manual
-# operator step and stays that way: it drops every connected player on the shared
-# server, and deciding to do that is a bigger call than a CI gate should make.
-# The final step below says loudly that the restart is REQUIRED and has NOT been
-# performed.
-#
-# This is the opposite choice from wod20-compendium-es, whose deploy does stop
-# and start Foundry. That is not inconsistency — the risk there is different:
-# those packs are LevelDB databases that the RUNNING server holds open, and
-# rsyncing them underneath a live process leaves it holding descriptors to
-# deleted inodes and can trigger LevelDB's RepairDB (it destroyed all 86 packs on
-# 2026-07-27). The bulk of THIS repo is plain JS/CSS/HBS/JSON that Foundry simply
-# re-reads on the next restart, so stopping the server buys nothing for those
-# files and would cost a gratuitous outage mid-session.
-#
-# KNOWN GAP, NOT ADDRESSED HERE: this tree also ships 33 compiled LevelDB pack
-# directories under packs/, and they ARE rsynced under a live Foundry, so the
-# corruption hazard above exists here too, in a smaller form (measured
-# 2026-07-30: the live server's pack dirs already carry MANIFEST/log generations
-# newer than the committed ones, i.e. Foundry has reopened and rewritten them
-# after the last deploy). Closing that properly needs the same stop → verify-down
-# → rsync → verify → start sequence as the compendium deploy, which is out of
-# scope for this change and is why the pack verification below is limited to the
-# immutable *.ldb data files.
 
 on:
   push:
@@ -66,11 +90,14 @@ on:
   pull_request: {}
   workflow_dispatch: {}
 
-# Serialises deploys OF THIS REPO. It cannot serialise against the other repos
+# Serialises deploys OF THIS REPO — two runs must never stop/start Foundry or
+# rsync into the same tree at once. It CANNOT serialise against the other repos
 # that write to the same Foundry server (wod20-compendium-es →
 # Data/modules/wod20-compendium-es, wod20-combat-foundryvtt →
-# Data/modules/wod20-combat-foundryvtt): concurrency groups are per-repository.
-# Do not push those at the same time as this one.
+# Data/modules/wod20-combat-foundryvtt): concurrency groups are per-repository,
+# and there is no cross-repo lock. A compendium deploy that stops Foundry while
+# this one is mid-rsync would still interleave. Do not push those at the same
+# time as this one.
 concurrency:
   group: foundry-system-deploy
   cancel-in-progress: false
@@ -114,6 +141,30 @@ jobs:
       - name: Syntax-check every committed JavaScript file
         run: bash .github/scripts/js-syntax-check.sh
 
+      # The deploy job below drives Foundry's lifecycle through this script. A
+      # syntax error in it would be discovered halfway through a deploy, i.e.
+      # with Foundry stopped.
+      - name: Syntax-check the deploy library
+        run: |
+          set -euo pipefail
+          bash -n .github/scripts/foundry-deploy-lib.sh
+          bash -n .github/scripts/test-down-gate.sh
+          # The dispatcher must reject an unknown subcommand rather than silently
+          # succeed, otherwise a typo in a `bash -s -- stop` call would look like
+          # a successful stop.
+          if bash .github/scripts/foundry-deploy-lib.sh definitely-not-a-subcommand >/dev/null 2>&1; then
+            echo "::error::foundry-deploy-lib.sh accepted an unknown subcommand"
+            exit 1
+          fi
+          echo "foundry-deploy-lib.sh parses and rejects unknown subcommands."
+
+      # Asserts that `stop` REFUSES when pm2 exits 0 but Foundry is still alive —
+      # the failure mode that destroys packs. Fully offline: fake pm2/ss on PATH
+      # and a fake process. Takes ~25s because it proves the poll loop really
+      # waits instead of spinning.
+      - name: Prove the verified-down gate refuses a lying pm2
+        run: bash .github/scripts/test-down-gate.sh
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server
@@ -124,40 +175,132 @@ jobs:
     # runs validation-only.
     if: ${{ success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
+    # NOTE: only github, needs, secrets, vars, inputs, strategy and matrix are
+    # available in a job-level `env:`. `${{ runner.temp }}` here is a workflow
+    # VALIDATION error — the run dies in 0s with "workflow file issue", before any
+    # step executes, so none of the gates in this file would run at all. Paths
+    # under the runner temp dir are resolved from $RUNNER_TEMP inside `run:`.
     env:
       TARGET: /var/www/foundrydata/Data/systems/worldofdarkness
+      SSH_TARGET: ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
+      LIB: .github/scripts/foundry-deploy-lib.sh
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Plain JS/HBS/CSS/JSON system read directly by Foundry at load time — no
-      # build step, the committed tree IS the deployable artifact. Mirrors the
-      # repo to the systems directory, excluding repo-only material (this
-      # EXCLUDE set is unchanged from the pre-gate version of this workflow;
-      # it matches the manual v7.3.x rsync's exclude set).
-      - name: Deploy to Foundry server
-        id: rsync
-        uses: easingthemes/ssh-deploy@main
-        with:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.SSH_HOST }}
-          REMOTE_USER: ${{ secrets.SSH_USERNAME }}
-          REMOTE_PORT: ${{ secrets.SSH_PORT }}
-          SOURCE: './'
-          TARGET: '/var/www/foundrydata/Data/systems/worldofdarkness/'
-          EXCLUDE: '.git*, docs, *.md'
-          ARGS: '-rlgoDz --delete'
+      - name: Resolve runner-temp paths
+        run: |
+          set -euo pipefail
+          echo "SSH_KEY_FILE=$RUNNER_TEMP/foundry_deploy_key" >> "$GITHUB_ENV"
+          echo "RSSH=$RUNNER_TEMP/rssh" >> "$GITHUB_ENV"
 
-      # An rsync exit code proves rsync was LAUNCHED and returned 0. It does not
-      # prove that the tree Foundry will load on the next restart is the tree in
-      # this commit. Compare per-file sha256 manifests instead.
-      - name: Verify the deployed tree matches this commit
-        id: verify
+      # One ssh wrapper for every remote call in this job, so the stop gate, the
+      # rsync's re-assert, the byte audit and the restart all reach the server
+      # with identical options. Replaces the per-step key setup the previous
+      # revision did inside the verify step.
+      - name: Configure SSH
         env:
           SSH_KEY: ${{ secrets.SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.SSH_HOST }}
-          REMOTE_USER: ${{ secrets.SSH_USERNAME }}
-          REMOTE_PORT: ${{ secrets.SSH_PORT }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > "$SSH_KEY_FILE"
+          chmod 600 "$SSH_KEY_FILE"
+          # Trust-on-first-use, the same trust model the easingthemes/ssh-deploy
+          # action used (it ran with StrictHostKeyChecking=no).
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          # Absolute key path on purpose: a literal ~ inside a quoted ssh string
+          # is not expanded by the shell, and ssh would resolve it from the passwd
+          # entry rather than $HOME.
+          cat > "$RSSH" <<'EOF'
+          #!/usr/bin/env bash
+          exec ssh -i "$SSH_KEY_FILE" -p "$SSH_PORT" \
+            -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=20 \
+            "$SSH_TARGET" "$@"
+          EOF
+          chmod +x "$RSSH"
+          "$RSSH" 'echo "ssh OK on $(hostname) as $(id -un)"'
+
+      # The library is piped over STDIN, so the remote shell's own command line is
+      # just `bash -s` and `pgrep -f <foundry entry script>` cannot match the
+      # checking shell itself.
+      #
+      # This is the step that prevents the incident: it does not return until ps
+      # AND port 30000 both agree Foundry is gone, and it fails the job (before
+      # any rsync) if that cannot be established within DOWN_TIMEOUT.
+      #
+      # It also covers a case that cannot be checked from here: the pm2 daemon is
+      # per-user (it lives in /var/www/.pm2, i.e. www-data's home), and secrets.
+      # SSH_USERNAME is not readable from a workflow. If the deploy user were ever
+      # NOT the user owning that daemon, `pm2 stop foundryvtt` would talk to an
+      # empty daemon and report whatever it likes while the real Foundry kept
+      # running. Because the decision is made from ps and the port rather than
+      # from pm2, that scenario fails the job instead of corrupting the packs.
+      - name: Stop Foundry and VERIFY it is down
+        id: stop
+        run: |
+          set -euo pipefail
+          "$RSSH" "FOUNDRY_DIR='$TARGET' bash -s -- stop" < "$LIB"
+
+      # Plain JS/HBS/CSS/JSON read directly by Foundry at load time plus the
+      # compiled packs/ — no build step, the committed tree IS the deployable
+      # artifact.
+      #
+      # The rsync ARGS and the EXCLUDE set are the ones the easingthemes/ssh-deploy
+      # action was invoked with (ARGS '-rlgoDz --delete', EXCLUDE '.git*, *.md'),
+      # so the transfer semantics are unchanged; only the sequencing around it is
+      # new. `-v --stats` are additions for the log and change nothing.
+      #
+      # 'docs' has been REMOVED from the exclude set because there is no docs/ in
+      # this repo — the directory is doc/ (87 tracked files, 18M of README
+      # screenshots), so the pattern never matched anything and doc/ has always
+      # shipped. See the comment on doc/ below the rsync for why it keeps
+      # shipping rather than being excluded.
+      - name: rsync the system tree (re-asserts Foundry is down first)
+        id: rsync
+        run: |
+          set -euo pipefail
+
+          # Closes the window between the previous step and this one: if anything
+          # brought Foundry back (an operator, `pm2 resurrect`, a queued deploy),
+          # abort BEFORE the first byte is written.
+          "$RSSH" "FOUNDRY_DIR='$TARGET' bash -s -- assert-down" < "$LIB"
+
+          rsync -rlgoDz --delete -v --stats \
+            -e "ssh -i $SSH_KEY_FILE -p $SSH_PORT -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=20" \
+            --exclude '.git*' \
+            --exclude '*.md' \
+            ./ "$SSH_TARGET:$TARGET/"
+
+          # DELIBERATE DECISION ABOUT doc/ (18M of README screenshots, no runtime
+          # role — the only doc/ reference in the code is an absolute
+          # raw.githubusercontent.com URL in module/ui/settings-sidebar.js, not a
+          # local path):
+          #
+          # It keeps shipping. Adding `--exclude doc` would NOT remove it from the
+          # server, because rsync protects excluded files from --delete; the only
+          # effect would be to freeze a stale 18M copy there forever, which is
+          # worse than a synced one. Actually removing it needs
+          # --delete-excluded or a remote `rm -rf`, and adding a destructive
+          # operation to a deploy whose entire purpose is to stop being
+          # destructive is not a trade worth making for 18M of static images.
+          # doc/ is therefore in the verified set below, like every other shipped
+          # directory.
+
+      # This comparison is only meaningful while Foundry is DOWN: opening a pack
+      # creates LOCK/LOG and a fresh WAL + MANIFEST, so a running Foundry makes
+      # the deployed tree legitimately differ from the committed one. That is why
+      # this step sits between the rsync and the restart, and why it can now
+      # compare the WHOLE pack tree instead of only the immutable *.ldb files as
+      # the previous revision had to.
+      #
+      # An rsync exit code proves rsync was LAUNCHED and returned 0. It does not
+      # prove that the tree Foundry will load on the next start is the tree in
+      # this commit. Compare per-file sha256 manifests instead.
+      - name: Verify the deployed tree matches this commit (Foundry still down)
+        id: verify
         run: |
           set -euo pipefail
 
@@ -170,12 +313,12 @@ jobs:
           export LC_ALL=C
 
           # The set of top-level entries rsync actually ships: everything except
-          # the EXCLUDE patterns above ('.git*', 'docs', '*.md') and packs/,
-          # which is verified separately below. DERIVED, not hardcoded, so a new
-          # top-level file or directory is verified automatically instead of
-          # shipping unchecked. If the EXCLUDE input above is ever changed, change
-          # this filter with it.
-          mapfile -t SHIPPED < <(ls -A1 | grep -Ev '^\.git|^docs$|\.md$|^packs$' | sort)
+          # the EXCLUDE patterns above ('.git*', '*.md') and packs/, which is
+          # verified separately below. DERIVED, not hardcoded, so a new top-level
+          # file or directory is verified automatically instead of shipping
+          # unchecked. If the EXCLUDE input above is ever changed, change this
+          # filter with it.
+          mapfile -t SHIPPED < <(ls -A1 | grep -Ev '^\.git|\.md$|^packs$' | sort)
           if [ "${#SHIPPED[@]}" -eq 0 ]; then
             echo "::error::no shippable top-level entries found; refusing to 'verify' nothing"
             exit 1
@@ -194,15 +337,6 @@ jobs:
           fi
           VERSION="$(python3 -c 'import json;print(json.load(open("system.json"))["version"])')"
 
-          # Absolute key path on purpose: a literal ~ inside the quoted SSH
-          # string is not expanded by the shell, and ssh would resolve it from
-          # the passwd entry rather than $HOME.
-          KEY="$HOME/.ssh/verify_key"
-          mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
-          printf '%s\n' "$SSH_KEY" > "$KEY"
-          chmod 600 "$KEY"
-          SSH="ssh -i $KEY -p ${REMOTE_PORT:-22} -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=20"
-
           # Everything the server side does, in one round trip. Read-only: it
           # hashes and lists, and changes nothing. Piped over STDIN so the remote
           # command line stays trivial.
@@ -214,7 +348,9 @@ jobs:
           for entry in "$@"; do [ -e "$entry" ] || echo "MISSINGPATH $entry"; done
           # shellcheck disable=SC2086
           find "$@" -type f -print0 | xargs -0 -r sha256sum | sort | sed 's/^/SHA /'
-          find ./packs -name '*.ldb' -type f -print0 | xargs -0 -r sha256sum | sort | sed 's/^/PACKSHA /'
+          find ./packs -type f ! -name LOCK ! -name LOG ! -name 'LOG.old' -print0 \
+            | xargs -0 -r sha256sum | sort | sed 's/^/PACKSHA /'
+          find ./packs -name LOCK -type f | sort | sed 's/^/PACKLOCK /'
           for dir in ./packs/*/; do
             dir="${dir%/}"
             ok=OK
@@ -228,9 +364,9 @@ jobs:
           REMOTE
 
           # shellcheck disable=SC2086  # PATHS must word-split
-          if ! $SSH "$REMOTE_USER@$REMOTE_HOST" "bash -s -- '$TARGET' $PATHS" \
+          if ! "$RSSH" "bash -s -- '$TARGET' $PATHS" \
                  < "$RUNNER_TEMP/remote-audit.sh" > "$RUNNER_TEMP/remote.out"; then
-            echo "::error::could not audit the server ($REMOTE_USER@$REMOTE_HOST:$TARGET); the deployed tree is UNVERIFIED"
+            echo "::error::could not audit the server ($SSH_TARGET:$TARGET); the deployed tree is UNVERIFIED"
             sed -n '1,20p' "$RUNNER_TEMP/remote.out" || true
             exit 1
           fi
@@ -248,7 +384,7 @@ jobs:
           FILE_COUNT="$(wc -l < "$RUNNER_TEMP/expected.sha" | tr -d ' ')"
           echo "Files verified: $FILE_COUNT"
           if ! diff -u "$RUNNER_TEMP/expected.sha" "$RUNNER_TEMP/deployed.sha"; then
-            echo "::error::The deployed system tree does NOT match ${GITHUB_SHA}. rsync exited 0 but the bytes on the server differ (see diff above). Do NOT restart Foundry."
+            echo "::error::The deployed system tree does NOT match ${GITHUB_SHA}. rsync exited 0 but the bytes on the server differ (see diff above)."
             rc=1
           fi
           if grep -q '^MISSINGPATH ' "$RUNNER_TEMP/remote.out"; then
@@ -256,25 +392,43 @@ jobs:
             rc=1
           fi
 
-          # ---- 2. packs/: the immutable data files ----------------------------
-          # Only *.ldb is compared. CURRENT, MANIFEST-*, *.log, LOG, LOG.old and
-          # LOCK are LevelDB runtime state that the LIVE Foundry rewrites as soon
-          # as it opens a pack, so they legitimately differ from the committed
-          # tree (measured 2026-07-30: the server was on MANIFEST-001258/001259.log
-          # where this repo commits MANIFEST-001226/001227.log). Comparing them
-          # would be permanent noise; *.ldb is the actual pack DATA and was
-          # byte-identical to this repo on the same measurement.
+          # ---- 2. packs/: the whole LevelDB tree ------------------------------
+          # CURRENT, MANIFEST-*, *.log and *.ldb are ALL compared now. The
+          # previous revision could only compare *.ldb, because it ran against a
+          # live Foundry that rewrites the rest as soon as it opens a pack
+          # (measured 2026-07-30: the server was on MANIFEST-001258/001259.log
+          # where this repo commits MANIFEST-001226/001227.log). With Foundry
+          # verified down, an rsync --delete mirror makes the whole tree
+          # comparable, so a rewound CURRENT or a missing MANIFEST is now caught.
+          #
+          # LOCK/LOG/LOG.old are excluded: LOCK is untracked (rsync --delete
+          # removes it from the server, and LevelDB recreates it on the next open)
+          # and LOG/LOG.old are debug logs LevelDB rewrites on open. Comparing
+          # them would be noise about nothing the deploy controls.
           #
           # Whole files are hashed. Values inside a .ldb are Snappy-COMPRESSED, so
           # grepping for a string in a .ldb proves nothing about what is stored.
-          find ./packs -name '*.ldb' -type f -print0 | xargs -0 -r sha256sum | sort > "$RUNNER_TEMP/expected-packs.sha"
+          find ./packs -type f ! -name LOCK ! -name LOG ! -name 'LOG.old' -print0 \
+            | xargs -0 -r sha256sum | sort > "$RUNNER_TEMP/expected-packs.sha"
           sed -n 's/^PACKSHA //p' "$RUNNER_TEMP/remote.out" > "$RUNNER_TEMP/deployed-packs.sha"
           PACK_COUNT="$(wc -l < "$RUNNER_TEMP/expected-packs.sha" | tr -d ' ')"
-          echo "Pack data files verified: $PACK_COUNT"
+          echo "Pack files verified: $PACK_COUNT"
           if ! diff -u "$RUNNER_TEMP/expected-packs.sha" "$RUNNER_TEMP/deployed-packs.sha"; then
-            echo "::error::Deployed pack data (*.ldb) does NOT match ${GITHUB_SHA} (see diff above)."
-            echo "::error::If the FILE NAMES differ, the live Foundry compacted or wrote to a system pack after the rsync — re-run this workflow and, if it repeats, deploy with Foundry stopped."
+            echo "::error::Deployed pack data does NOT match ${GITHUB_SHA} (see diff above)."
+            echo "::error::If the FILE NAMES differ, something opened or wrote to a system pack during the transfer."
             echo "::error::If the names match and only the hashes differ, the pack bytes on the server are not the ones that were pushed."
+            rc=1
+          fi
+
+          # A LevelDB LOCK file exists only because a process opened the database.
+          # rsync --delete has just removed every LOCK (none is tracked in git),
+          # so a LOCK present now means something opened a pack between the
+          # transfer and this audit — which makes the comparison above
+          # untrustworthy and is the start of the very race this job serialises
+          # against.
+          if grep -q '^PACKLOCK ' "$RUNNER_TEMP/remote.out"; then
+            sed -n 's/^PACKLOCK /::error::a LevelDB LOCK exists after the transfer, so a process opened this pack while Foundry was supposed to be down: /p' \
+              "$RUNNER_TEMP/remote.out"
             rc=1
           fi
 
@@ -296,11 +450,11 @@ jobs:
           done < <(sed -n 's/^PACKSTATE //p' "$RUNNER_TEMP/remote.out")
 
           # ---- 3. nothing that should not be there ---------------------------
-          # If the EXCLUDE input were ever dropped or silently emptied, rsync
+          # If the EXCLUDE args above were ever dropped or silently emptied, rsync
           # would exit 0 while shipping .git and .github into a live Foundry data
-          # directory. README.md is permitted: one predates its addition to
-          # EXCLUDE and `--delete` cannot remove it (rsync protects excluded files
-          # from deletion), so listing it as a leak would fail every run.
+          # directory. README.md is permitted: one predates its exclusion and
+          # `--delete` cannot remove it (rsync protects excluded files from
+          # deletion), so listing it as a leak would fail every run.
           {
             printf '%s\n' "${SHIPPED[@]}"
             printf 'packs\nREADME.md\n'
@@ -323,28 +477,91 @@ jobs:
           fi
           exit $rc
 
-      - name: Post-deploy notice — RESTART REQUIRED, NOT PERFORMED
+      # `if: always()` — whatever failed above, Foundry must not be left stopped.
+      # Guarded on the stop step having run at all: if we never stopped it (e.g.
+      # checkout or SSH setup failed) there is nothing to restore.
+      #
+      # This restart is also what makes the system change take effect: systems are
+      # read at startup. It replaces the manual `pm2 restart foundryvtt` the
+      # previous revision of this file told the operator to perform.
+      - name: Start Foundry and VERIFY it is back
+        id: start
+        if: always() && steps.stop.outcome != 'skipped'
+        run: |
+          set -euo pipefail
+          "$RSSH" "FOUNDRY_DIR='$TARGET' bash -s -- start" < "$LIB"
+
+      # No `if:` on purpose — automatically skipped if anything above failed, so a
+      # failed rsync does not also produce a second, confusing failure here.
+      - name: Verify the running Foundry loaded the deployed system
+        id: verify_live
+        run: |
+          set -euo pipefail
+
+          # system.json is not mutated by Foundry, so it must still read as pushed.
+          REMOTE_VER="$("$RSSH" "bash -s -- version '$TARGET'" < "$LIB" | cut -d= -f2)"
+          echo "deployed system.json version after restart: $REMOTE_VER"
+          [ "$REMOTE_VER" = "${{ steps.verify.outputs.system_version }}" ] \
+            || { echo "::error::system.json version changed after the restart"; exit 1; }
+
+          # The direct incident check: a Foundry started AFTER the rsync holds ZERO
+          # descriptors to deleted files under the system directory. Before this
+          # revision the live process held 128 live descriptors in there that an
+          # rsync --delete would have unlinked.
+          "$RSSH" "FOUNDRY_DIR='$TARGET' bash -s -- stale-handles" < "$LIB"
+
+          # If a world is active, Foundry reports the system version it actually
+          # loaded — the end-to-end proof that the restart picked up this commit.
+          # If no world is active there is no systemVersion to compare, which is
+          # normal and not a failure.
+          "$RSSH" "bash -s -- status-json" < "$LIB" > "$RUNNER_TEMP/status.json" || true
+          python3 - "$RUNNER_TEMP/status.json" "${{ steps.verify.outputs.system_version }}" <<'PY'
+          import json, sys
+          try:
+              st = json.load(open(sys.argv[1]))
+          except Exception as exc:
+              print(f"::warning::could not parse /api/status ({exc}); skipping the live version check")
+              raise SystemExit(0)
+          want = sys.argv[2]
+          print(f"/api/status: {json.dumps({k: st.get(k) for k in ('active','version','world','system','systemVersion')})}")
+          if st.get("system") != "worldofdarkness" or not st.get("systemVersion"):
+              print("::notice::no active worldofdarkness world; the live system version cannot be checked "
+                    "(the on-disk tree was verified byte-for-byte above)")
+              raise SystemExit(0)
+          if st["systemVersion"] != want:
+              print(f"::error::the restarted Foundry is serving system version {st['systemVersion']}, "
+                    f"but {want} was deployed")
+              raise SystemExit(1)
+          print(f"The running Foundry has loaded worldofdarkness {want}.")
+          PY
+
+      - name: Post-deploy notice
         if: always() && steps.rsync.outcome == 'success'
         run: |
           set -uo pipefail
           echo "Deployed the system tree to $TARGET"
           echo
-          echo "############################################################"
-          echo "# A SYSTEM change needs a Foundry PROCESS RESTART.         #"
-          echo "# THIS WORKFLOW HAS NOT RESTARTED ANYTHING.               #"
-          echo "#                                                          #"
-          echo "#   ssh <foundry server>                                   #"
-          echo "#   export NVM_DIR=/var/www/.nvm && . \$NVM_DIR/nvm.sh     #"
-          echo "#   pm2 restart foundryvtt                                 #"
-          echo "#                                                          #"
-          echo "# Until then the running Foundry keeps serving the PREVIOUS #"
-          echo "# system: worlds already open are unaffected, and the new   #"
-          echo "# files on disk are simply not loaded yet.                  #"
-          echo "# The restart drops every connected player, which is why it #"
-          echo "# is left to an operator and not done here.                 #"
-          echo "############################################################"
+          # Only claim the restart happened if the start step says it did — the
+          # "Shout if Foundry is not running" step below owns the other case.
+          if [ "${{ steps.start.outcome }}" = "success" ]; then
+            echo "############################################################"
+            echo "# The Foundry PROCESS WAS RESTARTED by this workflow.       #"
+            echo "# A system change needs that restart to take effect, so     #"
+            echo "# there is NO manual 'pm2 restart foundryvtt' left to do.   #"
+            echo "#                                                          #"
+            echo "# Connected players WERE DROPPED for the duration of the    #"
+            echo "# restart, and any open world reloaded. That was already    #"
+            echo "# true of the manual restart this replaces.                 #"
+            echo "#                                                          #"
+            echo "# What is still NOT done: nothing re-imports or migrates    #"
+            echo "# world content. A data-model change that needs a migration #"
+            echo "# still needs one.                                          #"
+            echo "############################################################"
+          else
+            echo "::warning::the restart step did not report success (outcome: ${{ steps.start.outcome }}) — see the errors below; Foundry may still be DOWN."
+          fi
           if [ "${{ steps.verify.outcome }}" != "success" ]; then
-            echo "::error::Verification did not pass — do NOT restart Foundry until the diff above is understood."
+            echo "::error::Byte verification did not pass — the tree on the server is NOT known to be this commit. Investigate the diff above before trusting the restarted Foundry."
           fi
 
       - name: Deploy summary
@@ -358,12 +575,41 @@ jobs:
             echo "| stage | result |"
             echo "|---|---|"
             echo "| preflight (offline gate) | \`${{ needs.preflight.result }}\` |"
+            echo "| stop + verified down | \`${{ steps.stop.outcome }}\` |"
             echo "| rsync | \`${{ steps.rsync.outcome }}\` |"
             echo "| deployed bytes == pushed bytes | \`${{ steps.verify.outcome }}\` |"
+            echo "| start + verified up | \`${{ steps.start.outcome }}\` |"
+            echo "| no stale handles, live version matches | \`${{ steps.verify_live.outcome }}\` |"
             echo
             echo "version \`${{ steps.verify.outputs.system_version }}\`, "
             echo "\`${{ steps.verify.outputs.files_verified }}\` files + "
-            echo "\`${{ steps.verify.outputs.pack_files_verified }}\` pack data files verified"
+            echo "\`${{ steps.verify.outputs.pack_files_verified }}\` pack files verified"
             echo
-            echo "**A system change takes effect only on \`pm2 restart foundryvtt\`, which this workflow does NOT do.**"
+            echo "#### Final Foundry state"
+            echo '```'
+            # ${RSSH:-} on purpose: if the run died before "Resolve runner-temp
+            # paths", `set -u` on a bare $RSSH would abort this step and lose the
+            # table above, which is the one thing that is always worth printing.
+            if [ -n "${RSSH:-}" ] && [ -x "${RSSH:-}" ]; then
+              "$RSSH" "FOUNDRY_DIR='$TARGET' bash -s -- state" < "$LIB" 2>&1 \
+                || echo "could not reach the server"
+            else
+              echo "ssh was never configured in this run; no server state to report"
+            fi
+            echo '```'
+            echo
+            echo "**This workflow restarts the Foundry process, which is what makes a system change take effect.**"
+            echo "Connected players are dropped for the duration of that restart."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Shout if Foundry is not running
+        if: always() && steps.start.outcome == 'failure'
+        run: |
+          echo "::error::################################################################"
+          echo "::error::FOUNDRY IS DOWN and this workflow could not bring it back."
+          echo "::error::Every world on the server is offline. Fix it by hand NOW:"
+          echo "::error::  ssh <foundry server>"
+          echo "::error::  export NVM_DIR=/var/www/.nvm && . \$NVM_DIR/nvm.sh"
+          echo "::error::  pm2 start foundryvtt && pm2 logs foundryvtt --lines 50"
+          echo "::error::################################################################"
+          exit 1
