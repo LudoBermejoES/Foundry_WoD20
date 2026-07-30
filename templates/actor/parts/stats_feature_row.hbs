@@ -18,7 +18,7 @@
 					0-shows-nothing rule for numeric values and passes any other string through
 					verbatim. Do NOT drop the system.value candidate - it is the character
 					exporter's only field.
-	useroll=true	Backgrounds only - makes the row's NAME a roll target: vrollable plus
+	useroll=true	Backgrounds AND Other Traits - makes the row's NAME a roll target: vrollable plus
 					data-action="rollDice" + data-rollitem="true" + data-itemid +
 					data-object="wod.types.background", which reaches the background branch of
 					ActionHelper.RollDialog and opens the same DialogGeneralRoll an ability name
@@ -58,12 +58,35 @@
 		<i class="pullLeft icon no-description-disabled fa-solid fa-eye"></i>
 	{{/if}}
 
-	<div class="pullLeft{{#if useroll}} vrollable{{/if}} ability-headlineWidth headlineNormal"
-		title="{{item.name}}"
-		{{#if useroll}}data-action="rollDice"
-		data-rollitem="true"
-		data-itemid="{{item._id}}"
-		data-object="wod.types.background"{{/if}}>{{shorten item.name 20}}</div>
+	{{!-- The name is a roll target when `useroll` is passed AND the item carries no pool of its
+	      own. The `dice1` guard is what makes it safe to pass `useroll` for Other Traits as well
+	      as Backgrounds — see this file's header for why that was deferred, and why the deferral
+	      no longer applies:
+
+	      `data-rollitem="true"` reaches a chain of `dataset.object` branches in
+	      ActionHelper.RollDialog that ENDS IN `ui.notifications.error("Item Roll missing
+	      function")` (action-helpers.js:423). So emitting it with the background object on an item
+	      that should roll its own dice1/dice2 pool would not degrade gracefully — it would roll
+	      the wrong pool. An item that HAS its own pool therefore keeps the plain, unrollable name
+	      here and stays rollable from the Features tab, where `feature_item.hbs` already rolls it
+	      properly. Measured on the live world: 11 of 11 rows in this column are `Feature` with no
+	      `dice1`, so today every one of them takes the rollable branch. --}}
+	{{#if useroll}}
+		{{#if item.system.dice1}}
+			<div class="pullLeft ability-headlineWidth headlineNormal"
+				title="{{item.name}}">{{shorten item.name 20}}</div>
+		{{else}}
+			<div class="pullLeft vrollable ability-headlineWidth headlineNormal"
+				title="{{item.name}}"
+				data-action="rollDice"
+				data-rollitem="true"
+				data-itemid="{{item._id}}"
+				data-object="wod.types.background">{{shorten item.name 20}}</div>
+		{{/if}}
+	{{else}}
+		<div class="pullLeft ability-headlineWidth headlineNormal"
+			title="{{item.name}}">{{shorten item.name 20}}</div>
+	{{/if}}
 
 	{{#if usedots}}
 

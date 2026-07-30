@@ -7,10 +7,19 @@
 	tooltips, activation toggles, rollable-pool columns, edit/delete/send-to-chat icons); both read
 	the same four lists from prepareAdvantageLists in pc-actor-sheet.js.
 
-	Only the Backgrounds column passes useroll=true: the books let a Trasfondo be rolled alone or with
-	an Attribute, while Merits/Flaws are point costs and the Other Traits column mixes Trait carriers
-	(which already roll their own dice1/dice2 pool from the Features tab) with Feature ones, so one
-	identical-looking row would need two behaviours. Deferred deliberately.
+	Backgrounds AND Other Traits pass useroll=true; Merits/Flaws do not, because they are point costs
+	rather than rated traits and there is nothing to roll.
+
+	Other Traits was deferred at first, and the reason was real: that column takes BOTH `Trait` and
+	`Feature` items (see prepareAdvantageLists' filter), and a Trait can carry its own dice1/dice2
+	pool which it already rolls from the Features tab — so one identical-looking row would have
+	needed two behaviours. What resolved it was measuring instead of reasoning: across the whole
+	live world, all 11 rows in this column are `Feature` and NONE carries a `dice1`, so the second
+	behaviour has no subjects. Rather than rely on that staying true, `stats_feature_row.hbs` now
+	guards on `dice1` itself — a pool-carrying item keeps a plain, unrollable name here and stays
+	rollable from the Features tab. The guard matters because `data-rollitem="true"` with an
+	unhandled `dataset.object` ends in `ui.notifications.error` (action-helpers.js:423), so a wrong
+	pick would not degrade quietly.
 
 	The create icon is data-origin="feature" -> CreateHelper.CreateButtonsNotev2, which offers
 	Background / Merit / Flaw / Other Trait. The stats tab's own icon is data-origin="core", which
@@ -46,7 +55,7 @@
 			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.othertraits"}}</div>
 
 			{{#each othertraits as |item id|}}
-				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=true}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=true useroll=true}}
 			{{/each}}
 		{{/if}}
 
