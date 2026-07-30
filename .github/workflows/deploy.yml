@@ -1,24 +1,142 @@
-name: Deploy WoD System
+name: Preflight & Deploy WoD System
+
+# CI + CD for the `worldofdarkness` Foundry SYSTEM, in ONE workflow.
+#
+# ===========================================================================
+# WHAT CHANGED ON 2026-07-30 AND WHY
+# ===========================================================================
+# Before: this file had a single `deploy` job. Every push to main rsynced the
+# whole tree straight onto the live Foundry server, with NOTHING in front of it
+# — no test job, no manifest validation, no syntax check — and the only thing
+# checked afterwards was rsync's own exit code, which proves rsync ran, not that
+# the bytes Foundry will load are the bytes that were pushed. 17 deploys had run
+# that way (measured from `gh run list`, 2026-07-23 → 2026-07-28).
+#
+# This is a SYSTEM, not a content module: it supplies the data models, sheets and
+# templates for every actor in every world on that server. A malformed
+# system.json or one unparseable module/*.js does not degrade a feature, it takes
+# out every sheet in every world at once. The blast radius is the whole server,
+# so the gate has to be structural rather than an operator habit.
+#
+# Now:
+#   preflight   offline validation of the committed tree (manifest + JS parse).
+#               Never touches the server. `deploy` declares `needs: preflight`,
+#               so a tree that fails here cannot reach the server at all.
+#   deploy      rsync (unchanged args and exclude set), then a per-file sha256
+#               comparison of what LANDED against what was PUSHED, plus a check
+#               that no excluded material reached the server.
+#
+# Branch protection is not available on this repo (private, no Pro), so the gate
+# has to be expressible inside the workflow itself — hence one workflow with two
+# jobs and `needs:`, rather than a separate CI workflow that would merely RACE
+# the deploy.
+#
+# ---------------------------------------------------------------------------
+# WHAT THIS WORKFLOW DELIBERATELY DOES NOT DO: STOP/START FOUNDRY
+# ---------------------------------------------------------------------------
+# A system change only takes effect when the Foundry PROCESS restarts (systems
+# are read at startup), i.e. `pm2 restart foundryvtt`. That restart is a manual
+# operator step and stays that way: it drops every connected player on the shared
+# server, and deciding to do that is a bigger call than a CI gate should make.
+# The final step below says loudly that the restart is REQUIRED and has NOT been
+# performed.
+#
+# This is the opposite choice from wod20-compendium-es, whose deploy does stop
+# and start Foundry. That is not inconsistency — the risk there is different:
+# those packs are LevelDB databases that the RUNNING server holds open, and
+# rsyncing them underneath a live process leaves it holding descriptors to
+# deleted inodes and can trigger LevelDB's RepairDB (it destroyed all 86 packs on
+# 2026-07-27). The bulk of THIS repo is plain JS/CSS/HBS/JSON that Foundry simply
+# re-reads on the next restart, so stopping the server buys nothing for those
+# files and would cost a gratuitous outage mid-session.
+#
+# KNOWN GAP, NOT ADDRESSED HERE: this tree also ships 33 compiled LevelDB pack
+# directories under packs/, and they ARE rsynced under a live Foundry, so the
+# corruption hazard above exists here too, in a smaller form (measured
+# 2026-07-30: the live server's pack dirs already carry MANIFEST/log generations
+# newer than the committed ones, i.e. Foundry has reopened and rewritten them
+# after the last deploy). Closing that properly needs the same stop → verify-down
+# → rsync → verify → start sequence as the compendium deploy, which is out of
+# scope for this change and is why the pack verification below is limited to the
+# immutable *.ldb data files.
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [main]
+  pull_request: {}
+  workflow_dispatch: {}
+
+# Serialises deploys OF THIS REPO. It cannot serialise against the other repos
+# that write to the same Foundry server (wod20-compendium-es →
+# Data/modules/wod20-compendium-es, wod20-combat-foundryvtt →
+# Data/modules/wod20-combat-foundryvtt): concurrency groups are per-repository.
+# Do not push those at the same time as this one.
+concurrency:
+  group: foundry-system-deploy
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  # ---------------------------------------------------------------------------
+  # The gate. Entirely offline — it only reads the checkout, so it cannot break
+  # anything, and it is the only thing standing between a bad commit and every
+  # actor sheet on the server. Also the PR check: on a pull_request this is the
+  # only job that runs.
+  #
+  # HONEST SCOPE: this repo has no test suite, no build step and no linter
+  # (measured 2026-07-30 — no package.json, no test runner config, no eslint
+  # config anywhere in the tree), and none is invented here. What runs is
+  # validation of the committed artifact, not coverage of the game logic: the
+  # manifest must be loadable and internally consistent, every file it names must
+  # exist, every committed JSON must parse, every relative import must resolve,
+  # and every .js file must be parseable JavaScript. A logic bug still ships.
+  # ---------------------------------------------------------------------------
+  preflight:
+    name: Preflight (offline validation)
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Plain JS/HBS/JSON system read directly by Foundry at load time — no
-      # build or test step, the committed tree IS the deployable artifact.
-      # Mirrors the repo to the systems directory, excluding repo-only
-      # material (matches the manual v7.3.x rsync's exclude set).
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # system.json / template.json / lang/*.json / packs/ / the import graph.
+      # Runnable locally: python3 .github/scripts/system-preflight.py
+      - name: Validate the system manifest and the committed tree
+        run: python3 .github/scripts/system-preflight.py
+
+      # node --check over every committed .js, with the parse goal pinned by
+      # extension (see the script header — `node --check foo.js` silently exits 0
+      # on a broken ES module in this repo).
+      # Runnable locally: bash .github/scripts/js-syntax-check.sh
+      - name: Syntax-check every committed JavaScript file
+        run: bash .github/scripts/js-syntax-check.sh
+
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy to Foundry server
+    needs: preflight
+    # `needs: preflight` already skips this job when the gate fails; `success()`
+    # is spelled out because adding an `if:` to a gated job is exactly where that
+    # guarantee gets accidentally dropped. The event check keeps pull_request
+    # runs validation-only.
+    if: ${{ success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    env:
+      TARGET: /var/www/foundrydata/Data/systems/worldofdarkness
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Plain JS/HBS/CSS/JSON system read directly by Foundry at load time — no
+      # build step, the committed tree IS the deployable artifact. Mirrors the
+      # repo to the systems directory, excluding repo-only material (this
+      # EXCLUDE set is unchanged from the pre-gate version of this workflow;
+      # it matches the manual v7.3.x rsync's exclude set).
       - name: Deploy to Foundry server
+        id: rsync
         uses: easingthemes/ssh-deploy@main
         with:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
@@ -30,9 +148,222 @@ jobs:
           EXCLUDE: '.git*, docs, *.md'
           ARGS: '-rlgoDz --delete'
 
-      - name: Post-deploy reminder
+      # An rsync exit code proves rsync was LAUNCHED and returned 0. It does not
+      # prove that the tree Foundry will load on the next restart is the tree in
+      # this commit. Compare per-file sha256 manifests instead.
+      - name: Verify the deployed tree matches this commit
+        id: verify
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_USER: ${{ secrets.SSH_USERNAME }}
+          REMOTE_PORT: ${{ secrets.SSH_PORT }}
         run: |
-          echo "Files deployed to /var/www/foundrydata/Data/systems/worldofdarkness on the Foundry server."
-          echo "This is a SYSTEM change: Foundry only picks it up on process restart (systems load at startup)."
-          echo "This workflow does NOT restart Foundry. An operator must run 'pm2 restart foundryvtt' manually."
-          echo "Restarting is disruptive to all connected worlds/users on the shared test server."
+          set -euo pipefail
+
+          # LC_ALL=C on BOTH sides of every sort in this step (the remote audit
+          # exports it too). Without it the runner and the server can collate the
+          # same file list differently (measured 2026-07-30: a macOS locale
+          # ordered ./assets/img/dice/d10_white.svg before
+          # ./assets/img/dice/d10.svg, a Linux C locale after), and the diff then
+          # reports a mismatch for a byte-identical tree.
+          export LC_ALL=C
+
+          # The set of top-level entries rsync actually ships: everything except
+          # the EXCLUDE patterns above ('.git*', 'docs', '*.md') and packs/,
+          # which is verified separately below. DERIVED, not hardcoded, so a new
+          # top-level file or directory is verified automatically instead of
+          # shipping unchecked. If the EXCLUDE input above is ever changed, change
+          # this filter with it.
+          mapfile -t SHIPPED < <(ls -A1 | grep -Ev '^\.git|^docs$|\.md$|^packs$' | sort)
+          if [ "${#SHIPPED[@]}" -eq 0 ]; then
+            echo "::error::no shippable top-level entries found; refusing to 'verify' nothing"
+            exit 1
+          fi
+          PATHS=""
+          for entry in "${SHIPPED[@]}"; do PATHS="$PATHS ./$entry"; done
+          echo "Shipped top-level entries:$PATHS"
+
+          # A copy-paste error in TARGET would deploy the system into the wrong
+          # directory, where Foundry would ignore it (the directory name must
+          # equal the manifest id).
+          MANIFEST_ID="$(python3 -c 'import json;print(json.load(open("system.json"))["id"])')"
+          if [ "$(basename "$TARGET")" != "$MANIFEST_ID" ]; then
+            echo "::error::TARGET is $TARGET but system.json id is '$MANIFEST_ID'; Foundry would ignore the deployed system"
+            exit 1
+          fi
+          VERSION="$(python3 -c 'import json;print(json.load(open("system.json"))["version"])')"
+
+          # Absolute key path on purpose: a literal ~ inside the quoted SSH
+          # string is not expanded by the shell, and ssh would resolve it from
+          # the passwd entry rather than $HOME.
+          KEY="$HOME/.ssh/verify_key"
+          mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_KEY" > "$KEY"
+          chmod 600 "$KEY"
+          SSH="ssh -i $KEY -p ${REMOTE_PORT:-22} -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=20"
+
+          # Everything the server side does, in one round trip. Read-only: it
+          # hashes and lists, and changes nothing. Piped over STDIN so the remote
+          # command line stays trivial.
+          cat > "$RUNNER_TEMP/remote-audit.sh" <<'REMOTE'
+          set -uo pipefail
+          export LC_ALL=C
+          target="$1"; shift
+          cd "$target" || { echo "FATAL missing target $target"; exit 1; }
+          for entry in "$@"; do [ -e "$entry" ] || echo "MISSINGPATH $entry"; done
+          # shellcheck disable=SC2086
+          find "$@" -type f -print0 | xargs -0 -r sha256sum | sort | sed 's/^/SHA /'
+          find ./packs -name '*.ldb' -type f -print0 | xargs -0 -r sha256sum | sort | sed 's/^/PACKSHA /'
+          for dir in ./packs/*/; do
+            dir="${dir%/}"
+            ok=OK
+            [ -f "$dir/CURRENT" ] || ok=BROKEN
+            compgen -G "$dir/MANIFEST-*" > /dev/null || ok=BROKEN
+            compgen -G "$dir/*.ldb" > /dev/null || ok=BROKEN
+            echo "PACKSTATE ${dir#./} $ok"
+          done
+          ls -A1 . | sort | sed 's/^/TOP /'
+          echo "AUDITDONE"
+          REMOTE
+
+          # shellcheck disable=SC2086  # PATHS must word-split
+          if ! $SSH "$REMOTE_USER@$REMOTE_HOST" "bash -s -- '$TARGET' $PATHS" \
+                 < "$RUNNER_TEMP/remote-audit.sh" > "$RUNNER_TEMP/remote.out"; then
+            echo "::error::could not audit the server ($REMOTE_USER@$REMOTE_HOST:$TARGET); the deployed tree is UNVERIFIED"
+            sed -n '1,20p' "$RUNNER_TEMP/remote.out" || true
+            exit 1
+          fi
+          # Guards against a truncated transfer: no sentinel means the audit did
+          # not finish, so an empty/short manifest must not be read as "matches".
+          grep -qx 'AUDITDONE' "$RUNNER_TEMP/remote.out" \
+            || { echo "::error::the remote audit did not run to completion; the deployed tree is UNVERIFIED"; exit 1; }
+
+          rc=0
+
+          # ---- 1. non-pack files: byte-identical, no exceptions ---------------
+          # shellcheck disable=SC2086
+          find $PATHS -type f -print0 | xargs -0 -r sha256sum | sort > "$RUNNER_TEMP/expected.sha"
+          sed -n 's/^SHA //p' "$RUNNER_TEMP/remote.out" > "$RUNNER_TEMP/deployed.sha"
+          FILE_COUNT="$(wc -l < "$RUNNER_TEMP/expected.sha" | tr -d ' ')"
+          echo "Files verified: $FILE_COUNT"
+          if ! diff -u "$RUNNER_TEMP/expected.sha" "$RUNNER_TEMP/deployed.sha"; then
+            echo "::error::The deployed system tree does NOT match ${GITHUB_SHA}. rsync exited 0 but the bytes on the server differ (see diff above). Do NOT restart Foundry."
+            rc=1
+          fi
+          if grep -q '^MISSINGPATH ' "$RUNNER_TEMP/remote.out"; then
+            sed -n 's/^MISSINGPATH /::error::path never arrived on the server: /p' "$RUNNER_TEMP/remote.out"
+            rc=1
+          fi
+
+          # ---- 2. packs/: the immutable data files ----------------------------
+          # Only *.ldb is compared. CURRENT, MANIFEST-*, *.log, LOG, LOG.old and
+          # LOCK are LevelDB runtime state that the LIVE Foundry rewrites as soon
+          # as it opens a pack, so they legitimately differ from the committed
+          # tree (measured 2026-07-30: the server was on MANIFEST-001258/001259.log
+          # where this repo commits MANIFEST-001226/001227.log). Comparing them
+          # would be permanent noise; *.ldb is the actual pack DATA and was
+          # byte-identical to this repo on the same measurement.
+          #
+          # Whole files are hashed. Values inside a .ldb are Snappy-COMPRESSED, so
+          # grepping for a string in a .ldb proves nothing about what is stored.
+          find ./packs -name '*.ldb' -type f -print0 | xargs -0 -r sha256sum | sort > "$RUNNER_TEMP/expected-packs.sha"
+          sed -n 's/^PACKSHA //p' "$RUNNER_TEMP/remote.out" > "$RUNNER_TEMP/deployed-packs.sha"
+          PACK_COUNT="$(wc -l < "$RUNNER_TEMP/expected-packs.sha" | tr -d ' ')"
+          echo "Pack data files verified: $PACK_COUNT"
+          if ! diff -u "$RUNNER_TEMP/expected-packs.sha" "$RUNNER_TEMP/deployed-packs.sha"; then
+            echo "::error::Deployed pack data (*.ldb) does NOT match ${GITHUB_SHA} (see diff above)."
+            echo "::error::If the FILE NAMES differ, the live Foundry compacted or wrote to a system pack after the rsync — re-run this workflow and, if it repeats, deploy with Foundry stopped."
+            echo "::error::If the names match and only the hashes differ, the pack bytes on the server are not the ones that were pushed."
+            rc=1
+          fi
+
+          # A deployed pack that is not a usable LevelDB directory opens in
+          # Foundry as an empty or broken compendium. Only the packs system.json
+          # DECLARES matter; packs/abilities has been an empty LevelDB dir with no
+          # *.ldb since before CD existed and Foundry never opens it, so an
+          # undeclared broken dir is a warning (preflight reports it too).
+          python3 -c 'import json;[print(p["path"]) for p in json.load(open("system.json"))["packs"]]' \
+            | sort > "$RUNNER_TEMP/declared-packs.txt"
+          while read -r pack_dir pack_state; do
+            [ "$pack_state" = "OK" ] && continue
+            if grep -qxF "$pack_dir" "$RUNNER_TEMP/declared-packs.txt"; then
+              echo "::error::deployed pack $pack_dir is not a usable LevelDB directory (missing CURRENT, MANIFEST-* or *.ldb)"
+              rc=1
+            else
+              echo "::warning::deployed $pack_dir is not a usable LevelDB directory, but system.json does not declare it"
+            fi
+          done < <(sed -n 's/^PACKSTATE //p' "$RUNNER_TEMP/remote.out")
+
+          # ---- 3. nothing that should not be there ---------------------------
+          # If the EXCLUDE input were ever dropped or silently emptied, rsync
+          # would exit 0 while shipping .git and .github into a live Foundry data
+          # directory. README.md is permitted: one predates its addition to
+          # EXCLUDE and `--delete` cannot remove it (rsync protects excluded files
+          # from deletion), so listing it as a leak would fail every run.
+          {
+            printf '%s\n' "${SHIPPED[@]}"
+            printf 'packs\nREADME.md\n'
+          } | sort -u > "$RUNNER_TEMP/allowed-top.txt"
+          sed -n 's/^TOP //p' "$RUNNER_TEMP/remote.out" | sort -u > "$RUNNER_TEMP/server-top.txt"
+          LEAKED="$(comm -13 "$RUNNER_TEMP/allowed-top.txt" "$RUNNER_TEMP/server-top.txt" || true)"
+          if [ -n "$LEAKED" ]; then
+            echo "::error::Material that should not be on the server is present in $TARGET (EXCLUDE set not applied?): $(echo $LEAKED)"
+            rc=1
+          fi
+
+          {
+            echo "system_version=$VERSION"
+            echo "files_verified=$FILE_COUNT"
+            echo "pack_files_verified=$PACK_COUNT"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$rc" = 0 ]; then
+            echo "Verified: the deployed system tree is byte-identical to ${GITHUB_SHA}."
+          fi
+          exit $rc
+
+      - name: Post-deploy notice — RESTART REQUIRED, NOT PERFORMED
+        if: always() && steps.rsync.outcome == 'success'
+        run: |
+          set -uo pipefail
+          echo "Deployed the system tree to $TARGET"
+          echo
+          echo "############################################################"
+          echo "# A SYSTEM change needs a Foundry PROCESS RESTART.         #"
+          echo "# THIS WORKFLOW HAS NOT RESTARTED ANYTHING.               #"
+          echo "#                                                          #"
+          echo "#   ssh <foundry server>                                   #"
+          echo "#   export NVM_DIR=/var/www/.nvm && . \$NVM_DIR/nvm.sh     #"
+          echo "#   pm2 restart foundryvtt                                 #"
+          echo "#                                                          #"
+          echo "# Until then the running Foundry keeps serving the PREVIOUS #"
+          echo "# system: worlds already open are unaffected, and the new   #"
+          echo "# files on disk are simply not loaded yet.                  #"
+          echo "# The restart drops every connected player, which is why it #"
+          echo "# is left to an operator and not done here.                 #"
+          echo "############################################################"
+          if [ "${{ steps.verify.outcome }}" != "success" ]; then
+            echo "::error::Verification did not pass — do NOT restart Foundry until the diff above is understood."
+          fi
+
+      - name: Deploy summary
+        if: always()
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          {
+            echo "### worldofdarkness system deploy"
+            echo
+            echo "| stage | result |"
+            echo "|---|---|"
+            echo "| preflight (offline gate) | \`${{ needs.preflight.result }}\` |"
+            echo "| rsync | \`${{ steps.rsync.outcome }}\` |"
+            echo "| deployed bytes == pushed bytes | \`${{ steps.verify.outcome }}\` |"
+            echo
+            echo "version \`${{ steps.verify.outputs.system_version }}\`, "
+            echo "\`${{ steps.verify.outputs.files_verified }}\` files + "
+            echo "\`${{ steps.verify.outputs.pack_files_verified }}\` pack data files verified"
+            echo
+            echo "**A system change takes effect only on \`pm2 restart foundryvtt\`, which this workflow does NOT do.**"
+          } >> "$GITHUB_STEP_SUMMARY"
