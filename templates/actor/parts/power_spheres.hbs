@@ -29,18 +29,26 @@
 						{{/numLoop}}						
 						
 					</div>
-					{{!-- showtooltip=true was missing here, so the eye never rendered and a Sphere's
-					      rules text was unreachable on the sheet, even though the .description div
-					      below has always been present and this include already passed
-					      collapseclass="power". The iconBox is no longer inside the locked check:
-					      list_icons.hbs gates showedit/showdelete on `locked` ITSELF and
-					      deliberately leaves the tooltip outside that gate, i.e. READING a
-					      description is meant to work on a locked sheet. The speciality indicator
-					      keeps its locked-only behaviour, unchanged, alongside it. --}}
-					<div class="iconBox">
-						{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showedit=true showtooltip=true item=sphere locked=../locked edittitle="wod.labels.edit.sphere" collapseclass="power"}}
-					</div>
-					{{#if (eq ../locked true)}}
+					{{!-- NO description eye here, and that is a measured decision rather than an
+					      oversight. 7.5.5 added one; 7.5.6 took it back out because it cost a
+					      working layout for nothing:
+
+					      * 0 of 243 live Sphere items in the world carry a description. Spheres are
+					        actor-intrinsic (9 per mage, created by the system, not dragged from a
+					        compendium), so the eye rendered DISABLED on every row.
+					      * Un-gating the iconBox from `locked` to show it made a locked sheet render
+					        an icon box that had never been there, which took the width the fifth dot
+					        needs — so the fifth dot wrapped onto its own line under every column.
+
+					      The .description div below is retained: it costs nothing when empty and is
+					      correct for a Sphere that ever does carry text. If Sphere descriptions are
+					      ever populated, re-adding the eye ALSO needs a width fix here, not just
+					      the showtooltip flag. --}}
+					{{#if (eq ../locked false)}}
+						<div class="iconBox">
+							{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showedit=true item=sphere locked=../locked edittitle="wod.labels.edit.sphere" collapseclass="power"}}
+						</div>
+					{{else}}
 						{{#if (gte sphere.system.value 4)}}
 							<div class="pullRight speciality-magic-icon">
 								<i class="fa-solid fa-circle-exclamation {{#if (eq sphere.system.speciality '')}}item-warning{{else}}item-notice{{/if}}" title="{{sphere.system.speciality}}"></i>

@@ -30,16 +30,25 @@
 						
 					</div>
 					{{!-- showtooltip=true was missing here, so the eye never rendered and a Realm's
-					      rules text (2,100-3,400 chars from the book) was unreachable on the sheet,
-					      even though the .description div below has always been present and this
-					      include already passed collapseclass="power". The outer locked check is
-					      gone on purpose: list_icons.hbs gates showedit/showdelete on `locked`
-					      ITSELF and deliberately leaves the tooltip outside that gate, i.e.
-					      READING a description is meant to work on a locked sheet. Wrapping the
-					      whole iconBox defeated that. --}}
-					<div class="iconBox">
-						{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showedit=true showtooltip=true item=realm locked=../locked edittitle="wod.labels.edit.realm" collapseclass="power"}}
-					</div>
+					      rules text (2,100-3,400 chars per Realm, and 6 of 6 live Realms carry it)
+					      was unreachable, even though the .description div below has always been
+					      present and this include already passed collapseclass="power".
+
+					      The outer `locked` check is KEPT, unlike the flag. 7.5.5 removed it here
+					      and in power_spheres.hbs on the reasoning that list_icons.hbs leaves its
+					      tooltip outside its own locked gate, i.e. reading should work when locked.
+					      That reasoning is sound and the result was still wrong: these two
+					      templates are a 3-across dot grid, and rendering an iconBox on a locked
+					      sheet where there had never been one consumed the width the FIFTH dot
+					      needs, wrapping it onto its own line under every column. Widening the grid
+					      is a CSS change with its own blast radius, so the eye is offered on an
+					      unlocked sheet only, where this iconBox already existed and already
+					      fitted. --}}
+					{{#if (eq ../locked false)}}
+						<div class="iconBox">
+							{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showedit=true showtooltip=true item=realm locked=../locked edittitle="wod.labels.edit.realm" collapseclass="power"}}
+						</div>
+					{{/if}}
 				</div>	
 					
 			</div>
