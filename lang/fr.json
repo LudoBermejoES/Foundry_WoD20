@@ -186,6 +186,13 @@
 			"virtueslimit": "Les vertus suivent la limite maximale de trait de Génération",
 			"virtueslimithint": "Si activé, la valeur maximale des vertus sera limitée à la valeur maximale de trait autorisée par la génération du personnage."
 		},
+		"connections": {
+			"heading": "Relations",
+			"link": "Lien",
+			"nolink": "Aucun lien",
+			"relation": "Historique",
+			"portrait": "Portrait"
+		},
 		"types": {
 			"maneuver": "Manœuvre de combat",
 			"mortal": "Mortel",
@@ -247,6 +254,7 @@
 			"shapeform": "Shapeshifting Form",
 			"aspect": "Aspect",
 			"passion": "Passion",
+			"connection": "Relation",
 			"darkpassion": "Dark passion",
 			"fetter": "Fetter",
 			"wyrd": "Wyrd",
@@ -1734,6 +1742,7 @@
 				"arcanoipower": "Nouveau pouvoir d'Arcanoi",
 				"passion": "Nouvelle Passion",
 				"darkpassion": "New dark passion",
+				"connection": "Nouvelle relation",
 				"fetter": "Nouvelle Entrave",
 				"hekau": "New hekau",
 				"hekaupower": "New hekau power",
@@ -1791,6 +1800,7 @@
 				"arcanoipower": "Ajouter un pouvoir d'arcanoi",
 				"passion": "Ajouter une passion",
 				"darkpassion": "Ajouter une passion sombre",
+				"connection": "Ajouter une relation",
 				"fetter": "Ajouter une entrave",
 				"hekau": "Add hekau",
 				"hekaupower": "Add hekau power",
@@ -1851,6 +1861,7 @@
 				"arcanoipower": "Éditer pouvoir d'arcanoi",
 				"passion": "Éditer passion",
 				"darkpassion": "Éditer passion sombre",
+				"connection": "Éditer relation",
 				"fetter": "Éditer entrave",
 				"hekau": "Edit hekau",
 				"hekaupower": "Edit hekau power",
@@ -1914,6 +1925,7 @@
 				"arcanoipower": "Retirer pouvoir d'arcanoi",
 				"passion": "Retirer passion",
 				"darkpassion": "Retirer passion sombre",
+				"connection": "Retirer relation",
 				"fetter": "Retirer entrave",
 				"hekau": "Remove hekau",
 				"hekaupower": "Remove hekau power",

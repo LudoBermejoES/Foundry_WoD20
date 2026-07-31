@@ -188,6 +188,13 @@
 			"virtueslimit": "Las virtudes siguen el límite máximo de rasgo de Generación",
 			"virtueslimithint": "Si está activado, el valor máximo de las virtudes se limitará al valor máximo de rasgo permitido por la generación del personaje."
 		},
+		"connections": {
+			"heading": "Relaciones",
+			"link": "Enlace",
+			"nolink": "Sin enlace",
+			"relation": "Trasfondo",
+			"portrait": "Retrato"
+		},
 		"types": {
 			"maneuver": "Maniobra de combate",
 			"chantry": "Capilla / Constructo",
@@ -250,6 +257,7 @@
 			"shapeform": "Forma cambiante",
 			"aspect": "Aspecto",
 			"passion": "Pasión",
+			"connection": "Relación",
 			"darkpassion": "Pasión Oscura",
 			"fetter": "Grillete",
 			"wyrd": "Fantasía",
@@ -1777,6 +1785,7 @@
 				"arcanoipower": "Nuevo Poder de Arcanos",
 				"passion": "Nueva Pasión",
 				"darkpassion": "Nueva Pasión Oscura",
+				"connection": "Nueva relación",
 				"fetter": "Nuevo Grillete",
 				"hekau": "Nueva Hekau",
 				"hekaupower": "Nuevo Poder de Hekau",
@@ -1834,6 +1843,7 @@
 				"arcanoipower": "Añadir Poder de Arcanos",
 				"passion": "Añadir Pasión",
 				"darkpassion": "Añadir Pasión Oscura",
+				"connection": "Añadir relación",
 				"fetter": "Añadir Grillete",
 				"hekau": "Añadir Hekau",
 				"hekaupower": "Añadir Poder de  Hekau",
@@ -1894,6 +1904,7 @@
 				"arcanoipower": "Editar Poder de Arcanos",
 				"passion": "Editar Pasión",
 				"darkpassion": "Editar Pasión Oscura",
+				"connection": "Editar relación",
 				"fetter": "Editar Grillete",
 				"hekau": "Editar Hekau",
 				"hekaupower": "Editar Poder de Hekau",
@@ -1957,6 +1968,7 @@
 				"arcanoipower": "Quitar Poder de Arcanos",
 				"passion": "Quitar Pasión",
 				"darkpassion": "Quitar Pasión Oscura",
+				"connection": "Quitar relación",
 				"fetter": "Quitar Grillete",
 				"hekau": "Quitar Hekau",
 				"hekaupower": "Quitar Poder de Hekau",

@@ -1727,7 +1727,10 @@
 				"base",
 				"feature"
 			],
-			"isrollable": false
+			"isrollable": false,
+			"relation": "",
+			"link": "",
+			"portrait": ""
 		},		
 		"Bonus": {
 			"templates": [

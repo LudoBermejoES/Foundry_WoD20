@@ -129,6 +129,65 @@
             </div>
         {{/if}}
 
+        {{!--
+            add-contacts-allies-roster — the relationship roster.
+
+            ONE sub-kind (`wod.types.connection`) grouped by `system.relation`, not one sub-kind per
+            Background: the real list is EIGHTEEN people-shaped Backgrounds (design D2/D2a), and a sub-kind
+            each would have cost ~500 i18n keys across seven language files for a single concept.
+
+            Each group's heading takes its NAME and its DOTS from the actor's own Background item, so
+            "Contactos ●●● (4)" needs no new key and shows the tension between the rating and the headcount
+            without enforcing equality — which the books do not require (D1/D4). The whole block is guarded
+            on `hasConnections`, so a PC with no entries is untouched (task 3.7), and nothing here is gated
+            on `settings.game`: this works for every line (task 3.9).
+
+            The portrait copies `trait-sheet.html:131` verbatim — `profile-img` + `data-edit` (which is what
+            hands you Foundry's FilePicker, so the 87 files in `wod20-portraits/` are two clicks away) + the
+            empty-state class. `portraitSrc` is resolved in the sheet: own image -> linked actor's portrait
+            -> placeholder.
+
+            The external link copies `bio.hbs:95-104` — anchor when set, localized placeholder when not.
+            An INTERNAL link needs nothing here: `@UUID[Actor.xxx]{Name}` typed into the description is
+            already enriched and clickable by `item-sheet.js:151`.
+        --}}
+        {{#if hasConnections}}
+            {{#each connections as |group|}}
+
+                <div class="headlineGroup splatFont">
+                    {{group.label}}
+                    {{#if group.rating}}{{#numLoop group.rating}}&#9679;{{/numLoop}}{{/if}}
+                    ({{group.count}})
+                </div>
+
+                <div class="feature-itemlistarea">
+                    {{#each group.entries as |item id|}}
+                        <div class="sheet-boxcontainer connection-entry">
+
+                            <div class="shape-panel-image">
+                                <img class="profile-img pointer shape-image{{#unless item.hasPortrait}} shape-image-empty{{/unless}}"
+                                     src="{{item.portraitSrc}}" title="{{item.name}}" />
+                            </div>
+
+                            {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs"
+                                actor=../../actor item=item locked=../../locked
+                                edittitle="wod.labels.edit.connection"
+                                deletetitle="wod.labels.remove.connection"
+                                showtype=false}}
+
+                            {{#if (ne item.system.link "")}}
+                                <a href="{{item.system.link}}" target="_blank">{{localize 'wod.connections.link'}}</a>
+                            {{else}}
+                                <span class="information-area">{{localize 'wod.connections.nolink'}}</span>
+                            {{/if}}
+
+                        </div>
+                    {{/each}}
+                </div>
+
+            {{/each}}
+        {{/if}}
+
         {{#if (gt shapeforms.length 0)}}
             <div class="feature-itemlistarea">
 

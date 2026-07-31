@@ -191,6 +191,13 @@
 			"virtueslimit": "Virtues follow Generation max trait limit",
 			"virtueslimithint": "If enabled, the maximum value of virtues will be limited to the maximum trait value allowed by the character's generation."
 		},
+		"connections": {
+			"heading": "Relationships",
+			"link": "Link",
+			"nolink": "No link",
+			"relation": "Background",
+			"portrait": "Portrait"
+		},
 		"types": {
 			"maneuver": "Combat Maneuver",
 			"chantry": "Chantry / Construct",
@@ -254,6 +261,7 @@
 			"shapeform": "Shapeshifting Form",
 			"aspect": "Aspect",
 			"passion": "Passion",
+			"connection": "Connection",
 			"darkpassion": "Dark passion",
 			"fetter": "Fetter",
 			"wyrd": "Wyrd",
@@ -1786,6 +1794,7 @@
 				"arcanoipower": "New arcanoi power",
 				"passion": "New passion",
 				"darkpassion": "New dark passion",
+				"connection": "New connection",
 				"fetter": "New fetter",
 				"hekau": "New hekau",
 				"hekaupower": "New hekau power",
@@ -1843,6 +1852,7 @@
 				"arcanoipower": "Add arcanoi power",
 				"passion": "Add passion",
 				"darkpassion": "Add dark passion",
+				"connection": "Add connection",
 				"fetter": "Add fetter",
 				"hekau": "Add hekau",
 				"hekaupower": "Add hekau power",
@@ -1903,6 +1913,7 @@
 				"arcanoipower": "Edit arcanoi power",
 				"passion": "Edit passion",
 				"darkpassion": "Edit dark passion",
+				"connection": "Edit connection",
 				"fetter": "Edit fetter",
 				"hekau": "Edit hekau",
 				"hekaupower": "Edit hekau power",
@@ -1967,6 +1978,7 @@
 				"arcanoipower": "Remove arcanoi power",
 				"passion": "Remove passion",
 				"darkpassion": "Remove dark passion",
+				"connection": "Remove connection",
 				"fetter": "Remove fetter",
 				"hekau": "Remove hekau",
 				"hekaupower": "Remove hekau power",

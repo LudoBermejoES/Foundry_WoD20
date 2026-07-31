@@ -1360,6 +1360,97 @@ export const prepareGearContext = async function (context, actor) {
   	return context;
 }
 
+const CONNECTION_PLACEHOLDER_IMG = "icons/svg/mystery-man.svg";
+
+/**
+ * add-contacts-allies-roster D8 — the entry's portrait, resolved in three steps, copied from the shapeform
+ * token idiom at `module/items/template/item-sheet.js:165-171`:
+ *
+ *   1. the entry's own `system.portrait` — a data-directory path from the FilePicker OR an absolute URL,
+ *      both of which Foundry's `img`-style strings accept;
+ *   2. else, when the entry LINKS to an actor with `@UUID[Actor.xxx]`, that actor's own portrait;
+ *   3. else the placeholder.
+ *
+ * Step 2 is the whole point and the easiest thing to leave quietly missing: there are 87 files in
+ * `wod20-portraits/` on the server, one per cast member, so most contacts a GM adds are already actors
+ * WITH art — and linking one should show the face with no second step.
+ *
+ * The UUID is read out of `description` and `details` because those are the two fields
+ * `item-sheet.js:151,154` already run `enrichHTML` over, i.e. the two places a working link can be typed.
+ * Only the world's own Actors are resolved: `fromUuidSync` is used, so no async and no compendium fetch.
+ */
+function resolveConnectionPortrait(entry) {
+	const own = (entry.system?.portrait ?? "").trim();
+	if (own !== "") return own;
+
+	const text = `${entry.system?.description ?? ""} ${entry.system?.details ?? ""}`;
+	const match = text.match(/@UUID\[(Actor\.[A-Za-z0-9]+)\]/);
+	if (match) {
+		try {
+			const linked = fromUuidSync(match[1]);
+			const img = linked?.img ?? "";
+			if (img !== "" && img !== CONNECTION_PLACEHOLDER_IMG) return img;
+		}
+		catch (err) {
+			// A dangling @UUID is a GM typo, not a sheet failure — fall through to the placeholder.
+			console.warn(`WoD | connection portrait: could not resolve ${match[1]}`, err);
+		}
+	}
+
+	return CONNECTION_PLACEHOLDER_IMG;
+}
+
+/**
+ * add-contacts-allies-roster — groups `wod.types.connection` Features by `system.relation` and resolves
+ * each group's heading from the actor's OWN Background item.
+ *
+ * Returns `[{ relation, label, rating, entries[] }]`, sorted by label so the blocks are stable.
+ *
+ * `label`/`rating` come from the Background Feature whose `flags["wod20-char"].id` matches the relation —
+ * so the name is whatever the compendium already localized it to, and the dots are the real ones. This is
+ * what lets the sheet show "Contactos ●●● (4)" and thereby DISPLAY the tension between dots and headcount
+ * without enforcing equality, which the books do not require (design D1/D4).
+ */
+function buildConnectionGroups(actor) {
+	const entries = (actor?.items ?? []).filter(
+		(item) => item.type === "Feature" && item.system?.type === "wod.types.connection" && item.system?.isvisible !== false,
+	);
+	if (entries.length === 0) return [];
+
+	const backgrounds = (actor?.items ?? []).filter(
+		(item) => item.type === "Feature" && item.system?.type === "wod.types.background",
+	);
+	const backgroundFor = (relation) =>
+		backgrounds.find((b) => b.flags?.["wod20-char"]?.id === relation)
+		?? backgrounds.find((b) => (b.name ?? "").toLowerCase() === String(relation).toLowerCase());
+
+	const grouped = new Map();
+	for (const entry of entries) {
+		const relation = entry.system.relation || "";
+		if (!grouped.has(relation)) {
+			const background = backgroundFor(relation);
+			grouped.set(relation, {
+				relation,
+				label: background?.name ?? (relation === "" ? game.i18n.localize("wod.types.connection") : relation),
+				rating: background ? Number(background.system?.value ?? 0) : null,
+				entries: [],
+			});
+		}
+		grouped.get(relation).entries.push(entry);
+	}
+
+	for (const group of grouped.values()) {
+		group.entries.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+		group.count = group.entries.length;
+		for (const entry of group.entries) {
+			entry.portraitSrc = resolveConnectionPortrait(entry);
+			entry.hasPortrait = entry.portraitSrc !== CONNECTION_PLACEHOLDER_IMG;
+		}
+	}
+
+	return Array.from(grouped.values()).sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export const prepareFeatureContext = async function (context, actor) {
   	context.tab = context.tabs.feature;	
 
@@ -1386,6 +1477,19 @@ export const prepareFeatureContext = async function (context, actor) {
 	// Dark Passions are a DISTINCT sub-kind rather than a flag on Passion, so that no sheet, roll or future
 	// total can ever add a Passion and a Dark Passion together: the first belongs to the wraith, the second
 	// to the Shadow.
+	// add-contacts-allies-roster — the relationship roster. ONE sub-kind, `wod.types.connection`, grouped
+	// by `system.relation` (the Background's entity id: contacts, mentor, totem, …) rather than one
+	// sub-kind per Background. See design D2a: the real list is EIGHTEEN people-shaped Backgrounds, and a
+	// sub-kind each would have cost ~500 i18n keys across seven language files for one concept. Grouping
+	// on a field is the pattern `prepareAdvantageLists` already uses for `Advantage.system.group`.
+	//
+	// The heading needs no new keys either: an exported Background Feature carries
+	// `flags["wod20-char"].id` = its entity id, so an entry with `relation: "contacts"` finds the actor's
+	// own Contactos item and takes its ALREADY-LOCALIZED name and its dots straight off it — which is
+	// also exactly what task 3.6 asks the heading to show. No Background on the actor -> the raw relation.
+	context.connections = buildConnectionGroups(actor);
+	context.hasConnections = context.connections.length > 0;
+
 	context.passions 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.passion");
 	context.darkpassions 	= ItemHelper.GetItemType(actor, "Feature", "wod.types.darkpassion");
 	context.fetters 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.fetter");

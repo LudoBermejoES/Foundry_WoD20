@@ -186,6 +186,13 @@
 			"virtueslimit": "Le virtù seguono il limite massimo di tratto della Generazione",
 			"virtueslimithint": "Se abilitato, il valore massimo delle virtù sarà limitato al valore massimo di tratto consentito dalla generazione del personaggio."
 		},
+		"connections": {
+			"heading": "Relazioni",
+			"link": "Collegamento",
+			"nolink": "Nessun collegamento",
+			"relation": "Background",
+			"portrait": "Ritratto"
+		},
 		"types": {
 			"maneuver": "Manovra di combattimento",
 			"mortal": "Mortale",
@@ -247,6 +254,7 @@
 			"shapeform": "Shapeshifting Form",
 			"aspect": "Aspect",
 			"passion": "Passione",
+			"connection": "Relazione",
 			"darkpassion": "Dark passion",
 			"fetter": "Catena",
 			"wyrd": "Wyrd",
@@ -1734,6 +1742,7 @@
 				"arcanoipower": "Nuovo potere",
 				"passion": "Nuova passione",
 				"darkpassion": "New dark passion",
+				"connection": "Nuova relazione",
 				"fetter": "Nuova catena",
 				"hekau": "New hekau",
 				"hekaupower": "New hekau power",
@@ -1791,6 +1800,7 @@
 				"arcanoipower": "Aggiungi potere ",
 				"passion": "Aggiungi passione",
 				"darkpassion": "Aggiungi passione oscura",
+				"connection": "Aggiungi relazione",
 				"fetter": "Aggiungi catena",
 				"hekau": "Add hekau",
 				"hekaupower": "Add hekau power",
@@ -1851,6 +1861,7 @@
 				"arcanoipower": "Modifica arcanoi",
 				"passion": "Modifica passione",
 				"darkpassion": "Modifica passione oscura",
+				"connection": "Modifica relazione",
 				"fetter": "Modifica catena",
 				"hekau": "Edit hekau",
 				"hekaupower": "Edit hekau power",
@@ -1914,6 +1925,7 @@
 				"arcanoipower": "Rimuovi potere",
 				"passion": "Rimuovi passione",
 				"darkpassion": "Rimuovi passione oscura",
+				"connection": "Rimuovi relazione",
 				"fetter": "Rimuovi catena",
 				"hekau": "Remove hekau",
 				"hekaupower": "Remove hekau power",

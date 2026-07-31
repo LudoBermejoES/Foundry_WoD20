@@ -186,6 +186,13 @@
 			"virtueslimit": "Virtudes seguem o limite máximo de traço da Geração",
 			"virtueslimithint": "Se ativado, o valor máximo das virtudes será limitado ao valor máximo de traço permitido pela geração do personagem."
 		},
+		"connections": {
+			"heading": "Relações",
+			"link": "Link",
+			"nolink": "Sem link",
+			"relation": "Antecedente",
+			"portrait": "Retrato"
+		},
 		"types": {
 			"maneuver": "Manobra de combate",
 			"mortal": "Mortal",
@@ -247,6 +254,7 @@
 			"shapeform": "Forma Metamórfica",
 			"aspect": "Aspecto",
 			"passion": "Paixão",
+			"connection": "Relação",
 			"darkpassion": "Paixão obscura",
 			"fetter": "Grilhão",
 			"wyrd": "Wyrd",
@@ -1734,6 +1742,7 @@
 				"arcanoipower": "Novo poder de arcanoi",
 				"passion": "Nova paixão",
 				"darkpassion": "Nova paixão obscura",
+				"connection": "Nova relação",
 				"fetter": "Novo grilhão",
 				"hekau": "Novo hekau",
 				"hekaupower": "Novo poder de hekau",
@@ -1791,6 +1800,7 @@
 				"arcanoipower": "Adicionar poder de arcanoi",
 				"passion": "Adicionar paixão",
 				"darkpassion": "Adicionar paixão obscura",
+				"connection": "Adicionar relação",
 				"fetter": "Adicionar grilhão",
 				"hekau": "Adicionar hekau",
 				"hekaupower": "Adicionar poder de hekau",
@@ -1851,6 +1861,7 @@
 				"arcanoipower": "Editar poder de arcanoi",
 				"passion": "Editar paixão",
 				"darkpassion": "Editar paixão obscura",
+				"connection": "Editar relação",
 				"fetter": "Editar grilhão",
 				"hekau": "Editar hekau",
 				"hekaupower": "Editar poder hekau",
@@ -1914,6 +1925,7 @@
 				"arcanoipower": "Remover poder de arcanoi",
 				"passion": "Remover paixão",
 				"darkpassion": "Remover paixão obscura",
+				"connection": "Remover relação",
 				"fetter": "Remover grilhão",
 				"hekau": "Remover hekau",
 				"hekaupower": "Remover poder hekau",

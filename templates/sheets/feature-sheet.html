@@ -92,7 +92,36 @@
 						<input class="sheet-infoValues editable" name="system.reference" type="text" value="{{data.system.reference}}" data-dtype="String" autocomplete="off" autofocus required />
 						<span class="floating-label">{{localize "wod.labels.trait.reference"}}</span>
 					</div>
-				{{/if}}			
+				{{/if}}
+
+				{{!--
+					add-contacts-allies-roster — the three roster fields, shown ONLY for a connection so no
+					other Feature grows three empty inputs.
+
+					`relation` is the Background entity id (contacts, mentor, totem, …) the entry hangs off;
+					the actor sheet groups by it and takes the heading's name and dots from the actor's own
+					Background item. `link` is the external URL, deliberately NOT `worldanvil` or
+					`reference`, which already mean other things (design D3). `portrait` carries `data-edit`,
+					which is what hands you Foundry's FilePicker — so an existing `wod20-portraits/` file is
+					two clicks, and an absolute URL also works in the same field (D8).
+
+					An INTERNAL link needs no field: `@UUID[Actor.xxx]{Name}` typed into the description is
+					already enriched and clickable (`item-sheet.js:151`).
+				--}}
+				{{#if (eqAny data.system.type "wod.types.connection")}}
+					<div class="infobox bioInformationArea floating-label-group">
+						<input class="sheet-infoValues editable" name="system.relation" type="text" value="{{data.system.relation}}" data-dtype="String" autocomplete="off" />
+						<span class="floating-label">{{localize "wod.connections.relation"}}</span>
+					</div>
+					<div class="infobox bioInformationArea floating-label-group">
+						<input class="sheet-infoValues editable" name="system.link" type="text" value="{{data.system.link}}" data-dtype="String" autocomplete="off" />
+						<span class="floating-label">{{localize "wod.connections.link"}}</span>
+					</div>
+					<div class="infobox bioInformationArea floating-label-group">
+						<input class="sheet-infoValues editable" name="system.portrait" type="text" value="{{data.system.portrait}}" data-dtype="String" autocomplete="off" data-edit="system.portrait" />
+						<span class="floating-label">{{localize "wod.connections.portrait"}}</span>
+					</div>
+				{{/if}}
 			</div>
 
 			{{#if (eqAnyNot data.system.type "wod.types.bloodbound" "wod.types.boon")}}

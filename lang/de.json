@@ -186,6 +186,13 @@
 			"virtueslimit": "Tugenden folgen dem maximalen Eigenschaftswert der Generation",
 			"virtueslimithint": "Wenn aktiviert, wird der Maximalwert der Tugenden auf den maximalen Eigenschaftswert begrenzt, den die Generation des Charakters erlaubt."
 		},
+		"connections": {
+			"heading": "Beziehungen",
+			"link": "Link",
+			"nolink": "Kein Link",
+			"relation": "Hintergrund",
+			"portrait": "Porträt"
+		},
 		"types": {
 			"maneuver": "Kampfmanöver",
 			"mortal": "Sterbliche",
@@ -247,6 +254,7 @@
 			"shapeform": "Gestaltwandlerische Form",
 			"aspect": "Aspekt",
 			"passion": "Leidenschaft",
+			"connection": "Verbindung",
 			"darkpassion": "Dunkle Leidenschaft",
 			"fetter": "Fessel",
 			"wyrd": "Wyrd",
@@ -1734,6 +1742,7 @@
 				"arcanoipower": "Neue Arkanoi-Kraft",
 				"passion": "Neue Leidenschaft",
 				"darkpassion": "Neue Dunkle Leidenschaft",
+				"connection": "Neue Verbindung",
 				"fetter": "Neue Fessel",
 				"hekau": "Neuer hekau",
 				"hekaupower": "Neue Hekau Kraft",
@@ -1791,6 +1800,7 @@
 				"arcanoipower": "Arkanoi-Kraft hinzufügen",
 				"passion": "Leidenschaft hinzufügen",
 				"darkpassion": "Dunkle Leidenschaft hinzufügen",
+				"connection": "Verbindung hinzufügen",
 				"fetter": "Fesseln hinzufügen",
 				"hekau": "hekau hinzufügen",
 				"hekaupower": "Hekau-Power hinzufügen",
@@ -1851,6 +1861,7 @@
 				"arcanoipower": "Arcanoi-Kraft bearbeiten",
 				"passion": "Leidenschaft bearbeiten",
 				"darkpassion": "Dunkle Leidenschaft bearbeiten",
+				"connection": "Verbindung bearbeiten",
 				"fetter": "Fesseln bearbeiten",
 				"hekau": "Hekau bearbeiten",
 				"hekaupower": "Hekau-Power bearbeiten",
@@ -1914,6 +1925,7 @@
 				"arcanoipower": "Arkanoi-Kraft entfernen",
 				"passion": "Leidenschaft entfernen",
 				"darkpassion": "Dunkle Leidenschaft entfernen",
+				"connection": "Verbindung entfernen",
 				"fetter": "Fesseln entfernen",
 				"hekau": "Hekau entfernen",
 				"hekaupower": "Entferne hekau power",

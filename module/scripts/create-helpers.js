@@ -2662,7 +2662,7 @@ export default class CreateHelper {
 
 	/* Create the buttons for create Note Items */
 	static async CreateButtonsNotev2(actor) {
-		return {
+		const buttons = {
 			background: {
 				label: game.i18n.localize("wod.types.background"),
 				callback: async () => {
@@ -2808,7 +2808,60 @@ export default class CreateHelper {
 					return;
 				}
 			}
+		};
+
+		/*
+		 * add-wraith-pc-splat §3.9 (a MISS caught while doing add-contacts-allies-roster) — Passions, Dark
+		 * Passions and Fetters had their sheet blocks, their predicates and their i18n, and were NOT offered
+		 * by this dialog. So "author a Passion by hand as a GM" was not merely unverified, it was
+		 * IMPOSSIBLE: the only creation route the Features tab offers is this button set, and the three
+		 * sub-kinds were absent from it. Gated on `hascorpus` so no other line sees them.
+		 */
+		if (actor.system.settings.hascorpus) {
+			for (const kind of ["passion", "darkpassion", "fetter"]) {
+				buttons[kind] = {
+					label: game.i18n.localize(`wod.types.${kind}`),
+					callback: async () => {
+						await this.CreateItem(actor, {
+							name: game.i18n.localize(`wod.labels.new.${kind}`),
+							type: "Feature",
+							system: {
+								level: 1,
+								type: `wod.types.${kind}`
+							}
+						});
+						return;
+					}
+				};
+			}
 		}
+
+		/*
+		 * add-contacts-allies-roster task 3.8 — the roster's creation route. Offered to EVERY line, with no
+		 * `settings.game` gate (task 3.9): Contacts, Allies and Mentor are shared Backgrounds, and the other
+		 * fifteen people-shaped ones belong to one line or another (design D2). The entry starts with an
+		 * empty `relation`, which the sheet groups under a fallback heading until a GM sets it — visible and
+		 * editable beats hidden.
+		 */
+		buttons.connection = {
+			label: game.i18n.localize("wod.types.connection"),
+			callback: async () => {
+				await this.CreateItem(actor, {
+					name: game.i18n.localize("wod.labels.new.connection"),
+					type: "Feature",
+					system: {
+						level: 0,
+						type: "wod.types.connection",
+						relation: "",
+						link: "",
+						portrait: ""
+					}
+				});
+				return;
+			}
+		};
+
+		return buttons;
 	}
 
 	/* 
