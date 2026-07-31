@@ -3091,6 +3091,36 @@ input.sheet-infoWidth {
   border-top: 1px solid var(--main-full-color);
 }
 
+/* START - Name cell: an eye icon beside a rollable label, WITHOUT widening the row.
+
+   The row layouts on these sheets are float-based with a fixed-percentage name column
+   (`ability-headlineWidth` is 50%, 40% for a supernatural attribute) and the dots floated to the
+   other side. Adding a second `pullLeft` element in front of that fixed width overflows the row and
+   drops the label to the next line, which is exactly how the Attributes block came out misaligned
+   once the eye was added to it.
+
+   So the cell carries the width and lays its two children out internally. The label keeps
+   `data-action="rollDice"` and the eye stays a SIBLING of it, never a child: ApplicationV2
+   dispatches a click to the nearest `[data-action]` ancestor, and this wrapper deliberately has
+   none, so clicking the eye cannot roll the trait. */
+.wod-sheet .wod-namecell {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  /* `pullLeft` floats it; flex is the INNER layout. Both are intended. */
+}
+.wod-sheet .wod-namecell-eye {
+  flex: 0 0 auto;
+}
+.wod-sheet .wod-namecell-label {
+  /* `min-width: 0` lets a long trait name shrink instead of forcing the cell wider than its
+     percentage, which would reintroduce the overflow this cell exists to prevent. */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* END - Name cell */
+
 /* START - Item viewer (read-only, open-item-window-from-eye-icon) */
 
 /* The body is the window's whole content area (single "body" PART); it, not some inner element,

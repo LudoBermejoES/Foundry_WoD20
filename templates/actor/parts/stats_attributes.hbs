@@ -27,17 +27,26 @@
 					      SIBLING of the name label, never a child: the label carries
 					      data-action="rollDice" and ApplicationV2 dispatches to the nearest
 					      [data-action] ancestor - same invariant stats_feature_row.hbs documents. --}}
-					{{#if (lookup ../attributeCompendiumUuid key)}}
-						<i class="pullLeft pointer icon collapsible button fa-solid fa-eye"
-							title="{{localize 'wod.labels.show.description'}}"
-							data-attributeuuid="{{lookup ../attributeCompendiumUuid key}}"></i>
-					{{/if}}
-					<label for="data.system.attributes.{{key}}.value"
-						class="pullLeft vrollable {{#if (gt attribute.max 5)}}supernaturalAttribute{{/if}} ability-headlineWidth headlineNormal"
-						data-type="{{../config.sheettype.mortal}}"
-						data-key="{{key}}"
-						data-action="rollDice"
-						data-attribute="true">{{localize attribute.label}}</label>
+					{{!-- The eye and the label share ONE name cell that carries the row's width, instead of
+					      both floating left. Floating them side by side is what misaligned this whole
+					      block: `ability-headlineWidth` is `width: 50%`, so a `pullLeft` icon in front of
+					      it pushed the pair past the row and the label dropped to the next line, taking
+					      the dots out of alignment with every other row. The cell keeps
+					      `ability-headlineWidth`/`supernaturalAttribute` so the 50%/40% rules apply
+					      unchanged; only the label's own float and width move onto it. --}}
+					<div class="pullLeft {{#if (gt attribute.max 5)}}supernaturalAttribute{{/if}} ability-headlineWidth wod-namecell">
+						{{#if (lookup ../attributeCompendiumUuid key)}}
+							<i class="pointer icon button fa-solid fa-eye wod-namecell-eye"
+								title="{{localize 'wod.labels.show.description'}}"
+								data-attributeuuid="{{lookup ../attributeCompendiumUuid key}}"></i>
+						{{/if}}
+						<label for="data.system.attributes.{{key}}.value"
+							class="vrollable headlineNormal wod-namecell-label"
+							data-type="{{../config.sheettype.mortal}}"
+							data-key="{{key}}"
+							data-action="rollDice"
+							data-attribute="true">{{localize attribute.label}}</label>
+					</div>
 
 					<div class="{{#if (gt attribute.max 8)}}pullLeft{{else}}pullRight{{/if}} resource-value" 
 						data-key="{{key}}"
