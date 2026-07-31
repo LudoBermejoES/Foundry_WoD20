@@ -1,5 +1,5 @@
 import * as migration from "./module/migration.js";
-import { enrichAllActorsAbilities } from "./module/migrations.js";
+import { enrichAllActorsAbilities, refreshAllActorsStaleDescriptions } from "./module/migrations.js";
 
 import { wod } from "./module/config.js";
 import { systemSettings } from "./module/settings.js";
@@ -616,6 +616,17 @@ Hooks.once("ready", async function () {
 		await enrichAllActorsAbilities();
 	} catch (err) {
 		console.error("WoD | Ability enrichment migration failed:", err);
+	}
+
+	// Same shape, different defect: items imported from wod20-char carry their description as raw
+	// MARKDOWN (its catalog ships `description_html` for only 236 of 5,453 entities, so the exporter
+	// falls back to `body_es`), and this system renders `system.description` as HTML - so paragraph
+	// breaks vanish and a Markdown pipe table prints literally. See stale-description-refresh.js.
+	// Also per-actor-flagged, also never allowed to block load.
+	try {
+		await refreshAllActorsStaleDescriptions();
+	} catch (err) {
+		console.error("WoD | Stale-description refresh migration failed:", err);
 	}
 });
 

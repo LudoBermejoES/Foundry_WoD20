@@ -12,6 +12,7 @@
  */
 
 import { findAbilityCompendiumMatch } from "./scripts/ability-enrichment.js";
+import { refreshActorStaleDescriptions } from "./scripts/stale-description-refresh.js";
 
 const FLAG_SCOPE = "worldofdarkness";
 const FLAG_KEY = "abilitiesEnriched";
@@ -89,4 +90,58 @@ export async function enrichAllActorsAbilities() {
 	}
 
 	console.log(`WoD | Ability enrichment migration complete: ${pending.length} actor(s) processed, ${totalEnriched} ability description(s) added, ${errored} actor(s) errored.`);
+}
+
+// --- Stale Markdown descriptions ------------------------------------------------------------------
+//
+// A SECOND, independent migration, with its own flag. Kept separate from the ability enrichment
+// above rather than folded into it, because the two differ on the one thing that matters: that one
+// only ever FILLS AN EMPTY description and so can destroy nothing, while this one REPLACES a
+// non-empty one. Sharing a flag would also make either impossible to re-run without the other.
+//
+// See scripts/stale-description-refresh.js for the defect, how the match is made (exact `_id`, not a
+// name), and why "no HTML tags at all, plus a Markdown marker" is a sound test for machine-written
+// staleness rather than a player's edit.
+
+const STALE_DESC_FLAG_KEY = "staleDescriptionsRefreshed";
+
+/**
+ * Runs the stale-description refresh once for every actor not already flagged.
+ *
+ * NOT limited to `type === "PC"`, unlike the ability migration: wodchar exports mortals and other
+ * actor types through the same path, so they carry the same Markdown.
+ * @returns {Promise<void>}
+ */
+export async function refreshAllActorsStaleDescriptions() {
+	const pending = game.actors.filter(
+		a => !foundry.utils.getProperty(a, `flags.${FLAG_SCOPE}.${STALE_DESC_FLAG_KEY}`));
+
+	if (!pending.length) {
+		console.log(`WoD | Stale-description refresh: nothing to do (${game.actors.size} actor(s), all already processed).`);
+		return;
+	}
+
+	let totalRefreshed = 0;
+	let totalNotFound = 0;
+	let errored = 0;
+
+	for (const actor of pending) {
+		try {
+			const stats = await refreshActorStaleDescriptions(actor);
+			totalRefreshed += stats.refreshed;
+			totalNotFound += stats.notFound;
+			// Flagged even when nothing was refreshed, so a world of already-clean actors does not
+			// re-scan every pack on every reload.
+			await actor.setFlag(FLAG_SCOPE, STALE_DESC_FLAG_KEY, true);
+			if (stats.refreshed || stats.notFound) {
+				console.log(`WoD | "${actor.name}": ${stats.refreshed} description(s) refreshed from the compendium, ${stats.notFound} with no compendium document.`);
+			}
+		} catch (err) {
+			// One broken actor (no update permission for this user, say) must not stop the batch.
+			errored++;
+			console.error(`WoD | Stale-description refresh failed for actor "${actor.name}":`, err);
+		}
+	}
+
+	console.log(`WoD | Stale-description refresh complete: ${pending.length} actor(s) processed, ${totalRefreshed} description(s) refreshed, ${totalNotFound} unmatched, ${errored} actor(s) errored.`);
 }
