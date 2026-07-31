@@ -31,6 +31,7 @@ import { OnItemCreate,
 
 import { calculateHealth } from "../../scripts/health.js";
 import { calculateTotals } from "../../scripts/totals.js";
+import { buildAttributeCompendiumUuidMap, openAttributeCompendiumSheet } from "../../scripts/attribute-enrichment.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api
 
@@ -447,7 +448,11 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 		
 		// Attach show/hide handlers for power description toggles
 		this._bindCollapsibleButtons(element);
-		
+
+		// Attach the Attributes tab's read-only compendium-description eyes (owner-delegated
+		// addition to open-item-window-from-eye-icon)
+		this._bindAttributeDescriptionButtons(element);
+
 		// Attach expand/collapse handlers for grouped tables (experience, etc.)
 		this._bindUnfoldButtons(element);
 		
@@ -486,6 +491,26 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 			if (icon.dataset.collapseBound) return;
 			icon.dataset.collapseBound = "true";
 			icon.addEventListener("click", (event) => this._handleCollapsibleClick(event));
+		});
+	}
+
+	/**
+	 * Attach the Attributes tab's read-only compendium-description eyes (owner-delegated addition
+	 * to open-item-window-from-eye-icon). A separate binder/handler pair from
+	 * `_bindCollapsibleButtons`/`_handleCollapsibleClick` on purpose: attributes are not Items, so
+	 * `data-itemid` + `actor.items.get()` does not apply - these icons carry `data-attributeuuid`
+	 * (a compendium document uuid, resolved and put in the render context by
+	 * `buildAttributeCompendiumUuidMap`) instead, and the template only renders the icon at all
+	 * when a match was found - see stats_attributes.hbs.
+	 * @param {HTMLElement} root - The root element to search for attribute-description buttons
+	 */
+	_bindAttributeDescriptionButtons(root) {
+		const icons = root.querySelectorAll?.(".collapsible.button[data-attributeuuid]");
+		if (!icons?.length) return;
+		icons.forEach(icon => {
+			if (icon.dataset.collapseBound) return;
+			icon.dataset.collapseBound = "true";
+			icon.addEventListener("click", (event) => this._handleAttributeDescriptionClick(event));
 		});
 	}
 
@@ -600,6 +625,23 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 		}
 
 		item.sheet.render(true);
+	}
+
+	// Owner-delegated addition to open-item-window-from-eye-icon: the Attributes tab's eye opens a
+	// read-only compendium document instead of an embedded item - see attribute-enrichment.js for
+	// why it is forced read-only rather than trusting the resolved sheet class's own permission
+	// logic. The icon only exists in the DOM when a match was already found at render time
+	// (stats_attributes.hbs), so a missing uuid here would mean the template rendered inconsistent
+	// markup, not a normal "no match" case - hence the warning rather than a silent return.
+	async _handleAttributeDescriptionClick(event) {
+		const icon = event.currentTarget;
+		const uuid = icon?.dataset?.attributeuuid;
+		if (!uuid) {
+			console.warn("PC Actor: Attribute description icon rendered with no compendium uuid.");
+			return;
+		}
+
+		await openAttributeCompendiumSheet(uuid);
 	}
 
 	_handleUnfoldClick(event) {
@@ -1101,6 +1143,12 @@ export const prepareAdvantageLists = function (context, actor) {
 
 export const prepareStatContext = async function (context, actor) {
   	context.tab = context.tabs.stats;
+
+	// Owner-delegated addition to open-item-window-from-eye-icon: which attribute rows get an eye
+	// icon at all (see stats_attributes.hbs). Attributes are system fields, not Items - nothing is
+	// written to the actor here, only a read-only lookup of a compendium document per attribute
+	// key. Degrades to an empty map (no eyes rendered) if the compendium/pack is absent.
+	context.attributeCompendiumUuid = await buildAttributeCompendiumUuidMap(actor);
 
 	context.talents = actor.items
 								.filter(item => item.type === "Ability" && item.system.type === 'wod.abilities.talent' && item.system.settings.isvisible)

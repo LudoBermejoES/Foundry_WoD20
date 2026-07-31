@@ -19,12 +19,25 @@
 						<div class="pullLeft resource-counter"><input class="item-active pointer resource-value-step" name="attribute.settings.isfavored" type="checkbox" data-type="{{../config.sheettype.exalted}}" data-key="{{key}}" data-attribute="true" {{isChecked attribute.settings.isfavorited}}></input></div>
 					{{/if}}
 
-					<label for="data.system.attributes.{{key}}.value" 
-						class="pullLeft vrollable {{#if (gt attribute.max 5)}}supernaturalAttribute{{/if}} ability-headlineWidth headlineNormal" 
+					{{!-- Owner-delegated addition to open-item-window-from-eye-icon: opens a READ-ONLY
+					      compendium document for this attribute (never writes to the actor - see
+					      attribute-enrichment.js). Only rendered when a match was found at render
+					      time (buildAttributeCompendiumUuidMap), so the icon is simply absent - not a
+					      dead click - while the compendium's "attributes" pack does not exist yet. A
+					      SIBLING of the name label, never a child: the label carries
+					      data-action="rollDice" and ApplicationV2 dispatches to the nearest
+					      [data-action] ancestor - same invariant stats_feature_row.hbs documents. --}}
+					{{#if (lookup ../attributeCompendiumUuid key)}}
+						<i class="pullLeft pointer icon collapsible button fa-solid fa-eye"
+							title="{{localize 'wod.labels.show.description'}}"
+							data-attributeuuid="{{lookup ../attributeCompendiumUuid key}}"></i>
+					{{/if}}
+					<label for="data.system.attributes.{{key}}.value"
+						class="pullLeft vrollable {{#if (gt attribute.max 5)}}supernaturalAttribute{{/if}} ability-headlineWidth headlineNormal"
 						data-type="{{../config.sheettype.mortal}}"
 						data-key="{{key}}"
 						data-action="rollDice"
-						data-attribute="true">{{localize attribute.label}}</label>			
+						data-attribute="true">{{localize attribute.label}}</label>
 
 					<div class="{{#if (gt attribute.max 8)}}pullLeft{{else}}pullRight{{/if}} resource-value" 
 						data-key="{{key}}"
