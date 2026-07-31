@@ -22,38 +22,14 @@
                             {{#if (eq ../locked false)}}
                                 <a class="pointer item-edit" title="{{localize 'wod.labels.edit.headline'}}" data-type="Trait" data-itemid="{{shapeform._id}}" data-action="itemEdit"><i class="icon fa-solid fa-pen-to-square"></i></a>
                             {{/if}}
+                            {{!-- Opens the shapeform's own item sheet in a window (open-item-window-from-eye-icon);
+                                  data-itemid is the actor's real embedded item id (no "shape-" prefix any
+                                  more - that prefix only existed to give the removed .description div a
+                                  distinct id, which no longer applies). --}}
                             <i class="pointer icon collapsible button power fa-solid fa-eye"
                                title="{{localize 'wod.labels.show.description'}}"
-                               data-itemid="shape-{{shapeform._id}}"></i>                            
+                               data-itemid="{{shapeform._id}}"></i>
                         </div>
-                    </div>
-                    <div class="description shape-panel-body"
-                         data-itemid="shape-{{shapeform._id}}">
-                         {{#if (isEmpty (getShapeformAttributeBonuses shapeform))}}
-                         {{else}}
-                            <div class="shape-bonus-list">
-                                    {{#each (getShapeformAttributeBonuses shapeform) as |bonus|}}
-                                        {{#if (eq bonus.type "attribute_fixed_value")}}
-                                            {{localize (getAttributeShortKey bonus.settingtype)}} {{formatBonusValue bonus}}<br />
-                                        {{else if (eq bonus.type "attribute_buff")}}
-                                            {{localize (getAttributeShortKey bonus.settingtype)}} ({{formatBonusValue bonus}})<br />
-                                        {{else if (eq bonus.type "attribute_diff")}}
-                                            {{localize (getAttributeShortKey bonus.settingtype)}} {{lowercase (localize "wod.labels.difficulty")}} {{formatBonusValue bonus}}<br />
-                                        {{/if}}
-                                    {{/each}}
-
-                            </div>
-                        {{/if}}
-                        {{#if shapeform.system.isrollable}}
-                            <div class="shape-difficulty">
-                                {{localize "wod.power.diff"}}: {{shapeform.system.difficulty}}
-                            </div>
-                        {{/if}}
-                        {{#if (ne shapeform.system.description "")}}
-                            <div>
-                                {{{shapeform.system.description}}}
-                            </div>
-                        {{/if}}
                     </div>
                 </div>
             {{/each}}

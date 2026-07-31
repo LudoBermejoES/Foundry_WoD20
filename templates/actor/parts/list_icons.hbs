@@ -11,14 +11,13 @@
     {{/if}}
 {{/if}}
 
+{{!-- The eye always opens the item's own sheet in a window now (open-item-window-from-eye-icon);
+      it is no longer gated on whether the item happens to carry description/detail/bonus content -
+      see foundry-system-types spec, "Items without descriptions are still clickable". --}}
 {{#if showtooltip}}
-    {{#if (showToolTip item)}}
-        <i class="pointer icon collapsible button {{collapseclass}} fa-solid fa-eye"
-                title="{{localize 'wod.labels.show.description'}}"
-                data-itemid="{{item._id}}"></i>
-    {{else}}
-        <i class="icon no-description-disabled fa-solid fa-eye"></i>
-    {{/if}}
+    <i class="pointer icon collapsible button {{collapseclass}} fa-solid fa-eye"
+            title="{{localize 'wod.labels.show.description'}}"
+            data-itemid="{{item._id}}"></i>
 {{/if}}
 
 <a class="pointer" title="LANG: Menu" data-itemid="{{item._id}}"><i class="icon fa-solid fa-ellipsis-vertical"></i></a>

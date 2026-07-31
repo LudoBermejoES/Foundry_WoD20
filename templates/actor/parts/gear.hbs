@@ -141,13 +141,10 @@
 									{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.headline" deletetitle="wod.labels.remove.headline"}}
 								{{/if}}
 							</div>																			
-						</div>	
-						<div class="description" data-itemid="{{item._id}}">
+						</div>
+						{{!-- The inline .description panel is removed: the eye above now opens the item's
+						      own sheet in a window (open-item-window-from-eye-icon). --}}
 
-							{{{getToolTip_v2 item.system.description item.system.details item.system.bonuslist ../actor}}}
-
-						</div>			
-						
 					{{/each}}
 
 				</div>

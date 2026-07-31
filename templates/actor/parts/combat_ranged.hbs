@@ -84,11 +84,8 @@
 
             </div>
         </div>
-        <div class="description" data-itemid="{{item._id}}">
-
-            {{{getToolTip_v2 item.system.description item.system.details item.system.bonuslist ../actor}}}
-
-        </div>
+        {{!-- The inline .description panel is removed: the eye above now opens the item's own
+              sheet in a window (open-item-window-from-eye-icon). --}}
 
     {{/each}}
 

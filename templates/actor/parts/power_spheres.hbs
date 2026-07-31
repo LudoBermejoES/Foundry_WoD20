@@ -40,10 +40,12 @@
 					        an icon box that had never been there, which took the width the fifth dot
 					        needs — so the fifth dot wrapped onto its own line under every column.
 
-					      The .description div below is retained: it costs nothing when empty and is
-					      correct for a Sphere that ever does carry text. If Sphere descriptions are
-					      ever populated, re-adding the eye ALSO needs a width fix here, not just
-					      the showtooltip flag. --}}
+					      The .description div this comment used to guard (open-item-window-from-eye-icon
+					      removed it) was already dead code here regardless: `showtooltip` is never
+					      passed to list_icons.hbs below, so no eye ever rendered in this file to toggle
+					      it. The sphere's own sheet remains reachable via the pencil-edit icon on an
+					      unlocked sheet (showedit=true below); re-adding a description eye here still
+					      needs the same width fix this comment always warned about. --}}
 					{{#if (eq ../locked false)}}
 						<div class="iconBox">
 							{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showedit=true item=sphere locked=../locked edittitle="wod.labels.edit.sphere" collapseclass="power"}}
@@ -59,14 +61,11 @@
 							</div>
 						{{/if}}
 					{{/if}}
-				</div>	
-					
-			</div>
-			<div class="description" data-itemid="{{sphere._id}}">
-
-				{{{getToolTip_v2 sphere.system.description "" sphere.system.bonuslist ../actor}}}
+				</div>
 
 			</div>
+			{{!-- The inline .description panel is removed: see the comment above for why it was
+			      already dead code in this file. --}}
 
 			{{#if (eq (mod index 3) 2)}}</div>{{/if}}
 		

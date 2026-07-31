@@ -569,43 +569,38 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 
 
 
+	// Click opens the item's own sheet in a new window instead of toggling an inline .description
+	// div — see openspec/changes/open-item-window-from-eye-icon. `item.sheet.render(true)` is
+	// Foundry's own "open or focus" idiom (the pencil-edit icon already uses it via OnItemEdit in
+	// action-helpers.js), so a second click on the same item raises the existing window instead of
+	// opening a duplicate, and permissions (read-only vs editable) are enforced by the item's own
+	// sheet class — no hand-rolled role check needed here. The old tab-scope lookup (the Attributes
+	// tab and the Features tab can both render the same item's icon) is no longer needed: both
+	// icons resolve to the SAME embedded item and therefore the SAME sheet instance.
 	_handleCollapsibleClick(event) {
 		const icon = event.currentTarget;
 		if (!icon?.dataset?.itemid) return;
-		const itemId = icon.dataset.itemid;
-		const container = this.element || icon.closest(".app");
-		const targetRoot = container instanceof HTMLElement ? container : document;
 
-		// Scope to the enclosing tab FIRST. AppV2 renders every tab into the DOM and only hides the
-		// inactive ones, so the same item can legitimately own a .description in two tabs at once —
-		// the Attributes tab summarises backgrounds/merits/flaws that the Features tab also lists.
-		// A sheet-wide querySelector returns the FIRST match in DOM order, which is the stats tab,
-		// so clicking the eye on the Features tab would silently expand a hidden copy and appear to
-		// do nothing. Falls back to the old sheet-wide lookup for any row not inside a [data-tab].
-		const tabScope = icon.closest("[data-tab]");
-		const bonusDiv = tabScope?.querySelector(`.description[data-itemid="${itemId}"]`)
-			?? targetRoot.querySelector(`.description[data-itemid="${itemId}"]`);
+		// power_shapes.hbs prefixes shapeform icons with "shape-" to keep their (now removed)
+		// .description div id distinct from other rows; strip it so the lookup below hits the
+		// actor's real embedded item id.
+		const itemId = icon.dataset.itemid.startsWith("shape-")
+			? icon.dataset.itemid.slice("shape-".length)
+			: icon.dataset.itemid;
 
-		if (!bonusDiv) {
-			console.warn(`PC Actor: Could not find .description[data-itemid="${itemId}"]`);
+		const item = this.actor.items.get(itemId);
+		if (!item) {
+			console.warn(`PC Actor: Could not find item with id "${itemId}"`);
 			return;
 		}
 
-		//const isOpen = bonusDiv.style.maxHeight && bonusDiv.style.maxHeight !== "0px";
-		const isOpen = bonusDiv.classList.contains("collapsible-open");
-
-		if (isOpen) {
-			bonusDiv.style.maxHeight = "0";
-			icon.classList.remove("fa-eye-slash");
-			icon.classList.add("fa-eye");
-			bonusDiv.classList.remove("collapsible-open");
-		} else {
-			bonusDiv.style.maxHeight = bonusDiv.scrollHeight + "px";
-			bonusDiv.classList.add("collapsible-open");
-			icon.classList.remove("fa-eye");
-			icon.classList.add("fa-eye-slash");
+		if (!item.sheet) {
+			console.warn(`PC Actor: Item "${item.name}" (${itemId}) has no sheet`);
+			return;
 		}
-	}	
+
+		item.sheet.render(true);
+	}
 
 	_handleUnfoldClick(event) {
 		const button = event.currentTarget;

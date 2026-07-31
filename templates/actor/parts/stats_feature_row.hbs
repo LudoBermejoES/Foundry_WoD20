@@ -49,14 +49,14 @@
 
 	      Not gated on `locked` — reading a description mutates nothing, the same reason the name
 	      stays rollable on a locked sheet, and the same choice list_icons.hbs makes by keeping its
-	      tooltip block outside its own locked check. --}}
-	{{#if (showToolTip item)}}
-		<i class="pullLeft pointer icon collapsible button fa-solid fa-eye"
-			title="{{localize 'wod.labels.show.description'}}"
-			data-itemid="{{item._id}}"></i>
-	{{else}}
-		<i class="pullLeft icon no-description-disabled fa-solid fa-eye"></i>
-	{{/if}}
+	      tooltip block outside its own locked check.
+
+	      Always clickable now (open-item-window-from-eye-icon): the click opens the item's own
+	      sheet in a window, so there is no "nothing to show" case any more - the item's other
+	      fields (name, type, ratings, ...) are visible even when system.description is empty. --}}
+	<i class="pullLeft pointer icon collapsible button fa-solid fa-eye"
+		title="{{localize 'wod.labels.show.description'}}"
+		data-itemid="{{item._id}}"></i>
 
 	{{!-- The name is a roll target when `useroll` is passed AND the item carries no pool of its
 	      own. The `dice1` guard is what makes it safe to pass `useroll` for Other Traits as well
@@ -118,15 +118,9 @@
 	{{/if}}
 
 </div>
-{{!-- Outside .clearareaBox on purpose: the row is a float container, and a max-height:0 panel
-      inside it would be clipped by the floats rather than pushing the next row down. Same
-      placement power_realms.hbs / feature_item.hbs use. The data-itemid deliberately MATCHES the
-      Features tab's copy of this item — _handleCollapsibleClick scopes its lookup to the enclosing
-      [data-tab] precisely so the two cannot toggle each other. --}}
-{{#if (showToolTip item)}}
-	<div class="description" data-itemid="{{item._id}}">
-
-		{{{getToolTip_v2 item.system.description item.system.details item.system.bonuslist actor item}}}
-
-	</div>
-{{/if}}
+{{!-- The inline .description panel that used to live here (toggled by the eye above) is removed:
+      the eye now opens the item's own sheet in a window, where the description is visible whether
+      or not it is empty. The data-itemid on the eye above deliberately MATCHES the Features tab's
+      copy of this item; that used to matter for tab-scoping the old inline toggle, but
+      item.sheet.render(true) is inherently idempotent (raises the same window), so no scoping is
+      needed any more. --}}

@@ -28,11 +28,8 @@
         {{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=mainpower locked=locked edittitle="wod.labels.edit.headline" deletetitle="wod.labels.remove.headline" collapseclass="power"}}
     </div>
 </div>
-<div class="description" data-itemid="{{mainpower._id}}">
-
-    {{{getToolTip_v2 mainpower.system.description mainpower.system.details mainpower.system.bonuslist actor}}}
-
-</div>
+{{!-- The inline .description panel is removed: the eye above now opens the item's own sheet
+      in a window (open-item-window-from-eye-icon). --}}
 
 <div>
     {{#each (getPowerList actor mainpower._id) as |item id|}}

@@ -49,14 +49,11 @@
 							{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showedit=true showtooltip=true item=realm locked=../locked edittitle="wod.labels.edit.realm" collapseclass="power"}}
 						</div>
 					{{/if}}
-				</div>	
-					
-			</div>
-			<div class="description" data-itemid="{{realm._id}}">
-
-				{{{getToolTip_v2 realm.system.description "" realm.system.bonuslist ../actor}}}
+				</div>
 
 			</div>
+			{{!-- The inline .description panel is removed: the eye above now opens the item's
+			      own sheet in a window (open-item-window-from-eye-icon). --}}
 
 			{{#if (eq (mod index 3) 2)}}</div>{{/if}}
 		
