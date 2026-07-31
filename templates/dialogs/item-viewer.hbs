@@ -1,0 +1,34 @@
+{{!--
+	Read-only viewer body (module/applications/item-viewer.js). Deliberately contains no <input>,
+	<textarea>, <select> or submit control - see the spec's "The viewer cannot edit" scenario. If
+	you are tempted to add a field here so a value shows up editable, that belongs on the
+	document's own edit sheet, not here.
+--}}
+<div class="wod-item-viewer-body">
+
+	<h1 class="wod-item-viewer-name">{{name}}</h1>
+
+	{{#if hasDescription}}
+		<section class="wod-item-viewer-section wod-item-viewer-description">
+			<h2>{{localize "wod.labels.description"}}</h2>
+			<div class="wod-item-viewer-description-content">{{{description}}}</div>
+		</section>
+	{{/if}}
+
+	{{#if systemFields.length}}
+		<section class="wod-item-viewer-section wod-item-viewer-fields">
+			<h2>{{localize "wod.labels.power.system"}}</h2>
+			<table class="wod-item-viewer-fields-table">
+				<tbody>
+					{{#each systemFields as |field|}}
+						<tr>
+							<td class="wod-item-viewer-field-label">{{field.label}}</td>
+							<td class="wod-item-viewer-field-value">{{field.value}}</td>
+						</tr>
+					{{/each}}
+				</tbody>
+			</table>
+		</section>
+	{{/if}}
+
+</div>

@@ -109,33 +109,11 @@ export async function buildAttributeCompendiumUuidMap(actor) {
 	return uuids;
 }
 
-/**
- * Opens a document by uuid in a forced-read-only sheet instance. Read-only is enforced twice,
- * because this system's own item sheets (item-sheet.js, item-sheet-v2.js) gate on their own
- * `this.locked` instance flag rather than the standard Foundry `options.editable` - and
- * item-sheet-v2.js hardcodes `this.locked = false` unconditionally (a pre-existing gap, not
- * introduced here - see the report), so passing `editable: false` alone would not be respected by
- * every sheet class this document's type might resolve to. Setting `.locked` directly after
- * construction works for both sheet families in this system regardless of which one applies.
- * @param {string} uuid
- * @returns {Promise<void>}
- */
-export async function openAttributeCompendiumSheet(uuid) {
-	if (!uuid) return;
-
-	const doc = await fromUuid(uuid);
-	if (!doc) {
-		console.warn(`WoD | Attribute description: compendium document "${uuid}" could not be resolved (pack may have been removed or updated).`);
-		return;
-	}
-
-	if (!doc.sheet) {
-		console.warn(`WoD | Attribute description: document "${uuid}" has no sheet.`);
-		return;
-	}
-
-	const SheetClass = doc.sheet.constructor;
-	const readOnlySheet = new SheetClass(doc, { editable: false });
-	readOnlySheet.locked = true;
-	readOnlySheet.render(true);
-}
+// CORRECTED 2026-07-31: this module used to also export `openAttributeCompendiumSheet`, which
+// opened the resolved document's own edit sheet and forced it read-only by constructing an
+// instance and overriding `.locked` from outside (a workaround for item-sheet-v2.js hardcoding
+// `this.locked = false`). That is gone: the click handler in pc-actor-sheet.js now resolves the
+// uuid itself and hands the document straight to the shared, purpose-built ItemViewer
+// (module/applications/item-viewer.js), which cannot write at all and needs no such workaround -
+// see design.md Decision 1. This module's job stays exactly "find the matching document", nothing
+// about how it gets displayed.

@@ -31,7 +31,8 @@ import { OnItemCreate,
 
 import { calculateHealth } from "../../scripts/health.js";
 import { calculateTotals } from "../../scripts/totals.js";
-import { buildAttributeCompendiumUuidMap, openAttributeCompendiumSheet } from "../../scripts/attribute-enrichment.js";
+import { buildAttributeCompendiumUuidMap } from "../../scripts/attribute-enrichment.js";
+import ItemViewer from "../../applications/item-viewer.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api
 
@@ -594,14 +595,14 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 
 
 
-	// Click opens the item's own sheet in a new window instead of toggling an inline .description
-	// div — see openspec/changes/open-item-window-from-eye-icon. `item.sheet.render(true)` is
-	// Foundry's own "open or focus" idiom (the pencil-edit icon already uses it via OnItemEdit in
-	// action-helpers.js), so a second click on the same item raises the existing window instead of
-	// opening a duplicate, and permissions (read-only vs editable) are enforced by the item's own
-	// sheet class — no hand-rolled role check needed here. The old tab-scope lookup (the Attributes
-	// tab and the Features tab can both render the same item's icon) is no longer needed: both
-	// icons resolve to the SAME embedded item and therefore the SAME sheet instance.
+	// CORRECTED 2026-07-31 (see openspec/changes/open-item-window-from-eye-icon/design.md Decision
+	// 1): the eye opens a purpose-built READ-ONLY viewer (ItemViewer), never the item's own edit
+	// sheet - "read-only" means the form controls are absent, not that an edit sheet is shown in a
+	// read-only mode. `ItemViewer.open()` is itself the "open or focus existing" idiom (keyed on
+	// the document's uuid), so a second click on the same item raises the existing viewer instead
+	// of opening a duplicate. The old tab-scope lookup (the Attributes tab and the Features tab can
+	// both render the same item's icon) is not needed: both icons resolve to the SAME embedded item
+	// and therefore the SAME uuid and the SAME viewer instance.
 	_handleCollapsibleClick(event) {
 		const icon = event.currentTarget;
 		if (!icon?.dataset?.itemid) return;
@@ -619,20 +620,17 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 			return;
 		}
 
-		if (!item.sheet) {
-			console.warn(`PC Actor: Item "${item.name}" (${itemId}) has no sheet`);
-			return;
-		}
-
-		item.sheet.render(true);
+		ItemViewer.open(item);
 	}
 
-	// Owner-delegated addition to open-item-window-from-eye-icon: the Attributes tab's eye opens a
-	// read-only compendium document instead of an embedded item - see attribute-enrichment.js for
-	// why it is forced read-only rather than trusting the resolved sheet class's own permission
-	// logic. The icon only exists in the DOM when a match was already found at render time
-	// (stats_attributes.hbs), so a missing uuid here would mean the template rendered inconsistent
-	// markup, not a normal "no match" case - hence the warning rather than a silent return.
+	// Owner-delegated addition to open-item-window-from-eye-icon: the Attributes tab's eye opens
+	// the SAME read-only ItemViewer for a compendium document instead of an embedded item. This is
+	// exactly why the viewer is generic (name/description/system fields only, never per-type
+	// knowledge) - it serves a compendium document with no per-actor item sheet of its own just as
+	// well as it serves an embedded item. The icon only exists in the DOM when a match was already
+	// found at render time (stats_attributes.hbs), so a missing uuid here would mean the template
+	// rendered inconsistent markup, not a normal "no match" case - hence the warning rather than a
+	// silent return.
 	async _handleAttributeDescriptionClick(event) {
 		const icon = event.currentTarget;
 		const uuid = icon?.dataset?.attributeuuid;
@@ -641,7 +639,13 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 			return;
 		}
 
-		await openAttributeCompendiumSheet(uuid);
+		const doc = await fromUuid(uuid);
+		if (!doc) {
+			console.warn(`PC Actor: Attribute description document "${uuid}" could not be resolved (pack may have been removed or updated).`);
+			return;
+		}
+
+		ItemViewer.open(doc);
 	}
 
 	_handleUnfoldClick(event) {
