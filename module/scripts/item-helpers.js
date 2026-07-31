@@ -958,6 +958,16 @@ export default class ItemHelper {
 					localizeKey: "wod.power.numinas",
 					condition: actor.system.settings.hasnuminas && context.numinas?.length
 				},
+				// add-wraith-pc-splat §3.4 — Arcanoi, container + powers, so `template: "hierarchical"`
+				// exactly like Disciplines/Arts/Lores/Edges/Numina above. `wod.power.arcanoi` already
+				// shipped in all seven language files.
+				arcanoi: {
+					id: "arcanoi",
+					template: "hierarchical",
+					data: { items: context.arcanoi },
+					localizeKey: "wod.power.arcanoi",
+					condition: actor.system.settings.hasarcanoi && context.arcanoi?.length
+				},
 				combinations: {
 					id: "combinations",
 					template: "simple",
@@ -1094,6 +1104,27 @@ export default class ItemHelper {
 				data: { items: context.unsortednuminas },
 				localizeKey: "wod.power.unsortednuminas",
 				sortAction: "SortNuminaPower",
+				condition: true
+			});
+		}
+
+		// add-wraith-pc-splat §3.5 — Arcanoi powers that carry no parent container. This matters more for
+		// wraith than for the other lines: the shipped `wraith-arcanoi` pack holds 294 `arcanos-power`
+		// documents whose `mechanics.arcanos` field is dirty from extraction, so a GM dragging one in has a
+		// real chance of it arriving unparented. Without this section such a power would be on the actor and
+		// visible nowhere.
+		//
+		// `sortAction: "SortArcanoiPower"` is not new — `action-helpers.js:378` has handled that exact
+		// string through `SortDialog.SortArcanoiPower` all along, and `wod.power.unsortedarcanois` has
+		// shipped in all seven language files. Only the section that surfaces them was missing.
+		if (context.unsortedarcanois?.length) {
+			sections.push({
+				id: "unsortedarcanois",
+				priority: config.unsorted?.priority || 99,
+				template: "unsorted",
+				data: { items: context.unsortedarcanois },
+				localizeKey: "wod.power.unsortedarcanois",
+				sortAction: "SortArcanoiPower",
 				condition: true
 			});
 		}

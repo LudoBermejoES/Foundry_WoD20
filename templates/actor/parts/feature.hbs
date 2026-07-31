@@ -79,6 +79,56 @@
             </div>
         {{/if}}
 
+        {{!--
+            add-wraith-pc-splat §3.6-§3.8 — Passions, Dark Passions and Fetters.
+
+            Three separate blocks, not one: a Passion belongs to the wraith and a Dark Passion to its
+            Shadow, and keeping them apart on the sheet is what stops anyone reading them as one pool.
+
+            Each is guarded by its own length check, exactly like every block above, so §3.10 comes for
+            free: the EMPTY state — which is the NORMAL state for a freshly imported wraith, since
+            wodchar exports neither — renders nothing at all rather than an empty frame. A GM authors
+            them with the `data-origin="feature"` create button at the top of this tab (§3.9).
+
+            Fetters carry their description through `feature_item.hbs`'s existing description carrier
+            (§3.8): a Fetter is an object, a place or a person, and its rating alone does not say which.
+        --}}
+        {{#if (gt passions.length 0)}}
+            <div class="feature-itemlistarea">
+
+                {{#each passions as |item id|}}
+
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.passion" deletetitle="wod.labels.remove.passion" showtype=true}}
+
+                {{/each}}
+
+            </div>
+        {{/if}}
+
+        {{#if (gt darkpassions.length 0)}}
+            <div class="feature-itemlistarea">
+
+                {{#each darkpassions as |item id|}}
+
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.darkpassion" deletetitle="wod.labels.remove.darkpassion" showtype=true}}
+
+                {{/each}}
+
+            </div>
+        {{/if}}
+
+        {{#if (gt fetters.length 0)}}
+            <div class="feature-itemlistarea">
+
+                {{#each fetters as |item id|}}
+
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.fetter" deletetitle="wod.labels.remove.fetter" showtype=true}}
+
+                {{/each}}
+
+            </div>
+        {{/if}}
+
         {{#if (gt shapeforms.length 0)}}
             <div class="feature-itemlistarea">
 

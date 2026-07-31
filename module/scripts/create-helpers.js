@@ -649,13 +649,33 @@ export default class CreateHelper {
 		return updates;
 	}
 
+	/*
+	 * add-wraith-pc-splat §2.1 — two fixes here, both of which meant a hand-created wraith got nothing.
+	 *
+	 * 1. `hascorpus` and `haspathos` were being set but were DECLARED NOWHERE — `actor_settings.js` had no
+	 *    such fields, so the assignments went into a strict DataModel that does not carry them. This change
+	 *    declares both (plus `hasangst` and `hasarcanoi`), so these two lines now actually persist.
+	 * 2. `settings.powers.hasarcanois` was wrong three ways: plural, nested under `settings.powers` (which
+	 *    holds only `defaultmaxvalue` and no capability flags at all), and not what anything reads —
+	 *    `ItemHelper.BuildPowerSections` checks the TOP-LEVEL `settings.hasarcanoi`. Corrected to the
+	 *    declared, singular, top-level name that matches the `wod.types.arcanoi` item sub-kind.
+	 *
+	 * `hasangst` is added because the Shadow's pool was simply missing from this setter.
+	 *
+	 * NOTE: the same undeclared-flag bug remains for OTHER lines and is deliberately not fixed here —
+	 * `hasrage`, `hasgnosis`, `hasglamour`, `hasbanality`, `hasfaith`, and every `settings.powers.has*`
+	 * (`hasgifts`, `hasarts`, `haspowers`) are all assigned in this file and declared in none. Imported
+	 * actors are unaffected because the wodchar exporter writes the correct top-level fields directly;
+	 * hand-created ones are not. That is its own change.
+	 */
 	static async SetWraithAttributes(actor) {
 		console.log('WoD | Set Wraith Attributes');
 
 		actor.system.settings.hascorpus = true;
 		actor.system.settings.haspathos = true;
+		actor.system.settings.hasangst = true;
 
-		actor.system.settings.powers.hasarcanois = true;
+		actor.system.settings.hasarcanoi = true;
 
 		return actor;
 	}
@@ -665,8 +685,9 @@ export default class CreateHelper {
 
 		updates["system.settings.hascorpus"] = true;
 		updates["system.settings.haspathos"] = true;
+		updates["system.settings.hasangst"] = true;
 
-		updates["system.settings.powers.hasarcanois"] = true;
+		updates["system.settings.hasarcanoi"] = true;
 
 		return updates;
 	}

@@ -1240,12 +1240,21 @@ export const preparePowersContext = async function (context, actor) {
 	context.resonances = actor.items.filter(item => item.type === "Trait" && item.system.type === "wod.types.resonance");
 	context.numinas = ItemHelper.GetPowersByType(actor, "wod.types.numina", true);
 
+	// add-wraith-pc-splat §3.4 — Arcanoi, the wraith power axis, as a container/power pair exactly like
+	// Disciplines and Arts above. Everything around this was already built: `wodsetup.js` collects
+	// `wod.types.arcanoi` containers into `powers.arcanoi` (from world items AND compendiums, so the
+	// shipped `wraith-arcanois` pack is already visible), `action-helpers.js:294` rolls a
+	// `wod.types.arcanoipower` through `PowerDialog.ArcanoiPower`, and `:380` sorts one through
+	// `SortDialog.SortArcanoiPower`. The only thing missing was the sheet asking for them.
+	context.arcanoi = ItemHelper.GetPowersByType(actor, "wod.types.arcanoi", true);
+
 	// Unsorted powers (no parent or missing parent reference)
 	const disciplinePowers = ItemHelper.GetPowersByType(actor, "wod.types.disciplinepower");
 	const artPowers = ItemHelper.GetPowersByType(actor, "wod.types.artpower");
 	const lorePowers = ItemHelper.GetPowersByType(actor, "wod.types.lorepower");
 	const edgePowers = ItemHelper.GetPowersByType(actor, "wod.types.edgepower");
 	const numinaPowers = ItemHelper.GetPowersByType(actor, "wod.types.numinapower");
+	const arcanoiPowers = ItemHelper.GetPowersByType(actor, "wod.types.arcanoipower");
 
 	context.unsorteddisciplines = disciplinePowers.filter(power => lacksParent(power, context.disciplines));
 	context.unsortedarts = artPowers.filter(power => lacksParent(power, context.arts));
@@ -1253,6 +1262,10 @@ export const preparePowersContext = async function (context, actor) {
 	context.unsortededges = edgePowers.filter(power => lacksParent(power, context.edges));
 	
 	context.unsortednuminas = numinaPowers.filter(power => lacksParent(power, context.numinas));
+
+	// §3.5 — surfaced with the existing `wod.power.unsortedarcanois` string, which has shipped in all
+	// seven language files all along and had no code to display it.
+	context.unsortedarcanois = arcanoiPowers.filter(power => lacksParent(power, context.arcanoi));
 
 	// Gifts grouped by rank
 	const giftItems = ItemHelper.GetPowersByType(actor, "wod.types.gift");
@@ -1336,6 +1349,25 @@ export const prepareFeatureContext = async function (context, actor) {
 	context.bloodbounds = ItemHelper.GetItemType(actor, "Feature", "wod.types.bloodbound");
 	context.boons 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.boon");
 	context.oaths 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.oath");
+
+	// add-wraith-pc-splat §3.6/§3.7 — Passions, Dark Passions and Fetters, the wraith's three rated
+	// Feature kinds. They sit here beside the other line-specific Feature lists (bloodbound is vampire's,
+	// oath is changeling's) rather than in `prepareAdvantageLists`, which carries only the four kinds every
+	// line shares.
+	//
+	// THE PREDICATE IS THE POINT, and it ships in the same commit as the sub-kind. `PCActorSheet` builds
+	// its Feature lists from a CLOSED set of these calls, so a Feature whose `system.type` matches none of
+	// them renders in NO section at all — it is on the actor, it is in the database, and the sheet simply
+	// never asks for it. That was measured for `wod.types.specialadvantage`, which has a label in all seven
+	// language files, appears in zero predicates, and silently hid seven of Carl el Cuervo's eight extra
+	// traits. An i18n key proves nothing renders.
+	//
+	// Dark Passions are a DISTINCT sub-kind rather than a flag on Passion, so that no sheet, roll or future
+	// total can ever add a Passion and a Dark Passion together: the first belongs to the wraith, the second
+	// to the Shadow.
+	context.passions 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.passion");
+	context.darkpassions 	= ItemHelper.GetItemType(actor, "Feature", "wod.types.darkpassion");
+	context.fetters 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.fetter");
 
   	return context;
 }

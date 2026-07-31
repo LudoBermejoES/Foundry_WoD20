@@ -12,6 +12,12 @@ export const datapowertab = {
         changeling: {
             primary: ["arts"],
         },
+        // add-wraith-pc-splat §3.4 — Arcanoi are the wraith power axis. Without this entry the powers tab
+        // renders NOTHING for a wraith: `BuildPowerSections` only adds a section if it appears in this
+        // splat's `primary` or in `defaultOrder`, so a section definition alone is not enough.
+        wraith: {
+            primary: ["arcanoi"],
+        },
         demon: {
             primary: ["lores", "rituals"],
         },
@@ -37,7 +43,8 @@ export const datapowertab = {
             "lores",
             "edges",
             "numinas",
-            "charms"
+            "charms",
+            "arcanoi"
         ],
         unsorted: {
             priority: 99, 
