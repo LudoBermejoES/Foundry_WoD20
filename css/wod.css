@@ -3102,15 +3102,33 @@ input.sheet-infoWidth {
    So the cell carries the width and lays its two children out internally. The label keeps
    `data-action="rollDice"` and the eye stays a SIBLING of it, never a child: ApplicationV2
    dispatches a click to the nearest `[data-action]` ancestor, and this wrapper deliberately has
-   none, so clicking the eye cannot roll the trait. */
+   none, so clicking the eye cannot roll the trait.
+
+   MEASURED, not reasoned about. These rows have a FIXED height (`attribute-rowheight` is 19px) and
+   contain floats, so a cell even 1px taller than the row overflows it and the float keeps displacing
+   the NEXT row: the second row of every column got pushed to x=160 instead of x=12 and its dots
+   dropped a whole row. The cause was the icon, not the cell — `.icon` carries `line-height: 23px`,
+   and `.icon.collapsible.button` is what caps it at 20px, so an eye missing the `collapsible` class
+   measured 23px of layout box (27.6px visually, from `scale: 1.2`) inside a 19px row. Hence
+   `height: 100%` here and an explicit line-height on the eye: the cell can never outgrow its row,
+   whatever a future icon rule does. */
 .wod-sheet .wod-namecell {
   display: flex;
   align-items: center;
   gap: 3px;
   /* `pullLeft` floats it; flex is the INNER layout. Both are intended. */
+  height: 100%;
+  box-sizing: border-box;
 }
 .wod-sheet .wod-namecell-eye {
   flex: 0 0 auto;
+  /* Overrides `.icon`'s 23px and `.icon.collapsible.button`'s 20px, both of which exceed the row.
+     `scale: 1.2` from `.icon` is a transform and affects only the painted size, never the layout
+     box, so the icon still reads at its usual size. */
+  height: 19px;
+  line-height: 19px;
+  margin-left: 0;
+  margin-right: 0;
 }
 .wod-sheet .wod-namecell-label {
   /* `min-width: 0` lets a long trait name shrink instead of forcing the cell wider than its

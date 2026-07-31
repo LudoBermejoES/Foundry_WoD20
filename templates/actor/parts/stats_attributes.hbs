@@ -36,7 +36,13 @@
 					      unchanged; only the label's own float and width move onto it. --}}
 					<div class="pullLeft {{#if (gt attribute.max 5)}}supernaturalAttribute{{/if}} ability-headlineWidth wod-namecell">
 						{{#if (lookup ../attributeCompendiumUuid key)}}
-							<i class="pointer icon button fa-solid fa-eye wod-namecell-eye"
+							{{!-- `collapsible` is LOAD-BEARING TWICE and was dropped once by accident, which
+							      broke the click and the layout together: the binder selects
+							      `.collapsible.button[data-attributeuuid]` (pc-actor-sheet.js), so without it
+							      the eye is dead, and `.icon.collapsible.button` is the rule that caps the
+							      icon at 20px — without it `.icon`'s own `line-height: 23px` applies and the
+							      icon overflows a 19px row. --}}
+							<i class="pointer icon collapsible button fa-solid fa-eye wod-namecell-eye"
 								title="{{localize 'wod.labels.show.description'}}"
 								data-attributeuuid="{{lookup ../attributeCompendiumUuid key}}"></i>
 						{{/if}}
