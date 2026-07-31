@@ -245,6 +245,44 @@
 
 {{/if}}
 
+{{!--
+    add-wraith-pc-splat §3.3 — the Corpus track.
+
+    Deliberately NOT a second copy of the health ladder above, and the rules are explicit about why: a
+    wraith "pierde Corpus EN LUGAR DE niveles de Salud a razón de uno por uno"
+    (wraith20-el-olvido-nsr-es L6811). So there are no wound-level names, and there is **no penalty line** —
+    a wraith takes no dice or movement penalty from Corpus damage at all (L10581).
+
+    The track is as long as PERMANENT Corpus (L10543: permanent is the maximum, temporary fluctuates and
+    can never exceed it), which is exactly the length of the array `calculateHealth`'s wraith branch
+    returns — every entry with `label: ""`.
+
+    The three marks are the book's own ("/" bashing, "x" lethal, "*" aggravated; bashing escalates by
+    marking a second line into an X, L10611-10613). They matter for WHICH STATE a full track puts the
+    wraith in, not for penalties: all bashing -> Vacilante (L10577); lethal -> Atormentado and an immediate
+    Harrowing (L10583). Neither is automated — both are Storyteller calls with a Willpower-vs-Angst roll.
+    Healing is 1 Pathos for 2 bashing or 1 lethal, max one Pathos per turn (L10635).
+--}}
+{{#if corpushealth}}
+
+    <div class="sheet-headline sheet-banner-small splatFont"><span class="sheet-banner-text">{{localize 'wod.advantages.corpus'}}</span></div>
+
+    <div class="sheet-boxcontainer">
+        <div class="health">
+            <div class="resource-counter healthbox" data-name="data.system.health.damage.corpus">
+                {{#numLoop corpushealth.length}}
+                    <span class="resource-value-step healthBox"
+                        data-type="{{../config.sheettype.wraith}}"
+                        data-action="editHealth"
+                        data-index="{{this}}"
+                        data-state="{{damageState "" ../corpushealth this}}"></span>
+                {{/numLoop}}
+            </div>
+        </div>
+    </div>
+
+{{/if}}
+
 <div class="sheet-boxcontainer">
     <div class="information-area">{{localize "wod.health.penalty"}}: {{ignorePain actor.system.health.damage.woundpenalty}}</div>    
 </div>

@@ -816,6 +816,38 @@ export const OnSquareCounterChange = async function (event, target) {
 			actorData.system.health.damage.chimerical.aggravated = 0;
 		}
 	}
+	// add-wraith-pc-splat §3.3 — the Corpus track. Same escalating cycle as the two above
+	// ("" -> bashing -> lethal -> aggravated -> ""), which is the book's own convention: bashing
+	// "asciende a letal conforme se inflige, simplemente marca otra línea para hacer una «X»"
+	// (`wraith20-el-olvido-nsr-es · L10611-10613`).
+	//
+	// Corpus damage carries NO wound penalty — a wraith loses Corpus INSTEAD OF health levels, one for
+	// one (`:6811`), and takes no dice or movement penalty for it (`:10581`). What the type decides is the
+	// state a FULL track puts the wraith in: all bashing -> Vacilante (`:10577`), lethal -> Atormentado
+	// and an immediate Harrowing (`:10583`). Neither transition is automated here — they are Storyteller
+	// calls involving a Willpower-vs-Angst roll — so this only tracks the marks.
+	if (dataset.type === CONFIG.worldofdarkness.sheettype.wraith) {
+		if (oldState == "") {
+			actorData.system.health.damage.corpus.bashing = parseInt(actorData.system.health.damage.corpus.bashing) + 1;
+		}
+		else if (oldState == "/") {
+			actorData.system.health.damage.corpus.bashing = parseInt(actorData.system.health.damage.corpus.bashing) - 1;
+			actorData.system.health.damage.corpus.lethal = parseInt(actorData.system.health.damage.corpus.lethal) + 1;
+		}
+		else if (oldState == "x") {
+			actorData.system.health.damage.corpus.lethal = parseInt(actorData.system.health.damage.corpus.lethal) - 1;
+			actorData.system.health.damage.corpus.aggravated = parseInt(actorData.system.health.damage.corpus.aggravated) + 1;
+		}
+		else if (oldState == "*") {
+			actorData.system.health.damage.corpus.aggravated = parseInt(actorData.system.health.damage.corpus.aggravated) - 1;
+		}
+
+		for (const kind of ["bashing", "lethal", "aggravated"]) {
+			if (parseInt(actorData.system.health.damage.corpus[kind]) < 0) {
+				actorData.system.health.damage.corpus[kind] = 0;
+			}
+		}
+	}
 
 	actorData = await calculateTotals(actorData);
 	actorData.system.settings.isupdated = false;

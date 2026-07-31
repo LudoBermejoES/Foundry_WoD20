@@ -22,7 +22,16 @@ export async function calculateHealth(actor, type) {
         lethal = actor.system.health.damage.corpus.lethal;
         aggravated = actor.system.health.damage.corpus.aggravated;
 
-        for (let i=0; i < actor.system.advantages.corpus.permanent; i++) {
+        // add-wraith-pc-splat §3.3 — the track is as long as the wraith's PERMANENT Corpus
+        // (`wraith20-el-olvido-nsr-es · L10543`: permanent is the maximum, temporary fluctuates and can
+        // never exceed it). This used to read `actor.system.advantages.corpus.permanent`, which only
+        // exists on the LEGACY `Wraith` Actor type — `PCDataModel` has no `system.advantages` at all, so
+        // on a PC that threw and the whole branch was unreachable. On a PC the pool is an `Advantage`
+        // ITEM with `system.id === "corpus"`, so read that first and keep the legacy path as a fallback.
+        const corpusItem = actor.items?.find((item) => item.type === "Advantage" && item.system?.id === "corpus");
+        const corpusMax = Number(corpusItem?.system?.permanent ?? actor.system.advantages?.corpus?.permanent ?? 10);
+
+        for (let i=0; i < corpusMax; i++) {
             let status = await calculateStatus();
 
             const healthLevel = {

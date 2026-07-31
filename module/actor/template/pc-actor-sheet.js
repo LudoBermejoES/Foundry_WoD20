@@ -1210,6 +1210,27 @@ export const prepareStatContext = async function (context, actor) {
 		context.chimericalhealth = await calculateHealth(actor, CONFIG.worldofdarkness.sheettype.changeling);
 	}
 
+	// add-wraith-pc-splat §3.3 — the Corpus track. Gated on `hascorpus` rather than on the splat, so a
+	// non-wraith never pays for it.
+	//
+	// This is NOT a second set of health levels, and the rules are explicit about why: a wraith
+	// "pierde Corpus EN LUGAR DE niveles de Salud a razón de uno por uno"
+	// (`wraith20-el-olvido-nsr-es · L6811`), the boxes carry no wound-level names, and a wraith takes
+	// **no wound penalties at all** from Corpus damage (`:10581`, and the same principle for Risen at
+	// `:14505` / Projectors at `:17325`). `calculateHealth`'s wraith branch already encodes exactly that:
+	// `label: ""` on every level, `woundPenalty = 0`, an early return so the bruised/hurt/injured ladder
+	// is never touched, and a track as long as PERMANENT Corpus (`:10543`).
+	//
+	// What the three damage types are for is which STATE the full track puts the wraith in, not a
+	// penalty: all bashing -> Vacilante (`:10577`), lethal -> Atormentado and an immediate Harrowing
+	// (`:10583`). They also set the healing rate — 1 Pathos buys back 2 bashing or 1 lethal, max one
+	// Pathos per turn (`:10635`).
+	context.corpushealth = undefined;
+
+	if (actor.system.settings.hascorpus) {
+		context.corpushealth = await calculateHealth(actor, CONFIG.worldofdarkness.sheettype.wraith);
+	}
+
   	return context
 }
 
