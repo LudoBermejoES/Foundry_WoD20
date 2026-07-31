@@ -103,6 +103,57 @@ export const databiotab = {
                     type: "textbox"
                 }
             },
+            // add-wraith-pc-splat §2.3 — the seven wraith identity fields, matching `template.json`'s
+            // `Actor.templates.wraith` exactly (shadow, life, death, regret, psyche, archetype, thorns).
+            // Every label key already exists in ALL SEVEN language files, so no i18n was added.
+            //
+            // Types follow what the trait IS, not a default: Psyche and Shadow are named archetypes
+            // (one line), Life/Death/Regret are the wraith's story (Death in particular is the defining
+            // one — the v1 sheet gave it its own `parts/wraith/death.html`), and Thorns is a list.
+            //
+            // `archetype` is an `input` rather than a `select` deliberately: a select needs a `listdata`
+            // source registered in SelectHelper, and while a `wraith-shadow-archetypes` compendium pack
+            // does ship, wiring a picker to it is out of this change's scope. Same for `thorns`, which has
+            // a `wraith-thorns` pack — `template.json` declares it a string, so it is a free-text summary
+            // here; promoting either to real Items is a later change, not a silent divergence from the
+            // data model.
+            wraith: {
+                psyche: {
+                    label: "wod.bio.wraith.psyche",
+                    value: "",
+                    type: "input"
+                },
+                shadow: {
+                    label: "wod.bio.wraith.shadow",
+                    value: "",
+                    type: "input"
+                },
+                archetype: {
+                    label: "wod.bio.wraith.archetype",
+                    value: "",
+                    type: "input"
+                },
+                life: {
+                    label: "wod.bio.wraith.life",
+                    value: "",
+                    type: "textbox"
+                },
+                death: {
+                    label: "wod.bio.wraith.death",
+                    value: "",
+                    type: "textbox"
+                },
+                regret: {
+                    label: "wod.bio.wraith.regret",
+                    value: "",
+                    type: "textbox"
+                },
+                thorns: {
+                    label: "wod.bio.wraith.thorns",
+                    value: "",
+                    type: "textbox"
+                }
+            },
             kindredeast: {
                 balance: {
                     label: "wod.bio.vampire.balance",

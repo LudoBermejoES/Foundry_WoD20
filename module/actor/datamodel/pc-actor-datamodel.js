@@ -131,6 +131,12 @@ export default class PCDataModel extends foundry.abstract.DataModel {
         if (source?.health?.damage && source.health.damage.chimerical === undefined) {
             source.health.damage.chimerical = { bashing: 0, lethal: 0, aggravated: 0 };
         }
+        // add-wraith-pc-splat §2.2 — same shim as `chimerical` above, for every PC that predates the
+        // Corpus track. Applies to actors of EVERY line, not just wraiths: the field is on the shared
+        // health schema, so an existing mage/vampire/werewolf must migrate cleanly too (§2.5).
+        if (source?.health?.damage && source.health.damage.corpus === undefined) {
+            source.health.damage.corpus = { bashing: 0, lethal: 0, aggravated: 0 };
+        }
         return super.migrateData(source);
     }
 }

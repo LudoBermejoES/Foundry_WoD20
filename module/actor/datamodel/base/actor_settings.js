@@ -22,6 +22,16 @@ export default class settings extends foundry.abstract.DataModel {
             hasquintessence: new fields.BooleanField({initial: false}),
             hasessence: new fields.BooleanField({initial: false}),
 
+            // add-wraith-pc-splat — the three wraith pools. Corpus is deliberately NOT a health track:
+            // it is repaired by Pathos (1 Pathos = 2 Corpus levels), which is why `template.json` gives it
+            // its own `health.damage.corpus` triple instead of reusing the mortal health levels. Angst is
+            // the SHADOW's pool and rises against the player, so the sheet renders it distinctly rather
+            // than as a second spendable resource beside Pathos. All three default off, like every flag
+            // here, so no existing actor of any other line changes behaviour.
+            hascorpus: new fields.BooleanField({initial: false}),
+            haspathos: new fields.BooleanField({initial: false}),
+            hasangst: new fields.BooleanField({initial: false}),
+
             hasdisciplines: new fields.BooleanField({initial: false}),
             hascombinationdisciplines: new fields.BooleanField({initial: false}),
             hasrituals: new fields.BooleanField({initial: false}),
@@ -37,6 +47,11 @@ export default class settings extends foundry.abstract.DataModel {
             haslores: new fields.BooleanField({initial: false}),
             hasedges: new fields.BooleanField({initial: false}),
             hascharms: new fields.BooleanField({initial: false}),
+            // add-wraith-pc-splat — Arcanoi, the wraith power axis. Two-level like Disciplines: a
+            // container (`wod.types.arcanoi`) holding powers (`wod.types.arcanoipower`). Both i18n keys
+            // already exist, as does `wod.power.unsortedarcanois`, which is strong evidence this was the
+            // original intent.
+            hasarcanoi: new fields.BooleanField({initial: false}),
 
             version: new fields.StringField({...valueString}),
             era: new fields.StringField({initial: 'wod.era.modern', nullable: false}),

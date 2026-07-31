@@ -311,7 +311,25 @@ wod.alwaysspeciality = {
         "science", 
         "technology"       
     ],
-    wraith: []
+    // add-wraith-pc-splat — was `wraith: []`, which meant a wraith PC had NO ability that requires a
+    // specialization, while every other line does. These seven are the Storyteller-System umbrella
+    // abilities (broad enough that a bare rating says nothing), and they are IDENTICAL for vampire,
+    // werewolf and changeling above; Wraith uses the same standard ability list, so it takes the same
+    // seven. Mage is the only line that differs, with its own eleven.
+    //
+    // NOTE for anyone reading the change docs: this map is `alwaysspeciality` — "this ability always needs
+    // a speciality" (read at `module/scripts/drop-helpers.js:1218`). The change's task 2.4 called it the
+    // "favoured-abilities list" and said mage had 4 entries; both were misreadings — mage has 11, and
+    // favoured abilities are not a thing this map models.
+    wraith: [
+        "expression",
+        "craft",
+        "performance",
+        "academics",
+        "law",
+        "science",
+        "technology"
+    ]
 }
 
 wod.attackAttributes = {

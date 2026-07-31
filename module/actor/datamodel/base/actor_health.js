@@ -21,6 +21,19 @@ export default class health extends foundry.abstract.DataModel {
                     bashing: new fields.NumberField({...positiveInteger}),
                     lethal: new fields.NumberField({...positiveInteger}),
                     aggravated: new fields.NumberField({...positiveInteger})
+                }),
+                // add-wraith-pc-splat §2.2 — Corpus damage, kept SEPARATE from the mortal health levels
+                // above and modelled exactly like changeling's `chimerical` triple, which is the existing
+                // precedent for "this splat tracks a second, parallel damage track".
+                //
+                // Corpus is not health: it is a track that PATHOS repairs (1 Pathos = 2 normal Corpus
+                // levels; 3 Pathos + eight hours of Sopor = 1 aggravated). `template.json`'s
+                // `Actor.templates.wraith` already declared `health.damage.corpus.{bashing,lethal,
+                // aggravated}` in exactly this shape — this makes the PC data model carry it too.
+                corpus: new fields.SchemaField({
+                    bashing: new fields.NumberField({...positiveInteger}),
+                    lethal: new fields.NumberField({...positiveInteger}),
+                    aggravated: new fields.NumberField({...positiveInteger})
                 })
             }),
             bruised: new fields.SchemaField({

@@ -1,8 +1,37 @@
+{{!--
+	Advantage items whose `system.group` is not one of the four the sheet handles explicitly
+	('', virtue, renown, quintessence). `prepareAdvantageLists` buckets them generically, so a splat can
+	introduce a pool block purely as DATA — no code change — by giving its Advantage items a new group.
+
+	add-wraith-pc-splat §3.2 — a heading was added here. Before, this partial rendered the items with no
+	label at all, so a grouped block was visually separate but anonymous. Wraith needs the distinction to be
+	legible, not merely present: Angst is the SHADOW's pool, it rises against the player, and a sheet that
+	shows it as just another number beside Pathos invites it to be spent like one.
+
+	The label chain mirrors the one `settings.hbs` already uses for the same data, so the two views of an
+	Advantage group agree. An unrecognised group falls back to its raw name rather than rendering blank.
+
+	Safe to change: measured 2026-07-31, no shipped data uses a group outside the four known ones, so this
+	partial rendered nothing for any existing actor of any line.
+--}}
 {{#each groupedadvantages as |groupData|}}
+	<div class="headlineGroup splatFont">
+		{{#if (eq groupData.group "shadow")}}
+			{{localize "wod.bio.wraith.shadow"}}
+		{{else if (eq groupData.group "virtue")}}
+			{{localize "wod.advantages.virtue.virtues"}}
+		{{else if (eq groupData.group "renown")}}
+			{{localize "wod.advantages.renown"}}
+		{{else if (eq groupData.group "quintessence")}}
+			{{localize "wod.advantages.quintessence"}}
+		{{else}}
+			{{groupData.group}}
+		{{/if}}
+	</div>
+
 	{{#each groupData.items as |advantage id|}}
 		<div class="sheet-boxcontainer">
 			{{{getGetStatArea_v2 ../../actor advantage}}}
 		</div>
 	{{/each}}
 {{/each}}
-
