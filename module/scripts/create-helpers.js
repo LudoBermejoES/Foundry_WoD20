@@ -1,5 +1,6 @@
 import AbilityHelper from "./ability-helpers.js";
 import BonusHelper from "./bonus-helpers.js";
+import { enrichAbilityItemData } from "./ability-enrichment.js";
 
 export default class CreateHelper {
 
@@ -1668,7 +1669,7 @@ export default class CreateHelper {
 				callback: async () => {
 					let itemData = {
 						name: game.i18n.localize("wod.labels.new.talent"),
-						type: "Ability",					
+						type: "Ability",
 						system: {
 							label: game.i18n.localize("wod.labels.new.talent"),
 							max: actor.system.settings.abilities.defaultmaxvalue,
@@ -1681,6 +1682,13 @@ export default class CreateHelper {
 						}
 					};
 
+					// add-ability-descriptions-from-compendium: a no-op today (this button creates a
+					// blank, generically-named Ability the user renames afterward), but harmless and
+					// keeps this creation point consistent with every other one - see
+					// ability-enrichment.js for why the actual enrichment happens once the ability is
+					// named (the item-update hook in wod.js) plus a one-off migration for actors that
+					// already had named Abilities before this change.
+					await enrichAbilityItemData(actor, itemData);
 					await this.CreateItem(actor, itemData);
 					return;
 				}
@@ -1703,6 +1711,7 @@ export default class CreateHelper {
 						}
 					};
 
+					await enrichAbilityItemData(actor, itemData);
 					await this.CreateItem(actor, itemData);
 					return;
 				}
@@ -1725,6 +1734,7 @@ export default class CreateHelper {
 						}
 					};
 
+					await enrichAbilityItemData(actor, itemData);
 					await this.CreateItem(actor, itemData);
 					return;
 				}

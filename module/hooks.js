@@ -3,6 +3,8 @@
  * All hooks are registered here to keep wod.js cleaner
  */
 
+import { maybeEnrichAbilityOnRename } from "./scripts/ability-enrichment.js";
+
 // Resolve classList for AppV1 (element[0]) and AppV2 (sheet.classList / element) sheets
 function getSheetClassList(sheet) {
 	if (sheet.classList) return sheet.classList;
@@ -66,9 +68,25 @@ export function registerHooks(constants, isTablet) {
 				const text = game.i18n.localize("wod.info.droprecieved");
 				text = text.replace("{1}", item.name);
 				text = text.replace("{2}", item.flags?.copyFile?.receivedName);
-				
-				ui.notifications.info(text); 
+
+				ui.notifications.info(text);
 			}
+		}
+	});
+
+	/**
+	 * Hook: updateItem
+	 * add-ability-descriptions-from-compendium: a blank "New Talent/Skill/Knowledge" Ability
+	 * (create-helpers.js) has nothing to match at creation time - only once the player types its
+	 * canonical id or name (which auto-submits per field) can a compendium description be found.
+	 * Never blocks or fails the actual update: any enrichment failure is caught and logged here so
+	 * a compendium hiccup can never surface as a broken ability edit.
+	 */
+	Hooks.on("updateItem", async (item, changes, options, userId) => {
+		try {
+			await maybeEnrichAbilityOnRename(item, changes);
+		} catch (err) {
+			console.error(`WoD | Ability enrichment on rename failed for "${item?.name}":`, err);
 		}
 	});
 

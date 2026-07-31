@@ -76,7 +76,13 @@
 							<i class="item-active pointer icon fa-solid fa-eye-slash" data-itemid="{{ability._id}}" data-type="settings.isvisible" data-action="itemSwitch"></i>
 						{{/if}}
 						{{#if ability.system.settings.isremovable}}
-							{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=false showedit=false showdelete=true showtooltip=false item=ability locked=../locked edittitle="wod.labels.edit.headline" deletetitle="wod.labels.remove.headline" collapseclass="ability"}}
+							{{!-- showtooltip=true (add-ability-descriptions-from-compendium): Abilities are
+						      already embedded Items and now get compendium descriptions, so the eye
+						      needs to render here to open them - it was false before because there was
+						      never a description to show. Note: this puts two fa-eye icons side by
+						      side (the row-visibility toggle above, data-action="itemSwitch", and this
+						      one, which opens the item sheet) - a known visual overlap, not fixed here. --}}
+						{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=false showedit=false showdelete=true showtooltip=true item=ability locked=../locked edittitle="wod.labels.edit.headline" deletetitle="wod.labels.remove.headline" collapseclass="ability"}}
 						{{/if}}
 					{{/if}}
 				
@@ -148,7 +154,13 @@
 							<i class="item-active pointer icon fa-solid fa-eye-slash" data-itemid="{{ability._id}}" data-type="settings.isvisible" data-action="itemSwitch"></i>
 						{{/if}}
 						{{#if ability.system.settings.isremovable}}
-							{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=false showedit=false showdelete=true showtooltip=false item=ability locked=../locked edittitle="wod.labels.edit.headline" deletetitle="wod.labels.remove.headline" collapseclass="ability"}}
+							{{!-- showtooltip=true (add-ability-descriptions-from-compendium): Abilities are
+						      already embedded Items and now get compendium descriptions, so the eye
+						      needs to render here to open them - it was false before because there was
+						      never a description to show. Note: this puts two fa-eye icons side by
+						      side (the row-visibility toggle above, data-action="itemSwitch", and this
+						      one, which opens the item sheet) - a known visual overlap, not fixed here. --}}
+						{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=false showedit=false showdelete=true showtooltip=true item=ability locked=../locked edittitle="wod.labels.edit.headline" deletetitle="wod.labels.remove.headline" collapseclass="ability"}}
 						{{/if}}
 					</div>
 				{{/if}}
@@ -219,7 +231,13 @@
 							<i class="item-active pointer icon fa-solid fa-eye-slash" data-itemid="{{ability._id}}" data-type="settings.isvisible" data-action="itemSwitch"></i>
 						{{/if}}
 						{{#if ability.system.settings.isremovable}}
-							{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=false showedit=false showdelete=true showtooltip=false item=ability locked=../locked edittitle="wod.labels.edit.headline" deletetitle="wod.labels.remove.headline" collapseclass="ability"}}
+							{{!-- showtooltip=true (add-ability-descriptions-from-compendium): Abilities are
+						      already embedded Items and now get compendium descriptions, so the eye
+						      needs to render here to open them - it was false before because there was
+						      never a description to show. Note: this puts two fa-eye icons side by
+						      side (the row-visibility toggle above, data-action="itemSwitch", and this
+						      one, which opens the item sheet) - a known visual overlap, not fixed here. --}}
+						{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=false showedit=false showdelete=true showtooltip=true item=ability locked=../locked edittitle="wod.labels.edit.headline" deletetitle="wod.labels.remove.headline" collapseclass="ability"}}
 						{{/if}}
 					</div>
 				{{/if}}

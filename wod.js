@@ -1,4 +1,5 @@
 import * as migration from "./module/migration.js";
+import { enrichAllActorsAbilities } from "./module/migrations.js";
 
 import { wod } from "./module/config.js";
 import { systemSettings } from "./module/settings.js";
@@ -604,7 +605,18 @@ Hooks.once("ready", async function () {
 
 	if (isIpadViewport()) {
 		isTablet = true;
-	}	
+	}
+
+	// add-ability-descriptions-from-compendium: one-off, per-actor-flagged backfill of Ability
+	// Item descriptions from wod20-compendium-es. Independent of the version-driven UpdateWorld
+	// migration above (its own "abilitiesEnriched" actor flag is what makes it idempotent and
+	// individually reversible), and never allowed to block system load - a broken compendium, a
+	// missing module, or any other failure here is logged, not thrown.
+	try {
+		await enrichAllActorsAbilities();
+	} catch (err) {
+		console.error("WoD | Ability enrichment migration failed:", err);
+	}
 });
 
 //Dice Roller
