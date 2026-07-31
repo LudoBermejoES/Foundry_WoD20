@@ -1,132 +1,166 @@
 /**
- * Refresh an embedded Item's description from the compendium when the stored one is UN-RENDERED
- * MARKDOWN.
+ * Re-sync an actor's embedded trait Items (Backgrounds, Merits, Flaws, ...) from the
+ * `wod20-compendium-es` compendium, keeping each trait's RATING.
  *
- * The defect this fixes, measured against the live world rather than inferred. `wod20-char`'s
- * Foundry exporter picks `entity.description_html || entity.body_es` for an item's description, and
- * `description_html` is only shipped in its catalog for entities with NO prose of their own (172
- * weapons, 39 armour, ...) — 236 of 5,453 entries. For everything else, and that includes every
- * Background, Merit, Flaw, Gift and Discipline power, it falls back to `body_es`, which is
- * **Markdown**. It then lands in `system.description`, which this system renders as **HTML**. So:
+ * THE DEFECT, diagnosed against the live world rather than inferred. `wod20-char`'s Foundry exporter
+ * picks `entity.description_html || entity.body_es`, and its catalog ships `description_html` for
+ * only 236 of 5,453 entities (weapons, armour, manoeuvres). Every Background, Merit, Flaw, Gift and
+ * Discipline power therefore falls back to `body_es`, which is **Markdown** — and it lands in
+ * `system.description`, which this system renders as **HTML**. So `\n\n` paragraph breaks vanish into
+ * one wall of text and the dot ladder, a Markdown pipe table, prints literally as
+ * `| X | ... | |-------|------`. Otto Von Grugger's "Arcano / Encubrimiento" is the case this was
+ * built on.
  *
- *   * `\n\n` paragraph breaks mean nothing in HTML -> one run-on wall of text
- *   * a Markdown pipe table renders literally -> `| X | ... | |-------|--------` on screen
+ * AND THE MECHANICS ARE MISSING TOO, which is worse because it is invisible. The exporter hardcodes
+ * `bonuslist: []` in ten places and the catalog carries no `bonuslist` at all, so the compendium's
+ * `{settingtype: "stealth", type: "ability_buff", value: 1, scale_with_rating: true}` never reaches
+ * the actor: Otto's Arcano was adding NO dice to Sigilo. Re-exporting from wodchar cannot fix this —
+ * the data is not there to export. The compendium is the only source that has both.
  *
- * Otto Von Grugger's "Arcano / Encubrimiento" is the case this was diagnosed on: stored
- * `system.version` "7.3.2", raw Markdown body, and the ladder as pipe rows. The compendium document
- * for the very same trait carries `<p>` paragraphs and a real `<table class='wod-kb-ratings'>`.
+ * MATCHING IS BY NAME + TYPE, not by `_id`. An earlier version matched on `_id`, on the evidence that
+ * `webgen`'s `_fid()` is deterministic and the import preserves it — true for Otto's Arcano
+ * (`wlivFqtbu8v2S5we` on both sides) and FALSE for Anne Sonnenfeld's, which is `ebk1l9bKBlK7OYlR`
+ * against the same compendium document. Some imports minted fresh ids. Name + type is what actually
+ * holds across the world.
  *
- * MATCHING IS EXACT, not heuristic. `webgen`'s `_fid()` derives a document's `_id` from
- * sha256("<line>/<type>/<id>"), and the wodchar import preserves it, so an imported item and its
- * compendium document share the SAME `_id` — verified on Otto's item and
- * `wod20-compendium-es.mage-backgrounds`, both `wlivFqtbu8v2S5we`. No name comparison, no key
- * table, no per-line guessing.
+ * THE PACK INDEX IS BUILT ONCE PER RUN. The first version called `pack.getDocument(id)` across ~107
+ * packs for every item of every actor, which loads each pack in full: it processed 22 of 84 actors
+ * before the page moved on, flagging them as done, so the world ended up half-migrated with no error
+ * anywhere. One `getIndex()` per pack up front, then one `getDocument` per matched item.
  *
- * THE SAFETY RULE, and why it is not the same as ability enrichment's. That migration only fills an
- * EMPTY description, so it can never destroy anything. This one must REPLACE a non-empty one, so it
- * needs to tell machine-written staleness from a human edit. The discriminator is that Foundry's own
- * editors (ProseMirror/TinyMCE) emit HTML: a description with no HTML tags at all, that carries
- * Markdown markers, cannot have come from a player editing it in Foundry. Anything containing a tag
- * is left strictly alone.
+ * UPDATE IN PLACE, rather than delete-and-re-add. The owner asked for the old items to be removed and
+ * replaced; this achieves the same result for every field that was wrong while keeping three things a
+ * delete would destroy: the trait's RATING (`system.value`, which the owner asked to preserve), the
+ * item's id (anything referencing it keeps working), and per-character text such as a Mentor's
+ * `relation`. Only fields owned by the compendium are copied.
  */
 
 const MODULE_ID = "wod20-compendium-es";
 
+/** Item types this touches: the trait Items wodchar exports with Markdown descriptions. */
+const REFRESHABLE_TYPES = new Set(["Feature", "Power", "Ability", "Item", "Fetish", "Rote"]);
+
 /**
- * Does this description look like Markdown that was never rendered?
- *
- * Requires BOTH: no HTML element at all, and at least one Markdown marker (a pipe-table row, or a
- * blank-line paragraph break). Deliberately conservative in both directions — a single `<p>` is
- * enough to disqualify it, and prose with neither marker is left alone rather than guessed at,
- * because a one-paragraph description is indistinguishable from correctly-rendered plain text.
- * @param {string} description
- * @returns {boolean}
+ * `system` fields copied FROM the compendium. Everything else on the item is left alone — most
+ * importantly `value` (the rating), `relation`, `details` and `speciality`, which are per-character.
+ * `bonuslist` is here because its absence is the invisible half of the defect.
  */
-export function looksLikeUnrenderedMarkdown(description) {
-	const text = String(description ?? "");
-	if (!text.trim()) return false;                 // empty is the other migration's business
-	if (/<[a-z][^>]*>/i.test(text)) return false;   // any HTML element: not ours to touch
-	const hasPipeTableRow = /^\s*\|.*\|\s*$/m.test(text);
-	const hasBlankLineBreak = /\n\s*\n/.test(text);
-	return hasPipeTableRow || hasBlankLineBreak;
+const COMPENDIUM_OWNED_FIELDS = ["description", "bonuslist"];
+
+function normalizeName(name) {
+	// The books print "Arcano / Encubrimiento" and an import may carry "Arcano/Encubrimiento":
+	// collapse whitespace (including around a slash) so spacing alone never breaks a match.
+	return String(name ?? "").replace(/\s+/g, " ").replace(/\s*\/\s*/g, "/").trim().toLowerCase();
 }
 
 /**
- * Every installed `wod20-compendium-es` Item pack. Unlike `candidateAbilityPacks`, this is NOT
- * scoped by line: the match is on `_id`, which is globally unique across the module, so scoping
- * would only risk missing a pack (a mortal actor can legitimately hold a `shared-` item, and a
- * Technocratic mage's items live under `mage-`). Returns [] when the module is absent.
- * @returns {CompendiumCollection[]}
+ * Index every installed `wod20-compendium-es` Item pack ONCE: `"name|type"` -> {pack, id}.
+ *
+ * Line-specific packs are indexed BEFORE `shared-` ones and an existing key is never overwritten, so
+ * a line's own document always wins over the cross-line fallback for the same name.
+ * @returns {Promise<Map<string, {pack: CompendiumCollection, id: string}>>}
  */
-function modulePacks() {
+async function buildCompendiumIndex() {
+	const index = new Map();
 	const packs = [];
 	for (const pack of game.packs) {
 		if (pack.documentName !== "Item") continue;
 		if (!pack.collection?.startsWith(`${MODULE_ID}.`)) continue;
 		packs.push(pack);
 	}
-	return packs;
-}
+	// line packs first, shared last
+	packs.sort((a, b) => {
+		const aShared = a.collection.includes(".shared-") ? 1 : 0;
+		const bShared = b.collection.includes(".shared-") ? 1 : 0;
+		return aShared - bShared;
+	});
 
-/**
- * The compendium description for `item`, found by exact `_id`, or null.
- *
- * Never throws: an unreachable pack is logged and treated as "no match", so an absent or partial
- * module means nothing is refreshed rather than a broken world.
- * @param {Item} item - an embedded Item on an actor
- * @returns {Promise<string|null>}
- */
-export async function findCompendiumDescription(item) {
-	const id = item?.id;
-	if (!id) return null;
-
-	for (const pack of modulePacks()) {
+	for (const pack of packs) {
 		try {
-			// `getDocument(id)` rather than loading the whole pack: this runs per item, over ~105
-			// packs, for every actor in the world.
-			const doc = await pack.getDocument(id);
-			const description = doc?.system?.description;
-			if (typeof description === "string" && description.trim()) return description;
-		} catch (err) {
-			console.warn(`WoD | Stale-description refresh: could not read pack "${pack.collection}":`, err);
-		}
-	}
-	return null;
-}
-
-/**
- * Refreshes every embedded Item on `actor` whose description is un-rendered Markdown.
- *
- * Touches `system.description` and NOTHING else — not `value`, not `max`, not `bonuslist`. The
- * `bonuslist` on these stale items is separately and often EMPTY where the compendium has one
- * (Otto's Arcano ships `stealth +1, scale_with_rating` in the compendium and `[]` on the actor,
- * so the trait adds no dice), but restoring that CHANGES DICE POOLS on live characters and is a
- * decision for the owner, not a side effect of a text fix.
- * @param {Actor} actor
- * @returns {Promise<{refreshed: number, skipped: number, notFound: number}>}
- */
-export async function refreshActorStaleDescriptions(actor) {
-	const stats = { refreshed: 0, skipped: 0, notFound: 0 };
-
-	for (const item of actor.items) {
-		if (!looksLikeUnrenderedMarkdown(item.system?.description)) {
-			stats.skipped++;
-			continue;
-		}
-		try {
-			const description = await findCompendiumDescription(item);
-			if (description) {
-				await item.update({ "system.description": description });
-				stats.refreshed++;
-			} else {
-				console.warn(`WoD | "${item.name}" on "${actor.name}" holds un-rendered Markdown but has no compendium document with id ${item.id}; left as-is.`);
-				stats.notFound++;
+			const entries = await pack.getIndex();
+			for (const entry of entries) {
+				const key = `${normalizeName(entry.name)}|${entry.type}`;
+				if (!index.has(key)) index.set(key, { pack, id: entry._id });
 			}
 		} catch (err) {
+			console.warn(`WoD | Trait re-sync: could not index pack "${pack.collection}":`, err);
+		}
+	}
+	return index;
+}
+
+/**
+ * Does this description look like Markdown that was never rendered?
+ *
+ * Requires BOTH no HTML element at all and a Markdown marker (a pipe-table row, or a blank-line
+ * paragraph break). Foundry's own editors emit HTML, so a description with no tag at all cannot be a
+ * player's edit — which is what makes it safe to replace. Anything containing a tag is left alone.
+ * @param {string} description
+ * @returns {boolean}
+ */
+export function looksLikeUnrenderedMarkdown(description) {
+	const text = String(description ?? "");
+	if (!text.trim()) return false;                 // empty is the ability migration's business
+	if (/<[a-z][^>]*>/i.test(text)) return false;   // any HTML element: not ours to touch
+	return /^\s*\|.*\|\s*$/m.test(text) || /\n\s*\n/.test(text);
+}
+
+/**
+ * Re-syncs one actor's trait Items from the compendium index.
+ *
+ * An item is re-synced when its description is un-rendered Markdown, OR when its `bonuslist` is empty
+ * while the compendium document has one — the second condition is what repairs traits whose text
+ * happens to be fine but which add no dice.
+ * @param {Actor} actor
+ * @param {Map<string, {pack: CompendiumCollection, id: string}>} index
+ * @returns {Promise<{resynced: number, bonusFixed: number, skipped: number, notFound: number}>}
+ */
+export async function resyncActorTraits(actor, index) {
+	const stats = { resynced: 0, bonusFixed: 0, skipped: 0, notFound: 0 };
+
+	for (const item of actor.items) {
+		if (!REFRESHABLE_TYPES.has(item.type)) { stats.skipped++; continue; }
+
+		const staleText = looksLikeUnrenderedMarkdown(item.system?.description);
+		const emptyBonus = !(item.system?.bonuslist?.length);
+		if (!staleText && !emptyBonus) { stats.skipped++; continue; }
+
+		const hit = index.get(`${normalizeName(item.name)}|${item.type}`);
+		if (!hit) {
+			if (staleText) {
+				console.warn(`WoD | "${item.name}" (${item.type}) on "${actor.name}" holds un-rendered Markdown but no compendium document matches its name; left as-is.`);
+				stats.notFound++;
+			} else {
+				stats.skipped++;
+			}
+			continue;
+		}
+
+		try {
+			const doc = await hit.pack.getDocument(hit.id);
+			if (!doc) { stats.notFound++; continue; }
+
+			const patch = {};
+			if (staleText && typeof doc.system?.description === "string" && doc.system.description.trim()) {
+				patch["system.description"] = doc.system.description;
+			}
+			// Only ever ADDS a bonuslist the actor is missing. Never replaces a non-empty one, so a
+			// hand-tuned buff on a character survives.
+			if (emptyBonus && doc.system?.bonuslist?.length) {
+				patch["system.bonuslist"] = foundry.utils.deepClone(doc.system.bonuslist);
+			}
+			if (!Object.keys(patch).length) { stats.skipped++; continue; }
+
+			await item.update(patch);
+			if (patch["system.description"]) stats.resynced++;
+			if (patch["system.bonuslist"]) stats.bonusFixed++;
+		} catch (err) {
 			// One item failing (permission, a mid-flight pack reload) must not stop the rest.
-			console.error(`WoD | Stale-description refresh failed for "${item.name}" on "${actor.name}":`, err);
+			console.error(`WoD | Trait re-sync failed for "${item.name}" on "${actor.name}":`, err);
 		}
 	}
 
 	return stats;
 }
+
+export { buildCompendiumIndex, COMPENDIUM_OWNED_FIELDS };
