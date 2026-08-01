@@ -1,27 +1,29 @@
 /**
- * Re-sync an actor's embedded trait Items (Backgrounds, Merits, Flaws, ...) from the
- * `wod20-compendium-es` compendium, keeping each trait's RATING.
+ * Re-sync an actor's embedded trait Items (Backgrounds, Merits, Flaws, ...) `bonuslist` from the
+ * `wod20-compendium-es` compendium, keeping each trait's RATING and every other per-character field.
  *
- * THE DEFECT, diagnosed against the live world rather than inferred. `wod20-char`'s Foundry exporter
- * picks `entity.description_html || entity.body_es`, and its catalog ships `description_html` for
- * only 236 of 5,453 entities (weapons, armour, manoeuvres). Every Background, Merit, Flaw, Gift and
- * Discipline power therefore falls back to `body_es`, which is **Markdown** — and it lands in
- * `system.description`, which this system renders as **HTML**. So `\n\n` paragraph breaks vanish into
- * one wall of text and the dot ladder, a Markdown pipe table, prints literally as
- * `| X | ... | |-------|------`. Otto Von Grugger's "Arcano / Encubrimiento" is the case this was
- * built on.
+ * DESCRIPTION IS NO LONGER PART OF THIS MODULE. read-descriptions-from-compendium retired that half:
+ * an item's description now RESOLVES LIVE from the compendium at read time
+ * (module/scripts/compendium-description.js) instead of being copied here, so a compendium content
+ * fix reaches every actor with no migration, no version-flag bump, and no walk over the world's
+ * actors. What follows is the history of WHY this file still exists at all, for the half that could
+ * not move: `bonuslist`.
  *
- * AND THE MECHANICS ARE MISSING TOO, which is worse because it is invisible. The exporter hardcodes
- * `bonuslist: []` in ten places and the catalog carries no `bonuslist` at all, so the compendium's
- * `{settingtype: "stealth", type: "ability_buff", value: 1, scale_with_rating: true}` never reaches
- * the actor: Otto's Arcano was adding NO dice to Sigilo. Re-exporting from wodchar cannot fix this —
- * the data is not there to export. The compendium is the only source that has both.
+ * THE MECHANICS ARE MISSING, which is worse than stale text because it is invisible. The exporter
+ * hardcodes `bonuslist: []` in ten places and the catalog carries no `bonuslist` field at all, so the
+ * compendium's `{settingtype: "stealth", type: "ability_buff", value: 1, scale_with_rating: true}`
+ * never reaches the actor: Otto Von Grugger's "Arcano / Encubrimiento" was adding NO dice to Sigilo.
+ * Re-exporting from wodchar cannot fix this - the data is not there to export. The compendium is the
+ * only source that has it, so - unlike description - it must still be COPIED onto the actor.
  *
  * MATCHING IS BY NAME + TYPE, not by `_id`. An earlier version matched on `_id`, on the evidence that
  * `webgen`'s `_fid()` is deterministic and the import preserves it — true for Otto's Arcano
  * (`wlivFqtbu8v2S5we` on both sides) and FALSE for Anne Sonnenfeld's, which is `ebk1l9bKBlK7OYlR`
  * against the same compendium document. Some imports minted fresh ids. Name + type is what actually
- * holds across the world.
+ * holds across the world. (Note: this is DELIBERATELY different from the id-based `(entity id, line,
+ * type)` triple `compendium-description.js` resolves descriptions on - that triple comes from
+ * provenance flags most existing actors' items do not carry, which is exactly why this migration,
+ * matching on name + type against a line-scoped index, still exists for `bonuslist`.)
  *
  * THE PACK INDEX IS BUILT ONCE PER RUN. The first version called `pack.getDocument(id)` across ~107
  * packs for every item of every actor, which loads each pack in full: it processed 22 of 84 actors
@@ -32,20 +34,22 @@
  * replaced; this achieves the same result for every field that was wrong while keeping three things a
  * delete would destroy: the trait's RATING (`system.value`, which the owner asked to preserve), the
  * item's id (anything referencing it keeps working), and per-character text such as a Mentor's
- * `relation`. Only fields owned by the compendium are copied.
+ * `relation`. Only `bonuslist`, the one field this module still owns, is ever copied.
  */
 
 const MODULE_ID = "wod20-compendium-es";
 
-/** Item types this touches: the trait Items wodchar exports with Markdown descriptions. */
+/** Item types this touches: the trait Items wodchar exports whose `bonuslist` may be missing. */
 const REFRESHABLE_TYPES = new Set(["Feature", "Power", "Ability", "Item", "Fetish", "Rote"]);
 
 /**
  * `system` fields copied FROM the compendium. Everything else on the item is left alone — most
- * importantly `value` (the rating), `relation`, `details` and `speciality`, which are per-character.
- * `bonuslist` is here because its absence is the invisible half of the defect.
+ * importantly `value` (the rating), `relation`, `details`, `speciality` and (since read-descriptions
+ * -from-compendium) `description` itself, which now resolves live and is never copied by this or any
+ * other migration. `bonuslist` is the one field left here, because its absence is the invisible half
+ * of the original defect and the compendium is the only source that has it.
  */
-const COMPENDIUM_OWNED_FIELDS = ["description", "bonuslist"];
+const COMPENDIUM_OWNED_FIELDS = ["bonuslist"];
 
 function normalizeName(name) {
 	// The books print "Arcano / Encubrimiento" and an import may carry "Arcano/Encubrimiento":
@@ -96,77 +100,42 @@ async function buildCompendiumIndex(splat) {
 }
 
 /**
- * Does this description look like Markdown that was never rendered?
+ * Re-syncs one actor's trait Items' `bonuslist` from the compendium index. `looksLikeUnrenderedMarkdown`
+ * and the `force` option that used to live here are GONE with the description half they existed
+ * solely to repair (read-descriptions-from-compendium) - there is no longer any copied text on the
+ * actor for either of them to find stale or force-overwrite.
  *
- * Requires BOTH no HTML element at all and a Markdown marker (a pipe-table row, or a blank-line
- * paragraph break). Foundry's own editors emit HTML, so a description with no tag at all cannot be a
- * player's edit — which is what makes it safe to replace. Anything containing a tag is left alone.
- * @param {string} description
- * @returns {boolean}
- */
-export function looksLikeUnrenderedMarkdown(description) {
-	const text = String(description ?? "");
-	if (!text.trim()) return false;                 // empty is the ability migration's business
-	if (/<[a-z][^>]*>/i.test(text)) return false;   // any HTML element: not ours to touch
-	return /^\s*\|.*\|\s*$/m.test(text) || /\n\s*\n/.test(text);
-}
-
-/**
- * Re-syncs one actor's trait Items from the compendium index.
- *
- * An item is re-synced when its description is un-rendered Markdown, OR when its `bonuslist` is empty
- * while the compendium document has one — the second condition is what repairs traits whose text
- * happens to be fine but which add no dice.
- * `force` re-syncs a matching item even when its description is already HTML. It exists to REPAIR the
- * wrong-line text a previous version wrote: that damage is valid HTML, so the Markdown test below
- * would skip it forever and leave 89 actors reading another game line's rules.
+ * An item is re-synced when its `bonuslist` is empty while the compendium document has one - this is
+ * the ONLY condition left, and it repairs traits that add no dice because the exporter never had
+ * `bonuslist` to write.
  * @param {Actor} actor
- * @param {object} [opts]
- * @param {boolean} [opts.force=false]
- * @returns {Promise<{resynced: number, bonusFixed: number, skipped: number, notFound: number}>}
+ * @returns {Promise<{bonusFixed: number, skipped: number, notFound: number}>}
  */
-export async function resyncActorTraits(actor, { force = false } = {}) {
+export async function resyncActorTraits(actor) {
 	const splat = actor?.system?.settings?.splat ?? "";
 	const index = await buildCompendiumIndex(splat);
-	if (!index.size) return { resynced: 0, bonusFixed: 0, skipped: 0, notFound: 0 };
-	const stats = { resynced: 0, bonusFixed: 0, skipped: 0, notFound: 0 };
+	if (!index.size) return { bonusFixed: 0, skipped: 0, notFound: 0 };
+	const stats = { bonusFixed: 0, skipped: 0, notFound: 0 };
 
 	for (const item of actor.items) {
 		if (!REFRESHABLE_TYPES.has(item.type)) { stats.skipped++; continue; }
 
-		const staleText = force || looksLikeUnrenderedMarkdown(item.system?.description);
 		const emptyBonus = !(item.system?.bonuslist?.length);
-		if (!staleText && !emptyBonus) { stats.skipped++; continue; }
+		if (!emptyBonus) { stats.skipped++; continue; }
 
 		const hit = index.get(`${normalizeName(item.name)}|${item.type}`);
-		if (!hit) {
-			if (staleText) {
-				console.warn(`WoD | "${item.name}" (${item.type}) on "${actor.name}" holds un-rendered Markdown but no compendium document matches its name; left as-is.`);
-				stats.notFound++;
-			} else {
-				stats.skipped++;
-			}
-			continue;
-		}
+		if (!hit) { stats.skipped++; continue; }
 
 		try {
 			const doc = await hit.pack.getDocument(hit.id);
 			if (!doc) { stats.notFound++; continue; }
 
-			const patch = {};
-			if (staleText && typeof doc.system?.description === "string" && doc.system.description.trim()) {
-				patch["system.description"] = doc.system.description;
-			}
 			// Only ever ADDS a bonuslist the actor is missing. Never replaces a non-empty one, so a
 			// hand-tuned buff on a character survives.
-			if (emptyBonus && doc.system?.bonuslist?.length) {
-				patch["system.bonuslist"] = foundry.utils.deepClone(doc.system.bonuslist);
-			}
-			if (!Object.keys(patch).length) { stats.skipped++; continue; }
+			if (!doc.system?.bonuslist?.length) { stats.skipped++; continue; }
 
-			await item.update(patch);
-			if (patch["system.description"]) stats.resynced++;
-			if (patch["system.bonuslist"]) stats.bonusFixed++;
+			await item.update({ "system.bonuslist": foundry.utils.deepClone(doc.system.bonuslist) });
+			stats.bonusFixed++;
 		} catch (err) {
 			// One item failing (permission, a mid-flight pack reload) must not stop the rest.
 			console.error(`WoD | Trait re-sync failed for "${item.name}" on "${actor.name}":`, err);

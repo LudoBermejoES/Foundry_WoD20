@@ -1,4 +1,5 @@
 import { calculateTotals } from "../scripts/totals.js";
+import { resolveDescription } from "./compendium-description.js";
 
 import { DiceRoller } from "../scripts/roll-dice.js";
 import { DiceRollContainer } from "../scripts/roll-dice.js";
@@ -2004,7 +2005,10 @@ export const SendChat = async function (event, target) {
 	const item = this.actor.getEmbeddedDocument('Item', itemid);
 
 	const headline = item.name;
-	const description = item.system.description;
+	// read-descriptions-from-compendium: this path is already `async`, so it resolves live rather
+	// than through the synchronous cache - see design.md Decision 2, row 4. Degrades to the item's
+	// own stored text on any failure (module absent, no provenance, no match, an override in force).
+	const description = (await resolveDescription(item)) ?? item.system.description;
 	let system;
 
 	if (item.system.details === undefined) {

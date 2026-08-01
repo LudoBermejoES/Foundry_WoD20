@@ -1,5 +1,6 @@
 import * as migration from "./module/migration.js";
 import { enrichAllActorsAbilities, refreshAllActorsStaleDescriptions } from "./module/migrations.js";
+import { warmDescriptionCache } from "./module/scripts/compendium-description.js";
 
 import { wod } from "./module/config.js";
 import { systemSettings } from "./module/settings.js";
@@ -627,6 +628,22 @@ Hooks.once("ready", async function () {
 		await refreshAllActorsStaleDescriptions();
 	} catch (err) {
 		console.error("WoD | Stale-description refresh migration failed:", err);
+	}
+
+	// read-descriptions-from-compendium: warms the description resolver's synchronous cache (see
+	// module/scripts/compendium-description.js) for every game line actually present among the
+	// world's actors - never for every line the compendium ships, and never per item. This is what
+	// makes the synchronous chat-card/power-list readers (handlebars.js, demon-actor-sheet.js,
+	// creature-actor-sheet.js) serve from cache in normal play; anything opened before this
+	// finishes simply falls back to its stored description until the warm-up completes. Never
+	// allowed to block system load.
+	try {
+		const linesInWorld = (game.actors ?? [])
+			.map(actor => actor?.system?.settings?.splat)
+			.filter(Boolean);
+		await warmDescriptionCache(linesInWorld);
+	} catch (err) {
+		console.error("WoD | Compendium description cache warm-up failed:", err);
 	}
 });
 

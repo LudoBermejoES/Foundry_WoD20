@@ -1,6 +1,7 @@
 import BonusHelper from "./scripts/bonus-helpers.js";
 import ItemHelper from "./scripts/item-helpers.js";
 import Functions from "./functions.js";
+import { getCachedDescription } from "./scripts/compendium-description.js";
 
 function getMeaningfulBonuses(bonuslist) {
 	return BonusHelper.asBonuslist(bonuslist).filter(bonus => bonus?.type);
@@ -552,9 +553,14 @@ export const registerHandlebarsHelpers = function () {
 			let footerhtml = `</div></div>`;
 
 			let descriptionhtml = "";
-			
-			if (items[i].system.description != "") {
-				descriptionhtml = `<h3>${game.i18n.localize("wod.labels.description")}</h3> ${items[i].system.description}`;
+
+			// read-descriptions-from-compendium: this Handlebars helper is SYNCHRONOUS and cannot
+			// `await` - reads the session cache warmed at `ready` (see design.md Decision 2, row 2)
+			// and falls back to the stored value on a cache miss (module absent, no provenance, or
+			// simply cold-start before the cache is warm).
+			const mainPowerDescription = getCachedDescription(items[i]) ?? items[i].system.description;
+			if (mainPowerDescription != "") {
+				descriptionhtml = `<h3>${game.i18n.localize("wod.labels.description")}</h3> ${mainPowerDescription}`;
 			}
 
 			let detailshtml = "";
@@ -632,9 +638,12 @@ export const registerHandlebarsHelpers = function () {
 				footerhtml = `</div>`;
 
 				descriptionhtml = "";
-				
-				if (itempowers[p].system.description != "") {
-					descriptionhtml = `<h3>${game.i18n.localize("wod.labels.description")}</h3> ${itempowers[p].system.description}`;
+
+				// read-descriptions-from-compendium: same synchronous cache-or-fallback as the main
+				// power list above (design.md Decision 2, row 3).
+				const subPowerDescription = getCachedDescription(itempowers[p]) ?? itempowers[p].system.description;
+				if (subPowerDescription != "") {
+					descriptionhtml = `<h3>${game.i18n.localize("wod.labels.description")}</h3> ${subPowerDescription}`;
 				}
 
 				detailshtml = "";

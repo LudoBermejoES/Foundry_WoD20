@@ -1,6 +1,7 @@
 import { default as MortalActorSheet } from "./mortal-actor-sheet.js";
 import ActionHelper from "../../scripts/action-helpers.js";
 import CreateHelper from "../../scripts/create-helpers.js";
+import { getCachedDescription } from "../../scripts/compendium-description.js";
 
 export default class CreatureActorSheet extends MortalActorSheet {
 	
@@ -29,12 +30,14 @@ export default class CreatureActorSheet extends MortalActorSheet {
 					if (i.system.type == "wod.types.apocalypticform") {
 						const bonus = i.system.bonuslist;
 
+						// read-descriptions-from-compendium: same synchronous cache-or-fallback as
+						// `demon-actor-sheet.js` (design.md Decision 2, row 7).
 						const form = {
 							isactive: i.system.isactive,
 							name: i.name,
 							level: i.system.level,
 							details: i.system.details,
-							description: i.system.description,
+							description: getCachedDescription(i) ?? i.system.description,
 							_id: i._id,
 							bonuses: bonus
 						}

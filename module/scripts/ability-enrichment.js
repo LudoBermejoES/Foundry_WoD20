@@ -108,9 +108,26 @@ export async function findAbilityCompendiumMatch(actor, abilityItem) {
 }
 
 /**
- * Populates `itemData.system.description` in place from the compendium, if a match is found.
- * Safe to call with `itemData.system.description` already set - it will not be overwritten unless
- * explicitly empty, so this never clobbers a player's own edits.
+ * The matched document's OWN provenance flags (`flags['wod20-compendium-es']`), ready to spread
+ * into an Item creation/update payload - or `{}` if the match carries none (an older compendium
+ * build, say). Ability items otherwise carry no entity provenance at all (`entityFlags()` is
+ * applied to entity-backed picks; a plain Ability is template-derived) - copying this flag is what
+ * brings an enriched Ability into the read-descriptions-from-compendium model, per design.md
+ * Decision 2, "#18, abilities": from this point on the ability resolves its description LIVE, with
+ * the copied text below serving only as the offline fallback.
+ * @param {Item|null} match
+ * @returns {Record<string, unknown>}
+ */
+export function compendiumProvenanceOf(match) {
+	const flags = match?.flags?.[MODULE_ID];
+	return flags ? { [MODULE_ID]: flags } : {};
+}
+
+/**
+ * Populates `itemData.system.description` in place from the compendium, if a match is found, and
+ * copies the matched document's provenance flags alongside it. Safe to call with
+ * `itemData.system.description` already set - it will not be overwritten unless explicitly empty,
+ * so this never clobbers a player's own edits.
  * @param {Actor} actor
  * @param {object} itemData - an Item creation/update payload with `type: "Ability"`
  * @returns {Promise<boolean>} true if a description was applied
@@ -130,6 +147,7 @@ export async function enrichAbilityItemData(actor, itemData) {
 	}
 
 	foundry.utils.setProperty(itemData, "system.description", match.system.description ?? "");
+	foundry.utils.mergeObject(itemData, { flags: compendiumProvenanceOf(match) });
 	return true;
 }
 
@@ -158,5 +176,8 @@ export async function maybeEnrichAbilityOnRename(item, changes) {
 	const match = await findAbilityCompendiumMatch(item.actor, item);
 	if (!match?.system?.description) return;
 
-	await item.update({ "system.description": match.system.description });
+	await item.update({
+		"system.description": match.system.description,
+		flags: compendiumProvenanceOf(match)
+	});
 }

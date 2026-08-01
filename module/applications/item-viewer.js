@@ -16,6 +16,8 @@
  * either - see `_systemFieldRows` below for exactly what "never needs to know" means in code.
  */
 
+import { resolveDescription } from "../scripts/compendium-description.js";
+
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 // Top-level `system` keys never shown as a generic labelled row, either because they are
@@ -109,12 +111,21 @@ export default class ItemViewer extends HandlebarsApplicationMixin(foundry.appli
 
 		context.name = doc?.name ?? "";
 
-		const rawDescription = doc?.system?.description ?? "";
+		// read-descriptions-from-compendium: resolve LIVE from `wod20-compendium-es` when `doc`
+		// carries entity provenance and has no local override (see compendium-description.js).
+		// `resolveDescription` degrades to `null` on every failure mode - no provenance, an
+		// override, module absent, no match, empty compendium text - so the stored value is always
+		// the fallback and this window never has less to show than it did before this change.
+		const rawDescription = (await resolveDescription(doc)) ?? doc?.system?.description ?? "";
 		context.description = rawDescription
 			? await foundry.applications.ux.TextEditor.implementation.enrichHTML(rawDescription, { async: true })
 			: "";
 		context.hasDescription = context.description.trim().length > 0;
 
+		// `_systemFieldRows` and `title` (above) both stay on the ACTOR's document, never the
+		// resolved compendium one - the compendium's own Background documents carry `value: 0`, and
+		// resolving system fields here would display a character's rating-3 Refuerzos as unbought
+		// (design.md Decision 4).
 		context.systemFields = _systemFieldRows(doc);
 
 		return context;

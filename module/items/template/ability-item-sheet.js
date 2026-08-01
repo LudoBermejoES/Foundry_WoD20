@@ -92,6 +92,12 @@ export default class AbilityItemSheet extends HandlebarsApplicationMixin(WoDItem
 export const prepareStatContext = async function (context, item) {
     context.tab = context.tabs.stats;
 
+    // read-descriptions-from-compendium leaves this EDIT sheet alone on purpose (design.md
+    // Decision 2, "the accepted degradation"): an empty box on a compendium-owned Ability with no
+    // stored text is correct - the resolved text is one click away on the eye (item-viewer.js) -
+    // and filling it here would recreate the exact copy-forward this change removes the moment the
+    // sheet is saved. `WoDItemSheetV2.onSubmitItemForm` is where the one addition this sheet does
+    // get lives: stamping a local-override flag when a user's edit changes this field.
     context.description = item.system.description;
     context.enrichedDescription = await foundry.applications.ux.TextEditor.implementation.enrichHTML(item.system.description, {async: true});
 

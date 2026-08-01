@@ -11,7 +11,7 @@
  * `game.ready()`.
  */
 
-import { findAbilityCompendiumMatch } from "./scripts/ability-enrichment.js";
+import { findAbilityCompendiumMatch, compendiumProvenanceOf } from "./scripts/ability-enrichment.js";
 import { resyncActorTraits } from "./scripts/stale-description-refresh.js";
 
 const FLAG_SCOPE = "worldofdarkness";
@@ -41,7 +41,14 @@ export async function enrichActorAbilities(actor) {
 		try {
 			const match = await findAbilityCompendiumMatch(actor, abilityItem);
 			if (match?.system?.description) {
-				await abilityItem.update({ "system.description": match.system.description });
+				// read-descriptions-from-compendium (ability-enrichment.js Decision 2, "#18,
+				// abilities"): also copy the matched document's provenance flags, so this Ability
+				// resolves its description LIVE from here on, with this copied text serving only as
+				// the offline fallback.
+				await abilityItem.update({
+					"system.description": match.system.description,
+					flags: compendiumProvenanceOf(match)
+				});
 				stats.enriched++;
 			} else {
 				console.warn(`WoD | Ability "${abilityItem.name}" not found in the wod20-compendium-es compendium for actor "${actor.name}"; left with no description.`);
@@ -92,37 +99,56 @@ export async function enrichAllActorsAbilities() {
 	console.log(`WoD | Ability enrichment migration complete: ${pending.length} actor(s) processed, ${totalEnriched} ability description(s) added, ${errored} actor(s) errored.`);
 }
 
-// --- Trait re-sync from the compendium ------------------------------------------------------------
+// --- Trait re-sync from the compendium (bonuslist only) --------------------------------------------
 //
-// A SECOND, independent migration with its own flag. Deliberately not folded into the ability
+// read-descriptions-from-compendium RETIRED THE DESCRIPTION HALF of this migration. Every item's
+// description now RESOLVES LIVE from the compendium at read time (see
+// module/scripts/compendium-description.js) instead of being copied onto the actor, so nothing
+// copies `system.description` here any more, `COMPENDIUM_OWNED_FIELDS` in
+// scripts/stale-description-refresh.js is down to `["bonuslist"]`, and a compendium CONTENT fix -
+// the entire reason V1 through V4 below existed - no longer needs a migration, a version-flag bump,
+// or a walk over the world's actors at all. See openspec/changes/read-descriptions-from-compendium.
+//
+// WHAT'S LEFT, and why it could not go with the rest: the system computes dice pools from
+// `item.system.bonuslist` ON THE ACTOR, and `wod20-char`'s exporter hardcodes `bonuslist: []` at ten
+// call sites with no catalog field to export instead - the compendium is the ONLY source that has
+// it, so it still has to be COPIED, not resolved (stale-description-refresh.js:14-18: "Otto's Arcano
+// was adding NO dice to Sigilo"). This keeps the `game.actors` + unlinked-token-actor walk, the
+// line-scoped index, and a versioned completion flag - a compendium fix to a trait's BONUSES still
+// needs a flag bump and a world walk; only a fix to its TEXT stopped needing one.
+//
+// A SECOND, independent migration with its own flag, still. Deliberately not folded into the ability
 // enrichment above, because the two differ on the one thing that matters: that one only ever FILLS AN
-// EMPTY description and can destroy nothing, while this one REPLACES data. Sharing a flag would also
-// make either impossible to re-run without the other.
+// EMPTY description and can destroy nothing, while this one REPLACES data (now: only `bonuslist`
+// data). Sharing a flag would also make either impossible to re-run without the other.
 //
-// THE FLAG KEY IS VERSIONED, and v1 is deliberately abandoned rather than reused. v1 matched
-// compendium documents by `_id`, which holds for some imports and not others, and it re-scanned all
-// ~107 packs for every item of every actor — so it flagged 22 of 84 actors as done before the page
-// moved on, having fixed almost nothing. Reusing the key would skip exactly those 22 forever. See
-// scripts/stale-description-refresh.js.
-
-// V4. The key is versioned on purpose and bumped whenever the COMPENDIUM's own content changes,
-// because an actor's item description is a SNAPSHOT taken when the migration ran, not a live link to
-// the compendium. Module 0.7.47 de-duplicated the interleaved dot ladder; every actor migrated under
-// 0.7.46 kept the duplicated copy, exactly as the owner worked out ("ya está embebido en el actor").
-// A version bump here is therefore part of shipping a compendium content fix, not an afterthought.
+// THE FLAG KEY IS VERSIONED, and every earlier key is deliberately abandoned rather than reused -
+// reusing one would skip every actor already flagged under it, which is exactly the mistake V1 made.
+// History, kept for the record: V1 matched compendium documents by `_id`, which holds for some
+// imports and not others, and it re-scanned all ~107 packs for every item of every actor - so it
+// flagged 22 of 84 actors as done before the page moved on, having fixed almost nothing. V2 matched
+// by name against a GLOBAL index of all ~107 packs with "first pack wins", so changeling-/hunter-
+// packs beat mage- ones and 89 live actors had traits overwritten with ANOTHER GAME LINE's text. V3
+// re-ran over every actor V2 touched, with a `force` option that existed purely to repair V2's
+// damage. V4 added the unlinked-token-actor walk and was versioned on compendium CONTENT changes -
+// the description-copying reason for its existence, which is now gone.
 //
-// V3, and V2 abandoned rather than reused for the second time. V2 matched by name against a GLOBAL
-// index of all ~107 packs with "first pack wins", so changeling-/hunter- packs beat mage- ones and 89
-// live actors had traits overwritten with ANOTHER GAME LINE's text. V3 must therefore re-run over
-// every actor V2 touched, and it runs with `force` because V2's damage is valid HTML that the
-// Markdown test would skip forever.
-const TRAIT_RESYNC_FLAG_KEY = "traitsResyncedFromCompendiumV4";
+// V5 (this one): DESCRIPTION-FREE, `bonuslist`-only. Not `traitsResyncedFromCompendiumV5` - the name
+// would lie about what the migration does once description is gone - but a fresh key regardless
+// (`bonuslistResyncedFromCompendiumV1`), so that every actor already flagged under V4 is processed
+// once more under the new, narrower semantics rather than skipped.
+const TRAIT_RESYNC_FLAG_KEY = "bonuslistResyncedFromCompendiumV1";
 
 /**
- * Re-syncs every actor not already flagged. The compendium is indexed ONCE for the whole batch.
+ * Re-syncs every actor's `bonuslist` (only - see the header comment above) from the compendium,
+ * for every actor not already flagged under `TRAIT_RESYNC_FLAG_KEY`.
  *
  * NOT limited to `type === "PC"`: wodchar exports mortals and other actor types through the same
- * path, so they carry the same Markdown.
+ * path, so they carry the same missing-`bonuslist` defect.
+ *
+ * Kept under its original name - `refreshAllActorsStaleDescriptions` - even though it no longer
+ * touches descriptions, because renaming it would be a cosmetic-only diff across every caller for
+ * no behavioural gain; the header comment and log lines below are what now describe what it does.
  * @returns {Promise<void>}
  */
 export async function refreshAllActorsStaleDescriptions() {
@@ -152,24 +178,22 @@ export async function refreshAllActorsStaleDescriptions() {
 	// The index is now built PER ACTOR, because it must be scoped to that actor's game line (see
 	// buildCompendiumIndex). That is ~10 packs per line rather than 107, and Foundry caches a pack
 	// index after the first read, so the cost stays far below V1's per-item pack loads.
-	console.log(`WoD | Trait re-sync (V4, line-scoped, incl. unlinked token actors): ${pending.length} of ${candidates.length} actor(s) to process.`);
+	console.log(`WoD | Trait re-sync (bonuslist-only, line-scoped, incl. unlinked token actors): ${pending.length} of ${candidates.length} actor(s) to process.`);
 
-	let totalResynced = 0;
 	let totalBonusFixed = 0;
 	let totalNotFound = 0;
 	let errored = 0;
 
 	for (const actor of pending) {
 		try {
-			const stats = await resyncActorTraits(actor, { force: true });
-			totalResynced += stats.resynced;
+			const stats = await resyncActorTraits(actor);
 			totalBonusFixed += stats.bonusFixed;
 			totalNotFound += stats.notFound;
 			// Flagged AFTER the work, so an interrupted run leaves the remaining actors pending
 			// rather than silently marked done.
 			await actor.setFlag(FLAG_SCOPE, TRAIT_RESYNC_FLAG_KEY, true);
-			if (stats.resynced || stats.bonusFixed || stats.notFound) {
-				console.log(`WoD | "${actor.name}": ${stats.resynced} description(s) re-synced, ${stats.bonusFixed} bonuslist(s) restored, ${stats.notFound} unmatched.`);
+			if (stats.bonusFixed || stats.notFound) {
+				console.log(`WoD | "${actor.name}": ${stats.bonusFixed} bonuslist(s) restored, ${stats.notFound} unmatched.`);
 			}
 		} catch (err) {
 			// One broken actor (no update permission for this user, say) must not stop the batch.
@@ -178,5 +202,5 @@ export async function refreshAllActorsStaleDescriptions() {
 		}
 	}
 
-	console.log(`WoD | Trait re-sync complete: ${pending.length} actor(s) processed, ${totalResynced} description(s) re-synced, ${totalBonusFixed} bonuslist(s) restored, ${totalNotFound} unmatched, ${errored} actor(s) errored.`);
+	console.log(`WoD | Trait re-sync complete: ${pending.length} actor(s) processed, ${totalBonusFixed} bonuslist(s) restored, ${totalNotFound} unmatched, ${errored} actor(s) errored.`);
 }

@@ -4,6 +4,7 @@ import { ActionEdit } from "../../scripts/item-actions.js";
 import { ActionRemove } from "../../scripts/item-actions.js";
 import { ActionSwitch } from "../../scripts/item-actions.js";
 import DropHelper from "../../scripts/drop-helpers.js";
+import { stampDescriptionOverride } from "../../scripts/compendium-description.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api
 
@@ -155,9 +156,15 @@ export default class WoDItemSheetV2 extends HandlebarsApplicationMixin(foundry.a
 			}
 
 			// Make the update for the field
-			await this.item.update({
+			// read-descriptions-from-compendium, Decision 3: stamps a local-override flag, in the
+			// SAME update, when this field is `system.description` on a provenance-carrying item -
+			// see compendium-description.js. A no-op for every other field and for an item with no
+			// provenance.
+			const updateData = {
 				[`${target.name}`]: value
-			})
+			};
+			stampDescriptionOverride(this.item, updateData);
+			await this.item.update(updateData)
 		} else {
 			// Process submit data
 			const submitData = this._prepareSubmitData(event, form, formData)
@@ -167,6 +174,10 @@ export default class WoDItemSheetV2 extends HandlebarsApplicationMixin(foundry.a
 				[target.name]: submitDataFlat[target.name]
 			}
 			const expandedData = foundry.utils.expandObject(updatedData)
+
+			// Same override-stamp as the direct-field branch above, for fields (e.g. a rich-text
+			// editor) that submit through `_prepareSubmitData` instead.
+			stampDescriptionOverride(this.item, expandedData);
 
 			// Update the item data
 			await this.item.update(expandedData)

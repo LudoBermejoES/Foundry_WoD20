@@ -2,6 +2,7 @@ import { default as MortalActorSheet } from "./mortal-actor-sheet.js";
 import ActionHelper from "../../scripts/action-helpers.js";
 import BonusHelper from "../../scripts/bonus-helpers.js";
 import CreateHelper from "../../scripts/create-helpers.js";
+import { getCachedDescription } from "../../scripts/compendium-description.js";
 
 export default class DemonActorSheet extends MortalActorSheet {
 	
@@ -27,12 +28,15 @@ export default class DemonActorSheet extends MortalActorSheet {
 				if (i.system.type == "wod.types.apocalypticform") {
 					const bonus = i.system.bonuslist;
 
+					// read-descriptions-from-compendium: `getData` cannot `await` this per-item cache
+					// read the way `resolveDescription` would (design.md Decision 2, row 6) - reads the
+					// session cache warmed at `ready` and falls back to the stored value on a miss.
 					const form = {
 						isactive: i.system.isactive,
 						name: i.name,
 						level: i.system.level,
 						details: i.system.details,
-						description: i.system.description,
+						description: getCachedDescription(i) ?? i.system.description,
 						_id: i._id,
 						bonuses: bonus
 					}

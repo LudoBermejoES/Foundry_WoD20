@@ -9,6 +9,7 @@ import ItemHelper from "../../scripts/item-helpers.js";
 import SelectHelper from "../../scripts/select-helpers.js"
 import CombatHelper from "../../scripts/combat-helpers.js";
 import BonusHelper from "../../scripts/bonus-helpers.js";
+import { resolveDescription } from "../../scripts/compendium-description.js";
 
 
 import { calculateHealth } from "../../scripts/health.js";
@@ -1279,7 +1280,10 @@ export default class MortalActorSheet extends foundry.appv1.sheets.ActorSheet {
 		const itemid = element.dataset.itemid || "";
 		let item = await this.actor.getEmbeddedDocument("Item", itemid);
 		const headline = item.name;
-		const description = item.system.description;
+		// read-descriptions-from-compendium: already `async`, so it resolves live rather than
+		// through the synchronous cache - see design.md Decision 2, row 5. Degrades to the item's
+		// own stored text on any failure.
+		const description = (await resolveDescription(item)) ?? item.system.description;
 		const system = item.system.details;
 
 		const templateData = {

@@ -88,6 +88,9 @@ export default class SphereItemSheet extends HandlebarsApplicationMixin(WoDItemS
 export const prepareStatContext = async function (context, item) {
     context.tab = context.tabs.stats;
 
+    // read-descriptions-from-compendium leaves this EDIT sheet alone on purpose (design.md
+    // Decision 2, "the accepted degradation") - see ability-item-sheet.js for the full rationale,
+    // which applies identically here.
     context.description = item.system.description;
     context.enrichedDescription = await foundry.applications.ux.TextEditor.implementation.enrichHTML(item.system.description, {async: true});
 

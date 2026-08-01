@@ -2,6 +2,7 @@ import ActionHelper from "../../scripts/action-helpers.js";
 import BonusHelper from "../../scripts/bonus-helpers.js"
 import SelectHelper from "../../scripts/select-helpers.js"
 import { calculateTotals } from "../../scripts/totals.js";
+import { stampDescriptionOverride } from "../../scripts/compendium-description.js";
 
 export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 	
@@ -147,6 +148,13 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 			data.bonus = items;
 		}	
 
+		// read-descriptions-from-compendium leaves this EDIT sheet alone on purpose (design.md
+		// Decision 2, "the accepted degradation"): it is an authoring surface, so it keeps reading
+		// and writing the item's own stored `system.description`. For a compendium-owned item with
+		// no stored text this box is correctly EMPTY - the text to read is one click away on the eye
+		// (item-viewer.js) - and filling it here would recreate the exact copy-forward this change
+		// removes the moment the sheet is saved. See `_updateObject` below for the one addition this
+		// sheet does get: stamping a local-override flag when a user's edit changes this field.
 		if (data.item.system?.description != undefined) {
 			data.item.system.description = await foundry.applications.ux.TextEditor.implementation.enrichHTML(data.item.system.description, {async: true});
 		}
@@ -176,6 +184,19 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 		console.log(data.item);
 
 		return data;
+	}
+
+	/** @override */
+	async _updateObject(event, formData) {
+		// read-descriptions-from-compendium, Decision 3: a saved edit to a provenance-carrying
+		// item's description wins over the compendium from here on - see compendium-description.js.
+		// This sheet is left reading/writing the item's own stored `system.description` exactly as
+		// before (see design.md Decision 2's "accepted degradation": an empty box on a compendium-
+		// owned item with no stored text is correct, and filling it here would recreate the copy
+		// this whole change removes) - this override-stamp is the ONE addition needed so that a
+		// deliberate edit is not silently replaced by the live compendium text on the next read.
+		stampDescriptionOverride(this.item, formData);
+		return super._updateObject(event, formData);
 	}
 
 	/** @override */
