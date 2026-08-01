@@ -54,31 +54,37 @@ function normalizeName(name) {
 }
 
 /**
- * Index every installed `wod20-compendium-es` Item pack ONCE: `"name|type"` -> {pack, id}.
+ * Index the packs that belong to ONE game line: `"name|type"` -> {pack, id}.
  *
- * Line-specific packs are indexed BEFORE `shared-` ones and an existing key is never overwritten, so
- * a line's own document always wins over the cross-line fallback for the same name.
+ * SCOPED BY LINE, and that scoping is the whole point. A first version built ONE global index across
+ * all ~107 packs with "first pack wins", which meant `changeling-*` and `hunter-*` beat `mage-*` on
+ * every shared trait name — so a mage's Mentor was overwritten with Changeling's ("otras hadas se
+ * aprestan a proteger... al nuevo changeling"), his Estatus with Hunter's Society of Leopold text, and
+ * his Adicción with one that triggers Banality. It ran against 89 live actors before it was caught.
+ * The precedent for doing it right was already in this codebase: `ability-enrichment.js`'s
+ * `candidateAbilityPacks(splat)`.
+ *
+ * `shared-` packs are indexed LAST and never overwrite an existing key, so a line's own document
+ * always beats the cross-line fallback.
+ * @param {string} splat - `actor.system.settings.splat` (e.g. "mage", "werewolf", "mortal")
  * @returns {Promise<Map<string, {pack: CompendiumCollection, id: string}>>}
  */
-async function buildCompendiumIndex() {
-	const index = new Map();
-	const packs = [];
+async function buildCompendiumIndex(splat) {
+	const linePacks = [];
+	const sharedPacks = [];
 	for (const pack of game.packs) {
 		if (pack.documentName !== "Item") continue;
 		if (!pack.collection?.startsWith(`${MODULE_ID}.`)) continue;
-		packs.push(pack);
+		const packName = pack.collection.slice(MODULE_ID.length + 1);
+		if (packName.startsWith("shared-")) sharedPacks.push(pack);
+		else if (splat && packName.startsWith(`${splat}-`)) linePacks.push(pack);
+		// A pack belonging to ANOTHER line is skipped outright, not merely ranked lower.
 	}
-	// line packs first, shared last
-	packs.sort((a, b) => {
-		const aShared = a.collection.includes(".shared-") ? 1 : 0;
-		const bShared = b.collection.includes(".shared-") ? 1 : 0;
-		return aShared - bShared;
-	});
 
-	for (const pack of packs) {
+	const index = new Map();
+	for (const pack of [...linePacks, ...sharedPacks]) {
 		try {
-			const entries = await pack.getIndex();
-			for (const entry of entries) {
+			for (const entry of await pack.getIndex()) {
 				const key = `${normalizeName(entry.name)}|${entry.type}`;
 				if (!index.has(key)) index.set(key, { pack, id: entry._id });
 			}
@@ -111,17 +117,24 @@ export function looksLikeUnrenderedMarkdown(description) {
  * An item is re-synced when its description is un-rendered Markdown, OR when its `bonuslist` is empty
  * while the compendium document has one — the second condition is what repairs traits whose text
  * happens to be fine but which add no dice.
+ * `force` re-syncs a matching item even when its description is already HTML. It exists to REPAIR the
+ * wrong-line text a previous version wrote: that damage is valid HTML, so the Markdown test below
+ * would skip it forever and leave 89 actors reading another game line's rules.
  * @param {Actor} actor
- * @param {Map<string, {pack: CompendiumCollection, id: string}>} index
+ * @param {object} [opts]
+ * @param {boolean} [opts.force=false]
  * @returns {Promise<{resynced: number, bonusFixed: number, skipped: number, notFound: number}>}
  */
-export async function resyncActorTraits(actor, index) {
+export async function resyncActorTraits(actor, { force = false } = {}) {
+	const splat = actor?.system?.settings?.splat ?? "";
+	const index = await buildCompendiumIndex(splat);
+	if (!index.size) return { resynced: 0, bonusFixed: 0, skipped: 0, notFound: 0 };
 	const stats = { resynced: 0, bonusFixed: 0, skipped: 0, notFound: 0 };
 
 	for (const item of actor.items) {
 		if (!REFRESHABLE_TYPES.has(item.type)) { stats.skipped++; continue; }
 
-		const staleText = looksLikeUnrenderedMarkdown(item.system?.description);
+		const staleText = force || looksLikeUnrenderedMarkdown(item.system?.description);
 		const emptyBonus = !(item.system?.bonuslist?.length);
 		if (!staleText && !emptyBonus) { stats.skipped++; continue; }
 
@@ -163,4 +176,4 @@ export async function resyncActorTraits(actor, index) {
 	return stats;
 }
 
-export { buildCompendiumIndex, COMPENDIUM_OWNED_FIELDS };
+export { COMPENDIUM_OWNED_FIELDS };

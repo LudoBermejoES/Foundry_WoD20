@@ -12,7 +12,7 @@
  */
 
 import { findAbilityCompendiumMatch } from "./scripts/ability-enrichment.js";
-import { resyncActorTraits, buildCompendiumIndex } from "./scripts/stale-description-refresh.js";
+import { resyncActorTraits } from "./scripts/stale-description-refresh.js";
 
 const FLAG_SCOPE = "worldofdarkness";
 const FLAG_KEY = "abilitiesEnriched";
@@ -105,7 +105,12 @@ export async function enrichAllActorsAbilities() {
 // moved on, having fixed almost nothing. Reusing the key would skip exactly those 22 forever. See
 // scripts/stale-description-refresh.js.
 
-const TRAIT_RESYNC_FLAG_KEY = "traitsResyncedFromCompendiumV2";
+// V3, and V2 abandoned rather than reused for the second time. V2 matched by name against a GLOBAL
+// index of all ~107 packs with "first pack wins", so changeling-/hunter- packs beat mage- ones and 89
+// live actors had traits overwritten with ANOTHER GAME LINE's text. V3 must therefore re-run over
+// every actor V2 touched, and it runs with `force` because V2's damage is valid HTML that the
+// Markdown test would skip forever.
+const TRAIT_RESYNC_FLAG_KEY = "traitsResyncedFromCompendiumV3";
 
 /**
  * Re-syncs every actor not already flagged. The compendium is indexed ONCE for the whole batch.
@@ -123,14 +128,10 @@ export async function refreshAllActorsStaleDescriptions() {
 		return;
 	}
 
-	// Built once for the batch, not per item. This is the difference between one pass over the packs
-	// and ~107 pack loads per item.
-	const index = await buildCompendiumIndex();
-	if (!index.size) {
-		console.warn("WoD | Trait re-sync: no wod20-compendium-es Item packs are installed; nothing to do.");
-		return;
-	}
-	console.log(`WoD | Trait re-sync: indexed ${index.size} compendium document(s); ${pending.length} actor(s) to process.`);
+	// The index is now built PER ACTOR, because it must be scoped to that actor's game line (see
+	// buildCompendiumIndex). That is ~10 packs per line rather than 107, and Foundry caches a pack
+	// index after the first read, so the cost stays far below V1's per-item pack loads.
+	console.log(`WoD | Trait re-sync (V3, line-scoped): ${pending.length} actor(s) to process.`);
 
 	let totalResynced = 0;
 	let totalBonusFixed = 0;
@@ -139,7 +140,7 @@ export async function refreshAllActorsStaleDescriptions() {
 
 	for (const actor of pending) {
 		try {
-			const stats = await resyncActorTraits(actor, index);
+			const stats = await resyncActorTraits(actor, { force: true });
 			totalResynced += stats.resynced;
 			totalBonusFixed += stats.bonusFixed;
 			totalNotFound += stats.notFound;
