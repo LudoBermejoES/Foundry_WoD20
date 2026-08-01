@@ -105,12 +105,18 @@ export async function enrichAllActorsAbilities() {
 // moved on, having fixed almost nothing. Reusing the key would skip exactly those 22 forever. See
 // scripts/stale-description-refresh.js.
 
+// V4. The key is versioned on purpose and bumped whenever the COMPENDIUM's own content changes,
+// because an actor's item description is a SNAPSHOT taken when the migration ran, not a live link to
+// the compendium. Module 0.7.47 de-duplicated the interleaved dot ladder; every actor migrated under
+// 0.7.46 kept the duplicated copy, exactly as the owner worked out ("ya está embebido en el actor").
+// A version bump here is therefore part of shipping a compendium content fix, not an afterthought.
+//
 // V3, and V2 abandoned rather than reused for the second time. V2 matched by name against a GLOBAL
 // index of all ~107 packs with "first pack wins", so changeling-/hunter- packs beat mage- ones and 89
 // live actors had traits overwritten with ANOTHER GAME LINE's text. V3 must therefore re-run over
 // every actor V2 touched, and it runs with `force` because V2's damage is valid HTML that the
 // Markdown test would skip forever.
-const TRAIT_RESYNC_FLAG_KEY = "traitsResyncedFromCompendiumV3";
+const TRAIT_RESYNC_FLAG_KEY = "traitsResyncedFromCompendiumV4";
 
 /**
  * Re-syncs every actor not already flagged. The compendium is indexed ONCE for the whole batch.
@@ -120,18 +126,33 @@ const TRAIT_RESYNC_FLAG_KEY = "traitsResyncedFromCompendiumV3";
  * @returns {Promise<void>}
  */
 export async function refreshAllActorsStaleDescriptions() {
-	const pending = game.actors.filter(
+	// UNLINKED TOKEN ACTORS TOO, and this is the failure that made three earlier rounds look like they
+	// had done nothing. A token with `actorLink: false` carries its OWN synthetic actor, stored in the
+	// scene's ActorDelta rather than in `game.actors` — so a migration over `game.actors` alone fixes
+	// the directory copy while the sheet the owner actually opens from the token keeps the old data.
+	// Otto Von Grugger's token is unlinked; every check against the directory actor reported success
+	// while his token sheet was untouched.
+	const candidates = [...game.actors];
+	for (const scene of game.scenes ?? []) {
+		for (const token of scene.tokens ?? []) {
+			if (token.actorLink) continue;          // linked tokens ARE the directory actor
+			const synthetic = token.actor;
+			if (synthetic && !candidates.includes(synthetic)) candidates.push(synthetic);
+		}
+	}
+
+	const pending = candidates.filter(
 		a => !foundry.utils.getProperty(a, `flags.${FLAG_SCOPE}.${TRAIT_RESYNC_FLAG_KEY}`));
 
 	if (!pending.length) {
-		console.log(`WoD | Trait re-sync: nothing to do (${game.actors.size} actor(s), all already processed).`);
+		console.log(`WoD | Trait re-sync: nothing to do (${candidates.length} actor(s) incl. unlinked tokens, all already processed).`);
 		return;
 	}
 
 	// The index is now built PER ACTOR, because it must be scoped to that actor's game line (see
 	// buildCompendiumIndex). That is ~10 packs per line rather than 107, and Foundry caches a pack
 	// index after the first read, so the cost stays far below V1's per-item pack loads.
-	console.log(`WoD | Trait re-sync (V3, line-scoped): ${pending.length} actor(s) to process.`);
+	console.log(`WoD | Trait re-sync (V4, line-scoped, incl. unlinked token actors): ${pending.length} of ${candidates.length} actor(s) to process.`);
 
 	let totalResynced = 0;
 	let totalBonusFixed = 0;
