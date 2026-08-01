@@ -48,6 +48,13 @@ export default class ItemViewer extends HandlebarsApplicationMixin(foundry.appli
 
 		const existing = ItemViewer.#openViewers.get(document.uuid);
 		if (existing?.rendered) {
+			// RE-RENDER, not just raise. Focusing alone showed a window whatever it happened to be
+			// built from, which went wrong the moment a migration rewrote item descriptions under an
+			// open viewer: the owner clicked the eye, got the same window back, and saw the OLD
+			// Markdown while the stored document already held the corrected HTML. A read-only window
+			// that can display stale data is a worse bug than a duplicate window.
+			existing.viewedDocument = document;
+			existing.render();
 			existing.bringToFront();
 			return existing;
 		}
@@ -113,6 +120,16 @@ export default class ItemViewer extends HandlebarsApplicationMixin(foundry.appli
 		return context;
 	}
 
+	/**
+	 * Re-renders the open viewer for `uuid`, if there is one. The `updateItem` hook at the bottom of
+	 * this file calls it; nothing else needs to know the registry exists.
+	 * @param {string} uuid
+	 */
+	static refreshFor(uuid) {
+		const viewer = uuid ? ItemViewer.#openViewers.get(uuid) : null;
+		if (viewer?.rendered) viewer.render();
+	}
+
 	/** @override */
 	async close(options) {
 		ItemViewer.#openViewers.delete(this.viewedDocument?.uuid);
@@ -165,3 +182,10 @@ function _labelFromKey(key) {
 		.replace(/[_-]+/g, " ");
 	return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
+
+// An open viewer must follow its document. Without this, anything that rewrites an item while its
+// window is open leaves that window showing the old content indefinitely - which is precisely what
+// the trait re-sync migration did: it corrected the stored description under an open viewer, and the
+// window kept displaying the Markdown it had been built from. Registered at module load, once,
+// alongside the registry it invalidates, so the class owns both halves.
+Hooks.on("updateItem", (item) => ItemViewer.refreshFor(item?.uuid));
