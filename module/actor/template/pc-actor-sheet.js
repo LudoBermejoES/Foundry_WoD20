@@ -32,6 +32,7 @@ import { OnItemCreate,
 import { calculateHealth } from "../../scripts/health.js";
 import { calculateTotals } from "../../scripts/totals.js";
 import { buildAttributeCompendiumUuidMap } from "../../scripts/attribute-enrichment.js";
+import { resolveDescription } from "../../scripts/compendium-description.js";
 import ItemViewer from "../../applications/item-viewer.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api
@@ -1448,17 +1449,48 @@ function resolveConnectionPortrait(entry) {
 }
 
 /**
+ * add-contacts-allies-roster — the entry's RELATIONSHIP DESCRIPTION, enriched for the roster row.
+ *
+ * The requirement is that an entry appears "with its name and relationship description visible" — in the
+ * row, not one window away. `feature_item.hbs` emits no description (the inline panel was removed by
+ * `open-item-window-from-eye-icon`), so the row has to be given one here.
+ *
+ * This uses the path the codebase ALREADY uses for Feature text everywhere else — `resolveDescription`
+ * then `enrichHTML` — rather than a second, divergent one. It is the same two lines as
+ * `item-viewer.js:119-122` (the eye), `mortal-actor-sheet.js:1286` (`_onSendChat`) and
+ * `action-helpers.js:2011` (`SendChat`). Two consequences that matter here:
+ *
+ *   - `resolveDescription` degrades to `null` on every failure mode, and a GM-typed connection entry has
+ *     no compendium provenance at all, so in practice this is the entry's own stored text — the fallback
+ *     IS the normal case, and it is silent (no provenance -> no warning).
+ *   - `enrichHTML` is what makes an INTERNAL link work: `@UUID[Actor.xxx]{Name}` typed into the
+ *     description becomes a clickable anchor in the row itself, which is the same enricher
+ *     `item-sheet.js:159` runs on the item's own sheet. So the roster row and the item sheet render the
+ *     same reference the same way, and no enricher was invented for either.
+ *
+ * @param {foundry.abstract.Document} entry - a `wod.types.connection` Feature
+ * @returns {Promise<string>} enriched HTML, or "" when there is no text
+ */
+async function resolveConnectionDescription(entry) {
+	const raw = (await resolveDescription(entry)) ?? entry?.system?.description ?? "";
+	if (!raw) return "";
+	return await foundry.applications.ux.TextEditor.implementation.enrichHTML(raw, { async: true });
+}
+
+/**
  * add-contacts-allies-roster — groups `wod.types.connection` Features by `system.relation` and resolves
  * each group's heading from the actor's OWN Background item.
  *
- * Returns `[{ relation, label, rating, entries[] }]`, sorted by label so the blocks are stable.
+ * Returns `[{ relation, label, rating, count, entries[] }]`, sorted by label so the blocks are stable.
  *
  * `label`/`rating` come from the Background Feature whose `flags["wod20-char"].id` matches the relation —
  * so the name is whatever the compendium already localized it to, and the dots are the real ones. This is
  * what lets the sheet show "Contactos ●●● (4)" and thereby DISPLAY the tension between dots and headcount
  * without enforcing equality, which the books do not require (design D1/D4).
+ *
+ * Async because each entry's description is enriched (see `resolveConnectionDescription`).
  */
-function buildConnectionGroups(actor) {
+async function buildConnectionGroups(actor) {
 	const entries = (actor?.items ?? []).filter(
 		(item) => item.type === "Feature" && item.system?.type === "wod.types.connection" && item.system?.isvisible !== false,
 	);
@@ -1492,6 +1524,8 @@ function buildConnectionGroups(actor) {
 		for (const entry of group.entries) {
 			entry.portraitSrc = resolveConnectionPortrait(entry);
 			entry.hasPortrait = entry.portraitSrc !== CONNECTION_PLACEHOLDER_IMG;
+			entry.enrichedDescription = await resolveConnectionDescription(entry);
+			entry.hasDescription = entry.enrichedDescription.trim().length > 0;
 		}
 	}
 
@@ -1534,7 +1568,12 @@ export const prepareFeatureContext = async function (context, actor) {
 	// `flags["wod20-char"].id` = its entity id, so an entry with `relation: "contacts"` finds the actor's
 	// own Contactos item and takes its ALREADY-LOCALIZED name and its dots straight off it — which is
 	// also exactly what task 3.6 asks the heading to show. No Background on the actor -> the raw relation.
-	context.connections = buildConnectionGroups(actor);
+	//
+	// Each entry also carries `enrichedDescription`, so the RELATIONSHIP TEXT renders in the row rather
+	// than only behind the eye (task 3.3). It goes through `resolveDescription` + `enrichHTML`, the same
+	// path `item-viewer.js` and `SendChat` use — which is also what makes an `@UUID[Actor.xxx]` reference
+	// clickable in the row itself.
+	context.connections = await buildConnectionGroups(actor);
 	context.hasConnections = context.connections.length > 0;
 
 	context.passions 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.passion");

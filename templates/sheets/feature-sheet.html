@@ -101,12 +101,20 @@
 					`relation` is the Background entity id (contacts, mentor, totem, …) the entry hangs off;
 					the actor sheet groups by it and takes the heading's name and dots from the actor's own
 					Background item. `link` is the external URL, deliberately NOT `worldanvil` or
-					`reference`, which already mean other things (design D3). `portrait` carries `data-edit`,
-					which is what hands you Foundry's FilePicker — so an existing `wod20-portraits/` file is
-					two clicks, and an absolute URL also works in the same field (D8).
+					`reference`, which already mean other things (design D3). `portrait` is the entry's
+					image (D8): a TYPED path or absolute URL, both of which Foundry's `img`-style strings
+					accept — so an existing `wod20-portraits/` file is a pasted path.
+
+					It is NOT a picker. `data-edit` was on this input and has been removed as false: appv1
+					`DocumentSheet.activateListeners` binds `img[data-edit]` and nothing else, which is why
+					`trait-sheet.html:131` (an <img>) opens a FilePicker and a text input never could.
+					Wiring one here means adding an `<img data-edit="system.portrait">` beside the field the
+					way trait-sheet does; recorded as a follow-up rather than shipped unverified.
+					Measured 2026-08-02.
 
 					An INTERNAL link needs no field: `@UUID[Actor.xxx]{Name}` typed into the description is
-					already enriched and clickable (`item-sheet.js:151`).
+					already enriched and clickable (`item-sheet.js:159`), and the PC sheet's roster row
+					enriches the same text so the anchor works there too.
 				--}}
 				{{#if (eqAny data.system.type "wod.types.connection")}}
 					<div class="infobox bioInformationArea floating-label-group">
@@ -118,7 +126,7 @@
 						<span class="floating-label">{{localize "wod.connections.link"}}</span>
 					</div>
 					<div class="infobox bioInformationArea floating-label-group">
-						<input class="sheet-infoValues editable" name="system.portrait" type="text" value="{{data.system.portrait}}" data-dtype="String" autocomplete="off" data-edit="system.portrait" />
+						<input class="sheet-infoValues editable" name="system.portrait" type="text" value="{{data.system.portrait}}" data-dtype="String" autocomplete="off" />
 						<span class="floating-label">{{localize "wod.connections.portrait"}}</span>
 					</div>
 				{{/if}}

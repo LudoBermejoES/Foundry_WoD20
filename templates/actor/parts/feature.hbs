@@ -150,13 +150,24 @@
             is why `trait-sheet.html:131` opens a FilePicker and this does not, and the system's only
             FilePicker action (`action-helpers.js OnEditImage`, registered as the actor-sheet `editImage`)
             is hard-wired to `actor.update()` so it could not write an ITEM field even if wired up.
-            Set the path or URL on the Feature's own item sheet (`feature-sheet.html`) instead.
-            Measured 2026-08-02; the empty-state class is likewise inert here, because
-            `.shape-image-empty` is scoped to `.wod20.wod-item` (item sheets) in `css/wod.css`.
+            Set the path or URL on the Feature's own item sheet (`feature-sheet.html`) instead — the
+            `wod.connections.portrait` text field there takes both a data-directory path and an absolute
+            URL. Measured 2026-08-02. The `pointer` class is gone with the same reasoning: nothing
+            happens on click, so the sheet must not offer a hand cursor that says otherwise.
+
+            The RELATIONSHIP DESCRIPTION renders in the row. `feature_item.hbs` emits none — its inline
+            panel was removed by `open-item-window-from-eye-icon` — so the row carries its own
+            `.connection-description`, fed by `enrichedDescription` off the sheet context. That is
+            `resolveDescription` + `enrichHTML`, the same path `item-viewer.js:119-122` uses, so an
+            INTERNAL `@UUID[Actor.xxx]{Name}` reference is a clickable anchor HERE and not only in the
+            item window. Triple-stash, deliberately: the value is already-enriched HTML.
 
             The external link copies `bio.hbs:95-104` — anchor when set, localized placeholder when not.
-            An INTERNAL link needs nothing here: `@UUID[Actor.xxx]{Name}` typed into the description is
-            already enriched and clickable by `item-sheet.js:151`.
+
+            `.connection-entry` and its children are styled in `css/wod.css` ("START Connection roster"):
+            before this row grew a description the class matched NO rule at all, and `shape-image-empty`
+            was scoped `.wod20.wod-item` (item sheets only), so the empty state styled nothing on an
+            actor sheet. Both are fixed there.
         --}}
         {{#if hasConnections}}
             {{#each connections as |group|}}
@@ -171,22 +182,30 @@
                     {{#each group.entries as |item id|}}
                         <div class="sheet-boxcontainer connection-entry">
 
-                            <div class="shape-panel-image">
-                                <img class="profile-img pointer shape-image{{#unless item.hasPortrait}} shape-image-empty{{/unless}}"
+                            <div class="shape-panel-image connection-portrait">
+                                <img class="profile-img shape-image{{#unless item.hasPortrait}} shape-image-empty{{/unless}}"
                                      src="{{item.portraitSrc}}" title="{{item.name}}" />
                             </div>
 
-                            {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs"
-                                actor=../../actor item=item locked=../../locked
-                                edittitle="wod.labels.edit.connection"
-                                deletetitle="wod.labels.remove.connection"
-                                showtype=false}}
+                            <div class="connection-body">
 
-                            {{#if (ne item.system.link "")}}
-                                <a href="{{item.system.link}}" target="_blank">{{localize 'wod.connections.link'}}</a>
-                            {{else}}
-                                <span class="information-area">{{localize 'wod.connections.nolink'}}</span>
-                            {{/if}}
+                                {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs"
+                                    actor=../../actor item=item locked=../../locked
+                                    edittitle="wod.labels.edit.connection"
+                                    deletetitle="wod.labels.remove.connection"
+                                    showtype=false}}
+
+                                {{#if item.hasDescription}}
+                                    <div class="connection-description">{{{item.enrichedDescription}}}</div>
+                                {{/if}}
+
+                                {{#if (ne item.system.link "")}}
+                                    <a class="connection-link" href="{{item.system.link}}" target="_blank">{{localize 'wod.connections.link'}}</a>
+                                {{else}}
+                                    <span class="information-area connection-link">{{localize 'wod.connections.nolink'}}</span>
+                                {{/if}}
+
+                            </div>
 
                         </div>
                     {{/each}}

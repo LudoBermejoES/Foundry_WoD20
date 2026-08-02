@@ -2320,6 +2320,69 @@ input.sheet-infoWidth {
   align-items: center;
 }
 
+/* START Connection roster (add-contacts-allies-roster) */
+/* `templates/actor/parts/feature.hbs` — the Contacts/Allies/… roster rows on a PC's Features tab.
+   Before this block `.connection-entry` matched NO rule in this file: the row inherited
+   `.sheet-boxcontainer` (width 100%, text-align center) only, so the portrait stacked ABOVE the name
+   instead of sitting beside it, and the relationship description had nowhere to go. Layout only —
+   colours and fonts stay inherited so every splat theme keeps its own. */
+
+.wod20 .connection-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  padding: 4px 0;
+}
+
+.wod20 .connection-entry .connection-portrait {
+  flex: 0 0 auto;
+  padding-top: 2px;
+}
+
+/* The roster portrait is a row avatar, not the 100px item-sheet panel image `.shape-image` sets. */
+.wod20 .connection-entry .connection-portrait .shape-image {
+  width: 64px;
+  height: 64px;
+}
+
+/* The empty state, which `.wod20.wod-item .shape-image.shape-image-empty` could never reach: that
+   selector is scoped to ITEM sheets, so the class `feature.hbs` emits when an entry resolves to the
+   `icons/svg/mystery-man.svg` placeholder styled nothing at all on a PC actor sheet. Same treatment,
+   reachable here — a dashed, dimmed, padded silhouette instead of a photo cropped to fill. */
+.wod20 .connection-entry .connection-portrait .shape-image.shape-image-empty {
+  object-fit: contain;
+  padding: 10px;
+  background: var(--main-dim-color, #ececec);
+  border-style: dashed;
+  opacity: 0.65;
+}
+
+.wod20 .connection-entry .connection-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The relationship text. `feature_item.hbs` emits no description (its inline panel was removed by
+   open-item-window-from-eye-icon), so this is the only place the row shows it. `white-space: normal`
+   is load-bearing: `.item-row-area` above sets `nowrap`, which would run a sentence off the row. */
+.wod20 .connection-entry .connection-description {
+  white-space: normal;
+  line-height: 1.35;
+  padding: 2px 4px 0 4px;
+}
+
+.wod20 .connection-entry .connection-description p {
+  margin: 0 0 4px 0;
+}
+
+.wod20 .connection-entry .connection-link {
+  display: inline-block;
+  font-size: var(--wod-font-sm);
+  padding: 0 4px 2px 4px;
+}
+/* END Connection roster */
+
 /* PC actor power_shapes.hbs only – do not affect legacy werewolf shapechange tab */
 /* Layout only; splat banner image comes from .sheet-banner (PC demon uses small banner in demon.css). */
 .wod20.pc-actor .pc-power-shapes > div > .sheet-banner {
