@@ -101,6 +101,23 @@
 .headlineNormalSpheres {
     font-size: var(--wod-font-sm);
 }
+
+/* The Sphere name cell's label, when the description eye shares the cell with it
+   (add-sphere-descriptions, 7.5.29). MEASURED in headless Chromium over the real css, HEAD vs this
+   change, 9 rows x locked/unlocked x Tradition/Technocracy: the eye takes 19px + a 3px gap out of a
+   55% cell, which is harmless for every Tradition name but wrapped three TECHNOCRATIC labels
+   ("Tecnología basada en la fuerza", "Ciencia de los materiales", "Teoría de la utilidad
+   primordial") onto a second 23px line inside a 26px row - painting over the row below. Note this
+   is NOT the failure 7.5.6 recorded: the dots never moved a pixel in any of those runs, because the
+   eye is inside the name cell and `.sphere-itemlist` is a fixed-height flex row. One line, clipped
+   with an ellipsis, with the full name one hover away (power_spheres.hbs puts it in the label's
+   `title`) - the same trade 7.5.27 made for long Feature names. Scoped to `.sphere-itemlist` so the
+   Attributes name cell, which has no long labels and no clipping today, is untouched. */
+.wod-sheet .sphere-itemlist .wod-namecell-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .magic-statArea {	
     width: 33%;	
 }

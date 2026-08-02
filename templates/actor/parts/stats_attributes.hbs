@@ -21,10 +21,11 @@
 
 					{{!-- Owner-delegated addition to open-item-window-from-eye-icon: opens a READ-ONLY
 					      compendium document for this attribute (never writes to the actor - see
-					      attribute-enrichment.js). Only rendered when a match was found at render
-					      time (buildAttributeCompendiumUuidMap), so the icon is simply absent - not a
-					      dead click - while the compendium's "attributes" pack does not exist yet. A
-					      SIBLING of the name label, never a child: the label carries
+					      trait-enrichment.js, which was attribute-enrichment.js until 7.5.29 widened
+					      it to serve Spheres from the same one definition). Only rendered when a match
+					      was found at render time (buildTraitCompendiumUuidMap), so the icon is simply
+					      absent - not a dead click - while the compendium's attributes pack does not
+					      exist yet. A SIBLING of the name label, never a child: the label carries
 					      data-action="rollDice" and ApplicationV2 dispatches to the nearest
 					      [data-action] ancestor - same invariant stats_feature_row.hbs documents. --}}
 					{{!-- The eye and the label share ONE name cell that carries the row's width, instead of
@@ -38,13 +39,17 @@
 						{{#if (lookup ../attributeCompendiumUuid key)}}
 							{{!-- `collapsible` is LOAD-BEARING TWICE and was dropped once by accident, which
 							      broke the click and the layout together: the binder selects
-							      `.collapsible.button[data-attributeuuid]` (pc-actor-sheet.js), so without it
+							      `.collapsible.button[data-traituuid]` (pc-actor-sheet.js), so without it
 							      the eye is dead, and `.icon.collapsible.button` is the rule that caps the
 							      icon at 20px — without it `.icon`'s own `line-height: 23px` applies and the
-							      icon overflows a 19px row. --}}
+							      icon overflows a 19px row.
+
+							      `data-attributeuuid` became `data-traituuid` in 7.5.29: the same binder now
+							      serves the Spheres block too, and one attribute of one name is what keeps
+							      that one binder honest. --}}
 							<i class="pointer icon collapsible button fa-solid fa-eye wod-namecell-eye"
 								title="{{localize 'wod.labels.show.description'}}"
-								data-attributeuuid="{{lookup ../attributeCompendiumUuid key}}"></i>
+								data-traituuid="{{lookup ../attributeCompendiumUuid key}}"></i>
 						{{/if}}
 						<label for="data.system.attributes.{{key}}.value"
 							class="vrollable headlineNormal wod-namecell-label"

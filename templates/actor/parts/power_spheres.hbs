@@ -11,11 +11,61 @@
 
 			<div class="sphere-itemlist">
 				<div class="headlineNormal sphere-itemlist {{#if (eq sphere.system.id ../actor.system.bio.splatfields.affinity.value)}}highlightedPowerRow{{/if}}" style="width: 100%;">
-					<div class="spheres-headlineWidth headlineNormalSpheres splatFont vrollable" 
-						{{#if (eq sphere.system.id ../actor.system.bio.splatfields.affinity.value)}}
-							title="{{localize 'wod.bio.mage.affinitysphere'}}"
-						{{/if}}>
-						{{localize sphere.system.label}}
+					{{!-- THE DESCRIPTION EYE IS HERE, IN THE NAME CELL, AND DELIBERATELY NOT IN THE
+					      iconBox BELOW. This comment replaces the "NO description eye here" one that
+					      stood in this file from 7.5.6 to 7.5.29. It was right, and it recorded two
+					      MEASURED objections; both have since been answered, each by a different change,
+					      and neither answer was available when it was written:
+
+					      1. "0 of 243 live Sphere items carry a description, so the eye renders DISABLED
+					         on every row." Answered by add-sphere-descriptions (the DATA half, in
+					         `webgen/`): the description no longer comes from the actor's Sphere item at
+					         all — which is still empty, because the system creates those items itself.
+					         Nine `sphere` documents, each carrying the Sphere's rank 1..5 ladder derived
+					         from its five `sphere-effect` records, ship in the `mage-spheres` compendium
+					         pack, and the eye opens THAT document read-only (`item-viewer.js`), matched
+					         on `sphere.system.id` by `trait-enrichment.js`. The eye is rendered only
+					         where that match was found at render time (`sphereCompendiumUuid`, built in
+					         `preparePowersContext`), so while the pack is absent this block looks
+					         EXACTLY as it did before — fewer eyes, never a dead one.
+
+					      2. "Un-gating the iconBox from `locked` made a locked sheet render an icon box
+					         that had never been there, which took the width the fifth dot needs, so the
+					         fifth dot wrapped onto its own line under every column." Answered by 7.5.16's
+					         `wod-namecell` (written for the Attributes block, which broke in precisely
+					         this way, and written to be reused here). The iconBox and its `locked` gate
+					         below are UNTOUCHED: the eye is inside the name cell, which already carries
+					         this row's width (`spheres-headlineWidth`, 55% on a PC sheet), and the label
+					         beside it has `min-width: 0`, so the cell cannot grow and the dots keep every
+					         pixel they had. That is also why the eye can render on a LOCKED sheet — it is
+					         a read affordance, and it no longer depends on the gate that made 7.5.5's
+					         attempt change a locked sheet's layout.
+
+					      The eye is a SIBLING of the label, never a child: ApplicationV2 dispatches a
+					      click to the nearest [data-action] ancestor, so an eye nested inside a rollable
+					      label would roll dice instead of opening the description. Keep `collapsible
+					      button` on it — the binder selects `.collapsible.button[data-traituuid]`, and
+					      `.icon.collapsible.button` is also what caps the icon's height. --}}
+					<div class="spheres-headlineWidth wod-namecell">
+						{{#if (lookup ../sphereCompendiumUuid sphere.system.id)}}
+							<i class="pointer icon collapsible button fa-solid fa-eye wod-namecell-eye"
+								title="{{localize 'wod.labels.show.description'}}"
+								data-traituuid="{{lookup ../sphereCompendiumUuid sphere.system.id}}"></i>
+						{{/if}}
+						{{!-- The label is clipped to one line in this block (css/mage.css), because the
+						      eye's 22px is enough to wrap the longest TECHNOCRATIC names onto a second
+						      line inside a 26px row. So the non-affinity rows now carry their own name
+						      as a `title`: the tail of a clipped name stays one hover away, exactly as
+						      7.5.27 did for long Feature names. The affinity row keeps the title it has
+						      always had — its name ("Fuerzas", "Vida", …) is never the clipped one. --}}
+						<div class="headlineNormalSpheres splatFont vrollable wod-namecell-label"
+							{{#if (eq sphere.system.id ../actor.system.bio.splatfields.affinity.value)}}
+								title="{{localize 'wod.bio.mage.affinitysphere'}}"
+							{{else}}
+								title="{{localize sphere.system.label}}"
+							{{/if}}>
+							{{localize sphere.system.label}}
+						</div>
 					</div>
 
 					<div class="resource-value" 
@@ -29,23 +79,11 @@
 						{{/numLoop}}						
 						
 					</div>
-					{{!-- NO description eye here, and that is a measured decision rather than an
-					      oversight. 7.5.5 added one; 7.5.6 took it back out because it cost a
-					      working layout for nothing:
-
-					      * 0 of 243 live Sphere items in the world carry a description. Spheres are
-					        actor-intrinsic (9 per mage, created by the system, not dragged from a
-					        compendium), so the eye rendered DISABLED on every row.
-					      * Un-gating the iconBox from `locked` to show it made a locked sheet render
-					        an icon box that had never been there, which took the width the fifth dot
-					        needs — so the fifth dot wrapped onto its own line under every column.
-
-					      The .description div this comment used to guard (open-item-window-from-eye-icon
-					      removed it) was already dead code here regardless: `showtooltip` is never
-					      passed to list_icons.hbs below, so no eye ever rendered in this file to toggle
-					      it. The sphere's own sheet remains reachable via the pencil-edit icon on an
-					      unlocked sheet (showedit=true below); re-adding a description eye here still
-					      needs the same width fix this comment always warned about. --}}
+					{{!-- Still NO eye in this iconBox, and `showtooltip` is still not passed to
+					      list_icons.hbs — see the long comment on the name cell above for why the eye
+					      moved there instead. Nothing about this gate changes: the pencil-edit icon
+					      stays unlocked-only, and the width this box takes is the width it always
+					      took. --}}
 					{{#if (eq ../locked false)}}
 						<div class="iconBox">
 							{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showedit=true item=sphere locked=../locked edittitle="wod.labels.edit.sphere" collapseclass="power"}}
@@ -64,8 +102,10 @@
 				</div>
 
 			</div>
-			{{!-- The inline .description panel is removed: see the comment above for why it was
-			      already dead code in this file. --}}
+			{{!-- No inline .description panel here, and none is coming back:
+			      open-item-window-from-eye-icon removed it, and it had always been dead code in this
+			      file anyway (nothing ever rendered an eye here to toggle it). The eye above opens a
+			      window instead — a compendium document, not this item. --}}
 
 			{{#if (eq (mod index 3) 2)}}</div>{{/if}}
 		

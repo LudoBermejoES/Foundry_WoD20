@@ -10,8 +10,8 @@
  *
  * It reads exactly three things - `name`, `system.description`, and the document's `system`
  * mechanics - which every item type in this system already carries, and which is also why the
- * same class serves the attribute compendium documents opened from
- * `attribute-enrichment.js`/`pc-actor-sheet.js`, which have no per-actor item sheet of their own.
+ * same class serves the keyed-trait compendium documents (Attributes, Spheres) opened from
+ * `trait-enrichment.js`/`pc-actor-sheet.js`, which have no per-actor item sheet of their own.
  * It never needs per-type knowledge (an Advantage's fields vs a Realm's), because it never edits
  * either - see `_systemFieldRows` below for exactly what "never needs to know" means in code.
  */

@@ -31,7 +31,7 @@ import { OnItemCreate,
 
 import { calculateHealth } from "../../scripts/health.js";
 import { calculateTotals } from "../../scripts/totals.js";
-import { buildAttributeCompendiumUuidMap } from "../../scripts/attribute-enrichment.js";
+import { buildTraitCompendiumUuidMap } from "../../scripts/trait-enrichment.js";
 import { resolveDescription } from "../../scripts/compendium-description.js";
 import { getSplat } from "../../scripts/splat-helpers.js";
 import ItemViewer from "../../applications/item-viewer.js";
@@ -452,9 +452,9 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 		// Attach show/hide handlers for power description toggles
 		this._bindCollapsibleButtons(element);
 
-		// Attach the Attributes tab's read-only compendium-description eyes (owner-delegated
-		// addition to open-item-window-from-eye-icon)
-		this._bindAttributeDescriptionButtons(element);
+		// Attach the read-only compendium-description eyes on KEYED traits - the Attributes tab and
+		// the Mage sheet's Spheres block (owner-delegated addition to open-item-window-from-eye-icon)
+		this._bindTraitDescriptionButtons(element);
 
 		// Attach expand/collapse handlers for grouped tables (experience, etc.)
 		this._bindUnfoldButtons(element);
@@ -498,22 +498,27 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 	}
 
 	/**
-	 * Attach the Attributes tab's read-only compendium-description eyes (owner-delegated addition
-	 * to open-item-window-from-eye-icon). A separate binder/handler pair from
-	 * `_bindCollapsibleButtons`/`_handleCollapsibleClick` on purpose: attributes are not Items, so
-	 * `data-itemid` + `actor.items.get()` does not apply - these icons carry `data-attributeuuid`
-	 * (a compendium document uuid, resolved and put in the render context by
-	 * `buildAttributeCompendiumUuidMap`) instead, and the template only renders the icon at all
-	 * when a match was found - see stats_attributes.hbs.
-	 * @param {HTMLElement} root - The root element to search for attribute-description buttons
+	 * Attach the read-only compendium-description eyes on KEYED traits - Attributes and Spheres
+	 * today (owner-delegated addition to open-item-window-from-eye-icon; Spheres added by
+	 * add-sphere-descriptions). ONE binder for every kind, because the icons are identical from
+	 * here down: whatever the row, the eye carries a resolved compendium uuid and opens it.
+	 *
+	 * A separate binder/handler pair from `_bindCollapsibleButtons`/`_handleCollapsibleClick` on
+	 * purpose: those resolve `data-itemid` through `actor.items.get()`, which does not apply here -
+	 * an attribute is not an Item at all, and a Sphere Item's own description is empty because the
+	 * system creates it rather than the compendium. These icons carry `data-traituuid` instead (a
+	 * compendium document uuid, resolved into the render context by `buildTraitCompendiumUuidMap`),
+	 * and the templates render the icon only where a match was found - see stats_attributes.hbs and
+	 * power_spheres.hbs.
+	 * @param {HTMLElement} root - The root element to search for trait-description buttons
 	 */
-	_bindAttributeDescriptionButtons(root) {
-		const icons = root.querySelectorAll?.(".collapsible.button[data-attributeuuid]");
+	_bindTraitDescriptionButtons(root) {
+		const icons = root.querySelectorAll?.(".collapsible.button[data-traituuid]");
 		if (!icons?.length) return;
 		icons.forEach(icon => {
 			if (icon.dataset.collapseBound) return;
 			icon.dataset.collapseBound = "true";
-			icon.addEventListener("click", (event) => this._handleAttributeDescriptionClick(event));
+			icon.addEventListener("click", (event) => this._handleTraitDescriptionClick(event));
 		});
 	}
 
@@ -625,25 +630,26 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 		ItemViewer.open(item);
 	}
 
-	// Owner-delegated addition to open-item-window-from-eye-icon: the Attributes tab's eye opens
-	// the SAME read-only ItemViewer for a compendium document instead of an embedded item. This is
-	// exactly why the viewer is generic (name/description/system fields only, never per-type
-	// knowledge) - it serves a compendium document with no per-actor item sheet of its own just as
-	// well as it serves an embedded item. The icon only exists in the DOM when a match was already
-	// found at render time (stats_attributes.hbs), so a missing uuid here would mean the template
-	// rendered inconsistent markup, not a normal "no match" case - hence the warning rather than a
-	// silent return.
-	async _handleAttributeDescriptionClick(event) {
+	// Owner-delegated addition to open-item-window-from-eye-icon: a keyed trait's eye (Attributes,
+	// Spheres) opens the SAME read-only ItemViewer for a compendium document instead of an embedded
+	// item. This is exactly why the viewer is generic (name/description/system fields only, never
+	// per-type knowledge) - it serves a compendium document with no per-actor item sheet of its own
+	// just as well as it serves an embedded item, and a Sphere document's rank 1..5 ladder is just
+	// more description HTML to it. The icon only exists in the DOM when a match was already found at
+	// render time (stats_attributes.hbs, power_spheres.hbs), so a missing uuid here would mean the
+	// template rendered inconsistent markup, not a normal "no match" case - hence the warning rather
+	// than a silent return. Nothing on this path writes to the actor.
+	async _handleTraitDescriptionClick(event) {
 		const icon = event.currentTarget;
-		const uuid = icon?.dataset?.attributeuuid;
+		const uuid = icon?.dataset?.traituuid;
 		if (!uuid) {
-			console.warn("PC Actor: Attribute description icon rendered with no compendium uuid.");
+			console.warn("PC Actor: Trait description icon rendered with no compendium uuid.");
 			return;
 		}
 
 		const doc = await fromUuid(uuid);
 		if (!doc) {
-			console.warn(`PC Actor: Attribute description document "${uuid}" could not be resolved (pack may have been removed or updated).`);
+			console.warn(`PC Actor: Trait description document "${uuid}" could not be resolved (pack may have been removed or updated).`);
 			return;
 		}
 
@@ -1144,7 +1150,7 @@ export const prepareStatContext = async function (context, actor) {
 	// icon at all (see stats_attributes.hbs). Attributes are system fields, not Items - nothing is
 	// written to the actor here, only a read-only lookup of a compendium document per attribute
 	// key. Degrades to an empty map (no eyes rendered) if the compendium/pack is absent.
-	context.attributeCompendiumUuid = await buildAttributeCompendiumUuidMap(actor);
+	context.attributeCompendiumUuid = await buildTraitCompendiumUuidMap("attribute", Object.keys(actor?.system?.attributes ?? {}));
 
 	context.talents = actor.items
 								.filter(item => item.type === "Ability" && item.system.type === 'wod.abilities.talent' && item.system.settings.isvisible)
@@ -1379,6 +1385,15 @@ export const preparePowersContext = async function (context, actor) {
 	// Spheres
 	context.spheres = actor.items.filter(item => item.type === "Sphere" && item.system.settings.isvisible);
 	context.spheres = context.spheres.sort((a, b) => Number(a.system.settings.order) - Number(b.system.settings.order));
+
+	// add-sphere-descriptions: which Sphere rows get an eye at all (see power_spheres.hbs). Keyed on
+	// `system.id` - the same nine ids `CONFIG.worldofdarkness.allSpheres` enumerates, which a
+	// Technocratic mage's sheet also carries (`allSpheresTechnocracy` is keyed by those same ids and
+	// only swaps the LABEL, config.js:387 / dialog-edits.js:412). A Sphere Item is created by the
+	// system and carries no description and no provenance flags of its own, so the eye opens a
+	// read-only compendium document instead; nothing is written to the actor. Degrades to an empty
+	// map - and so to no eyes at all - while the `mage-spheres` pack is absent.
+	context.sphereCompendiumUuid = await buildTraitCompendiumUuidMap("sphere", context.spheres.map(sphere => sphere.system?.id));
 
 	// Realms
 	context.realms = actor.items.filter(item => item.type === "Realm" && item.system.settings.isvisible);
