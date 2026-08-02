@@ -333,10 +333,21 @@ cmd_assert_up() {
 # outside every deploy target, so no rsync --delete can remove it. Held across
 # stop -> rsync -> verify -> start.
 #
-# THIS IS HALF A MUTEX UNTIL wod20-compendium-es TAKES THE SAME LOCK. Adding
-# `lock`/`unlock` to that repo's copy of this library and two steps to its
-# deploy.yml, with the SAME DEPLOY_LOCK_DIR, is what makes it real. Until then
-# this side always acquires uncontended and behaves exactly as before.
+# BOTH HALVES EXIST as of 2026-08-02: `wod20-compendium-es@b787d5ec` carries the
+# same `lock`/`unlock`, verified byte-identical across the 62 executable lines,
+# with the SAME DEPLOY_LOCK_DIR and the same 1800s staleness. That equality is
+# the whole mechanism — two locks with different paths or different expiries
+# would each acquire happily and reproduce the very race this exists to stop,
+# while looking protected. Its test suite pins both constants by literal for
+# exactly that reason, because neither repo's CI can see the other's checkout.
+#
+# The race this prevents is not hypothetical. On 2026-08-02 the compendium
+# stopped Foundry at 15:09:34; this deploy read `foundry_was_running=false` at
+# :43 and asserted VERIFIED DOWN — true, and true only because the sibling had
+# stopped it; the compendium restarted it at :45.95, and this side's
+# `rsync --delete` then unlinked LOCK/MANIFEST-*/*.log across 32 packs while
+# Foundry was booting and opening them. The byte audit caught it. Neither gate
+# was wrong; neither could see two seconds ahead.
 #
 # FAILING TO CREATE THE LOCK IS NOT A DEPLOY FAILURE. If the path is not
 # writable, cmd_lock warns and returns 0: degrading to the previous behaviour is
