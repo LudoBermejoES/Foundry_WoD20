@@ -22,7 +22,11 @@
                 {{/if}}
             </div>
         {{else}}
-            <div class="largeBox">
+            {{!-- `title` mirrors the rollable branch above. It is not decoration: the name box is
+                  clipped to its column width in `css/wod.css` (".wod20 .item-row-area.feature-itemlist
+                  .dragrow > .largeBox"), so a long name now ends in an ellipsis and the hover is the
+                  only way to read the rest of it. --}}
+            <div class="largeBox" title="{{item.name}}">
                 {{#if (ne item.name "")}}
                     {{item.name}}
                 {{else}}
@@ -50,24 +54,42 @@
                 {{!-- pointValue, not gt: a merit/flaw's point value can be the book's own
                       "1 a 5" / "1 o 3" / "1/2/3/4/5", which gt coerces to NaN and hides.
 
-                      `system.level` FIRST and by default, and `system.value` is NOT read unless the
-                      caller opts in with `valuefallback=item.system.value` - deliberately, and this
-                      is not the same choice `stats_feature_row.hbs` makes. This partial is shared by
-                      twelve blocks across three tabs (merits, flaws, backgrounds, bloodbound, boons,
-                      oaths, connections, headlines, other traits, apocalyptic forms, ...) and for
-                      several of them `system.value` is not a point cost at all, so a blanket
-                      fallback here would start printing a number in a cost column that never had
-                      one. An opt-in keeps the blast radius at exactly the callers that ask.
+                      THREE candidates, tried in order, and BOTH extra ones are opt-in:
+                        valuefirst    - read BEFORE `system.level`
+                        system.level  - always, and the only candidate a caller cannot switch off
+                        valuefallback - read AFTER `system.level`
+                      `pointValue` skips a candidate that is null/undefined/""/0/negative, so a
+                      caller that passes neither behaves exactly as before.
 
-                      The wraith Passion / Dark Passion / Fetter blocks (feature.hbs) are the callers
-                      that ask: those three sub-kinds are DOT-RATED traits, not point-costed ones -
-                      the exporter writes the rating into `system.value` and hard-codes
-                      `level: '0'`, and `pointValue` maps "0" to nothing, which is why the column was
-                      blank for every row on the only wraith PC in production. The Death tab renders
-                      the same items' `system.value`/`system.max` as filled dots, so the DATA was
-                      never the problem - this column was. --}}
-                {{#if (pointValue item.system.level valuefallback)}}
-                    {{pointValue item.system.level valuefallback}}
+                      Neither is applied blanket-wise inside this partial, and that is not the same
+                      choice `stats_feature_row.hbs` makes. This partial is shared by twelve blocks
+                      across three tabs (merits, flaws, backgrounds, bloodbound, boons, oaths,
+                      connections, headlines, other traits, apocalyptic forms, ...) and for several
+                      of them `system.value` is not a point cost at all - a boon's `system.level` is
+                      not even a number, it is a BoonTypes key. An opt-in keeps the blast radius at
+                      exactly the callers that ask.
+
+                      WHY TWO PARAMETERS AND NOT ONE. The three producers of a Feature disagree
+                      about which field carries the number, and which of the two is authoritative
+                      depends on the sub-kind:
+
+                      - MERITS / FLAWS are POINT-COSTED. The compendium exporter writes the cost into
+                        `system.level` and leaves `value` at 0 (measured: 411 merits + 436 flaws in
+                        wod20-compendium-es, every one of them `value: 0`); the character exporter
+                        hard-codes `level: '0'` and writes the cost into `system.value`. So `level`
+                        wins and `value` is the fallback -> `valuefallback`.
+                      - BACKGROUNDS, and the wraith Passion / Dark Passion / Fetter, are DOT-RATED.
+                        `system.value`/`system.max` IS the rating: the Advantages block on the
+                        Attributes tab renders it as an editable dot row, and the background roll
+                        (`action-helpers.js`, `dataset.object == "wod.types.background"`) reads
+                        `item.system.value` for the pool. No producer ever puts a Background's rating
+                        in `level`: all 96 compendium backgrounds ship `level: '0'`, the character
+                        exporter hard-codes `'0'`, and the system's own create button hard-codes
+                        `level: 1` as a placeholder that never tracks the dots afterwards. So `value`
+                        wins -> `valuefirst`. Passing `valuefallback` there instead would leave every
+                        GM-created Background stuck printing that placeholder 1 over a real rating. --}}
+                {{#if (pointValue valuefirst item.system.level valuefallback)}}
+                    {{pointValue valuefirst item.system.level valuefallback}}
                 {{else}}
                     &nbsp;
                 {{/if}}

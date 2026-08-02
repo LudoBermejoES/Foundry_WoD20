@@ -33,6 +33,7 @@ import { calculateHealth } from "../../scripts/health.js";
 import { calculateTotals } from "../../scripts/totals.js";
 import { buildAttributeCompendiumUuidMap } from "../../scripts/attribute-enrichment.js";
 import { resolveDescription } from "../../scripts/compendium-description.js";
+import { getSplat } from "../../scripts/splat-helpers.js";
 import ItemViewer from "../../applications/item-viewer.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api
@@ -1002,21 +1003,11 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 	}
 }
 
-export const getSplat = function (actor) {
-	// Use variantsheet first, then splat, then actor type as fallback
-	let splatname = "";
-	if (actor.system?.settings?.variantsheet && actor.system.settings.variantsheet !== "") {
-		splatname = actor.system.settings.variantsheet.toLowerCase();
-	} else if (actor.system?.settings?.splat && actor.system.settings.splat !== "") {
-		splatname = actor.system.settings.splat.toLowerCase();
-	} else if (actor.system?.settings?.game && actor.system.settings.game !== "") {
-		splatname = actor.system.settings.game.toLowerCase();
-	}
-	else {
-		splatname = actor.type.toLowerCase();
-	}
-	return ( splatname === "pc" ? "mortal" : splatname);
-}
+/* Moved to `module/scripts/splat-helpers.js` (body unchanged) so that non-sheet code can ask the
+   same question - `create-helpers.js` needs it to decide which splat's create buttons to offer, and
+   importing it from here would have closed the cycle pc-actor-sheet -> action-helpers ->
+   create-helpers -> pc-actor-sheet. Re-exported so this module's public surface is unchanged. */
+export { getSplat };
 
 export const getPowertype = function (actor) {
 	if (!actor || !actor.system || !actor.system.settings) {

@@ -7,24 +7,53 @@
             <div class="largeBox">{{localize "TYPES.Item.Feature"}}</div>                
         </div>
 
+        {{!--
+            A Background is DOT-RATED, so `valuefirst=item.system.value` - the rating is read BEFORE
+            `system.level`, the opposite order from merits/flaws below. Measured evidence for why:
+
+              * all 96 backgrounds in wod20-compendium-es ship `level: '0', value: 0` (every merit
+                and flaw in the same packs ships a real `level` instead - that is the exporter
+                saying, per sub-kind, which field is the number);
+              * the character exporter's `buildFeatureItem` hard-codes `level: '0'` and writes the
+                rating into `value` - which is what made Rike Heinz's five Backgrounds render a
+                blank cell while holding Memoriam 2, Morada 2, Legado 1, Contactos 1, Eidolon 1;
+              * the system's own create button (`CreateHelper.CreateButtonsNotev2`) hard-codes
+                `level: 1` on a NEW Background and never touches it again - it is a placeholder, not
+                a rating, and a `level`-first order would keep printing that 1 over a Background the
+                GM has since raised to 4 dots on the Attributes tab.
+
+            So no producer means "rating" by a Background's `level`, while `value` is the rating
+            everywhere else in the system: the Advantages block dots write to it, and the background
+            roll reads `item.system.value` for the pool. `level` is still the second candidate, so a
+            GM who does type a number into the Feature sheet's level field still sees it on a
+            Background with no dots.
+        --}}
         {{#if (gt backgrounds.length 0)}}
             <div class="feature-itemlistarea">
 
                 {{#each backgrounds as |item id|}}
 
-                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked unnamedtitle="wod.notes.unnamedbackground" edittitle="wod.labels.edit.background" deletetitle="wod.labels.remove.background" showtype=true}}
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked unnamedtitle="wod.notes.unnamedbackground" edittitle="wod.labels.edit.background" deletetitle="wod.labels.remove.background" showtype=true valuefirst=item.system.value}}
 
                 {{/each}}
 
             </div>
         {{/if}}
 
+        {{!--
+            Merits and flaws are POINT-COSTED, so `level` FIRST and `valuefallback=item.system.value`
+            second - the same order, for the same reason, that `stats_feature_row.hbs` already uses
+            for these two lists on the Attributes tab. The two views rendered the same items and
+            disagreed: a compendium merit carries its cost in `level` (411 merits / 436 flaws, all
+            with `value: 0`), a character-exporter merit carries it in `value` with `level: '0'`, so
+            every merit and flaw on an imported PC was blank here and correct one tab over.
+        --}}
         {{#if (gt merits.length 0)}}
             <div class="feature-itemlistarea">
 
                 {{#each merits as |item id|}}
 
-                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.merit" deletetitle="wod.labels.remove.merit" showtype=true}}
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.merit" deletetitle="wod.labels.remove.merit" showtype=true valuefallback=item.system.value}}
 
                 {{/each}}
 
@@ -36,7 +65,7 @@
 
                 {{#each flaws as |item id|}}
 
-                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.flaw" deletetitle="wod.labels.remove.flaw" showtype=true}}
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.flaw" deletetitle="wod.labels.remove.flaw" showtype=true valuefallback=item.system.value}}
 
                 {{/each}}
 
@@ -93,13 +122,18 @@
             Fetters carry their description through `feature_item.hbs`'s existing description carrier
             (§3.8): a Fetter is an object, a place or a person, and its rating alone does not say which.
 
-            All three pass `valuefallback=item.system.value`, and they are the ONLY callers of
-            `feature_item.hbs` that do. These three sub-kinds are dot-rated traits, not point-costed
-            merits: the exporter writes the rating into `system.value` and hard-codes
-            `system.level: '0'`, and the partial's value box reads `system.level` alone by default,
-            where `pointValue` maps "0" to nothing - so every row rendered `name | type | <blank>`.
-            The opt-in adds `system.value` as the SECOND candidate, after `level`, so a hand-authored
-            Passion that does carry a level still wins with it. The fallback is scoped to these three
+            All three pass `valuefirst=item.system.value`, like the Backgrounds block above and for
+            the same reason. These three sub-kinds are dot-rated traits, not point-costed merits: the
+            exporter writes the rating into `system.value` and hard-codes `system.level: '0'`, and the
+            partial's value box reads `system.level` alone by default, where `pointValue` maps "0" to
+            nothing - so every row rendered `name | type | <blank>`.
+
+            This was `valuefallback` (level first, value second) when the blank was first fixed, and
+            that was wrong in one case which is now reachable: the create button for these three
+            hard-codes a `level` on a NEW item, exactly as the Background button does, so a
+            hand-authored Passion would print that placeholder forever instead of the dots the GM
+            then sets. `valuefirst` reverses the order; `level` remains the second candidate, so a
+            Passion with no dots and a hand-typed level still shows it. The choice is scoped to these
             blocks rather than applied inside the partial because `system.value` is not a point cost
             for the nine other sub-kinds that share it - see feature_item.hbs for that reasoning.
 
@@ -119,7 +153,7 @@
 
                 {{#each passions as |item id|}}
 
-                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.passion" deletetitle="wod.labels.remove.passion" showtype=true valuefallback=item.system.value}}
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.passion" deletetitle="wod.labels.remove.passion" showtype=true valuefirst=item.system.value}}
 
                 {{/each}}
 
@@ -131,7 +165,7 @@
 
                 {{#each darkpassions as |item id|}}
 
-                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.darkpassion" deletetitle="wod.labels.remove.darkpassion" showtype=true valuefallback=item.system.value}}
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.darkpassion" deletetitle="wod.labels.remove.darkpassion" showtype=true valuefirst=item.system.value}}
 
                 {{/each}}
 
@@ -143,7 +177,7 @@
 
                 {{#each fetters as |item id|}}
 
-                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.fetter" deletetitle="wod.labels.remove.fetter" showtype=true valuefallback=item.system.value}}
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.fetter" deletetitle="wod.labels.remove.fetter" showtype=true valuefirst=item.system.value}}
 
                 {{/each}}
 

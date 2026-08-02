@@ -1,6 +1,7 @@
 import AbilityHelper from "./ability-helpers.js";
 import BonusHelper from "./bonus-helpers.js";
 import { enrichAbilityItemData } from "./ability-enrichment.js";
+import { getSplat } from "./splat-helpers.js";
 
 export default class CreateHelper {
 
@@ -2825,9 +2826,37 @@ export default class CreateHelper {
 		 * Passions and Fetters had their sheet blocks, their predicates and their i18n, and were NOT offered
 		 * by this dialog. So "author a Passion by hand as a GM" was not merely unverified, it was
 		 * IMPOSSIBLE: the only creation route the Features tab offers is this button set, and the three
-		 * sub-kinds were absent from it. Gated on `hascorpus` so no other line sees them.
+		 * sub-kinds were absent from it.
+		 *
+		 * THE GATE IS THE SPLAT, NOT `hascorpus`. It was `settings.hascorpus`, and that made FST-4
+		 * ("authorable on the sheet by a GM, so the feature is complete from the Foundry side alone and
+		 * does not block on the character generator") false: nothing inside Foundry sets `hascorpus` on a
+		 * `PC` actor. `SetWraithAttributesv2` does set it, but only from `_preCreate` and only for the
+		 * LEGACY `Wraith` Actor document type; the splat-drop path (`DropHelper.DropSplatToActor`) copies
+		 * `splat`/`game`/`variant`/`variantsheet` off the splat item and touches no `has*` flag, and the
+		 * system ships no Wraith splat item anyway. In practice the only writer was the wodchar exporter -
+		 * so the buttons appeared exactly on the actors that least needed them, the imported ones, and
+		 * never on an actor a GM built.
+		 *
+		 * `getSplat(actor)` is the system's own answer to "which splat is this", the same one the PC sheet
+		 * uses to pick its icons, its power type and its splat-specific tabs. It resolves
+		 * variantsheet -> splat -> game -> actor.type, so it covers BOTH shapes at once: a wodchar wraith
+		 * PC (`variantsheet: "wraith"`) and a legacy `Wraith` document (`actor.type`). Neither the
+		 * `actor.type == CONFIG.worldofdarkness.sheettype.wraith` test used by `CreateButtonsPower`'s
+		 * Arcanoi buttons (false for every `PC` actor, so those buttons are unreachable on this fork's
+		 * sheet - a separate bug, deliberately not fixed here) nor a bare `settings.splat` test (empty on
+		 * a legacy document) covers both.
+		 *
+		 * `hascorpus` keeps its ONE meaning - "render the Corpus health track" (`prepareStatContext`) - and
+		 * is deliberately not written from here. A hand-built wraith therefore gets the three create
+		 * buttons but still no Corpus track until something sets that flag; that is the next gap, and it
+		 * is a display-flag problem, not an authoring one.
+		 *
+		 * `level: 0`, not 1: these three are DOT-RATED (the Death tab shows `value`/`max` as dots and the
+		 * Features tab now reads `value` first), so a hard-coded 1 would be a placeholder point cost on a
+		 * trait that has no point cost. Same choice the `connection` button below makes.
 		 */
-		if (actor.system.settings.hascorpus) {
+		if (getSplat(actor) === CONFIG.worldofdarkness.splat.wraith) {
 			for (const kind of ["passion", "darkpassion", "fetter"]) {
 				buttons[kind] = {
 					label: game.i18n.localize(`wod.types.${kind}`),
@@ -2836,7 +2865,7 @@ export default class CreateHelper {
 							name: game.i18n.localize(`wod.labels.new.${kind}`),
 							type: "Feature",
 							system: {
-								level: 1,
+								level: 0,
 								type: `wod.types.${kind}`
 							}
 						});

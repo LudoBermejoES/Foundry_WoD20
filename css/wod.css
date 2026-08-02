@@ -1479,6 +1479,31 @@ input.sheet-infoWidth {
   border-bottom: 0px solid var(--main-full-color);
 }
 
+/* A Features-tab row's two text columns are both `.largeBox`, which is `width: 200px` and nothing
+   else. The row is `display: flex; white-space: nowrap`, and NOTHING clipped the box - so a long
+   name kept the layout intact (measured: the box stays exactly 200px and the type column stays at
+   the same x, because a flex item's automatic minimum size is capped by its own definite width) and
+   simply PAINTED outside itself, over the next column. On a wraith PC that printed "Pasion:
+   Proteger a De Misteriis de lo que yo desperte (Culpa)" straight across the word "Passion".
+
+   So the fix is the clip, not the sizing: `overflow: hidden` stops the paint at the column edge and
+   `text-overflow: ellipsis` makes the cut legible instead of a chopped glyph. Nothing here changes
+   any geometry - verified in headless Chromium against this file's HEAD version on the real
+   rendered tab: 0 of 24 rows changed width or column position, and a short row screenshots
+   byte-identical. `feature_item.hbs` carries `title="{{item.name}}"` on BOTH branches of the name
+   box (the rollable one always did), so the clipped tail is one hover away.
+
+   Scoped THREE ways on purpose - `.item-row-area` (not the `.headlineRow` above the list, whose
+   single `.largeBox` is a heading that must never be clipped), `.feature-itemlist` (not gear,
+   combat or power rows, which size their columns with `.width-namebox` instead), and the direct
+   child combinator (not `.armor-largeBox` or any nested box further in). It therefore lands on
+   exactly the twelve blocks that render through `feature_item.hbs`, plus the identically shaped
+   legacy `notes.html` row, and on no other list in the system. */
+.wod20 .item-row-area.feature-itemlist .dragrow > .largeBox {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .wod20 .feature-itemlistarea {
   border-bottom: 1px solid var(--main-full-color);
 }
