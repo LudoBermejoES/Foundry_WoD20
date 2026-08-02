@@ -3295,3 +3295,20 @@ input.sheet-infoWidth {
 }
 
 /* END - Item viewer */
+/* START Shadow area (add-wraith-shadow-budget) */
+/* `templates/actor/parts/feature_shadow.hbs` — the wraith's Shadow area on the Features tab.
+
+   Only one rule is needed, and it is the one the requirement actually asks for: the Dark-Passion
+   ceiling has to be APPARENT to a GM. Everything else in the area reuses classes the tab already
+   styles (`sheet-area`, `headlineRow`, `headlineGroup`, `feature-itemlistarea`, `information-area`,
+   `sheet-boxcontainer`), so the block reads as part of the sheet rather than as a bolted-on panel.
+
+   DISPLAY, NEVER ENFORCE (design D4): this marks the excess, it does not refuse it. `wod20-char`'s
+   `validate()` evaluates no cross-pool constraint, so a sheet that blocked the overage could make a
+   generator-built character un-openable. The colour is paired with `font-weight: bold` on purpose —
+   colour alone is not a signal for a colour-blind GM. */
+.wod20 .information-area.wod-overbudget {
+  color: #a52019;
+  font-weight: bold;
+}
+/* END - Shadow area */

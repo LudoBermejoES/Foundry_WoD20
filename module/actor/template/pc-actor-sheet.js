@@ -1066,6 +1066,62 @@ export const getPowertype = function (actor) {
 	return powertype;
 }
 
+/**
+ * add-wraith-shadow-budget §3.1/§3.4 — reconcile a stored bio splatfield with the field type the
+ * system DECLARES for it, in the one direction that is always safe.
+ *
+ * WHY THIS IS NEEDED AT ALL. `assets/data/sheet/biotab.js` looks like the sheet's field
+ * declaration, and it is not: it is a SEED. `DropHelper.PopulateBio` copies it onto an actor once,
+ * when a Splat item is dropped, and the wodchar exporter writes its own copy
+ * (`WRAITH_BIO_SPLATFIELDS`, `export.ts`) at import. From then on the sheet renders
+ * `actor.system.bio.splatfields` — per-actor data. So changing a `type` in `biotab.js` changes what
+ * the NEXT actor is seeded with and nothing about the ones that already exist. Promoting
+ * `archetype` from `input` to `select` would otherwise have needed a data migration over every live
+ * wraith, which is precisely the migration `add-wraith-shadow-budget` was scoped around.
+ *
+ * WHY IT ONLY PROMOTES, AND ONLY TO A SELECT. Overlaying the declaration wholesale would rewrite
+ * fields the exporter populates per character — Mage's seven are built by `buildMageSplatfields()`
+ * and Vampire's `generation` is a select carrying a `mod` — and a demotion (select -> input) would
+ * push a non-string value through `bio_splatfields.hbs`'s `{{localize field.value}}`, whose
+ * `key.split(...)` throws and takes the WHOLE sheet down (measured on a numeric `generation`,
+ * 2026-07-28). One direction — a stored `input`/absent type promoted to a declared `select` — can
+ * do neither: the select branch never localizes the value, and `lookupListData` returns an
+ * unmatched value unchanged, so nothing a GM typed is lost or coerced.
+ *
+ * The VALUE is never touched, and each field is COPIED rather than mutated: `context.splatfields`
+ * shares its field objects with `actor.system.bio.splatfields`, so writing through them would edit
+ * live actor data from a render path.
+ *
+ * @param {Actor} actor
+ * @param {Record<string, object>} splatfields  the visible stored fields, as built above
+ * @returns {Record<string, object>} the same map, with promoted fields replaced by copies
+ */
+export const applyDeclaredSplatfieldTypes = function (actor, splatfields) {
+	const fields = splatfields ?? {};
+	const bio = CONFIG?.worldofdarkness?.sheetv2?.bio;
+	if (!bio) return fields;
+
+	const splat = getSplat(actor);
+	const era = actor?.system?.settings?.era ?? "";
+	const declared = bio[era]?.[splat] ?? bio.modern?.[splat];
+	if (!declared) return fields;
+
+	const result = {};
+
+	for (const [key, field] of Object.entries(fields)) {
+		const decl = declared[key];
+
+		if ((decl?.type === "select") && (field?.type !== "select")) {
+			result[key] = { ...field, type: "select", listdata: decl.listdata ?? "" };
+		}
+		else {
+			result[key] = field;
+		}
+	}
+
+	return result;
+}
+
 export const prepareBioContext = async function (context, actor) {
   	context.tab = context.tabs.bio;
 
@@ -1081,6 +1137,11 @@ export const prepareBioContext = async function (context, actor) {
 	context.splatfields = Object.fromEntries(
 	Object.entries(allSplatfields).filter(([_, field]) => field?.isvisible === true)
 	);
+
+	// add-wraith-shadow-budget §3.1/§3.4 — the system's own declaration wins when it PROMOTES a
+	// free-text field to a pick. See applyDeclaredSplatfieldTypes above for why this exists at all
+	// and why it only ever promotes.
+	context.splatfields = applyDeclaredSplatfieldTypes(actor, context.splatfields);
 
 	// Enrich textbox splatfields for bio_splatboxes.hbs
 	if (context.splatfields) {
@@ -1099,6 +1160,63 @@ export const prepareBioContext = async function (context, actor) {
 	context.listData = SelectHelper.SetupItem(actor, true);
 
   	return context;
+}
+
+/** The content module whose provenance flags the sheet reads. Same constant, same reason, as in
+ *  `trait-enrichment.js` and `compendium-description.js`. */
+const COMPENDIUM_MODULE = "wod20-compendium-es";
+
+/**
+ * add-wraith-shadow-budget §3.2 — is this item one of the Shadow's Thorns?
+ *
+ * TWO ways to be one, and the second is what makes the change work without a data migration or a
+ * content-repo change:
+ *
+ *   1. `system.type === "wod.types.thorn"` — the sub-kind this change introduces. What the create
+ *      button writes, and what a GM can retype an item to on its own Feature sheet.
+ *   2. the pack's own provenance flag, `flags["wod20-compendium-es"].source_type === "thorn"` —
+ *      what the 24 documents in the shipped `wraith-thorns` pack actually carry. Every one of them
+ *      is `type: "Feature"` with `system.type: "wod.types.othertraits"` (counted 2026-08-02), the
+ *      exporter's default for any Feature-mapped entity type. Re-typing those documents lives in
+ *      `webgen/`, a different repo and a different owner, so the sheet reads what ships instead of
+ *      waiting for it. A Thorn dragged straight from the compendium lands in the Shadow area with
+ *      nothing written to it.
+ *
+ * WHY NOT `wod.types.sliver`. That is Foundry's own Thorn sub-kind and it is a POWER type, for
+ * which `ItemHelper.BuildPowerSections` declares no `slivers` section — so a "correctly" typed
+ * Thorn renders on no part of the sheet, which is the measured `wod.types.specialadvantage` defect
+ * exactly. The content settles it independently of that: the pack ships Features, so a Power
+ * carrier could not have received them however many sections were built for it.
+ *
+ * @param {Item} item
+ * @returns {boolean}
+ */
+export const isThornFeature = function (item) {
+	if (item?.type !== "Feature") return false;
+	if (item.system?.type === "wod.types.thorn") return true;
+
+	const flags = item.flags?.[COMPENDIUM_MODULE];
+	return (flags?.source_type === "thorn") && (flags?.line === "wraith");
+}
+
+/**
+ * The rating a rated Feature row actually shows, resolved in the SAME order `feature_item.hbs`
+ * resolves it for these blocks: `system.value` first, `system.level` second (the `valuefirst`
+ * arrangement). Anything unparseable or non-positive counts as 0.
+ *
+ * This exists so the Dark-Passion ceiling readout can never disagree with the numbers printed on
+ * the rows immediately above it — the two would drift the moment one of them picked a different
+ * field, and a bound that contradicts the rows it bounds is worse than no bound.
+ *
+ * @param {Item} item
+ * @returns {number}
+ */
+export const featureRating = function (item) {
+	for (const candidate of [item?.system?.value, item?.system?.level]) {
+		const n = Number(candidate);
+		if (Number.isFinite(n) && (n > 0)) return n;
+	}
+	return 0;
 }
 
 /**
@@ -1128,10 +1246,26 @@ export const prepareAdvantageLists = function (context, actor) {
 	// Reading only Trait (as this filter used to) meant every one of those compendium items
 	// rendered nowhere at all on a PC sheet. The system.placement check is kept: it is what
 	// separates a feature-tab other trait from the powers-tab one (see preparePowersContext).
+	//
+	// add-wraith-shadow-budget §3.2 — one exception, and it is narrow on purpose. A Thorn dragged
+	// from the `wraith-thorns` pack arrives as exactly this shape (`Feature` +
+	// `wod.types.othertraits` + `placement: "feature"`), because that is the exporter's default for
+	// every Feature-mapped entity type. On a WRAITH it now renders in the Shadow area instead, so
+	// leaving it here too would print every Thorn twice. `isThornFeature` recognises it by the
+	// pack's own provenance flag, which is why no migration and no re-typing of the catalog is
+	// needed for a Thorn to land in the right block.
+	//
+	// The `isWraith` guard is the whole safety of it: on any other line the Shadow area does not
+	// render, so removing the item here would hide it completely — the silent-loss failure mode this
+	// sheet has already been bitten by twice. A vampire holding a thorn-flagged Feature keeps it in
+	// Other Traits.
+	const isWraith = getSplat(actor) === CONFIG.worldofdarkness.splat.wraith;
+
 	const allFeatureTraits = (actor?.items ?? []).filter(item =>
 										((item.type === "Trait") || (item.type === "Feature"))
 										&& item.system.type === "wod.types.othertraits"
-										&& item.system.placement === "feature");
+										&& item.system.placement === "feature"
+										&& !(isWraith && isThornFeature(item)));
 
 	context.othertraits = allFeatureTraits.sort((a, b) => {
 		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
@@ -1603,7 +1737,95 @@ export const prepareFeatureContext = async function (context, actor) {
 	context.darkpassions 	= ItemHelper.GetItemType(actor, "Feature", "wod.types.darkpassion");
 	context.fetters 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.fetter");
 
+	prepareShadowAreaContext(context, actor);
+
   	return context;
+}
+
+/**
+ * add-wraith-shadow-budget §2/§4 — the Shadow's own area.
+ *
+ * WHAT THIS IS FOR. A wraith's creation budget is 25 points, not 15: the Shadow is Step Six of
+ * every wraith's creation (`wraith20 · L4799`) and its 10 freebie points are ADDITIONAL to the
+ * character's own 15 (`wraith.json` -> `shadow.freebies.additionalToCharacterTotal: true`). Before
+ * this, the Shadow's four pieces were scattered — Archetype a free-text line on the Bio tab, Angst
+ * a pool block one tab away, Dark Passions rendered immediately beside the character's own
+ * Passions, Thorns a text box — so the sheet showed a 25-point character as a 15-point one and
+ * offered the Shadow's pool as if it belonged to the Psyche.
+ *
+ * WHICH TAB HOSTS IT (design D1's first open question). The Features tab. Two of the four pieces
+ * are `Feature` items and this is the tab that owns Feature items and carries their create button;
+ * the Attributes tab's advantages column is a 33%-wide stack of pool boxes with no room for a
+ * four-part area. Angst is MIRRORED here rather than moved: it keeps its `system.group: "shadow"`
+ * block on the Attributes tab, exactly as Backgrounds, Merits and Flaws already render on both
+ * tabs from one shared list (see `prepareAdvantageLists`). `_onRender` runs
+ * `SetupDotCounters_v2` over the whole sheet element, so the mirrored pool is fully interactive
+ * here — the requirement's "editable value" holds in the Shadow area itself, not only one tab away.
+ *
+ * WHEN IT RENDERS. For a wraith, always — including empty, which is the NORMAL state of a freshly
+ * imported one and so is the first case to get right, not the last. For any other line it renders
+ * only if that actor somehow holds Shadow content, and that condition is not defensive
+ * bookkeeping: `prepareAdvantageLists` drops Thorns from Other Traits on a wraith, and Dark
+ * Passions no longer render beside Passions on any line, so an unconditional wraith-only gate
+ * would make a Dark Passion on a mis-splatted actor vanish. Visible in an unexpected place beats
+ * silently gone.
+ *
+ * WHAT IT DOES NOT DO (design D4/D5). It does not tally spend, and it does not enforce either
+ * bound. The Dark-Passion ceiling is DISPLAYED because `wod20-char`'s `validate()` evaluates no
+ * cross-pool constraint, so a sheet that refused the excess could make a generator-built character
+ * un-openable; permanent Angst is an editable value with its floor STATED because the rule is a
+ * Storyteller's Willpower roll at difficulty 6 and a sheet that computed it would be inventing a
+ * result.
+ *
+ * @param {object} context
+ * @param {Actor} actor
+ * @returns {object} the same context
+ */
+export const prepareShadowAreaContext = function (context, actor) {
+	const isWraith = getSplat(actor) === CONFIG.worldofdarkness.splat.wraith;
+
+	context.thorns = (actor?.items ?? [])
+							.filter(item => isThornFeature(item))
+							.sort((a, b) => a.name.localeCompare(b.name));
+
+	// The Shadow's own pools: the Advantage items already filed under `system.group: "shadow"` by
+	// add-wraith-pc-splat §3.2. Read by group, not by id, so a Shadow pool added later joins the
+	// area as data with no code change - the same generic contract `stats_groupedadvantages.hbs`
+	// makes on the Attributes tab.
+	context.shadowadvantages = (actor?.items ?? [])
+							.filter(item => (item.type === "Advantage")
+											&& (item.system?.group === "shadow")
+											&& (item.system?.settings?.isvisible))
+							.sort((a, b) => Number(a.system.settings.order) - Number(b.system.settings.order));
+
+	// Archetype is a Bio-tab field; the area SHOWS it so the Shadow reads as one thing, and does
+	// not duplicate its editor. An unresolved legacy string prints as itself - see
+	// `select/wraith.js` for why that is a property of the list rather than an accident.
+	const splatfields = actor?.system?.bio?.splatfields ?? {};
+	context.shadowarchetype = (splatfields.archetype?.value ?? "").toString().trim();
+
+	// The pre-change free-text Thorns summary. Surfaced, not migrated and not dropped: it is what
+	// every wraith authored before this change holds, and the spec's own words are that a string
+	// resolving to no catalog entity "SHALL remain readable to a GM rather than being silently
+	// dropped".
+	context.legacythorns = (splatfields.thorns?.value ?? "").toString().trim();
+
+	// The cross-pool bound, DISPLAYED. Both totals use `featureRating`, so they can never disagree
+	// with the numbers printed on the rows.
+	context.passiontotal = (context.passions ?? []).reduce((sum, item) => sum + featureRating(item), 0);
+	context.darkpassiontotal = (context.darkpassions ?? []).reduce((sum, item) => sum + featureRating(item), 0);
+	context.darkpassionsexceeded = context.darkpassiontotal > context.passiontotal;
+
+	// `wraith.json` -> `shadow.freebies.total`. Named, never tallied (D5).
+	context.shadowfreebies = 10;
+
+	context.isshadowsplat = isWraith;
+	context.hasshadowarea = isWraith
+							|| (context.thorns.length > 0)
+							|| ((context.darkpassions ?? []).length > 0)
+							|| (context.shadowadvantages.length > 0);
+
+	return context;
 }
 
 export const prepareEffectContext = async function (context, actor) {

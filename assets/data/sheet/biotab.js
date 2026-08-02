@@ -111,12 +111,30 @@ export const databiotab = {
             // (one line), Life/Death/Regret are the wraith's story (Death in particular is the defining
             // one — the v1 sheet gave it its own `parts/wraith/death.html`), and Thorns is a list.
             //
-            // `archetype` is an `input` rather than a `select` deliberately: a select needs a `listdata`
-            // source registered in SelectHelper, and while a `wraith-shadow-archetypes` compendium pack
-            // does ship, wiring a picker to it is out of this change's scope. Same for `thorns`, which has
-            // a `wraith-thorns` pack — `template.json` declares it a string, so it is a free-text summary
-            // here; promoting either to real Items is a later change, not a silent divergence from the
-            // data model.
+            // add-wraith-shadow-budget §3.1 — `archetype` is now a PICK against the twelve
+            // `shadow-archetype` documents the `wraith-shadow-archetypes` pack ships. The comment that
+            // stood here said the wiring was out of scope; `SelectHelper.GetWraithShadowArchetypeList`
+            // (module/scripts/select/wraith.js) is that wiring, so the comment is gone rather than
+            // stale.
+            //
+            // NO MIGRATION IS NEEDED for a wraith authored before this change, and that is a property
+            // of the list rather than luck. Two mechanisms hold it up: the list ADDS the actor's own
+            // stored value as an option when the catalog does not contain it, so an old free-text
+            // Archetype stays selected and survives the next save; and the locked branch of
+            // `bio_splatfields.hbs` prints through `lookupListData`, whose documented fallback is to
+            // return the raw value. Both are asserted offline in the change's harness.
+            //
+            // THIS MAP IS ONLY A SEED. The sheet renders `actor.system.bio.splatfields` — per-actor
+            // DATA, written once by the wodchar exporter or by `DropHelper.PopulateBio` — not this
+            // declaration, so changing a `type` here does NOT reach an existing actor. What reaches
+            // them is `applyDeclaredSplatfieldTypes` in `pc-actor-sheet.js`, which promotes a stored
+            // `input` to the `select` declared here at render time.
+            //
+            // `thorns` STAYS a textbox on purpose. It is no longer where a wraith's Thorns live —
+            // they are `Feature` items in the Shadow area on the Features tab — but the string is
+            // still what every wraith authored before this change holds, and dropping the field would
+            // strand it. The Shadow area surfaces its value under a "legacy" label so a GM can read it
+            // and retype it as items at leisure.
             wraith: {
                 psyche: {
                     label: "wod.bio.wraith.psyche",
@@ -131,7 +149,8 @@ export const databiotab = {
                 archetype: {
                     label: "wod.bio.wraith.archetype",
                     value: "",
-                    type: "input"
+                    type: "select",
+                    listdata: "ShadowArchetypeList"
                 },
                 life: {
                     label: "wod.bio.wraith.life",

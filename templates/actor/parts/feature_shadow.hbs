@@ -1,0 +1,108 @@
+{{!--
+    add-wraith-shadow-budget §2/§4 — THE SHADOW AREA.
+
+    A wraith's creation budget is 25 points, not 15. The Shadow is Step Six of every wraith's
+    creation and its 10 freebie points are ADDITIONAL to the character's own 15, so a sheet that
+    showed only the character's side was misrepresenting the character. This is the Shadow's own
+    area: Archetype, Angst, Dark Passions and Thorns in one place, labelled as the Shadow's.
+
+    It is a sibling `sheet-area` of the character's Feature list, not another block inside it. That
+    is the point of the requirement's "SHALL NOT render adjacent to the character's own Passions":
+    the Dark Passions used to sit in the very next row of the same list as the Passions, which
+    invites reading them as one pool.
+
+    The whole area is guarded by `hasshadowarea` (prepareShadowAreaContext), so it is absent on
+    every other line — and present, EMPTY, on a freshly imported wraith, which is the normal state
+    and therefore the first one to get right.
+
+    NOTHING HERE IS COMPUTED OR ENFORCED. The 10-point pool is NAMED, never tallied: creation
+    budgets are the character generator's job and this sheet shows state, not spend history. The
+    Dark-Passion ceiling is SHOWN and marked when exceeded, never refused: `wod20-char`'s
+    `validate()` evaluates no cross-pool constraint, so a sheet that blocked the excess could make a
+    generator-built character un-openable. Permanent Angst is an ordinary editable pool with its
+    floor STATED, because the rule is a Storyteller's Willpower roll at difficulty 6 and a sheet
+    that computed it would be inventing a result.
+--}}
+{{#if hasshadowarea}}
+<div class="sheet-area flex-columns">
+
+    <div class="headlineRow headlineList splatFont feature-itemlist">
+        <div class="largeBox">{{localize "wod.bio.wraith.shadow"}}</div>
+    </div>
+
+    {{!-- The second budget, named. `wraith.json` -> `shadow.freebies.total`. --}}
+    <div class="information-area">
+        {{localize "wod.bio.wraith.shadowfreebies"}}: {{shadowfreebies}}
+    </div>
+
+    {{!-- Archetype. Shown here so the Shadow reads as one thing; edited on the Bio tab, where the
+          pick against the twelve `shadow-archetype` documents lives. A value the catalog does not
+          know prints as itself rather than vanishing. --}}
+    <div class="information-area">
+        {{localize "wod.bio.wraith.archetype"}}:
+        {{#if (ne shadowarchetype "")}}
+            {{shadowarchetype}}
+        {{else}}
+            &mdash;
+        {{/if}}
+    </div>
+
+    {{!-- Angst, mirrored from its `system.group: "shadow"` Advantage. `SetupDotCounters_v2` runs
+          over the whole sheet element in `_onRender`, so this pool is as editable here as it is in
+          the Advantages block on the Attributes tab. --}}
+    {{#if (gt shadowadvantages.length 0)}}
+        {{#each shadowadvantages as |advantage id|}}
+            <div class="sheet-boxcontainer">
+                {{{getGetStatArea_v2 ../actor advantage}}}
+            </div>
+        {{/each}}
+
+        <div class="information-area">{{localize "wod.bio.wraith.angstnote"}}</div>
+    {{/if}}
+
+    {{!-- Dark Passions, MOVED here from beside the character's own Passions, with the cross-pool
+          bound beside them where a GM can see it. --}}
+    <div class="headlineGroup splatFont">{{localize "wod.bio.wraith.darkpassions"}}</div>
+
+    <div class="information-area{{#if darkpassionsexceeded}} wod-overbudget{{/if}}">
+        {{localize "wod.bio.wraith.darkpassionceiling"}}: {{darkpassiontotal}} / {{passiontotal}}
+    </div>
+
+    {{#if (gt darkpassions.length 0)}}
+        <div class="feature-itemlistarea">
+
+            {{#each darkpassions as |item id|}}
+
+                {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.darkpassion" deletetitle="wod.labels.remove.darkpassion" showtype=true valuefirst=item.system.value}}
+
+            {{/each}}
+
+        </div>
+    {{/if}}
+
+    {{!-- Thorns. `valuefirst` like every other dot-rated wraith row: a Thorn costs 1 point per
+          level, so its rating is the number that matters. --}}
+    <div class="headlineGroup splatFont">{{localize "wod.bio.wraith.thorns"}}</div>
+
+    {{#if (gt thorns.length 0)}}
+        <div class="feature-itemlistarea">
+
+            {{#each thorns as |item id|}}
+
+                {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.thorn" deletetitle="wod.labels.remove.thorn" showtype=true valuefirst=item.system.value}}
+
+            {{/each}}
+
+        </div>
+    {{/if}}
+
+    {{!-- The pre-change free-text Thorns summary, if this wraith has one. Read-only and clearly
+          labelled as the legacy field: it is not migrated, and it is not dropped either. --}}
+    {{#if (ne legacythorns "")}}
+        <div class="information-area">
+            {{localize "wod.bio.wraith.legacythorns"}}: {{legacythorns}}
+        </div>
+    {{/if}}
+
+</div>
+{{/if}}

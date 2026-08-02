@@ -39,6 +39,7 @@
  * - Changeling: `SeemingList`, `CourtList`, `KithList`, `AffinityRealmList`
  * - Hunter: `CreedList`, `PrimaryVirtueList`
  * - Demon: `HouseList`, `FactionList`
+ * - Wraith: `ShadowArchetypeList` (read from the installed `wraith-shadow-archetypes` pack)
  *
  * Notes:
  * - This file is long. Use the `//#region ...` markers below to quickly fold and navigate sections.
@@ -65,6 +66,8 @@ import {
     getWerewolfTribes
 } from "./select/werewolf.js";
 import { getMageAffiliations, getMageSects } from "./select/mage.js";
+import { getWraithShadowArchetypeList } from "./select/wraith.js";
+import { getSplat } from "./splat-helpers.js";
 
 export default class SelectHelper {
     //#region SetupItem (entry point)
@@ -80,6 +83,7 @@ export default class SelectHelper {
         listData.PrimaryVirtueList = {};
         listData.HouseList = {};
         listData.FactionList = {};
+        listData.ShadowArchetypeList = {};
         listData.Dice1List = [];
         listData.Dice2List = [];
 
@@ -204,9 +208,31 @@ export default class SelectHelper {
                 group: game.i18n.localize("wod.games.vampire")
             },
             {
-                value: "wod.types.oath", 
-                label: game.i18n.localize("wod.types.oath"), 
+                value: "wod.types.oath",
+                label: game.i18n.localize("wod.types.oath"),
                 group: game.i18n.localize("wod.games.changeling")
+            },
+            /*
+             * add-wraith-shadow-budget §3.2 — Thorn, the Shadow's rated special abilities.
+             *
+             * A FEATURE sub-kind, deliberately, and NOT Foundry's own `wod.types.sliver`, which is
+             * a POWER sub-kind that `ItemHelper.BuildPowerSections` declares no section for — a
+             * "correctly" typed Sliver renders on no part of the sheet, the measured
+             * `wod.types.specialadvantage` defect. The decisive evidence is on the content side:
+             * every one of the 24 documents in `wod20-compendium-es`'s `wraith-thorns` pack ships
+             * as `type: "Feature"` (counted 2026-08-02), so a Power carrier could never have
+             * received them however many sections were added for it.
+             *
+             * Listing it here is what lets a GM retype a Thorn dragged in from that pack, which
+             * arrives as the exporter's default `wod.types.othertraits`. The sheet does not wait for
+             * that: `isThornFeature` (pc-actor-sheet.js) also recognises the pack's own
+             * `flags["wod20-compendium-es"].source_type === "thorn"`, so a dragged Thorn lands in
+             * the Shadow area untouched and this select is a convenience, not a requirement.
+             */
+            {
+                value: "wod.types.thorn",
+                label: game.i18n.localize("wod.types.thorn"),
+                group: game.i18n.localize("wod.games.wraith")
             }];
 
             listData.BoonTypes = [
@@ -1021,7 +1047,22 @@ export default class SelectHelper {
                 listData.HouseList = this.GetDemonHouseList();
                 listData.FactionList = this.GetDemonFactionList();
             }
-        }   
+
+            /*
+             * add-wraith-shadow-budget §3.1 — the Shadow Archetype pick.
+             *
+             * ONE branch, not the two the lines above use, and the gate is `getSplat` rather than
+             * `settings.splat` / `actor.type`. That is the v7.5.28 lesson applied here: a wodchar
+             * wraith PC carries `variantsheet: "wraith"`, a splat-dropped one carries `splat`, a
+             * legacy document carries only `actor.type`, and `getSplat` resolves all three in the
+             * one order the rest of the system already agrees on. A `data.system.settings.splat`
+             * test — the shape the changeling/hunter/demon branches use — would miss the imported
+             * wraiths, which are the ones that have an Archetype to show.
+             */
+            if ((data?.type != undefined) && (getSplat(data) === CONFIG.worldofdarkness.splat.wraith)) {
+                listData.ShadowArchetypeList = this.GetWraithShadowArchetypeList(data);
+            }
+        }
         // Dialogs and Items
         else {
             listData.Era = this.GetEraList();
@@ -1386,6 +1427,17 @@ export default class SelectHelper {
     static GetMageAffiliations(actor, isCharacter) { return getMageAffiliations(actor, isCharacter); }
 
     static GetMageSects(actor, isCharacter) { return getMageSects(actor, isCharacter); }
+    //#endregion
+
+    //#region Wraith (Bio tab lists)
+
+    /**
+     * Shadow Archetype list (Bio tab). Read from the installed `wraith-shadow-archetypes` pack, with
+     * the actor's own stored value preserved as an option — see `select/wraith.js` for why that is
+     * what makes the `input` -> `select` promotion migration-free.
+     */
+    static GetWraithShadowArchetypeList(actor) { return getWraithShadowArchetypeList(actor); }
+
     //#endregion
 }
 

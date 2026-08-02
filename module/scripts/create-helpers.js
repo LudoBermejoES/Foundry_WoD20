@@ -2910,8 +2910,20 @@ export default class CreateHelper {
 		 * Features tab now reads `value` first), so a hard-coded 1 would be a placeholder point cost on a
 		 * trait that has no point cost. Same choice the `connection` button below makes.
 		 */
+		/*
+		 * add-wraith-shadow-budget §3.2 — `thorn` joins the same loop, on the same gate, for the same
+		 * reason: a sub-kind a GM cannot create is a sub-kind only the exporter can fill.
+		 *
+		 * The sub-kind is `wod.types.thorn`, a FEATURE, and NOT Foundry's own `wod.types.sliver`,
+		 * which is a POWER sub-kind that `ItemHelper.BuildPowerSections` declares no section for — a
+		 * Thorn typed that way is in the database and on no part of the sheet, the measured
+		 * `wod.types.specialadvantage` defect. The content settles it independently: all 24 documents
+		 * in the shipped `wraith-thorns` pack are `type: "Feature"`, so a Power carrier could never
+		 * have received them. Its sheet predicate ships in the same commit (`isThornFeature`,
+		 * `pc-actor-sheet.js`) and it renders in the Shadow area on the Features tab.
+		 */
 		if (getSplat(actor) === CONFIG.worldofdarkness.splat.wraith) {
-			for (const kind of ["passion", "darkpassion", "fetter"]) {
+			for (const kind of ["passion", "darkpassion", "fetter", "thorn"]) {
 				buttons[kind] = {
 					label: game.i18n.localize(`wod.types.${kind}`),
 					callback: async () => {
