@@ -142,10 +142,17 @@
             on `hasConnections`, so a PC with no entries is untouched (task 3.7), and nothing here is gated
             on `settings.game`: this works for every line (task 3.9).
 
-            The portrait copies `trait-sheet.html:131` verbatim — `profile-img` + `data-edit` (which is what
-            hands you Foundry's FilePicker, so the 87 files in `wod20-portraits/` are two clicks away) + the
-            empty-state class. `portraitSrc` is resolved in the sheet: own image -> linked actor's portrait
-            -> placeholder.
+            The portrait renders `profile-img` + the empty-state class, and `portraitSrc` is resolved in
+            the sheet: own image -> linked actor's portrait -> placeholder. That fallback chain works.
+
+            It is NOT a picker, despite what this comment used to claim. There is no `data-edit` on the
+            <img> below, so clicking it does nothing: appv1 `DocumentSheet` binds `img[data-edit]`, which
+            is why `trait-sheet.html:131` opens a FilePicker and this does not, and the system's only
+            FilePicker action (`action-helpers.js OnEditImage`, registered as the actor-sheet `editImage`)
+            is hard-wired to `actor.update()` so it could not write an ITEM field even if wired up.
+            Set the path or URL on the Feature's own item sheet (`feature-sheet.html`) instead.
+            Measured 2026-08-02; the empty-state class is likewise inert here, because
+            `.shape-image-empty` is scoped to `.wod20.wod-item` (item sheets) in `css/wod.css`.
 
             The external link copies `bio.hbs:95-104` — anchor when set, localized placeholder when not.
             An INTERNAL link needs nothing here: `@UUID[Actor.xxx]{Name}` typed into the description is
