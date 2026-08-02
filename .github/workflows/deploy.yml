@@ -49,6 +49,13 @@ name: Preflight & Deploy WoD System
 #   preflight            offline validation of the committed tree. Never touches
 #                        the server. `deploy` declares `needs: preflight`, so a
 #                        tree that fails here cannot reach the server at all.
+#   TAKE THE DEPLOY LOCK a server-side lock directory shared with the other repos
+#                        that deploy to this Foundry. `concurrency:` is
+#                        per-repository and could not cover them; on 2026-08-02 a
+#                        wod20-compendium-es deploy restarted Foundry two seconds
+#                        into this one's transfer window (run 30753691518 vs their
+#                        30753690312). Half a mutex until that repo takes the same
+#                        lock — see the mutex header in foundry-deploy-lib.sh.
 #   stop + VERIFY DOWN   pm2 stop, then poll ps AND port 30000 until both are
 #                        empty. pm2's exit code is printed and IGNORED — it has
 #                        lied in this project before. Timeout => FAIL, no rsync.
@@ -59,7 +66,10 @@ name: Preflight & Deploy WoD System
 #   verify bytes         per-file sha256 of what LANDED vs what was PUSHED, while
 #                        Foundry is still DOWN — the only moment the two trees are
 #                        comparable, because Foundry mutates LOCK/LOG/WAL/MANIFEST
-#                        as soon as it opens a pack.
+#                        as soon as it opens a pack. That precondition is now
+#                        MEASURED after the audit instead of merely claimed in the
+#                        step name, and a mismatch says which of the two possible
+#                        causes it is (a raced open vs a bad transfer).
 #   start + VERIFY UP    process present, port listening, /api/status serving.
 #                        Runs with `if: always()`, so a failure above still brings
 #                        Foundry back — and says so LOUDLY if it cannot.
@@ -95,9 +105,15 @@ on:
 # that write to the same Foundry server (wod20-compendium-es →
 # Data/modules/wod20-compendium-es, wod20-combat-foundryvtt →
 # Data/modules/wod20-combat-foundryvtt): concurrency groups are per-repository,
-# and there is no cross-repo lock. A compendium deploy that stops Foundry while
-# this one is mid-rsync would still interleave. Do not push those at the same
-# time as this one.
+# and GitHub offers no cross-repo group.
+#
+# That gap is no longer covered by a comment asking people not to push both at
+# once — it bit on 2026-08-02 (this run vs wod20-compendium-es run 30753690312;
+# see the "cross-repo deploy mutex" header in .github/scripts/foundry-deploy-lib.sh
+# for the second-by-second timeline). It is now covered by a SERVER-SIDE lock
+# directory taken below, before the stop gate, and released after the restart.
+# NOTE: that lock only becomes a real mutex once wod20-compendium-es takes the
+# same one; until then this side always acquires uncontended.
 concurrency:
   group: foundry-system-deploy
   cancel-in-progress: false
@@ -149,6 +165,7 @@ jobs:
           set -euo pipefail
           bash -n .github/scripts/foundry-deploy-lib.sh
           bash -n .github/scripts/test-down-gate.sh
+          bash -n .github/scripts/test-deploy-lock.sh
           # The dispatcher must reject an unknown subcommand rather than silently
           # succeed, otherwise a typo in a `bash -s -- stop` call would look like
           # a successful stop.
@@ -164,6 +181,14 @@ jobs:
       # waits instead of spinning.
       - name: Prove the verified-down gate refuses a lying pm2
         run: bash .github/scripts/test-down-gate.sh
+
+      # The deploy lock is the FIRST step of the deploy job and it can fail the
+      # job, so both directions matter and both are asserted offline: it must
+      # refuse a second holder (admitting one re-opens the corruption race), and
+      # it must not block a deploy when the lock path is unusable or was left
+      # behind by a cancelled run.
+      - name: Prove the cross-repo deploy lock excludes, expires and degrades
+        run: bash .github/scripts/test-deploy-lock.sh
 
   # ---------------------------------------------------------------------------
   deploy:
@@ -222,6 +247,21 @@ jobs:
           EOF
           chmod +x "$RSSH"
           "$RSSH" 'echo "ssh OK on $(hostname) as $(id -un)"'
+
+      # FIRST thing that touches shared state, and it must stay first: everything
+      # below (stop, rsync --delete, byte audit, restart) assumes this run is the
+      # only deploy in the Foundry data directory. `concurrency:` above cannot
+      # promise that across repositories; this can.
+      #
+      # It does NOT stop anything or write into the deploy target — it creates one
+      # directory outside every target — and an unusable lock path degrades to a
+      # warning rather than failing the deploy. The only way this step fails the
+      # job is genuine contention, which is precisely when NOT deploying is right.
+      - name: Take the cross-repo Foundry deploy lock
+        id: lock
+        run: |
+          set -euo pipefail
+          "$RSSH" "DEPLOY_LOCK_OWNER='${GITHUB_REPOSITORY}#${GITHUB_RUN_ID}' bash -s -- lock" < "$LIB"
 
       # The library is piped over STDIN, so the remote shell's own command line is
       # just `bash -s` and `pgrep -f <foundry entry script>` cannot match the
@@ -299,7 +339,23 @@ jobs:
       # An rsync exit code proves rsync was LAUNCHED and returned 0. It does not
       # prove that the tree Foundry will load on the next start is the tree in
       # this commit. Compare per-file sha256 manifests instead.
-      - name: Verify the deployed tree matches this commit (Foundry still down)
+      #
+      # THE STEP NAME NO LONGER ASSERTS "Foundry still down" (2026-08-02). It used
+      # to, and the claim was false in run 30753691518: both down-gates were true
+      # when they ran, and a wod20-compendium-es deploy started Foundry two seconds
+      # later, inside the transfer. So the step now MEASURES the claim instead of
+      # printing it — see the assert-down round trip after the audit — and uses the
+      # answer to diagnose the failure it would otherwise mislabel as bad bytes.
+      #
+      # WHAT WAS DELIBERATELY *NOT* DONE: CURRENT / MANIFEST-* / *.log were NOT
+      # dropped from the comparison to "make it deterministic". They are exactly
+      # the files that move when a live process opens a pack under an rsync
+      # --delete, i.e. the signature of the corruption class this whole workflow
+      # exists to prevent. Excluding them would have made this step pass silently
+      # through the 2026-08-02 race. The comparison is already deterministic given
+      # its precondition; the precondition is what needed enforcing (the deploy
+      # lock above), not the comparison.
+      - name: Verify the deployed tree matches this commit (and that Foundry stayed down)
         id: verify
         run: |
           set -euo pipefail
@@ -375,6 +431,19 @@ jobs:
           grep -qx 'AUDITDONE' "$RUNNER_TEMP/remote.out" \
             || { echo "::error::the remote audit did not run to completion; the deployed tree is UNVERIFIED"; exit 1; }
 
+          # TEST THE PRECONDITION THIS STEP DEPENDS ON, rather than asserting it in
+          # the step name. Together with the assert-down the rsync step already
+          # runs, this brackets the transfer: down before the first byte, and
+          # (checked here) still down after the audit read the tree. If it is up
+          # now, everything below is comparing a tree a live process has been
+          # writing to, and the diff is evidence about the RACE, not about rsync.
+          if "$RSSH" "FOUNDRY_DIR='$TARGET' bash -s -- assert-down" < "$LIB" >/dev/null 2>&1; then
+            FOUNDRY_AFTER=down
+          else
+            FOUNDRY_AFTER=up
+          fi
+          echo "Foundry state after the audit: $FOUNDRY_AFTER"
+
           rc=0
 
           # ---- 1. non-pack files: byte-identical, no exceptions ---------------
@@ -413,23 +482,51 @@ jobs:
           sed -n 's/^PACKSHA //p' "$RUNNER_TEMP/remote.out" > "$RUNNER_TEMP/deployed-packs.sha"
           PACK_COUNT="$(wc -l < "$RUNNER_TEMP/expected-packs.sha" | tr -d ' ')"
           echo "Pack files verified: $PACK_COUNT"
+          PACKS_DIFFER=0
           if ! diff -u "$RUNNER_TEMP/expected-packs.sha" "$RUNNER_TEMP/deployed-packs.sha"; then
             echo "::error::Deployed pack data does NOT match ${GITHUB_SHA} (see diff above)."
-            echo "::error::If the FILE NAMES differ, something opened or wrote to a system pack during the transfer."
-            echo "::error::If the names match and only the hashes differ, the pack bytes on the server are not the ones that were pushed."
+            PACKS_DIFFER=1
             rc=1
           fi
 
           # A LevelDB LOCK file exists only because a process opened the database.
-          # rsync --delete has just removed every LOCK (none is tracked in git),
-          # so a LOCK present now means something opened a pack between the
-          # transfer and this audit — which makes the comparison above
-          # untrustworthy and is the start of the very race this job serialises
-          # against.
+          # rsync --delete has just removed every LOCK (none is tracked in git —
+          # preflight fails the build if one ever is), so a LOCK present now means
+          # something opened a pack between the transfer and this audit.
+          PACKS_OPENED=0
           if grep -q '^PACKLOCK ' "$RUNNER_TEMP/remote.out"; then
+            PACKS_OPENED=1
             sed -n 's/^PACKLOCK /::error::a LevelDB LOCK exists after the transfer, so a process opened this pack while Foundry was supposed to be down: /p' \
               "$RUNNER_TEMP/remote.out"
             rc=1
+          fi
+
+          # ---- 2b. say WHICH of the two failures this is -----------------------
+          # These two errors read almost identically in a log and mean opposite
+          # things. Getting it wrong cost a full manual investigation of run
+          # 30753691518 (the conclusion there was "the deploy was fine, the check
+          # is flaky" — it was the other way round: the check was right and the
+          # deploy had been raced). So name the cause explicitly.
+          if [ "$PACKS_DIFFER" = 1 ] || [ "$PACKS_OPENED" = 1 ]; then
+            if [ "$PACKS_OPENED" = 1 ] || [ "$FOUNDRY_AFTER" = up ]; then
+              echo "::error::DIAGNOSIS: SOMETHING OPENED THE PACKS INSIDE THIS DEPLOY WINDOW."
+              # `|| true`, not `|| echo 0`: grep -c already PRINTS 0 before exiting
+              # 1, so the fallback would emit the count twice.
+              echo "::error::  LOCK files recreated after rsync: $(grep -c '^PACKLOCK ' "$RUNNER_TEMP/remote.out" || true)"
+              echo "::error::  Foundry state after the audit:    $FOUNDRY_AFTER"
+              echo "::error::This is NOT a bad transfer: a LevelDB open rewrites CURRENT and rolls"
+              echo "::error::MANIFEST-*/*.log forward, so those names and hashes move while *.ldb do not."
+              echo "::error::It IS the corruption hazard this workflow exists to prevent, because the"
+              echo "::error::rsync --delete above unlinked files that process may now hold open."
+              echo "::error::Most likely cause: a CONCURRENT DEPLOY FROM ANOTHER REPO restarted Foundry"
+              echo "::error::(wod20-compendium-es and wod20-combat-foundryvtt write to the same server)."
+              echo "::error::Check their Actions tabs for a run overlapping this one, then re-run this"
+              echo "::error::deploy on its own. See the deploy lock in .github/scripts/foundry-deploy-lib.sh."
+            else
+              echo "::error::DIAGNOSIS: the pack bytes on the server are not the ones that were pushed,"
+              echo "::error::and nothing appears to have opened them (no LOCK, Foundry still down)."
+              echo "::error::Suspect the transfer itself: a partial rsync, a full disk, or a wrong TARGET."
+            fi
           fi
 
           # A deployed pack that is not a usable LevelDB directory opens in
@@ -470,6 +567,7 @@ jobs:
             echo "system_version=$VERSION"
             echo "files_verified=$FILE_COUNT"
             echo "pack_files_verified=$PACK_COUNT"
+            echo "foundry_after_audit=$FOUNDRY_AFTER"
           } >> "$GITHUB_OUTPUT"
 
           if [ "$rc" = 0 ]; then
@@ -491,10 +589,19 @@ jobs:
           set -euo pipefail
           "$RSSH" "FOUNDRY_DIR='$TARGET' bash -s -- start" < "$LIB"
 
-      # No `if:` on purpose — automatically skipped if anything above failed, so a
-      # failed rsync does not also produce a second, confusing failure here.
+      # RUNS EVEN WHEN THE BYTE VERIFICATION FAILED (changed 2026-08-02). It used
+      # to have no `if:`, so a failed verify skipped it — and the stale-handle
+      # measurement below is the one check that answers "did that failure actually
+      # corrupt anything?". In run 30753691518 it was skipped for exactly that
+      # reason and the question had to be answered by hand over ssh afterwards.
+      # A failed deploy producing two errors is cheaper than a failed deploy
+      # producing an unanswered question.
+      #
+      # Still gated on the restart having succeeded: with Foundry down there is no
+      # process to read /proc/<pid>/fd from and the check cannot mean anything.
       - name: Verify the running Foundry loaded the deployed system
         id: verify_live
+        if: always() && steps.start.outcome == 'success'
         run: |
           set -euo pipefail
 
@@ -534,6 +641,17 @@ jobs:
               raise SystemExit(1)
           print(f"The running Foundry has loaded worldofdarkness {want}.")
           PY
+
+      # Last step that touches shared state. `always()` so a failure anywhere above
+      # cannot leave the next deploy of either repo waiting out DEPLOY_LOCK_STALE,
+      # and gated on us having taken it so a run that never got the lock cannot
+      # release someone else's (`unlock` re-checks the owner on the server too).
+      - name: Release the cross-repo Foundry deploy lock
+        if: always() && steps.lock.outcome == 'success'
+        run: |
+          set -uo pipefail
+          "$RSSH" "DEPLOY_LOCK_OWNER='${GITHUB_REPOSITORY}#${GITHUB_RUN_ID}' bash -s -- unlock" < "$LIB" \
+            || echo "::warning::could not release the deploy lock over ssh; it expires on its own"
 
       - name: Post-deploy notice
         if: always() && steps.rsync.outcome == 'success'
@@ -575,9 +693,11 @@ jobs:
             echo "| stage | result |"
             echo "|---|---|"
             echo "| preflight (offline gate) | \`${{ needs.preflight.result }}\` |"
+            echo "| cross-repo deploy lock | \`${{ steps.lock.outcome }}\` |"
             echo "| stop + verified down | \`${{ steps.stop.outcome }}\` |"
             echo "| rsync | \`${{ steps.rsync.outcome }}\` |"
             echo "| deployed bytes == pushed bytes | \`${{ steps.verify.outcome }}\` |"
+            echo "| Foundry stayed down through the audit | \`${{ steps.verify.outputs.foundry_after_audit }}\` |"
             echo "| start + verified up | \`${{ steps.start.outcome }}\` |"
             echo "| no stale handles, live version matches | \`${{ steps.verify_live.outcome }}\` |"
             echo

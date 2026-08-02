@@ -788,5 +788,5 @@
   "background": "systems/worldofdarkness/assets/img/graphics/wod.png",
   "manifest": "https://github.com/LudoBermejoES/Foundry_WoD20/releases/download/v7.5.1/system.json",
   "download": "https://github.com/LudoBermejoES/Foundry_WoD20/releases/download/v7.5.1/v7.5.1.zip",
-  "license": "LICENSE.txt"
+  "license": "LICENSE"
 }

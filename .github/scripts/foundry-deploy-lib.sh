@@ -77,6 +77,8 @@
 #   assert-down    one-shot "is it down?" gate; non-zero if anything is up
 #   start          pm2 start, then poll until VERIFIED up; non-zero if it is not
 #   assert-up      one-shot "is it up?" check
+#   lock           take the CROSS-REPO deploy mutex (see its section below)
+#   unlock         release it, if and only if this caller still holds it
 #   stale-handles  count deleted-inode fds Foundry holds inside FOUNDRY_DIR;
 #                  non-zero if any exist (the direct corruption signature)
 #   status-json    print the raw /api/status body (parsed by the caller)
@@ -84,6 +86,11 @@
 #
 # DELIBERATE DIFFERENCES FROM THE wod20-compendium-es COPY:
 #   * FOUNDRY_DIR (default: the systems/worldofdarkness dir) replaces MODULE_DIR.
+#   * `lock`/`unlock` are NEW HERE (2026-08-02) and are the half of a cross-repo
+#     mutex that this repo can add on its own. They are meant to be copied into
+#     the wod20-compendium-es library VERBATIM, with the same DEPLOY_LOCK_DIR —
+#     until that happens the two deploys can still interleave, which is the
+#     failure recorded in that section's header.
 #   * `hash DIR` is absent: this repo's deploy.yml compares per-file sha256
 #     manifests of the whole tree, so a second hashing implementation here would
 #     be dead code that could silently disagree with the one in use.
@@ -293,6 +300,125 @@ cmd_assert_up() {
 }
 
 # ---------------------------------------------------------------------------
+# cross-repo deploy mutex
+# ---------------------------------------------------------------------------
+# WHY THIS EXISTS (measured, 2026-08-02).
+#
+# Three repos rsync into the same Foundry data directory and two of them stop and
+# start the same pm2 process. GitHub `concurrency:` groups are PER-REPOSITORY, so
+# they cannot serialise against each other, and the previous mitigation was a
+# comment in deploy.yml saying "do not push those at the same time as this one".
+# That is not a mechanism, and a `regen.py` fan-out commits the entity data and
+# the system in the same breath, so pushing both together is the NORMAL case.
+#
+# It happened. Foundry_WoD20 run 30753691518 and wod20-compendium-es run
+# 30753690312 overlapped:
+#   15:09:34  compendium deploy: pm2 stop foundryvtt (foundry_was_running=true)
+#   15:09:43  system deploy: stop gate sees foundry_was_running=false, VERIFIED DOWN
+#   15:09:45  compendium deploy: pm2 restart foundryvtt  <-- inside our window
+#   15:09:46  system deploy: assert-down OK, rsync starts
+#   15:09:48  system deploy: rsync --delete unlinks LOCK/MANIFEST-*/*.log in 32
+#             system packs WHILE Foundry is booting and opening them
+#   15:09:52  system deploy: audit finds a LOCK in every pack and CURRENT /
+#             MANIFEST-* / *.log advanced by exactly +2. Byte verification FAILS.
+# Both of that deploy's "is it down?" gates were TRUE when they ran. Neither could
+# see two seconds into the future.
+#
+# That is the exact rsync-into-a-live-LevelDB scenario the rest of this file
+# exists to prevent, arriving from another repository. So the lock is the fix and
+# the byte comparison is the detector; do not "fix" the detector by excluding the
+# files that move.
+#
+# MECHANISM: an atomically-created lock DIRECTORY (mkdir is atomic on POSIX)
+# outside every deploy target, so no rsync --delete can remove it. Held across
+# stop -> rsync -> verify -> start.
+#
+# THIS IS HALF A MUTEX UNTIL wod20-compendium-es TAKES THE SAME LOCK. Adding
+# `lock`/`unlock` to that repo's copy of this library and two steps to its
+# deploy.yml, with the SAME DEPLOY_LOCK_DIR, is what makes it real. Until then
+# this side always acquires uncontended and behaves exactly as before.
+#
+# FAILING TO CREATE THE LOCK IS NOT A DEPLOY FAILURE. If the path is not
+# writable, cmd_lock warns and returns 0: degrading to the previous behaviour is
+# correct, blocking every deploy on a lock that cannot exist is not.
+DEPLOY_LOCK_DIR="${DEPLOY_LOCK_DIR:-/var/www/foundrydata/.foundry-deploy.lock}"
+DEPLOY_LOCK_TIMEOUT="${DEPLOY_LOCK_TIMEOUT:-600}"
+# Older than this and the holder is assumed dead (a cancelled job cannot run its
+# release step). A whole deploy of either repo is ~50s, so 30 min is 30x slack.
+DEPLOY_LOCK_STALE="${DEPLOY_LOCK_STALE:-1800}"
+DEPLOY_LOCK_OWNER="${DEPLOY_LOCK_OWNER:-unidentified-caller}"
+
+lock_holder() {
+  cat "$DEPLOY_LOCK_DIR/owner" 2>/dev/null
+}
+
+# Seconds the current lock has been held. An unreadable/absent epoch falls back
+# to the directory's own mtime (set by mkdir), and an unreadable mtime yields 0 —
+# i.e. "assume FRESH". Never guess that an unknown lock is stale: breaking a live
+# one re-opens the very race this lock closes.
+lock_age() {
+  local since now
+  since="$(cat "$DEPLOY_LOCK_DIR/epoch" 2>/dev/null)"
+  case "${since:-}" in ''|*[!0-9]*) since="$(stat -c %Y "$DEPLOY_LOCK_DIR" 2>/dev/null)" ;; esac
+  case "${since:-}" in ''|*[!0-9]*) echo 0; return 0 ;; esac
+  now="$(date +%s)"
+  echo $(( now - since ))
+}
+
+cmd_lock() {
+  local waited=0 age broke=0 announced=0
+  while ! mkdir "$DEPLOY_LOCK_DIR" 2>/dev/null; do
+    # mkdir can fail for reasons that are not contention (no such parent, read-only
+    # mount, wrong owner). Those must not stall a deploy that used to work.
+    if [ ! -d "$DEPLOY_LOCK_DIR" ]; then
+      echo "::warning::cannot create the deploy lock at $DEPLOY_LOCK_DIR (not a contention failure)."
+      echo "::warning::continuing WITHOUT the cross-repo mutex — a concurrent deploy of another repo can still interleave."
+      return 0
+    fi
+    age="$(lock_age)"
+    if [ "$broke" = 0 ] && [ "$age" -gt "$DEPLOY_LOCK_STALE" ]; then
+      echo "::warning::breaking a deploy lock held for ${age}s (> ${DEPLOY_LOCK_STALE}s) by: $(lock_holder)"
+      broke=1
+      rm -rf "$DEPLOY_LOCK_DIR" 2>/dev/null || true
+      continue
+    fi
+    if [ "$waited" -ge "$DEPLOY_LOCK_TIMEOUT" ]; then
+      echo "::error::another Foundry deploy has held $DEPLOY_LOCK_DIR for ${age}s: $(lock_holder)"
+      echo "::error::refusing to stop Foundry and rsync into the same server underneath it."
+      echo "::error::Wait for that run to finish and re-run this one."
+      return 1
+    fi
+    if [ "$announced" = 0 ]; then
+      echo "waiting up to ${DEPLOY_LOCK_TIMEOUT}s for the Foundry deploy lock, held by: $(lock_holder)"
+      announced=1
+    fi
+    sleep "$POLL_INTERVAL"
+    waited=$((waited + POLL_INTERVAL))
+  done
+  printf '%s\n' "$DEPLOY_LOCK_OWNER" > "$DEPLOY_LOCK_DIR/owner" 2>/dev/null
+  date +%s > "$DEPLOY_LOCK_DIR/epoch" 2>/dev/null
+  echo "deploy lock ACQUIRED after ${waited}s by $DEPLOY_LOCK_OWNER ($DEPLOY_LOCK_DIR)"
+}
+
+cmd_unlock() {
+  if [ ! -d "$DEPLOY_LOCK_DIR" ]; then
+    echo "deploy lock $DEPLOY_LOCK_DIR is not held; nothing to release."
+    return 0
+  fi
+  local holder
+  holder="$(lock_holder)"
+  # If our lock was broken as stale and re-taken, the holder is someone else's
+  # live deploy. Removing it would hand two runs the same window.
+  if [ -n "$holder" ] && [ "$holder" != "$DEPLOY_LOCK_OWNER" ]; then
+    echo "::warning::the deploy lock is held by '$holder', not by '$DEPLOY_LOCK_OWNER' — leaving it in place."
+    return 0
+  fi
+  rm -rf "$DEPLOY_LOCK_DIR" 2>/dev/null \
+    && echo "deploy lock RELEASED by $DEPLOY_LOCK_OWNER" \
+    || echo "::warning::could not remove $DEPLOY_LOCK_DIR; it will expire after ${DEPLOY_LOCK_STALE}s"
+}
+
+# ---------------------------------------------------------------------------
 # verification
 # ---------------------------------------------------------------------------
 
@@ -350,11 +476,13 @@ case "${1:-}" in
   assert-down)   cmd_assert_down ;;
   start)         cmd_start ;;
   assert-up)     cmd_assert_up ;;
+  lock)          cmd_lock ;;
+  unlock)        cmd_unlock ;;
   stale-handles) cmd_stale_handles ;;
   status-json)   cmd_status_json ;;
   version)       cmd_version "${2:-.}" ;;
   *)
-    echo "usage: $0 {state|stop|assert-down|start|assert-up|stale-handles|status-json|version DIR}" >&2
+    echo "usage: $0 {state|stop|assert-down|start|assert-up|lock|unlock|stale-handles|status-json|version DIR}" >&2
     exit 2
     ;;
 esac

@@ -166,8 +166,10 @@ if background and not os.path.exists(strip_system_prefix(background)):
     error(f"background {background!r} does not exist in the tree")
 license_file = manifest.get("license")
 if license_file and not os.path.exists(strip_system_prefix(license_file)):
-    # Pre-existing since upstream: the manifest says LICENSE.txt, the file is
-    # LICENSE. Cosmetic (Foundry only links it from the setup UI), so warn.
+    # Fired until 2026-08-02: the manifest inherited "LICENSE.txt" from upstream
+    # while the file in this tree is "LICENSE", so Foundry's setup-UI license link
+    # 404'd. Fixed in system.json; the check stays because the next such typo is
+    # cosmetic too and should keep warning rather than blocking.
     warn(f"license {license_file!r} does not exist in the tree "
          f"(the license file here is {'LICENSE' if os.path.exists('LICENSE') else 'unknown'})")
 
