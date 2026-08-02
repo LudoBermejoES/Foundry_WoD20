@@ -29,6 +29,51 @@
 const MODULE_ID = "wod20-compendium-es";
 
 /**
+ * `pack.collection` -> that pack's `Ability` documents, memoized for the session.
+ *
+ * This exists because the callers are LOOPS over an actor's abilities, and without it each one
+ * re-ran `pack.getDocuments()` over every candidate pack. A mage has 25 line packs plus the shared
+ * one, and `candidateAbilityPacks` returns every pack whose name starts with the line - armor,
+ * equipment, instruments, derangements and the rest, not only the four ability packs - because the
+ * pack that holds a given ability is not derivable from its name. Filtering to `type === "Ability"`
+ * happens only AFTER the whole pack is loaded, so a 27-ability actor could fully construct several
+ * hundred packs' worth of documents in one pass. That is the exact shape of the V1 failure
+ * `compendium-description.js` documents in its header ("one `getIndex()` per pack, never a
+ * `getDocument()` per actor item"), and this module is now on the interactive splat-install path
+ * where it is felt directly.
+ *
+ * Session-scoped and never invalidated, the same lifetime and the same trade-off
+ * `compendium-description.js` takes for `lineIndexes`: a compendium module updated mid-session is
+ * not picked up until reload, which is acceptable for description text and is why the cache holds
+ * the DOCUMENTS rather than any resolved per-actor result.
+ * @type {Map<string, Item[]>}
+ */
+const abilityDocsByPack = new Map();
+
+/**
+ * @param {CompendiumCollection} pack
+ * @returns {Promise<Item[]>} the pack's Ability documents, or [] if it could not be read
+ */
+async function abilityDocsOf(pack) {
+	const cached = abilityDocsByPack.get(pack.collection);
+	if (cached) return cached;
+
+	let docs;
+	try {
+		docs = await pack.getDocuments();
+	} catch (err) {
+		console.warn(`WoD | Ability enrichment: could not load compendium pack "${pack.collection}":`, err);
+		// Deliberately NOT cached: a pack that failed to load once (a mid-flight module update, say)
+		// should be retried, unlike a pack that simply holds no abilities.
+		return [];
+	}
+
+	const abilities = docs.filter(d => d.type === "Ability");
+	abilityDocsByPack.set(pack.collection, abilities);
+	return abilities;
+}
+
+/**
  * All installed compendium packs relevant to one actor's line: every Item pack whose name is
  * prefixed with the line (e.g. "mage-talents", "mage-skills", "mage-knowledges" for splat
  * "mage"), plus the line-agnostic "shared-secondary-ability" pack, checked last so a
@@ -61,13 +106,24 @@ function candidateAbilityPacks(splat) {
  * Finds the compendium Ability document that matches `abilityItem`, scoped to `actor`'s line.
  * Never throws: any failure to reach/read a pack is caught, logged, and treated as "no match".
  * @param {Actor} actor - the PC actor the ability belongs to (its `system.settings.splat` picks
- *        which line's packs are searched)
- * @param {Item} abilityItem - the embedded `Ability` Item to enrich
+ *        which line's packs are searched, unless `splatOverride` is given)
+ * @param {Item} abilityItem - the embedded `Ability` Item to enrich. Only `system.id` and `name`
+ *        are read, so a plain creation payload works here as well as a real Document.
+ * @param {string} [splatOverride] - the line to search INSTEAD of the actor's own. Required by any
+ *        caller that runs BEFORE the actor's splat has been written: `DropHelper.DropSplatToActor`
+ *        imports the abilities (drop-helpers.js:589) roughly 150 lines before it assigns
+ *        `system.settings.splat` and calls `actor.update` (:740, :748), so during a splat install
+ *        the actor still reports its PREVIOUS line. Reading it there would search a fresh PC's
+ *        `mortal` (which has NO packs in wod20-compendium-es, so nothing would ever match) or, on a
+ *        line change, the OLD line's packs - stamping another game line's provenance onto the
+ *        abilities. That is precisely the cross-line failure `compendium-description.js` records as
+ *        the V2 disaster ("overwrote 89 live actors with ANOTHER GAME LINE's rules"), so this
+ *        parameter is a correctness requirement, not a convenience.
  * @returns {Promise<Item|null>} the matching compendium Item document, or null if none was found
  */
-export async function findAbilityCompendiumMatch(actor, abilityItem) {
+export async function findAbilityCompendiumMatch(actor, abilityItem, splatOverride) {
 	try {
-		const splat = actor?.system?.settings?.splat ?? "";
+		const splat = splatOverride || actor?.system?.settings?.splat || "";
 		const canonicalId = (abilityItem?.system?.id ?? "").trim().toLowerCase();
 		const abilityName = (abilityItem?.name ?? "").trim().toLowerCase();
 
@@ -77,15 +133,8 @@ export async function findAbilityCompendiumMatch(actor, abilityItem) {
 		if (!packs.length) return null;
 
 		for (const pack of packs) {
-			let docs;
-			try {
-				docs = await pack.getDocuments();
-			} catch (err) {
-				console.warn(`WoD | Ability enrichment: could not load compendium pack "${pack.collection}":`, err);
-				continue;
-			}
-
-			const abilities = docs.filter(d => d.type === "Ability");
+			const abilities = await abilityDocsOf(pack);
+			if (!abilities.length) continue;
 
 			if (canonicalId) {
 				const byId = abilities.find(d => (d.system?.id ?? "").trim().toLowerCase() === canonicalId);

@@ -1,6 +1,7 @@
 import ItemHelper from "./item-helpers.js";
 import BonusHelper from "./bonus-helpers.js";
 import { calculateTotals } from "./totals.js";
+import { findAbilityCompendiumMatch, compendiumProvenanceOf } from "./ability-enrichment.js";
 
 export default class DropHelper {
 
@@ -586,7 +587,11 @@ export default class DropHelper {
         const abilities = droppedItem.system.abilities;
 
         for (const obj in abilities) {
-            const abilityData = await this.ImportAbility(actor, abilities[obj]);
+            // The INCOMING line, not the actor's - `actorData.system.settings.splat` is not written
+            // until ~150 lines below (and `actor.update` later still), so `actor` here still reports
+            // its previous splat. See ImportAbility / findAbilityCompendiumMatch for why passing the
+            // stale one would either match nothing or stamp the wrong game line.
+            const abilityData = await this.ImportAbility(actor, abilities[obj], droppedItem.system.settings.id);
 
             if (abilityData === false) {
                 continue;
@@ -1194,7 +1199,14 @@ export default class DropHelper {
     }
 
 
-    static async ImportAbility(actor, ability) {
+    /**
+     * @param {Actor} actor
+     * @param {object} ability - the Ability entry off the dropped Splat item
+     * @param {string} [splat] - the line BEING INSTALLED (`droppedItem.system.settings.id`). Must be
+     *        passed by the splat-install path: the actor's own `system.settings.splat` is not
+     *        written until after every ability here has been built, so it is stale at this point.
+     */
+    static async ImportAbility(actor, ability, splat) {
         // If ability.uuid begins with Compendium, e.g., Compendium.worldofdarkness.lunarshapeshifting.Item.4wb0jZskSDXKmkWZ
         // search in the pack worldofdarkness.lunarshapeshifting for the full uuid
         // If ability.uuid begins with Item, it's in the world, so search game.items for the uuid or _id.
@@ -1276,6 +1288,50 @@ export default class DropHelper {
 
         if (!mergedData.system.type || mergedData.system.type === "" || mergedData.system.type === "wod.abilities.ability") {
             mergedData.system.type = "wod.abilities.talent";
+        }
+
+        // add-ability-descriptions-from-compendium §1: enrich at CREATION time.
+        //
+        // This is the path a character actually takes. Every branch above sources its text from
+        // somewhere that is not the wod20-compendium-es catalog - the system's own `worldofdarkness`
+        // packs, a world Item, or verbatim off the splat template - and none of them stamps entity
+        // provenance. Nothing downstream rescued that: `enrichActorAbilities` (migrations.js:36-39)
+        // skips any Ability that already has a description, which the branches above have just
+        // supplied, and `maybeEnrichAbilityOnRename` only fires on a later rename.
+        //
+        // `findAbilityCompendiumMatch` directly rather than `enrichAbilityItemData`, deliberately:
+        // that wrapper returns early when `system.description` is already set (ability-enrichment.js
+        // :137), which is the normal case here, so calling it would reproduce the same no-op.
+        //
+        // THE PROVENANCE FLAG IS THE LOAD-BEARING HALF. `compendium-description.js` resolves an
+        // item's description live by the (id, line, type) triple in these flags and `provenanceOf`
+        // returns null without them - so an Ability with text but no flags is invisible to the
+        // resolver forever and keeps whatever was copied onto it. Writing `system.description` too
+        // is what gives it an offline fallback consistent with what the resolver will serve.
+        //
+        // Overwriting the branch text is intended and safe HERE, and only here: this runs while a
+        // splat is being installed, before the item exists on the actor, so there is no player edit
+        // to clobber - the text being replaced is the system pack's or the template's, which is
+        // exactly the text this change exists to supersede. The read-time override
+        // (`flags.worldofdarkness.descriptionOverride`) still wins later, as always.
+        //
+        // Degrades to today's behaviour on every failure: no compendium module, no match, or a match
+        // with no description all leave `mergedData` exactly as the branches above built it.
+        try {
+            const match = await findAbilityCompendiumMatch(actor, mergedData, splat);
+
+            if (match?.system?.description) {
+                mergedData.system.description = match.system.description;
+                foundry.utils.mergeObject(mergedData, { flags: compendiumProvenanceOf(match) });
+            }
+            else {
+                console.warn(`WoD | Installing Splat | Ability "${mergedData.name}" not found in the wod20-compendium-es compendium for line "${splat ?? ""}"; keeping its own description and no provenance.`);
+            }
+        }
+        catch (err) {
+            // Enrichment is quality-of-life. A failure here must not abort the splat install, which
+            // is mid-flight and has already deleted the actor's old items.
+            console.error(`WoD | Installing Splat | Ability enrichment failed for "${mergedData.name}":`, err);
         }
 
         return mergedData;
