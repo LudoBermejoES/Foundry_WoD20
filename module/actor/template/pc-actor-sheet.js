@@ -1166,11 +1166,16 @@ export const prepareBioContext = async function (context, actor) {
  *  `trait-enrichment.js` and `compendium-description.js`. */
 const COMPENDIUM_MODULE = "wod20-compendium-es";
 
+/** The character generator's export namespace. Every trait `wod20-char` writes carries
+ *  `{ key, category }` here; `buildConnectionGroups` below already reads the same flags to match a
+ *  roster entry to its Background. */
+const WODCHAR_MODULE = "wod20-char";
+
 /**
  * add-wraith-shadow-budget §3.2 — is this item one of the Shadow's Thorns?
  *
- * TWO ways to be one, and the second is what makes the change work without a data migration or a
- * content-repo change:
+ * THREE ways to be one. The second and third are what make the change work without a data
+ * migration or a content-repo change:
  *
  *   1. `system.type === "wod.types.thorn"` — the sub-kind this change introduces. What the create
  *      button writes, and what a GM can retype an item to on its own Feature sheet.
@@ -1181,6 +1186,22 @@ const COMPENDIUM_MODULE = "wod20-compendium-es";
  *      `webgen/`, a different repo and a different owner, so the sheet reads what ships instead of
  *      waiting for it. A Thorn dragged straight from the compendium lands in the Shadow area with
  *      nothing written to it.
+ *   3. the CHARACTER GENERATOR's own flag, `flags["wod20-char"].category === "thorn"` — and this
+ *      is the one that every wraith in the live world actually holds. Measured 2026-08-02 against
+ *      the deployed v7.5.30 world: the only wraith PC (`G5sYPF5UzB5iJ6wF`, Rike Heinz) carries her
+ *      three Thorns as `type: "Feature"` / `system.type: "wod.types.othertraits"` stamped
+ *      `flags["wod20-char"]: { key: "thorn:susurros", category: "thorn", unresolved: true }` — the
+ *      compendium namespace is absent, so recognisers 1 and 2 both missed them and all three
+ *      rendered in Other Traits while the Shadow area's Thorns block sat empty. 3 held, 0 rendered:
+ *      exactly the document-versus-sheet count the requirement's own scenario forbids.
+ *
+ *      The cause is upstream and stays there. `wod20-char`'s `FEATURE_TYPE_BY_TRAIT_CATEGORY`
+ *      (`web/server/services/foundry/types.ts:592`) maps `passion` / `darkpassion` / `fetter` /
+ *      `connection` to sub-kinds and has no `thorn` entry, because `wod.types.thorn` did not exist
+ *      when it was written; so `buildNoteItem` falls back to `othertraits` and flags the trait
+ *      `unresolved`. Adding the entry there is a `wod20-char` change and would still only fix
+ *      characters re-exported afterwards. Reading the flag fixes every already-imported wraith at
+ *      once and keeps working if the entry is never added — the same read-side reasoning as (2).
  *
  * WHY NOT `wod.types.sliver`. That is Foundry's own Thorn sub-kind and it is a POWER type, for
  * which `ItemHelper.BuildPowerSections` declares no `slivers` section — so a "correctly" typed
@@ -1195,8 +1216,13 @@ export const isThornFeature = function (item) {
 	if (item?.type !== "Feature") return false;
 	if (item.system?.type === "wod.types.thorn") return true;
 
-	const flags = item.flags?.[COMPENDIUM_MODULE];
-	return (flags?.source_type === "thorn") && (flags?.line === "wraith");
+	const packFlags = item.flags?.[COMPENDIUM_MODULE];
+	if ((packFlags?.source_type === "thorn") && (packFlags?.line === "wraith")) return true;
+
+	// No `line` test on this one: `category` is the generator's own trait vocabulary and `thorn`
+	// belongs to no other splat. The Other Traits exclusion that consumes this predicate is
+	// wraith-gated anyway, so an off-splat item could never be hidden by it.
+	return item.flags?.[WODCHAR_MODULE]?.category === "thorn";
 }
 
 /**
