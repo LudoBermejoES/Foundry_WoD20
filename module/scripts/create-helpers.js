@@ -652,17 +652,20 @@ export default class CreateHelper {
 	}
 
 	/*
-	 * add-wraith-pc-splat §2.1 — two fixes here, both of which meant a hand-created wraith got nothing.
+	 * add-wraith-pc-splat §2.1 set four flags here. Three of them — `hascorpus`, `haspathos`, `hasangst` —
+	 * are gone: they only ever restated "this actor is a wraith", and the two things that cared now ask the
+	 * splat directly (the Corpus track in `prepareStatContext`) or never cared at all (Pathos and Angst are
+	 * plain `Advantage` items on the PC sheet). See `actor_settings.js` for the full reasoning.
 	 *
-	 * 1. `hascorpus` and `haspathos` were being set but were DECLARED NOWHERE — `actor_settings.js` had no
-	 *    such fields, so the assignments went into a strict DataModel that does not carry them. This change
-	 *    declares both (plus `hasangst` and `hasarcanoi`), so these two lines now actually persist.
-	 * 2. `settings.powers.hasarcanois` was wrong three ways: plural, nested under `settings.powers` (which
-	 *    holds only `defaultmaxvalue` and no capability flags at all), and not what anything reads —
-	 *    `ItemHelper.BuildPowerSections` checks the TOP-LEVEL `settings.hasarcanoi`. Corrected to the
-	 *    declared, singular, top-level name that matches the `wod.types.arcanoi` item sub-kind.
+	 * `hasarcanoi` stays, and stays here, but it is no longer the source of truth: `_prepareCharacterData`
+	 * derives it from the actor's Arcanoi items on every prepare, for `PC` actors. This assignment now only
+	 * matters to a legacy per-splat Actor document, which that derivation skips.
 	 *
-	 * `hasangst` is added because the Shadow's pool was simply missing from this setter.
+	 * Both functions are reachable only from `_preCreate`'s `data.type == sheettype.wraith` branch, i.e.
+	 * only for a legacy `Wraith` Actor document. This fork's actors are `type: "PC"` (the only Actor
+	 * subtype `system.json`'s `documentTypes` declares besides `Chantry`, and the only one with a
+	 * DataModel), so that branch never fires for them. That, not the flags, is why a hand-built wraith got
+	 * nothing.
 	 *
 	 * NOTE: the same undeclared-flag bug remains for OTHER lines and is deliberately not fixed here —
 	 * `hasrage`, `hasgnosis`, `hasglamour`, `hasbanality`, `hasfaith`, and every `settings.powers.has*`
@@ -673,10 +676,6 @@ export default class CreateHelper {
 	static async SetWraithAttributes(actor) {
 		console.log('WoD | Set Wraith Attributes');
 
-		actor.system.settings.hascorpus = true;
-		actor.system.settings.haspathos = true;
-		actor.system.settings.hasangst = true;
-
 		actor.system.settings.hasarcanoi = true;
 
 		return actor;
@@ -684,10 +683,6 @@ export default class CreateHelper {
 
 	static async SetWraithAttributesv2(updates, actor) {
 		console.log('WoD | Set Wraith Attributes');
-
-		updates["system.settings.hascorpus"] = true;
-		updates["system.settings.haspathos"] = true;
-		updates["system.settings.hasangst"] = true;
 
 		updates["system.settings.hasarcanoi"] = true;
 
@@ -2231,6 +2226,45 @@ export default class CreateHelper {
 					}
 				}
 			},
+			/*
+			 * Arcanoi, the wraith power axis. Container (`wod.types.arcanoi`) + powers
+			 * (`wod.types.arcanoipower`), two-level exactly like Disciplines / Arts / Lores / Edges, and
+			 * `CreateItemPower` has shipped both shapes since add-wraith-pc-splat.
+			 *
+			 * They were absent from THIS button set entirely, which is why Arcanoi could not be authored on
+			 * this fork's sheet. The Arcanoi buttons that do exist live in the LEGACY `CreateButtonsPower`,
+			 * called only by `mortal-actor-sheet.js` (the appv1 sheets, registered for the per-splat Actor
+			 * document types) and gated there on `actor.type == sheettype.wraith`, which is false for every
+			 * `PC` actor. The PC sheet never reaches that function: `action-helpers.js` routes it here and
+			 * only here. So repairing that copy's gate would have changed nothing on this sheet.
+			 *
+			 * Declared here with the other lines and REMOVED below for non-wraiths, which is the convention
+			 * this function already uses for `art`/`lore`/`rote` - not a parallel one.
+			 */
+			arcanoi: {
+				game: "wraith",
+				button: {
+					label: game.i18n.localize("wod.types.arcanoi"),
+					callback: async () => {
+						let itemData = await this.CreateItemPower("arcanoi", "wraith");
+
+						await this.CreateItem(actor, itemData);
+						return;
+					}
+				}
+			},
+			arcanoipower: {
+				game: "wraith",
+				button: {
+					label: game.i18n.localize("wod.types.arcanoipower"),
+					callback: async () => {
+						let itemData = await this.CreateItemPower("arcanoipower", "wraith");
+
+						await this.CreateItem(actor, itemData);
+						return;
+					}
+				}
+			},
 			shapeform: {
 				game: null, // "other"
 				button: {
@@ -2288,7 +2322,27 @@ export default class CreateHelper {
 			delete allButtons.lorepower;
 			delete allButtons.demonritual;
 		}
-		
+
+		/*
+		 * Arcanoi are wraith-only. THE GATE IS THE SPLAT, the same predicate `CreateButtonsNotev2` uses for
+		 * Passions / Dark Passions / Fetters, so the two wraith authoring routes can never disagree about
+		 * who is a wraith. `getSplat` resolves variantsheet -> splat -> game -> actor.type, so it covers a
+		 * wodchar wraith PC (`variantsheet: "wraith"`), a splat-item wraith (`splat`/`game`) and a legacy
+		 * `Wraith` document (`actor.type`) at once, and it refuses a vampire that happens to carry a
+		 * wraith-ish `has*` flag. Deliberately NOT `settings.hasarcanoi`: that flag is derived from the
+		 * Arcanoi items the actor already holds (`wod-actor-base.js`), so gating creation on it would mean
+		 * you can only add an Arcanos to an actor that already has one.
+		 *
+		 * `variant !== "shadow"` preserves the exclusion the legacy `CreateButtonsPower` has always made,
+		 * and it is right by the rules: Arcanoi belong to the Psyche. A `shadow` variant sheet is the
+		 * Shadow's half - it keeps its Dark Passions and its Angst and gets no Arcanoi. This narrows the
+		 * gate, it never widens it. A wodchar wraith exports `variant: "general"`, so imports are unaffected.
+		 */
+		if ((getSplat(actor) !== CONFIG.worldofdarkness.splat.wraith) || (actor.system.settings.variant === "shadow")) {
+			delete allButtons.arcanoi;
+			delete allButtons.arcanoipower;
+		}
+
 		// Gruppera buttons efter game
 		const categories = {};
 		const flatButtons = {};
@@ -2843,14 +2897,14 @@ export default class CreateHelper {
 		 * variantsheet -> splat -> game -> actor.type, so it covers BOTH shapes at once: a wodchar wraith
 		 * PC (`variantsheet: "wraith"`) and a legacy `Wraith` document (`actor.type`). Neither the
 		 * `actor.type == CONFIG.worldofdarkness.sheettype.wraith` test used by `CreateButtonsPower`'s
-		 * Arcanoi buttons (false for every `PC` actor, so those buttons are unreachable on this fork's
-		 * sheet - a separate bug, deliberately not fixed here) nor a bare `settings.splat` test (empty on
-		 * a legacy document) covers both.
+		 * Arcanoi buttons (false for every `PC` actor) nor a bare `settings.splat` test (empty on a legacy
+		 * document) covers both.
 		 *
-		 * `hascorpus` keeps its ONE meaning - "render the Corpus health track" (`prepareStatContext`) - and
-		 * is deliberately not written from here. A hand-built wraith therefore gets the three create
-		 * buttons but still no Corpus track until something sets that flag; that is the next gap, and it
-		 * is a display-flag problem, not an authoring one.
+		 * v7.5.28 finished the job: the same predicate now gates the Arcanoi buttons in
+		 * `CreateButtonsPowerv2` (the set this fork's sheet actually uses) and the Corpus health track in
+		 * `prepareStatContext`, and `settings.hascorpus` — which was only ever a cache of this very
+		 * question, filled by one producer outside Foundry — has been deleted along with `haspathos` and
+		 * `hasangst`. One predicate, asked in three places, with no flag in between to go unwritten.
 		 *
 		 * `level: 0`, not 1: these three are DOT-RATED (the Death tab shows `value`/`max` as dots and the
 		 * Features tab now reads `value` first), so a hard-coded 1 would be a placeholder point cost on a
@@ -3149,6 +3203,15 @@ export default class CreateHelper {
 			};
 		}
 
+		/*
+		 * NOT the Arcanoi buttons this fork's sheet uses, and not the place to fix them. `actor.type` is
+		 * `"PC"` for every actor the PC sheet serves, so this test is false for all of them - and the whole
+		 * function is unreachable from that sheet anyway: only `mortal-actor-sheet.js` calls
+		 * `CreateButtonsPower`, while `action-helpers.js` routes the PC sheet to `CreateButtonsPowerv2`.
+		 * The live Arcanoi buttons are the `game: "wraith"` pair in `CreateButtonsPowerv2`, gated on
+		 * `getSplat`. Left as-is: changing it would fix nothing on the PC sheet and could only affect a
+		 * legacy per-splat Actor document.
+		 */
 		if (actor.type == CONFIG.worldofdarkness.sheettype.wraith) {
 			if (actor.system.settings.variant != "shadow") {
 				buttons.arcanoi = {

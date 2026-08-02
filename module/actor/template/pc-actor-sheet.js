@@ -1249,8 +1249,25 @@ export const prepareStatContext = async function (context, actor) {
 		context.chimericalhealth = await calculateHealth(actor, CONFIG.worldofdarkness.sheettype.changeling);
 	}
 
-	// add-wraith-pc-splat §3.3 — the Corpus track. Gated on `hascorpus` rather than on the splat, so a
-	// non-wraith never pays for it.
+	// add-wraith-pc-splat §3.3 — the Corpus track.
+	//
+	// THE GATE IS THE SPLAT, and `settings.hascorpus` is gone. It used to read that flag, and the flag had
+	// no writer inside Foundry: `SetWraithAttributesv2` sets it only from `_preCreate`'s
+	// `data.type == sheettype.wraith` branch, which never fires for a `type: "PC"` actor;
+	// `DropHelper.DropSplatToActor` copies `splat`/`game`/`variant`/`variantsheet` off the splat item and
+	// touches no `has*` capability flag, and the system ships no Wraith splat item to drop. Its only real
+	// writer was the wodchar exporter — which computes it as `line === "wraith"` and nothing else. So the
+	// flag never carried a fact the splat did not already carry; it was a CACHE of the splat that only one
+	// producer ever filled, and a hand-built wraith got no Corpus because of it.
+	//
+	// The alternative was "write `hascorpus` at a point that genuinely means it". There is no such point:
+	// Corpus is not optional equipment a wraith may or may not take, it is what a wraith is made of, so any
+	// honest writer would itself have been a splat test. Asking the splat directly removes the cache
+	// instead of adding a fifth writer for it. `getSplat` is the system's own resolver
+	// (variantsheet -> splat -> game -> actor.type), so this covers a wodchar wraith PC, a splat-item
+	// wraith and a legacy `Wraith` document alike, and — unlike the old flag — it refuses a vampire that
+	// happens to arrive carrying `hascorpus: true`. Same predicate the Passion/Fetter and Arcanoi create
+	// buttons use, so the sheet and the authoring routes cannot disagree about who is a wraith.
 	//
 	// This is NOT a second set of health levels, and the rules are explicit about why: a wraith
 	// "pierde Corpus EN LUGAR DE niveles de Salud a razón de uno por uno"
@@ -1266,7 +1283,7 @@ export const prepareStatContext = async function (context, actor) {
 	// Pathos per turn (`:10635`).
 	context.corpushealth = undefined;
 
-	if (actor.system.settings.hascorpus) {
+	if (getSplat(actor) === CONFIG.worldofdarkness.splat.wraith) {
 		context.corpushealth = await calculateHealth(actor, CONFIG.worldofdarkness.sheettype.wraith);
 	}
 

@@ -434,6 +434,15 @@ export class WoDActor extends Actor {
             actorData.system.settings.hasrealms = false;
             actorData.system.settings.haslores = false;
             actorData.system.settings.hasedges = false;
+            // `hasarcanoi` joins its thirteen siblings here instead of being authored once at creation.
+            // It was set in exactly two places — `CreateHelper.SetWraithAttributes(v2)`, reachable only
+            // from `_preCreate` for the legacy `Wraith` Actor document type, and the wodchar exporter —
+            // so a hand-built wraith had it false forever and `ItemHelper.BuildPowerSections`, its only
+            // reader, hid the Arcanoi section no matter how many Arcanoi the actor held. Unlike
+            // `hascorpus`/`haspathos`/`hasangst` (deleted: they only ever restated the splat) this flag
+            // carries a fact the splat does not — "this actor holds Arcanoi items" — which is precisely
+            // what its reader needs, so it is derived rather than dropped.
+            actorData.system.settings.hasarcanoi = false;
 
             for (const power of allpowers) {
                 if (power.system.type === "wod.types.discipline" || power.system.type === "wod.types.disciplinepower") {
@@ -459,6 +468,9 @@ export class WoDActor extends Actor {
                 }
                 if (power.system.type === "wod.types.numina" || power.system.type === "wod.types.numinapower") {
                     actorData.system.settings.hasnuminas = true;
+                }
+                if (power.system.type === "wod.types.arcanoi" || power.system.type === "wod.types.arcanoipower") {
+                    actorData.system.settings.hasarcanoi = true;
                 }
                 if (power.type === "Sphere") {
                     actorData.system.settings.hasspheres = true;

@@ -22,15 +22,26 @@ export default class settings extends foundry.abstract.DataModel {
             hasquintessence: new fields.BooleanField({initial: false}),
             hasessence: new fields.BooleanField({initial: false}),
 
-            // add-wraith-pc-splat — the three wraith pools. Corpus is deliberately NOT a health track:
-            // it is repaired by Pathos (1 Pathos = 2 Corpus levels), which is why `template.json` gives it
-            // its own `health.damage.corpus` triple instead of reusing the mortal health levels. Angst is
-            // the SHADOW's pool and rises against the player, so the sheet renders it distinctly rather
-            // than as a second spendable resource beside Pathos. All three default off, like every flag
-            // here, so no existing actor of any other line changes behaviour.
-            hascorpus: new fields.BooleanField({initial: false}),
-            haspathos: new fields.BooleanField({initial: false}),
-            hasangst: new fields.BooleanField({initial: false}),
+            // add-wraith-pc-splat declared `hascorpus`, `haspathos` and `hasangst` here. All three are
+            // GONE, and nothing replaced them:
+            //
+            //   * `haspathos` and `hasangst` were read by NOTHING, in this repo, ever — verified by an
+            //     unbounded search of the whole system. They could not acquire a reader either: on the PC
+            //     sheet Pathos and Angst are ordinary `Advantage` items, rendered by the generic advantage
+            //     machinery in `prepareStatContext` (`context.advantages` / `context.groupedadvantages`),
+            //     which asks no capability flag of any pool. A declared flag no view consults is a promise
+            //     the schema makes and the sheet ignores, and it is exactly what let `hascorpus` pass for a
+            //     working gate for months.
+            //   * `hascorpus` had one reader, the Corpus health track in `prepareStatContext`, and that now
+            //     asks `getSplat(actor) === CONFIG.worldofdarkness.splat.wraith` instead. The flag never
+            //     held a fact the splat did not: its only real writer, the wodchar exporter, computed it as
+            //     `line === "wraith"`, and nothing inside Foundry wrote it onto a `PC` actor at all.
+            //
+            // The wraith flag that SURVIVES is `hasarcanoi`, below, because it is the one that means
+            // something the splat does not — and it is now derived from the actor's items rather than
+            // authored once. Note for anyone re-adding one of these: the wodchar exporter still sends all
+            // four keys. Three of them are now silently dropped by this DataModel, which is harmless
+            // because nothing reads them; the exporter is the place to stop sending them, not here.
 
             hasdisciplines: new fields.BooleanField({initial: false}),
             hascombinationdisciplines: new fields.BooleanField({initial: false}),
@@ -51,6 +62,10 @@ export default class settings extends foundry.abstract.DataModel {
             // container (`wod.types.arcanoi`) holding powers (`wod.types.arcanoipower`). Both i18n keys
             // already exist, as does `wod.power.unsortedarcanois`, which is strong evidence this was the
             // original intent.
+            //
+            // DERIVED, not authored: `_prepareCharacterData` recomputes it from the actor's items on every
+            // prepare, next to `hasdisciplines`/`hasgifts`/`hasspheres` and the ten others. A stored value
+            // is still accepted (imports send one) but is overwritten before anything reads it.
             hasarcanoi: new fields.BooleanField({initial: false}),
 
             version: new fields.StringField({...valueString}),
