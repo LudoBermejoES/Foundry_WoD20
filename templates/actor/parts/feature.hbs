@@ -92,13 +92,34 @@
 
             Fetters carry their description through `feature_item.hbs`'s existing description carrier
             (§3.8): a Fetter is an object, a place or a person, and its rating alone does not say which.
+
+            All three pass `valuefallback=item.system.value`, and they are the ONLY callers of
+            `feature_item.hbs` that do. These three sub-kinds are dot-rated traits, not point-costed
+            merits: the exporter writes the rating into `system.value` and hard-codes
+            `system.level: '0'`, and the partial's value box reads `system.level` alone by default,
+            where `pointValue` maps "0" to nothing - so every row rendered `name | type | <blank>`.
+            The opt-in adds `system.value` as the SECOND candidate, after `level`, so a hand-authored
+            Passion that does carry a level still wins with it. The fallback is scoped to these three
+            blocks rather than applied inside the partial because `system.value` is not a point cost
+            for the nine other sub-kinds that share it - see feature_item.hbs for that reasoning.
+
+            Deliberately NOT switched to `stats_feature_row.hbs` (the dotted Advantages row on the
+            Attributes tab) even though it reads `system.value` already: it is a different row shape
+            for a different container. It carries no `list_icons.hbs` column, so a GM would lose
+            send-to-chat, edit and DELETE on every Passion and Fetter; no `dragrow` handle, so the
+            rows would stop reordering; no `showtype` column, so Passion / Dark Passion / Fetter
+            would become indistinguishable once rendered; and its dot row is EDITABLE
+            (SetupDotCounters_v2 / OnDotCounterChange write back to system.value), which this tab
+            does not otherwise offer. It also needs `config.sheettype.mortal` for the dot type, which
+            is not in scope inside these `{{#each}}` blocks. A number in the existing value box is
+            the smaller, in-shape fix; the dots already exist on the Death tab.
         --}}
         {{#if (gt passions.length 0)}}
             <div class="feature-itemlistarea">
 
                 {{#each passions as |item id|}}
 
-                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.passion" deletetitle="wod.labels.remove.passion" showtype=true}}
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.passion" deletetitle="wod.labels.remove.passion" showtype=true valuefallback=item.system.value}}
 
                 {{/each}}
 
@@ -110,7 +131,7 @@
 
                 {{#each darkpassions as |item id|}}
 
-                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.darkpassion" deletetitle="wod.labels.remove.darkpassion" showtype=true}}
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.darkpassion" deletetitle="wod.labels.remove.darkpassion" showtype=true valuefallback=item.system.value}}
 
                 {{/each}}
 
@@ -122,7 +143,7 @@
 
                 {{#each fetters as |item id|}}
 
-                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.fetter" deletetitle="wod.labels.remove.fetter" showtype=true}}
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.fetter" deletetitle="wod.labels.remove.fetter" showtype=true valuefallback=item.system.value}}
 
                 {{/each}}
 

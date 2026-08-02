@@ -49,9 +49,25 @@
             <div class="width-valuebox">
                 {{!-- pointValue, not gt: a merit/flaw's point value can be the book's own
                       "1 a 5" / "1 o 3" / "1/2/3/4/5", which gt coerces to NaN and hides.
-                      Level only here - no system.value fallback, deliberately. --}}
-                {{#if (pointValue item.system.level)}}
-                    {{pointValue item.system.level}}
+
+                      `system.level` FIRST and by default, and `system.value` is NOT read unless the
+                      caller opts in with `valuefallback=item.system.value` - deliberately, and this
+                      is not the same choice `stats_feature_row.hbs` makes. This partial is shared by
+                      twelve blocks across three tabs (merits, flaws, backgrounds, bloodbound, boons,
+                      oaths, connections, headlines, other traits, apocalyptic forms, ...) and for
+                      several of them `system.value` is not a point cost at all, so a blanket
+                      fallback here would start printing a number in a cost column that never had
+                      one. An opt-in keeps the blast radius at exactly the callers that ask.
+
+                      The wraith Passion / Dark Passion / Fetter blocks (feature.hbs) are the callers
+                      that ask: those three sub-kinds are DOT-RATED traits, not point-costed ones -
+                      the exporter writes the rating into `system.value` and hard-codes
+                      `level: '0'`, and `pointValue` maps "0" to nothing, which is why the column was
+                      blank for every row on the only wraith PC in production. The Death tab renders
+                      the same items' `system.value`/`system.max` as filled dots, so the DATA was
+                      never the problem - this column was. --}}
+                {{#if (pointValue item.system.level valuefallback)}}
+                    {{pointValue item.system.level valuefallback}}
                 {{else}}
                     &nbsp;
                 {{/if}}
