@@ -1,4 +1,5 @@
 import { calculateTotals } from "../../scripts/totals.js";
+import AbilityHelper from "../../scripts/ability-helpers.js";
 
 /**
  * Extend the basic Item with some very simple modifications.
@@ -30,7 +31,7 @@ export class WoDItem extends Item {
 
 				if (data.type === "Ability") {
 					if (!data.system.id || data.system.id === "") {
-						updates["system.id"] = (data.name || "").toLowerCase().replace(/\s+/g, '');
+						updates["system.id"] = AbilityHelper.GetAbilityId(data.name);
 					}
 					if (!data.system.type || data.system.type === "") {
 						updates["system.type"] = "wod.abilities.ability";
@@ -39,6 +40,35 @@ export class WoDItem extends Item {
 				
 				if ((data.type === "Advantage") && (options?.parent !== null) && (options?.parent !== undefined)) {
 					updates["system.settings.order"] = options.parent.items.filter(i => i.type === "Advantage").length;
+				}
+
+				// A SECONDARY ability is a Trait item, not an Ability item, so the
+				// Ability branch above never reaches one. Mirror its system.id half
+				// here: without the key a secondary can only be recognised by
+				// re-slugifying its name, which stops working the moment the name is
+				// localised ("Hipertecnologia" does not slugify back to "hypertech").
+				// Trait has no DataModel (see the CONFIG.Item.dataModels list in
+				// wod.js) and template.json declares no `id` on Item.Trait nor on any
+				// of its three merged templates, so system is free-form there and the
+				// added key persists with no schema change.
+				//
+				// Two deliberate differences from the Ability branch:
+				//  - the derivation is GetSecondAbilityId, which mirrors the consumer's
+				//    slug rule (diacritics stripped, snake_case). The Ability rule is a
+				//    different, older spelling that live data depends on; see the two
+				//    functions' comments.
+				//  - the system.type half is not mirrored, because system.type is
+				//    exactly what identifies the item as a secondary in the first place.
+				//
+				// This can only ever stamp the name the item was CREATED with, which for
+				// the sheet's "+" button is the placeholder -- _preUpdate below is what
+				// settles the real key.
+				if ((data.type === "Trait") && (AbilityHelper.IsSecondAbilityType(data.system?.type))) {
+					if (!data.system.id || data.system.id === "") {
+						updates["system.id"] = AbilityHelper.GetSecondAbilityId(
+							AbilityHelper.GetSecondAbilityLabel(data)
+						);
+					}
 				}
 
 				if (data.type === "Trait" && data.system?.type === "wod.types.shapeform") {
@@ -87,6 +117,52 @@ export class WoDItem extends Item {
 			if (updateData.type === "Power") {
 				updateData = await this._handlePowerCalculations(updateData);
 			} 			
+
+			// Settle a SECONDARY ability's key on update.
+			//
+			// _preCreate can only stamp the name the item was created WITH, and the
+			// sheet's "+" button creates one named with the placeholder ("New secondary
+			// ability") and then opens the rename dialog. A create-only stamp would
+			// therefore freeze the placeholder's slug forever -- worse than no key at
+			// all, because the wod20-char importer prefers a carried key over the item's
+			// name (`slug = carriedId || slugify(name)`).
+			//
+			// The rule is MONOTONE: fill the key only when there is nothing real to
+			// lose (absent, empty, or still the placeholder's slug) and never overwrite
+			// a real one, because changing a live key would orphan that ability's data
+			// on the app side. Note this reads `this`, not updateData: an update diff
+			// carries neither `type` nor `system.type`.
+			//
+			// Consequence, and it is the point of doing it here: a secondary that is
+			// already live and has no key -- the two "Arte" Traits on the server were
+			// created long before any of this existed -- picks the key up on its next
+			// ordinary update, with no hand migration.
+			if ((this.type === "Trait") && (AbilityHelper.IsSecondAbilityType(this.system?.type))) {
+				const currentid = this.system?.id;
+
+				if (AbilityHelper.IsFillableSecondAbilityId(currentid)) {
+					const newid = AbilityHelper.GetSecondAbilityId(
+						AbilityHelper.GetSecondAbilityLabel(this, updateData)
+					);
+
+					if ((newid !== "") && (newid !== currentid)) {
+						// Write the key in the SAME shape the caller submitted. The actor
+						// sheets all send a fully nested duplicate of the item, but the
+						// Trait ITEM sheet submits FormDataExtended's flat "system.*" keys
+						// -- and that is the one path where a rename actually changes
+						// item.name, so it is the path that matters most here. Dropping a
+						// nested `system` object into a flat payload would leave the update
+						// carrying both spellings of the same branch, and which one wins
+						// expansion is not something to bet a live key on.
+						if (Object.keys(updateData).some(k => k.startsWith("system."))) {
+							updateData["system.id"] = newid;
+						}
+						else {
+							updateData.system.id = newid;
+						}
+					}
+				}
+			}
 		}
 		catch (err) {
 			ui.notifications.error(`Cannot update Item ${updateData.name}. Please check console for details.`);

@@ -190,6 +190,19 @@ jobs:
       - name: Prove the cross-repo deploy lock excludes, expires and degrades
         run: bash .github/scripts/test-deploy-lock.sh
 
+      # The FIRST gate in this repo on MODULE LOGIC rather than on deploy
+      # plumbing. Everything above validates the manifest, the tree and the
+      # deploy scripts; a logic bug in a sheet still shipped to every actor on
+      # the server. This one copies `module/` to a temp dir, stubs the Foundry
+      # globals and EXECUTES the real `_preCreate`/`_preUpdate`/`AbilityHelper`
+      # against them, so it can catch what a syntax check cannot: a key derived
+      # by the wrong rule, or overwritten when it should have been preserved.
+      # A wrong `system.id` is worse than none — the wod20-char importer prefers
+      # a carried key over the item's name — so this is the gate that keeps that
+      # from reaching a live sheet. Offline, no Foundry, ~1s.
+      - name: Prove secondary-ability keys are derived and never clobbered
+        run: node .github/scripts/test-secondability-id.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server
