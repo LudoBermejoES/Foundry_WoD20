@@ -1067,6 +1067,38 @@ export const getPowertype = function (actor) {
 }
 
 /**
+ * The bio splatfield set the system DECLARES for this actor's splat, or `null` when it declares none.
+ *
+ * `assets/data/sheet/biotab.js` -> `templates.SetupBioTab()` -> `CONFIG.worldofdarkness.sheetv2.bio`,
+ * keyed `[era][splat]` with `modern` as the fallback era, exactly as `DropHelper.PopulateBio`
+ * (`drop-helpers.js:1391-1397`) reads it. Factored out of `applyDeclaredSplatfieldTypes` so that the
+ * backfill below asks the same question of the same authority; the lookup was duplicated nowhere else
+ * and is duplicated nowhere now.
+ *
+ * `mortal` declares `{}`, and `changeling`/`hunter` are not declared at all — for those this returns
+ * an empty map or `null` and every consumer is a no-op. That is the correct behaviour, not a gap to
+ * paper over: their fields exist only in the pack Splat Items.
+ *
+ * The returned object is the LIVE declaration — `SetupBioTab` returns `databiotab` itself, not a
+ * clone, so `CONFIG` holds references into that module. Never hand one of these field objects to the
+ * render context: copy it. The enrichment pass in `prepareBioContext` writes `enriched` onto whatever
+ * it is given, and a `mod` is written onto generation fields elsewhere, so leaking a declaration
+ * object into the context would mutate the seed for every actor opened afterwards.
+ *
+ * @param {Actor} actor
+ * @returns {Record<string, object>|null}
+ */
+const getDeclaredSplatfields = function (actor) {
+	const bio = CONFIG?.worldofdarkness?.sheetv2?.bio;
+	if (!bio) return null;
+
+	const splat = getSplat(actor);
+	const era = actor?.system?.settings?.era ?? "";
+
+	return bio[era]?.[splat] ?? bio.modern?.[splat] ?? null;
+}
+
+/**
  * add-wraith-shadow-budget §3.1/§3.4 — reconcile a stored bio splatfield with the field type the
  * system DECLARES for it, in the one direction that is always safe.
  *
@@ -1098,12 +1130,7 @@ export const getPowertype = function (actor) {
  */
 export const applyDeclaredSplatfieldTypes = function (actor, splatfields) {
 	const fields = splatfields ?? {};
-	const bio = CONFIG?.worldofdarkness?.sheetv2?.bio;
-	if (!bio) return fields;
-
-	const splat = getSplat(actor);
-	const era = actor?.system?.settings?.era ?? "";
-	const declared = bio[era]?.[splat] ?? bio.modern?.[splat];
+	const declared = getDeclaredSplatfields(actor);
 	if (!declared) return fields;
 
 	const result = {};
@@ -1122,6 +1149,161 @@ export const applyDeclaredSplatfieldTypes = function (actor, splatfields) {
 	return result;
 }
 
+/**
+ * The only `type`s the Bio tab can actually draw. `bio_splatfields.hbs` has a branch for `input` and
+ * one for `select` and no `else`; `bio_splatboxes.hbs` draws `textbox` and nothing else. A field of
+ * any other type renders on no part of the sheet, so the backfill below refuses to add one rather
+ * than adding something invisible and calling the gap closed.
+ */
+const RENDERABLE_SPLATFIELD_TYPES = new Set(["input", "select", "textbox"]);
+
+/**
+ * Does this `listdata` name resolve to a list with at least one REAL option?
+ *
+ * This is the guard that makes the backfill safe to point at a declared `select`. A `select` whose
+ * `listdata` does not resolve paints an EMPTY dropdown with no free-text input to escape through
+ * (`bio_splatfields.hbs:26` — `{{selectOptions (lookup ../listData field.listdata) ...}}`), which is
+ * strictly WORSE than the absent field it would be replacing: the absent field at least cannot lie
+ * about being editable. `hunter` is the live example of the failure mode — its two picks' lists are
+ * built behind `data.system.settings.splat === splat.hunter` (`select-helpers.js:1033`), which a
+ * wodchar hunter never satisfies because it exports as a V20 `mortal`.
+ *
+ * So the rule is not a list of trusted keys, which would rot the moment a splat gains a field: ask
+ * the list itself, at render time, for the actor being rendered. Both list shapes are accepted
+ * because both ship — v1 lists are option MAPS (`{value: label}`), v2 lists are ARRAYS of
+ * `{value, label}` — and in both the leading "- select -" placeholder is keyed by the empty string,
+ * so a list that contains only the placeholder counts as empty. That is deliberate: a dropdown whose
+ * only entry is "choose one" is the same dead end as an empty one.
+ *
+ * @param {object} listData    the map `SelectHelper.SetupItem` built for this actor
+ * @param {string} listname    the declaration's `listdata` key
+ * @returns {boolean}
+ */
+const declaredListHasOptions = function (listData, listname) {
+	if (!listname) return false;
+
+	const list = listData?.[listname];
+	if (!list) return false;
+
+	if (Array.isArray(list)) {
+		return list.some((option) => ((option?.value ?? "") !== ""));
+	}
+
+	if (typeof list === "object") {
+		return Object.keys(list).some((key) => (key !== ""));
+	}
+
+	return false;
+}
+
+/**
+ * align-splatfields-declaration-seam §D3 route B — supply a declared bio field the actor never
+ * stored, at RENDER time, so that a splat's identity reaches its sheet however the actor was created.
+ *
+ * WHY THE SHIM ABOVE CANNOT DO THIS. `applyDeclaredSplatfieldTypes` walks the STORED map, so it can
+ * promote a field the actor has and can never add one it lacks. `prepareBioContext` takes the field
+ * SET from stored data too. Between them, a field the writer omitted is permanently invisible and
+ * correcting the declaration does not reach it. Measured read-only against the live world on
+ * 2026-08-03: six werewolves have no `bio.splatfields` key at all — their Breed and Auspice survive
+ * only as prose in `bio.concept` — and five of six vampires carry `generation` alone, without
+ * `sect`/`clan`/`bloodline`/`weakness`/`sire`. Of 89 actors not one has ever received a Splat drop,
+ * which is the population the declaration was written for, so "a drop will seed it" is not a writer
+ * that exists here.
+ *
+ * THIS IS RENDER, NOT MIGRATION. Nothing is written to any actor: the return value is a fresh map of
+ * fresh field objects for this one render pass. There is nothing to revert, and an actor whose fields
+ * a future export or drop DOES write is unaffected, because a stored field always wins:
+ *
+ *   - a key already in `fields` (i.e. stored AND `isvisible === true`, already promoted) is left
+ *     exactly as it is, in its existing position — so an actor whose six fields were populated by
+ *     hand renders byte-identically, with no duplicate row and no reordering. Backfilled keys are
+ *     appended after the stored ones, never interleaved.
+ *   - a stored `isvisible === false` is a GM's deliberate hide (the eye in the Settings tab writes
+ *     that boolean and only that boolean, `OnActorSwitch` refuses a non-boolean) and is respected:
+ *     the field stays hidden.
+ *   - a stored value is carried onto the backfilled field and the declaration's default never
+ *     overwrites it.
+ *
+ * THE PARTIAL-WRITE CASE IS WHY THE STORED MAP IS PASSED IN WHOLE rather than just the visible one,
+ * and it is not an edge case — it is what happens the FIRST time anyone edits a backfilled field.
+ * `onSubmitActorForm` writes a changed `INPUT` through `foundry.utils.setProperty(actorData,
+ * "system.bio.splatfields.<key>.value", …)`, which creates the intermediate object, so the actor
+ * gains `{value: "Brujah"}` — a field with no `label`, no `type` and no `isvisible`. A `SELECT`
+ * change goes through `_prepareSubmitData` and writes the whole form, so it does that for every
+ * rendered bio field at once. Such a field fails the strict `isvisible === true` filter, so without
+ * healing it the row would VANISH taking the just-typed value with it. Here it is completed from the
+ * declaration and rendered, value first: type a Clan, it stays a Clan.
+ *
+ * TWO THINGS IT DELIBERATELY DOES NOT DO. It will not add a field whose type no template draws, and
+ * it will not add a `select` whose option list does not resolve for this actor — see
+ * `declaredListHasOptions`. Both refusals are silent by design: the correct answer to "this field
+ * cannot be drawn usefully" is the status quo, not a dead control.
+ *
+ * @param {Actor} actor
+ * @param {Record<string, object>} stored      `actor.system.bio.splatfields`, unfiltered
+ * @param {Record<string, object>} splatfields the render map built so far (filtered + promoted)
+ * @param {object} listData                    `context.listData`, needed for the `select` check
+ * @returns {Record<string, object>} the render map, with drawable declared fields appended
+ */
+export const backfillDeclaredSplatfields = function (actor, stored, splatfields, listData) {
+	const fields = splatfields ?? {};
+	const declared = getDeclaredSplatfields(actor);
+	if (!declared) return fields;
+
+	const storedFields = stored ?? {};
+	const added = {};
+
+	for (const [key, decl] of Object.entries(declared)) {
+		if (!decl || (typeof decl !== "object")) continue;
+
+		// already on the sheet: the stored copy wins, untouched and in place
+		if (Object.prototype.hasOwnProperty.call(fields, key)) continue;
+
+		const storedField = storedFields[key];
+
+		// a GM switched the eye off — that is an answer, not an omission
+		if (storedField?.isvisible === false) continue;
+
+		// the declaration is the base; every property the actor actually stored overrides it
+		const field = { ...decl };
+
+		if (storedField && (typeof storedField === "object")) {
+			for (const [property, value] of Object.entries(storedField)) {
+				if (value !== undefined) field[property] = value;
+			}
+		}
+
+		// the same ONE-WAY reconciliation `applyDeclaredSplatfieldTypes` performs, and for the same
+		// reason: a declared pick may be promoted to, never demoted from. A demotion would push a
+		// non-string value through `{{localize field.value}}`, whose `key.split(...)` throws and takes
+		// the whole sheet down (measured on a numeric `generation`, 2026-07-28).
+		if (decl.type === "select") {
+			field.type = "select";
+			if (!field.listdata) field.listdata = decl.listdata ?? "";
+		}
+
+		if (!field.label) field.label = decl.label ?? "";
+
+		if (!RENDERABLE_SPLATFIELD_TYPES.has(field.type)) continue;
+		if ((field.type === "select") && !declaredListHasOptions(listData, field.listdata)) continue;
+
+		// belt and braces for the crash above: the `input` and `textbox` branches DO localize the
+		// value, so anything this function emits down those branches is a string. Only the copy is
+		// coerced; no actor is touched.
+		if ((field.type !== "select") && (typeof field.value !== "string")) {
+			field.value = (field.value ?? "").toString();
+		}
+
+		// the Bio tab's visibility predicate is strict `=== true`, so a field added without this is
+		// added invisibly — present in the context and drawn nowhere
+		field.isvisible = true;
+
+		added[key] = field;
+	}
+
+	return { ...fields, ...added };
+}
+
 export const prepareBioContext = async function (context, actor) {
   	context.tab = context.tabs.bio;
 
@@ -1131,6 +1313,19 @@ export const prepareBioContext = async function (context, actor) {
 	context.enrichedAppearance = await foundry.applications.ux.TextEditor.implementation.enrichHTML(actor.system.bio.appearance, {async: true});
 	context.enrichedBackground = await foundry.applications.ux.TextEditor.implementation.enrichHTML(actor.system.bio.background, {async: true});
 	context.enrichedRoleplaytip = await foundry.applications.ux.TextEditor.implementation.enrichHTML(actor.system.bio.roleplaytip, {async: true});
+
+	// Get listData for bio select fields - same pattern as legacy templates (bio_mage_background.html)
+	// Pass actor directly to SetupItem so functions that need actor data (custom handling) work correctly
+	//
+	// align-splatfields-declaration-seam §D3 — this MOVED above the splatfields block, and the order is
+	// now load-bearing rather than incidental: `backfillDeclaredSplatfields` refuses to add a declared
+	// `select` whose option list does not resolve, and it can only ask that question once `listData`
+	// exists. `SelectHelper.SetupItem` reads the actor only, never the splatfield context, so nothing
+	// depends on the old order.
+	const splat = getSplat(actor);
+	//const actorData = { type: CONFIG.worldofdarkness.sheettype[splat] || splat, system: actor.system };
+	//context.listData = SelectHelper.SetupItem(actorData, true);
+	context.listData = SelectHelper.SetupItem(actor, true);
 
 	//context.splatfields = actor.system.bio.splatfields.filter(([_, field]) => field?.isvisible !== false);
 	const allSplatfields = actor.system.bio.splatfields ?? {};
@@ -1143,6 +1338,11 @@ export const prepareBioContext = async function (context, actor) {
 	// and why it only ever promotes.
 	context.splatfields = applyDeclaredSplatfieldTypes(actor, context.splatfields);
 
+	// align-splatfields-declaration-seam §D3 route B — and it supplies a declared field the actor
+	// never stored, which is the one thing the promotion above structurally cannot do. Runs BEFORE the
+	// enrichment pass below so that a backfilled `textbox` gets its `enriched` like any other.
+	context.splatfields = backfillDeclaredSplatfields(actor, allSplatfields, context.splatfields, context.listData);
+
 	// Enrich textbox splatfields for bio_splatboxes.hbs
 	if (context.splatfields) {
 		for (const [key, field] of Object.entries(context.splatfields)) {
@@ -1151,13 +1351,6 @@ export const prepareBioContext = async function (context, actor) {
 			}
 		}
 	}
-
-	// Get listData for bio select fields - same pattern as legacy templates (bio_mage_background.html)
-	// Pass actor directly to SetupItem so functions that need actor data (custom handling) work correctly
-	const splat = getSplat(actor);
-	//const actorData = { type: CONFIG.worldofdarkness.sheettype[splat] || splat, system: actor.system };
-	//context.listData = SelectHelper.SetupItem(actorData, true);
-	context.listData = SelectHelper.SetupItem(actor, true);
 
   	return context;
 }
