@@ -203,6 +203,26 @@ jobs:
       - name: Prove secondary-ability keys are derived and never clobbered
         run: node .github/scripts/test-secondability-id.mjs
 
+      # Sibling of the harness above, same mechanism, different question: WHICH
+      # DOCUMENT SHAPES does the description-enrichment path accept? The filter it
+      # guards is a one-liner that is wrong in BOTH directions, so this pins both:
+      #   - too narrow (`d.type === "Ability"`) and the 25 secondary-ability
+      #     documents stop resolving the moment
+      #     make-secondary-abilities-secondary-everywhere B1 retypes them to
+      #     `Trait` — presenting as a BLANK DESCRIPTION WINDOW plus a console
+      #     warning, which this project's notes record as a false-alarm generator
+      #     ("a blank description reads as a missing translation");
+      #   - too wide (any `Trait`) and the 104 non-ability Trait documents the
+      #     packs ship — 87 maneuvers, 17 mage resonances, and `mage-resonance`
+      #     IS searched for a mage — enter name-matching against every mage's
+      #     abilities, which is the cross-contamination shape that once overwrote
+      #     89 live actors with another game line's rules.
+      # It also runs the four (item shape x document shape) combinations, so the
+      # gate fails if this fork ever depends on the content packs having been
+      # deployed first. Offline, no Foundry, no compendium, ~1s.
+      - name: Prove ability enrichment accepts retyped secondaries and nothing more
+        run: node .github/scripts/test-ability-enrichment-types.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server

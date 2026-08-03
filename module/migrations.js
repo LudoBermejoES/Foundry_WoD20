@@ -11,7 +11,7 @@
  * `game.ready()`.
  */
 
-import { findAbilityCompendiumMatch, compendiumProvenanceOf } from "./scripts/ability-enrichment.js";
+import { findAbilityCompendiumMatch, compendiumProvenanceOf, isEnrichableAbility } from "./scripts/ability-enrichment.js";
 import { resyncActorTraits } from "./scripts/stale-description-refresh.js";
 
 const FLAG_SCOPE = "worldofdarkness";
@@ -30,7 +30,15 @@ const FLAG_KEY = "abilitiesEnriched";
 export async function enrichActorAbilities(actor) {
 	const stats = { enriched: 0, skipped: 0, notFound: 0 };
 
-	const abilityItems = actor.items.filter(i => i.type === "Ability");
+	// `isEnrichableAbility`, so secondary-ability `Trait`s are backfilled too (ability-enrichment.js
+	// documents why the two shapes are one question). NOTE THE BLAST RADIUS OF THIS WIDENING IS NEAR
+	// ZERO ON THE CURRENT WORLD, deliberately: `enrichAllActorsAbilities` skips any actor already
+	// carrying `flags.worldofdarkness.abilitiesEnriched`, and FLAG_KEY is NOT bumped by this change.
+	// So widening the filter does not walk the live world's already-flagged actors - it covers new
+	// and unflagged actors, while a live secondary picks its description up through
+	// `maybeEnrichAbilityOnRename` on its next ordinary edit. Bumping FLAG_KEY would turn a system
+	// deploy into a mass write over ~88 production actors and is a separate, owner-level decision.
+	const abilityItems = actor.items.filter(isEnrichableAbility);
 
 	for (const abilityItem of abilityItems) {
 		if (abilityItem.system.description) {

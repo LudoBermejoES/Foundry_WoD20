@@ -26,10 +26,93 @@
  * `system.description` empty, and nothing here ever throws past its own boundary.
  */
 
+import AbilityHelper from "./ability-helpers.js";
+
 const MODULE_ID = "wod20-compendium-es";
 
 /**
- * `pack.collection` -> that pack's `Ability` documents, memoized for the session.
+ * IS THIS AN ABILITY, FOR ENRICHMENT PURPOSES? The ONE definition, applied to BOTH SIDES of the
+ * match - the compendium document and the actor's own item - because they are the same question and
+ * a second copy would be two predicates to keep in agreement forever.
+ *
+ * A secondary ability is a `Trait` whose `system.type` ends in `secondability`
+ * (`AbilityHelper.IsSecondAbilityType`, the single definition of that, reused here rather than
+ * re-spelled). It is an ability in every sense this module cares about: it has a rating, it lives in
+ * the ability block of the sheet, and the compendium ships a ratings table for it - it simply is not
+ * the `Ability` document type.
+ *
+ * WHY BOTH SIDES, AND WHY THIS WAS A BUG IN TWO DIRECTIONS.
+ *
+ *  - THE DOCUMENT SIDE was `d.type === "Ability"` in `abilityDocsOf` below. `wod20-compendium-es`
+ *    ships its 25 secondary-ability documents in `shared-secondary-ability`, and
+ *    `openspec/changes/make-secondary-abilities-secondary-everywhere` Decision B1 retypes them to
+ *    `Trait` / `wod.types.*secondability`. `candidateAbilityPacks` selects that pack BY NAME, so the
+ *    pack goes on being searched either way (verified: the literal `"shared-secondary-ability"` at
+ *    :95 is untouched by this change) - it is the DOCUMENTS that would stop fitting the filter, and
+ *    every caller would degrade to "no match": an empty description window plus a console warning.
+ *  - THE ITEM SIDE was `type !== "Ability"` in `enrichAbilityItemData`, `maybeEnrichAbilityOnRename`
+ *    and `migrations.js:enrichActorAbilities`. An actor's secondary ability has ALWAYS been a
+ *    `Trait` (`AbilityHelper.CreateAbility` builds one for every `*secondability` type), so those
+ *    three gates have never once let a secondary through. The compendium's 25 documents could only
+ *    ever be reached by an item that was mis-shaped as a primary `Ability` - the population
+ *    `make-secondary-abilities-secondary-everywhere` M2 measures at 17 items across 14 actors.
+ *
+ * So the same predicate on both sides is what makes this DEPLOY-ORDER INDEPENDENT, which is the
+ * property that actually matters: this system fork and the content packs deploy separately and in
+ * either order (see `trait-enrichment.js`'s header). All four combinations now resolve to the same
+ * document - `Ability` item/`Ability` doc (today's working path, 183 primaries), `Ability`
+ * item/`Trait` doc (post-B1, the regression this closes), `Trait` item/`Ability` doc (pre-B1, which
+ * never worked and now does), `Trait` item/`Trait` doc (post-B1) - so neither repo can be deployed
+ * "too early".
+ *
+ * NOT SIMPLY "DROP THE TYPE FILTER", and this is the part that has to stay narrow.
+ * `candidateAbilityPacks` returns EVERY pack prefixed with the actor's line - armor, equipment,
+ * instruments, derangements, resonance, the lot - because the pack holding a given ability is not
+ * derivable from its name. The type filter is the only thing keeping that blast radius closed.
+ * Measured over `wod20-compendium-es/src`: the packs hold 104 `Trait` documents, 87
+ * `wod.types.maneuver` in `shared-maneuvers` and 17 `wod.types.resonance` in `mage-resonance` - and
+ * `mage-resonance` IS searched for a mage. An unqualified `type === "Trait"` would put all 17
+ * resonances ("Devoto", "Estatico", "Dinamico", ...) into name-matching against every mage's
+ * abilities, which is the shape of the V2 cross-contamination disaster
+ * `compendium-description.js` records. The `secondability` qualifier excludes all 104.
+ *
+ * @param {Item|object} doc - a document, an embedded item, or a plain creation payload
+ * @returns {boolean}
+ */
+export function isEnrichableAbility(doc) {
+	if (doc?.type === "Ability") return true;
+	return doc?.type === "Trait" && AbilityHelper.IsSecondAbilityType(doc?.system?.type);
+}
+
+/**
+ * The comparison spelling of a canonical ability key: trimmed, lowercased, and with `-`/`_` runs
+ * collapsed to a single `_` so the two SEPARATOR CONVENTIONS for the same slug compare equal.
+ *
+ * This exists because the two sides really do disagree, and neither can be changed:
+ *
+ *  - the compendium's secondary ids are webgen entity ids, HYPHENATED (`tiro-con-arco`,
+ *    `sueno-lucido`, `medios-de-comunicacion` - measured: 10 of the 25 contain a hyphen);
+ *  - an actor's secondary id is `AbilityHelper.GetSecondAbilityId`, UNDERSCORED (`tiro_con_arco`),
+ *    and that spelling is a hard cross-repo contract with `wod20-char`'s importer - its header says
+ *    in as many words that a different spelling would be strictly worse than emitting nothing.
+ *
+ * Without this, those 10 fall off the `system.id` path entirely and survive only by the NAME
+ * fallback - which this module's own header calls reliable only within one line's pack. Normalising
+ * at the COMPARATOR is the fix; normalising at either GENERATOR would break a contract.
+ *
+ * PROVABLY INERT FOR THE 183 PRIMARIES: their ids are the concatenated English keys
+ * (`animalken`, `melee`, `firearms`) and NOT ONE of the 183 contains a `-` or a `_`, so this
+ * function returns them byte-identical. It equates two spellings of one slug; it does not strip
+ * separators (`animalken` still does not equal `animal-ken`), so it widens nothing else.
+ * @param {unknown} value
+ * @returns {string}
+ */
+function abilityKey(value) {
+	return (value ?? "").toString().trim().toLowerCase().replace(/[-_]+/g, "_");
+}
+
+/**
+ * `pack.collection` -> that pack's ability documents, memoized for the session.
  *
  * This exists because the callers are LOOPS over an actor's abilities, and without it each one
  * re-ran `pack.getDocuments()` over every candidate pack. A mage has 25 line packs plus the shared
@@ -68,7 +151,9 @@ async function abilityDocsOf(pack) {
 		return [];
 	}
 
-	const abilities = docs.filter(d => d.type === "Ability");
+	// `isEnrichableAbility`, NOT `d.type === "Ability"` - see that function's header for why this
+	// covers `Trait`/`*secondability` documents too, and why it must not be widened any further.
+	const abilities = docs.filter(isEnrichableAbility);
 	abilityDocsByPack.set(pack.collection, abilities);
 	return abilities;
 }
@@ -124,7 +209,7 @@ function candidateAbilityPacks(splat) {
 export async function findAbilityCompendiumMatch(actor, abilityItem, splatOverride) {
 	try {
 		const splat = splatOverride || actor?.system?.settings?.splat || "";
-		const canonicalId = (abilityItem?.system?.id ?? "").trim().toLowerCase();
+		const canonicalId = abilityKey(abilityItem?.system?.id);
 		const abilityName = (abilityItem?.name ?? "").trim().toLowerCase();
 
 		if (!canonicalId && !abilityName) return null;
@@ -137,7 +222,7 @@ export async function findAbilityCompendiumMatch(actor, abilityItem, splatOverri
 			if (!abilities.length) continue;
 
 			if (canonicalId) {
-				const byId = abilities.find(d => (d.system?.id ?? "").trim().toLowerCase() === canonicalId);
+				const byId = abilities.find(d => abilityKey(d.system?.id) === canonicalId);
 				if (byId) return byId;
 			}
 
@@ -178,11 +263,12 @@ export function compendiumProvenanceOf(match) {
  * `itemData.system.description` already set - it will not be overwritten unless explicitly empty,
  * so this never clobbers a player's own edits.
  * @param {Actor} actor
- * @param {object} itemData - an Item creation/update payload with `type: "Ability"`
+ * @param {object} itemData - an Item creation/update payload for an `Ability`, or for a `Trait`
+ *        whose `system.type` makes it a secondary ability (see `isEnrichableAbility`)
  * @returns {Promise<boolean>} true if a description was applied
  */
 export async function enrichAbilityItemData(actor, itemData) {
-	if (itemData?.type !== "Ability") return false;
+	if (!isEnrichableAbility(itemData)) return false;
 	if (itemData.system?.description) return false;
 
 	const match = await findAbilityCompendiumMatch(actor, {
@@ -214,7 +300,12 @@ export async function enrichAbilityItemData(actor, itemData) {
  * @returns {Promise<void>}
  */
 export async function maybeEnrichAbilityOnRename(item, changes) {
-	if (item.type !== "Ability") return;
+	// Secondary-ability `Trait`s included (see `isEnrichableAbility`). This is the ONLY path by which
+	// an ALREADY-LIVE secondary can acquire a description without a migration or a forced write: it
+	// fires on an ordinary edit, and only ever fills an EMPTY description, so it cannot clobber a
+	// player's own text. It stays a no-op whenever the compendium has nothing matching - the two live
+	// "Arte" Traits, for one, whose key `arte` is not among the 25 shipped secondaries.
+	if (!isEnrichableAbility(item)) return;
 	if (!item.actor) return;
 	if (item.system.description) return;
 
