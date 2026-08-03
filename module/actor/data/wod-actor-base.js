@@ -323,8 +323,26 @@ export class WoDActor extends Actor {
 
                 if (actorData.system.advantages[key].system.id === "bloodpool") {  
                     if (actorData.system.bio.splatfields.generation != undefined) {
-                        const bloodpoolMax = this._calculteMaxBlood(actorData.system.bio.splatfields.generation.value - actorData.system.bio.splatfields.generation.mod);
-                        const bloodSpending = this._calculteMaxBloodSpend(actorData.system.bio.splatfields.generation.value - actorData.system.bio.splatfields.generation.mod);
+                        // `mod` is OPTIONAL, and the guard above only proves the PARENT object exists —
+                        // it says nothing about this property. `bio.splatfields` has no schema and no
+                        // template backing (`pc-actor-datamodel.js`: a bare `ObjectField`), so the only
+                        // writers that produce a `mod` are a Splat drop and the wodchar exporter. A
+                        // generation the SHEET wrote is `{value: …}` and nothing else, because
+                        // `onSubmitActorForm` goes through `setProperty(…, "…generation.value", …)` and
+                        // no form control is ever named `.mod`. Since v7.5.34 supplies declared bio
+                        // fields at render time, the FIRST Bio edit of a vampire that never stored
+                        // `generation` writes exactly that shape — which is what made this reachable.
+                        //
+                        // `value - undefined` is NaN, and NaN does not throw here: every consumer is
+                        // `let x = <default>; if (gen == n) x = …; return x`, so it answers with its
+                        // INITIALISED value (`_calculteMaxBlood` -> 10, `_calculteMaxBloodSpend` -> 1).
+                        // The actor's correct max/perturn are therefore silently replaced by 10/1 and
+                        // PERSISTED to the bloodpool item by the `itemList` push below — degradation, not
+                        // a failure, which is why it went unnoticed. `?? 0` is what the one caller that
+                        // always got this right does: `OnGenerationChange` (action-helpers.js:2066).
+                        const effectiveGeneration = actorData.system.bio.splatfields.generation.value - (actorData.system.bio.splatfields.generation.mod ?? 0);
+                        const bloodpoolMax = this._calculteMaxBlood(effectiveGeneration);
+                        const bloodSpending = this._calculteMaxBloodSpend(effectiveGeneration);
 
                         if ((adv.system.max != bloodpoolMax) || (adv.system.perturn != bloodSpending)) {
                             actorData.system.advantages[key].system.max = bloodpoolMax;
@@ -879,7 +897,11 @@ export class WoDActor extends Actor {
             else {
                 for (const bio in actorData.system.bio.splatfields) {
                     if (actorData.system.bio.splatfields[bio].label == "wod.bio.vampire.generation") {                    
-                        const traitMax = await this._calculteMaxTrait(parseInt(actorData.system.bio.splatfields.generation.value) - parseInt(actorData.system.bio.splatfields.generation.mod));
+                        // The same optional `mod` as the bloodpool block above, in its `parseInt` form:
+                        // `parseInt(undefined)` is NaN too, and `_calculteMaxTrait` answers NaN with its
+                        // initialised 5 — so a 6th-generation vampire's traits cap at 5 instead of 7, and
+                        // that 5 is then written into all three `defaultmaxvalue` settings below.
+                        const traitMax = await this._calculteMaxTrait(parseInt(actorData.system.bio.splatfields.generation.value) - parseInt(actorData.system.bio.splatfields.generation.mod ?? 0));
 
                         actorData.system.settings.attributes.defaultmaxvalue = traitMax;
                         actorData.system.settings.abilities.defaultmaxvalue = traitMax;
