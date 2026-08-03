@@ -1303,6 +1303,113 @@ export const prepareAdvantageLists = function (context, actor) {
 	return context;
 }
 
+/**
+ * The three ability columns, built from BOTH carriers an ability reaches a PC on.
+ *
+ * A PRIMARY ability is an `Ability` item typed `wod.abilities.talent|skill|knowledge`. A SECONDARY
+ * ability is a different document entirely: a `Trait` item typed
+ * `wod.types.talentsecondability|skillsecondability|knowledgesecondability`, created by
+ * `AbilityHelper.CreateAbility`, by the era seeding in `create-helpers.js`, and by the legacy-actor
+ * migration at `migration.js:511-582`. Reading only `Ability` (as these filters used to) meant a
+ * secondary ability rendered on NO tab of a PC sheet at all - measured live: "Arte" at value 3 on
+ * two PCs, three points invisible. Same silent-loss class as the compendium Features that
+ * `prepareAdvantageLists` was widened for; same fix, one carrier added to the filter.
+ *
+ * NOT to be confused with the `shared-secondary-ability` compendium pack: that exporter emits
+ * `Ability` items typed `wod.abilities.skill`, so those already rendered and are untouched here.
+ *
+ * `issecondary` is carried onto the context object so the sheet can keep the two visibly distinct
+ * (stats_abilities.hbs) - the same flag name `ItemHelper._sortTraits` puts on the legacy sheets'
+ * lists, so the two views describe an ability the same way.
+ *
+ * This is the ONLY place the primary/secondary union lives: both the Attributes tab
+ * (prepareStatContext, visible rows only) and the Settings tab (prepareSettingsContext, every row,
+ * because that tab is where a hidden one is switched back on) call it. Widening one and forgetting
+ * the other would leave a secondary that can be hidden and never restored.
+ */
+const SECONDARY_ABILITY_TYPE = {
+	"wod.abilities.talent": 	"wod.types.talentsecondability",
+	"wod.abilities.skill": 		"wod.types.skillsecondability",
+	"wod.abilities.knowledge": 	"wod.types.knowledgesecondability"
+};
+
+/**
+ * THE TWO CARRIERS PUT THEIR FLAGS IN DIFFERENT PLACES, and this is the whole subtlety of the change.
+ *
+ * An `Ability` is a DataModel (`ability-item-datamodel.js:20`) that declares `schema.settings` as a
+ * SchemaField, so its flags are NESTED: `system.settings.isvisible`.
+ *
+ * A `Trait` has no DataModel - it is built from template.json, and Foundry MERGES the keys of a
+ * `templates: ["settings", ...]` entry FLAT into `system`. There is no `system.settings` object on a
+ * Trait at all. Verified against a live item created through the system's own
+ * `AbilityHelper.CreateAbility` on the deployed 7.5.32: `system.isvisible: true`,
+ * `system.isremovable: true`, `system.settings` absent. `ItemHelper._sortTraits` reading
+ * `item.system.isvisible` was right all along.
+ *
+ * So stats_abilities.hbs, which reads `system.settings.isvisible`, sees `undefined` on every Trait:
+ * the row would draw as permanently hidden, its delete/description icons would never render, and the
+ * eye toggle (which writes the path in `data-type`) would silently no-op because `OnItemSwitch` bails
+ * when the property is not already a boolean. Hence `readAbilityFlag` + the normalised `settings`
+ * copy below: the TEMPLATE gets one shape to read, and `visibilitypath` tells the toggle which real
+ * path to WRITE on the document. Absent or unreadable means visible - defaulting to hidden is exactly
+ * the invisible-points bug this change exists to end.
+ *
+ * @param {Item} item 			The ability item, either carrier.
+ * @param {string} flag 		"isvisible" or "isremovable".
+ * @param {boolean} fallback 	Value when neither carrier has it.
+ * @returns {boolean}
+ */
+const readAbilityFlag = function (item, flag, fallback) {
+	return item.system?.settings?.[flag] ?? item.system?.[flag] ?? fallback;
+}
+
+/**
+ * @param {Actor} actor 		The PC actor.
+ * @param {string} abilitytype 	One of the `wod.abilities.*` column types.
+ * @param {boolean} onlyvisible	true for the Attributes tab, false for the Settings tab.
+ * @returns {object[]} 			Primary + secondary rows, sorted by displayed name.
+ */
+const buildAbilityColumn = function (actor, abilitytype, onlyvisible) {
+	const secondarytype = SECONDARY_ABILITY_TYPE[abilitytype];
+	const items = actor?.items ?? [];
+
+	const abilities = items
+							.filter(item => item.type === "Ability"
+											&& item.system.type === abilitytype
+											&& (!onlyvisible || item.system.settings.isvisible))
+							.map(item => ({ _id: item._id, ...item, issecondary: false, visibilitypath: "settings.isvisible" }));
+
+	const secondaries = items
+							.filter(item => item.type === "Trait"
+											&& item.system.type === secondarytype
+											&& (!onlyvisible || readAbilityFlag(item, "isvisible", true)))
+							.map(item => {
+								const row = { _id: item._id, ...item, issecondary: true, secondarytype: secondarytype };
+
+								// The document is NEVER touched - everything below rebuilds `system` as a copy.
+								row.system = {
+									...row.system,
+									// A secondary's name IS its label; there is no CONFIG key behind it. Traits
+									// that arrived without one (drag-drop, older migrations) would draw a blank row.
+									label: row.system.label || item.name,
+									settings: {
+										...(row.system.settings ?? {}),
+										isvisible: readAbilityFlag(item, "isvisible", true),
+										isremovable: readAbilityFlag(item, "isremovable", true)
+									}
+								};
+
+								// Where the eye toggle must WRITE, which is not where the template READS.
+								row.visibilitypath = (item.system?.settings?.isvisible !== undefined) ? "settings.isvisible" : "isvisible";
+
+								return row;
+							});
+
+	return abilities
+			.concat(secondaries)
+			.sort((a, b) => game.i18n.localize(a.system.label || a.name || "").localeCompare(game.i18n.localize(b.system.label || b.name || "")));
+}
+
 export const prepareStatContext = async function (context, actor) {
   	context.tab = context.tabs.stats;
 
@@ -1312,23 +1419,11 @@ export const prepareStatContext = async function (context, actor) {
 	// key. Degrades to an empty map (no eyes rendered) if the compendium/pack is absent.
 	context.attributeCompendiumUuid = await buildTraitCompendiumUuidMap("attribute", Object.keys(actor?.system?.attributes ?? {}));
 
-	context.talents = actor.items
-								.filter(item => item.type === "Ability" && item.system.type === 'wod.abilities.talent' && item.system.settings.isvisible)
-								.map(item => ({ _id: item._id, ...item }));
-
-	context.talents = context.talents.sort((a, b) => game.i18n.localize(a.system.label).localeCompare(game.i18n.localize(b.system.label)));
-
-	context.skills = actor.items
-								.filter(item => item.type === "Ability" && item.system.type === 'wod.abilities.skill' && item.system.settings.isvisible)
-								.map(item => ({ _id: item._id, ...item }));
-
-	context.skills = context.skills.sort((a, b) => game.i18n.localize(a.system.label).localeCompare(game.i18n.localize(b.system.label)));
-
-	context.knowledges = actor.items
-								.filter(item => item.type === "Ability" && item.system.type === 'wod.abilities.knowledge' && item.system.settings.isvisible)
-								.map(item => ({ _id: item._id, ...item }));
-
-	context.knowledges = context.knowledges.sort((a, b) => game.i18n.localize(a.system.label).localeCompare(game.i18n.localize(b.system.label)));
+	// Primary Abilities + secondary-ability Traits, in one list per column - see buildAbilityColumn.
+	// Visible rows only: this is the tab a player reads, not the tab where rows are switched on.
+	context.talents 	= buildAbilityColumn(actor, "wod.abilities.talent", true);
+	context.skills 		= buildAbilityColumn(actor, "wod.abilities.skill", true);
+	context.knowledges 	= buildAbilityColumn(actor, "wod.abilities.knowledge", true);
 
 	context.advantages 	= actor.items
 								.filter(item => item.type === "Advantage" && item.system.group === '' && item.system.settings.isvisible)
@@ -1895,24 +1990,11 @@ export const prepareSettingsContext = async function (context, actor) {
 	context.hassplatfields = Object.keys(actor.system.bio.splatfields).length > 0;
 
 
-	// Abilities
-	context.talents = actor.items
-								.filter(item => item.type === "Ability" && item.system.type === 'wod.abilities.talent')
-								.map(item => ({ _id: item._id, ...item }));
-
-	context.talents = context.talents.sort((a, b) => game.i18n.localize(a.system.label).localeCompare(game.i18n.localize(b.system.label)));
-
-	context.skills = actor.items
-								.filter(item => item.type === "Ability" && item.system.type === 'wod.abilities.skill')
-								.map(item => ({ _id: item._id, ...item }));
-
-	context.skills = context.skills.sort((a, b) => game.i18n.localize(a.system.label).localeCompare(game.i18n.localize(b.system.label)));
-
-	context.knowledges = actor.items
-								.filter(item => item.type === "Ability" && item.system.type === 'wod.abilities.knowledge')
-								.map(item => ({ _id: item._id, ...item }));
-
-	context.knowledges = context.knowledges.sort((a, b) => game.i18n.localize(a.system.label).localeCompare(game.i18n.localize(b.system.label)));
+	// Abilities - every row, hidden ones included: this tab is where the eye toggle lives, so a
+	// secondary ability that is switched off has to stay listed here to be switched back on.
+	context.talents 	= buildAbilityColumn(actor, "wod.abilities.talent", false);
+	context.skills 		= buildAbilityColumn(actor, "wod.abilities.skill", false);
+	context.knowledges 	= buildAbilityColumn(actor, "wod.abilities.knowledge", false);
 
 	// Advantages
 	context.advantages 	= actor.items

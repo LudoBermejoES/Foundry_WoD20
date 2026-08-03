@@ -1896,6 +1896,13 @@ input.sheet-infoWidth {
   width: 40%;
 }
 
+/* A secondary ability (a *secondability Trait) shares the talent/skill/knowledge column with the
+   primary Abilities - italics are what keeps the two readable apart at a glance. Pairs with the
+   hover title carrying the localized "Secondary Talent/Skill/Knowledge Ability" name. */
+.wod-sheet .secondaryAbility.ability-headlineWidth {
+  font-style: italic;
+}
+
 .wod20 .ability-rowheight {
   height: 19px;
 }

@@ -25,13 +25,20 @@
 				{{/if}}
 
 				<label for="data.system.abilities.{{ability.system.id}}.system.value"
-					class="pullLeft {{#if ../useroll}}vrollable{{/if}} {{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} ability-headlineWidth headlineNormal" 
+					class="pullLeft {{#if ../useroll}}vrollable{{/if}} {{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} {{#if ability.issecondary}}secondaryAbility{{/if}} ability-headlineWidth headlineNormal"
 					data-type="{{../config.sheettype.mortal}}"
 					data-key="{{ability._id}}"
 					{{#if ../useroll}}data-action="rollDice"{{/if}}
+					{{!-- A secondary ability sits in the same column as the primary ones (that is the
+					      point - it was rendering nowhere before), so the row still has to SAY which
+					      one it is. Marked the way the legacy sheets mark it: the `issecondary` flag,
+					      here as a class plus the localized type name on hover. data-ability stays
+					      "true" - it is what routes the click to the ability branch of
+					      ActionHelper.RollDialog, and "secondary" would silently stop the roll. --}}
+					{{#if ability.issecondary}}title="{{localize ability.secondarytype}}"{{/if}}
 					data-ability="true">
 							{{localize ability.system.label}}
-				</label>	
+				</label>
 
 				{{#if ../showvalues}}
 
@@ -71,9 +78,9 @@
 
 					{{#if ../showvisibleicon}}					
 						{{#if ability.system.settings.isvisible}}
-							<i class="item-active pointer icon fa-solid fa-eye" data-itemid="{{ability._id}}" data-type="settings.isvisible" data-action="itemSwitch"></i>
+							<i class="item-active pointer icon fa-solid fa-eye" data-itemid="{{ability._id}}" data-type="{{ability.visibilitypath}}" data-action="itemSwitch"></i>
 						{{else}}
-							<i class="item-active pointer icon fa-solid fa-eye-slash" data-itemid="{{ability._id}}" data-type="settings.isvisible" data-action="itemSwitch"></i>
+							<i class="item-active pointer icon fa-solid fa-eye-slash" data-itemid="{{ability._id}}" data-type="{{ability.visibilitypath}}" data-action="itemSwitch"></i>
 						{{/if}}
 						{{#if ability.system.settings.isremovable}}
 							{{!-- showtooltip=true (add-ability-descriptions-from-compendium): Abilities are
@@ -105,13 +112,20 @@
 				{{/if}}
 
 				<label for="data.system.abilities.{{ability.system.id}}.system.value"
-					class="pullLeft {{#if ../useroll}}vrollable{{/if}} {{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} ability-headlineWidth headlineNormal" 
+					class="pullLeft {{#if ../useroll}}vrollable{{/if}} {{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} {{#if ability.issecondary}}secondaryAbility{{/if}} ability-headlineWidth headlineNormal"
 					data-type="{{../config.sheettype.mortal}}"
 					data-key="{{ability._id}}"
 					{{#if ../useroll}}data-action="rollDice"{{/if}}
+					{{!-- A secondary ability sits in the same column as the primary ones (that is the
+					      point - it was rendering nowhere before), so the row still has to SAY which
+					      one it is. Marked the way the legacy sheets mark it: the `issecondary` flag,
+					      here as a class plus the localized type name on hover. data-ability stays
+					      "true" - it is what routes the click to the ability branch of
+					      ActionHelper.RollDialog, and "secondary" would silently stop the roll. --}}
+					{{#if ability.issecondary}}title="{{localize ability.secondarytype}}"{{/if}}
 					data-ability="true">
 							{{localize ability.system.label}}
-				</label>	
+				</label>
 
 				{{#if ../showvalues}}
 
@@ -149,9 +163,9 @@
 				{{#if ../showvisibleicon}}
 					<div>
 						{{#if ability.system.settings.isvisible}}
-							<i class="item-active pointer icon fa-solid fa-eye" data-itemid="{{ability._id}}" data-type="settings.isvisible" data-action="itemSwitch"></i>
+							<i class="item-active pointer icon fa-solid fa-eye" data-itemid="{{ability._id}}" data-type="{{ability.visibilitypath}}" data-action="itemSwitch"></i>
 						{{else}}
-							<i class="item-active pointer icon fa-solid fa-eye-slash" data-itemid="{{ability._id}}" data-type="settings.isvisible" data-action="itemSwitch"></i>
+							<i class="item-active pointer icon fa-solid fa-eye-slash" data-itemid="{{ability._id}}" data-type="{{ability.visibilitypath}}" data-action="itemSwitch"></i>
 						{{/if}}
 						{{#if ability.system.settings.isremovable}}
 							{{!-- showtooltip=true (add-ability-descriptions-from-compendium): Abilities are
@@ -182,13 +196,20 @@
 				{{/if}}
 
 				<label for="data.system.abilities.{{ability.system.id}}.system.value"
-					class="pullLeft {{#if ../useroll}}vrollable{{/if}} {{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} ability-headlineWidth headlineNormal" 
+					class="pullLeft {{#if ../useroll}}vrollable{{/if}} {{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} {{#if ability.issecondary}}secondaryAbility{{/if}} ability-headlineWidth headlineNormal"
 					data-type="{{../config.sheettype.mortal}}"
 					data-key="{{ability._id}}"
 					{{#if ../useroll}}data-action="rollDice"{{/if}}
+					{{!-- A secondary ability sits in the same column as the primary ones (that is the
+					      point - it was rendering nowhere before), so the row still has to SAY which
+					      one it is. Marked the way the legacy sheets mark it: the `issecondary` flag,
+					      here as a class plus the localized type name on hover. data-ability stays
+					      "true" - it is what routes the click to the ability branch of
+					      ActionHelper.RollDialog, and "secondary" would silently stop the roll. --}}
+					{{#if ability.issecondary}}title="{{localize ability.secondarytype}}"{{/if}}
 					data-ability="true">
 							{{localize ability.system.label}}
-				</label>	
+				</label>
 
 				{{#if ../showvalues}}
 
@@ -226,9 +247,9 @@
 				{{#if ../showvisibleicon}}
 					<div>
 						{{#if ability.system.settings.isvisible}}
-							<i class="item-active pointer icon fa-solid fa-eye" data-itemid="{{ability._id}}" data-type="settings.isvisible" data-action="itemSwitch"></i>
+							<i class="item-active pointer icon fa-solid fa-eye" data-itemid="{{ability._id}}" data-type="{{ability.visibilitypath}}" data-action="itemSwitch"></i>
 						{{else}}
-							<i class="item-active pointer icon fa-solid fa-eye-slash" data-itemid="{{ability._id}}" data-type="settings.isvisible" data-action="itemSwitch"></i>
+							<i class="item-active pointer icon fa-solid fa-eye-slash" data-itemid="{{ability._id}}" data-type="{{ability.visibilitypath}}" data-action="itemSwitch"></i>
 						{{/if}}
 						{{#if ability.system.settings.isremovable}}
 							{{!-- showtooltip=true (add-ability-descriptions-from-compendium): Abilities are

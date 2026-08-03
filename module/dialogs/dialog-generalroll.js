@@ -225,6 +225,33 @@ export class DialogGeneralRoll extends FormApplication {
                             _id: abilityItem.system.id
                         };
                     }
+                    else {
+                        // A SECONDARY ability is a `Trait` item, not an `Ability` one, so
+                        // `api.getAbility` (which matches `Ability` only, api-handler.js:536) returns
+                        // false for it and `ability` would stay undefined - the very next statement
+                        // dereferences `ability._id` and throws. That was harmless while no secondary
+                        // ability rendered on a PC sheet; now that the ability columns include them
+                        // (buildAbilityColumn in pc-actor-sheet.js), clicking one's name reaches here.
+                        //
+                        // Resolved by item _id, which is exactly what the row's `data-key` carries, and
+                        // shaped like the legacy fallback below: `issecondary: true` keeps the label
+                        // verbatim instead of running it through localize(), because a secondary's name
+                        // is its own label with no CONFIG key behind it.
+                        const secondary = this.actor.items.get(abilityKey);
+
+                        if (secondary != undefined) {
+                            ability = {
+                                issecondary: secondary.type !== "Ability",
+                                isvisible: secondary.system.settings?.isvisible ?? secondary.system.isvisible ?? true,
+                                label: secondary.system.label || secondary.name,
+                                max: secondary.system.max,
+                                name: secondary.name,
+                                speciality: secondary.system.speciality,
+                                value: secondary.system.value,
+                                _id: abilityKey
+                            };
+                        }
+                    }
                 } else if ((data.actorData.abilities[abilityKey] != undefined) && (data.actorData.abilities[abilityKey].isvisible)) {
                     // Legacy actors
                     ability = data.actorData.abilities[abilityKey];

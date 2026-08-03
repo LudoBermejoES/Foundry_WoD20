@@ -1271,12 +1271,17 @@ export const registerHandlebarsHelpers = function () {
 			specialityLevel = parseInt(CONFIG.worldofdarkness.specialityLevel);
 		}
 
-		if (ability?.type === "Ability") {
+		// "Trait" joins "Ability" here because a secondary ability is carried on a Trait item and now
+		// renders in the PC sheet's ability columns (buildAbilityColumn in pc-actor-sheet.js) - without
+		// it a secondary at 4+ dots would be the only row in the column with no speciality icon. The
+		// legacy branch below is unreachable for these: it keys off plain objects that carry a flat
+		// `.value` and no `.type` at all (ItemHelper._sortTraits), never off item documents.
+		if ((ability?.type === "Ability") || (ability?.type === "Trait")) {
 			if (ability.system.value >= specialityLevel) {
 				hasSpeciality = true;
 			}
 			else if (ability.system.value >= 1) {
-				hasSpeciality = ability.system.settings.alwaysspeciality;
+				hasSpeciality = ability.system.settings?.alwaysspeciality ?? false;
 			}
 		}
 		// legacy
@@ -1306,10 +1311,14 @@ export const registerHandlebarsHelpers = function () {
 			specialityLevel = parseInt(CONFIG.worldofdarkness.specialityLevel);
 		}
 
-		if ((ability.system.settings.alwaysspeciality) && (ability.system.speciality !== "") && (ability.system.value >= 1)) {
+		// Optional-chained on `settings`: this helper now also receives secondary-ability Traits, and a
+		// Trait written by the v9-era migration (migration.js:511-582, which wrote a flat `data:` block)
+		// can reach here without one. A throw inside a Handlebars helper fails the WHOLE sheet render,
+		// not just the row, so the cost of not guarding is a blank character sheet.
+		if ((ability.system.settings?.alwaysspeciality) && (ability.system.speciality !== "") && (ability.system.value >= 1)) {
 			return 'item-notice';
 		}
-		if ((ability.system.settings.alwaysspeciality) && (ability.system.speciality === "") && (ability.system.value >= 1)) {
+		if ((ability.system.settings?.alwaysspeciality) && (ability.system.speciality === "") && (ability.system.value >= 1)) {
 			return 'item-warning';
 		}
 		if ((ability.system.value >= specialityLevel) && (ability.system.speciality !== "")) {
