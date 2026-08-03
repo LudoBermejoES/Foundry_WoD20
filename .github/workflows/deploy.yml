@@ -373,7 +373,9 @@ jobs:
           # verified separately below. DERIVED, not hardcoded, so a new top-level
           # file or directory is verified automatically instead of shipping
           # unchecked. If the EXCLUDE input above is ever changed, change this
-          # filter with it.
+          # filter with it -- AND the depth-independent one on the `find` that
+          # builds expected.sha below, which is the half this filter cannot do
+          # and the half that was missing until 2026-08-03.
           mapfile -t SHIPPED < <(ls -A1 | grep -Ev '^\.git|\.md$|^packs$' | sort)
           if [ "${#SHIPPED[@]}" -eq 0 ]; then
             echo "::error::no shippable top-level entries found; refusing to 'verify' nothing"
@@ -447,8 +449,26 @@ jobs:
           rc=0
 
           # ---- 1. non-pack files: byte-identical, no exceptions ---------------
+          # The EXCLUDE patterns are matched by rsync at EVERY DEPTH, so the
+          # expected manifest has to apply them at every depth too. The
+          # top-level `SHIPPED` filter above cannot do that job: it only decides
+          # which top-level entries to descend into. A `.md` nested inside a
+          # shipped directory was therefore counted as expected while rsync
+          # never sent it, and the step failed reporting a one-line deficit --
+          # blaming the transfer for an exclusion working exactly as configured.
+          # It went unnoticed until 2026-08-03 only because every `.md` in the
+          # tree had lived at the top level until then
+          # (`assets/data/splats/README.md` was the first that did not).
+          #
+          # Deliberately asymmetric: the REMOTE audit still lists everything.
+          # A file the repo excludes but the server still holds -- rsync
+          # protects excluded files from `--delete`, so a stale one can outlive
+          # its exclusion forever -- then appears in `deployed.sha` and not in
+          # `expected.sha`, and this diff is the only thing that would catch it
+          # (the leak check below reads top-level entries only).
           # shellcheck disable=SC2086
-          find $PATHS -type f -print0 | xargs -0 -r sha256sum | sort > "$RUNNER_TEMP/expected.sha"
+          find $PATHS -type f ! -name '*.md' ! -path '*/.git*' -print0 \
+            | xargs -0 -r sha256sum | sort > "$RUNNER_TEMP/expected.sha"
           sed -n 's/^SHA //p' "$RUNNER_TEMP/remote.out" > "$RUNNER_TEMP/deployed.sha"
           FILE_COUNT="$(wc -l < "$RUNNER_TEMP/expected.sha" | tr -d ' ')"
           echo "Files verified: $FILE_COUNT"
