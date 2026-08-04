@@ -92,11 +92,13 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		powers: {
 			template: "systems/worldofdarkness/templates/actor/parts/powers.hbs"
 		},
+		// MIGRATED. Reverting is this one line back to `parts/combat.hbs`.
 		combat: {
-			template: "systems/worldofdarkness/templates/actor/parts/combat.hbs"
+			template: "systems/worldofdarkness/templates/actor/v3/combat.hbs"
 		},
+		// MIGRATED. Reverting is this one line back to `parts/gear.hbs`.
 		gear: {
-			template: "systems/worldofdarkness/templates/actor/parts/gear.hbs"
+			template: "systems/worldofdarkness/templates/actor/v3/gear.hbs"
 		},
 		feature: {
 			template: "systems/worldofdarkness/templates/actor/parts/feature.hbs"

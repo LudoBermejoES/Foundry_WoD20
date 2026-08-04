@@ -395,6 +395,42 @@ const itemModels = await import(M("items", "datamodel", "_module.js"));
 const sheetModule = await import(M("actor", "template", "pc-actor-sheet.js"));
 const PCActorSheet = sheetModule.default;
 
+/*
+ * EVERY sheet in the PCActorSheet family, not just the base one.
+ *
+ * This harness hard-coded `PCActorSheet.PARTS` until 7.5.57, which meant it rendered the v2
+ * templates and nothing else — so the first three parts migrated to `PCActorSheetV3` shipped
+ * WITHOUT the one check that catches a template reading a context key its preparer never built.
+ * That is the exact failure this file exists for, and it has shipped three times on this sheet.
+ *
+ * Discovered by the same person who wrote the third migration, who patched the harness by hand to
+ * check their own work and then said so rather than relying on a green run that proved nothing
+ * about what they had written.
+ *
+ * Discovery is by DIRECTORY, the way binder-selector-check.py does it: any `pc-actor-sheet*.js`
+ * whose default export has a `PARTS` object. A fourth sheet is covered the day it is written, with
+ * no edit here — which is the property that failed the first time.
+ */
+const SHEETS = [];
+{
+	const dir = path.join(sandbox, "module", "actor", "template");
+	const files = fs.readdirSync(dir).filter(f => /^pc-actor-sheet.*\.js$/.test(f)).sort();
+
+	for (const f of files) {
+		const mod = await import(M("actor", "template", f));
+		const cls = mod.default;
+
+		if (cls?.PARTS && typeof cls.PARTS === "object") {
+			SHEETS.push({ name: cls.name || f, cls });
+		}
+	}
+
+	if (SHEETS.length === 0) {
+		console.error("test-part-render: found no sheet with a PARTS object — refusing to pass");
+		process.exit(2);
+	}
+}
+
 CONFIG.worldofdarkness = wod;
 Object.assign(CONFIG.worldofdarkness, templatesModule.SetupBioTab(), templatesModule.SetupPowerTab());
 CONFIG.worldofdarkness.sheetv2 = Object.assign({},
@@ -1502,6 +1538,35 @@ if (eraGates.cosmetic.length) {
 console.log("\nC. every part renders for every structure");
 
 const PART_IDS = Object.keys(PCActorSheet.PARTS);
+
+/*
+ * partId -> every distinct template any sheet in the family declares for it.
+ *
+ * The CONTEXT is what a preparer builds, and `_preparePartContext` switches on the partId STRING
+ * and is inherited unchanged — so a v2 instance and a v3 instance produce identical context for a
+ * given part. Only the template differs. That is why one sheet instance can drive both: this
+ * harness's question is "does the template read a key the context does not have", and the context
+ * is the same object either way.
+ */
+const PART_TEMPLATES = new Map();
+
+for (const partId of PART_IDS) {
+	const seen = new Map();
+
+	for (const { name, cls } of SHEETS) {
+		const t = cls.PARTS?.[partId]?.template;
+
+		if (!t) continue;
+
+		if (seen.has(t)) seen.get(t).push(name);
+		else seen.set(t, [name]);
+	}
+
+	PART_TEMPLATES.set(partId, [...seen].map(([template, sheets]) => ({ template, sheets })));
+}
+
+console.log(`   ${SHEETS.length} sheet(s) in the family: ${SHEETS.map(s => s.name).join(", ")}`);
+console.log(`   ${[...PART_TEMPLATES.values()].reduce((n, v) => n + v.length, 0)} distinct part template(s) to render`);
 const findings = { missingKeys: [], partialOutput: [], unevaluable: [] };
 const renderedByStructure = new Map();
 const structureItems = new Map();
@@ -1535,9 +1600,12 @@ for (const structure of structures) {
 
 	const perPart = new Map();
 	for (const partId of PART_IDS) {
-		const templatePath = templateFile(PCActorSheet.PARTS[partId].template);
+	  for (const { template, sheets } of PART_TEMPLATES.get(partId)) {
+		// Only named when more than one sheet declares this part, so the common case reads as before
+		const who = sheets.length === SHEETS.length ? partId : `${partId} [${sheets.join("/")}]`;
+		const templatePath = templateFile(template);
 		if (!templatePath) {
-			fail(`${structure.id} / ${partId}`, `PARTS names "${PCActorSheet.PARTS[partId].template}", which does not exist in this checkout`);
+			fail(`${structure.id} / ${who}`, `PARTS names "${template}", which does not exist in this checkout`);
 			continue;
 		}
 
@@ -1557,7 +1625,11 @@ for (const structure of structures) {
 			fail(`${structure.id} / ${partId} — render`, `${err.message}`);
 			continue;
 		}
-		perPart.set(partId, html);
+		// Later sections index by partId. Keep the FIRST sheet's html under the bare id so section C
+		// and the orphan sweep behave exactly as before, and append every other sheet's under a
+		// suffixed key so an extra template cannot silently mask the base one.
+		perPart.set(perPart.has(partId) ? `${partId}::${sheets[0]}` : partId, html);
+	  }
 	}
 	renderedByStructure.set(structure.id, perPart);
 	if (VERBOSE) realLog(`     ${structure.id}: ${[...perPart.values()].reduce((n, h) => n + countElements(h), 0)} elements over ${perPart.size} parts`);

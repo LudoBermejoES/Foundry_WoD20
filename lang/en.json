@@ -1140,6 +1140,7 @@
 			"demonchi": "Demon chi"
 		},
 		"combat": {
+			"empty": "No weapons, armour or manoeuvres yet. Natural attacks, melee and ranged weapons, combat manoeuvres and armour appear here; use Add item to create one. Conditions, health and movement below are always shown.",
 			"conditions": {
 				"frenzy": "Frenzy",
 				"ignorepain": "Ignore pain",
@@ -1407,7 +1408,8 @@
 			"trinket": "Trinket",
 			"contains": "Contains",
 			"name": "Name",
-			"type": "Type"
+			"type": "Type",
+			"empty": "No gear yet. Treasures, relics, devices, talismans, periapts, matrices, trinkets, fetishes and talens appear here; use Add item to create one. Weapons and armour belong on the Combat tab."
 		},
 		"effects": {
 			"origin": "Origin",

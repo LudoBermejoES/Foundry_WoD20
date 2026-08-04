@@ -176,6 +176,15 @@ jobs:
       - name: Check no power section renders on two tabs
         run: python3 .github/scripts/power-section-check.py
 
+      # Three rules on the v3 stylesheet, and the reason this exists at all is that the file's own
+      # header claimed the check ran before the check was written — a comment asserting a gate that
+      # does not exist is worse than no comment, because the next reader trusts it. Zero literal
+      # colours (darkmode.css loads LAST, so a hard-coded colour yields a half-dark sheet), every
+      # selector carrying `.pc-actor-v3` in its first compound (the v2 and v3 sheets differ by
+      # exactly that class), and a hard cap of six `!important` on the float neutralisers.
+      - name: Check the v3 stylesheet stays scoped and themeable
+        run: python3 .github/scripts/v3-css-check.py
+
       # The first gate that reads a template AGAINST THE JAVASCRIPT THAT RENDERS IT.
       # `template-structure-check.py` above checks a template against itself — comments,
       # nesting, tag balance, partial registration — and every one of these four passes that

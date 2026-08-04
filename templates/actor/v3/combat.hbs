@@ -1,0 +1,132 @@
+{{!-- v3 Combat tab.
+
+      THIRD PART MIGRATED, and the one D5 fits exactly: 65 lines on v2 and nine includes, every one
+      of which is a shared partial that stays shared. This file adds no row markup at all — it is
+      pure shell, so a change to `combat_melee.hbs` reaches both sheets from one file, which is the
+      whole reason the split exists.
+
+      WHAT CHANGES, AND WHY EACH ONE
+      ------------------------------
+      1. THE FIVE UNCONDITIONAL HEADER ROWS. `combat_natural.hbs`, `combat_melee.hbs`,
+         `combat_maneuvers.hbs`, `combat_ranged.hbs` and `combat_armor.hbs` each open with a
+         `.headlineRow` that is OUTSIDE their `{{#each}}`, so it draws whether or not the actor
+         holds anything. A mage with no weapons meets five column-header rows over nothing. The
+         gate has to live HERE rather than in the partials: adding `{{#if}}` inside them would
+         change the v2 sheet too, and the whole point of the split is that v3 does not do that.
+         Same `length > 0` idiom the rest of the sheet already uses (feature.hbs, powers.hbs,
+         stats_features.hbs).
+
+      2. ONE EMPTY STATE FOR THE TAB (D9). When all five are empty the tab says what belongs in it
+         and keeps the create control. It is never hidden: `data-origin="combat"` is the only
+         in-sheet route to authoring a weapon, so a tab that vanished when empty would be a tab you
+         could not use to make it non-empty. The wording is checkable rather than decorative —
+         `CreateHelper.CreateButtonsCombat` (create-helpers.js:1824) offers exactly manoeuvre,
+         natural weapon, melee weapon, ranged weapon and armour, for every splat, which is what the
+         string names. Conditions, health and movement are NOT part of that test: they render from
+         actor data, not from items, and are always present.
+
+         The gate is `and`+`not`, deliberately not `or`. Foundry's own `or` helper folds over
+         `arguments`, WHICH INCLUDES THE OPTIONS OBJECT, so `(or a b)` is unconditionally true —
+         recorded at test-part-render.mjs:449. `and` is unaffected (a truthy extra term changes
+         nothing in `every`), so the De Morgan form is the one that actually works.
+
+      3. THE SECOND HEALTH TRACK IS KEPT, deliberately. It mirrors the Stats tab, and its context
+         was fixed in 7.5.54 — `prepareCombatContext` now builds `chimericalhealth` and
+         `corpushealth`, which it never had, so a changeling's chimerical marks and a wraith's
+         Corpus were blank here while correct one tab away.
+
+      4. FLOATS ARE NEUTRALISED BY BLOCKIFICATION, NEVER BY `!important` (D4). `combat_movement.hbs`
+         is the densest debt in the tree — 15 floats and 10 inline widths in 26 lines — and it is a
+         shared partial, so not one character of it is touched. Its container is made a grid/flex
+         chain in `css/pc-actor-v3.css` instead: a grid item's `float` computes to `none`, which is
+         a computed-value rule and therefore beats the `!important` on `.pullLeft` without entering
+         the cascade at all. The four floats in `combat_armor.hbs`'s chimerical header are handled
+         the same way. Its ten inline widths are NOT overridden — no `[style]` sledgehammer — they
+         are made flex bases, which shrink.
+
+      NO `data-action` AND NO `data-*` IS ADDED OR LOST. This shell authors exactly one of each that
+      v2 authors (`itemCreate` with `data-origin="combat"`); everything else arrives through the
+      nine includes, unchanged. --}}
+<section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}" data-drop-area="true">
+
+	<div class="v3-tabhead">
+		<h2 class="v3-tabtitle splatFont">{{localize "wod.tab.combat"}}</h2>
+
+		<button type="button" class="v3-add" data-origin="combat" data-action="itemCreate">
+			<i class="fa-solid fa-square-plus" aria-hidden="true"></i>
+			<span>{{localize "wod.labels.add.item"}}</span>
+		</button>
+	</div>
+
+	<div class="v3-tabbody">
+		<div class="v3-tabmain">
+
+			{{!-- The five item blocks. Each hash argument is carried across exactly as v2 passes it,
+			      including the redundant ones — the partials read `../config.sheettype.mortal` and
+			      `../actor` through the context these establish, so trimming them is a behaviour
+			      change dressed up as tidying. --}}
+			{{#if weapon_natural.length}}
+				<div class="v3-section v3-weapons">
+					{{> "systems/worldofdarkness/templates/actor/parts/combat_natural.hbs" actor=actor config=config locked=locked weapon_natural=weapon_natural}}
+				</div>
+			{{/if}}
+
+			{{#if weapon_melee.length}}
+				<div class="v3-section v3-weapons">
+					{{> "systems/worldofdarkness/templates/actor/parts/combat_melee.hbs" actor=actor config=config locked=locked weapon_melee=weapon_melee}}
+				</div>
+			{{/if}}
+
+			{{#if maneuvers.length}}
+				<div class="v3-section v3-weapons">
+					{{> "systems/worldofdarkness/templates/actor/parts/combat_maneuvers.hbs" actor=actor config=config locked=locked maneuvers=maneuvers}}
+				</div>
+			{{/if}}
+
+			{{#if weapon_ranged.length}}
+				<div class="v3-section v3-weapons">
+					{{> "systems/worldofdarkness/templates/actor/parts/combat_ranged.hbs" actor=actor config=config locked=locked weapon_ranged=weapon_ranged}}
+				</div>
+			{{/if}}
+
+			{{#if armor.length}}
+				<div class="v3-section v3-weapons">
+					{{> "systems/worldofdarkness/templates/actor/parts/combat_armor.hbs" actor=actor config=config locked=locked armor=armor}}
+				</div>
+			{{/if}}
+
+			{{#if (and (not weapon_natural.length) (not weapon_melee.length) (not maneuvers.length) (not weapon_ranged.length) (not armor.length))}}
+				<p class="v3-empty">{{localize "wod.combat.empty"}}</p>
+			{{/if}}
+
+			{{!-- Conditions and the mirrored health track. v2 laid these out with `.flex-rows` plus
+			      two elements carrying BOTH `.two-columns` (48%) and `.combat-bottomarea` (33%), a
+			      contradiction resolved only by which rule wod.css happens to declare later, and an
+			      inline `style="width: 100%"` on the health box. A two-column grid, no percentages.
+
+			      `combat_conditions.hbs` renders NOTHING for the `spirit` variant — one of only two
+			      `settings.variant` branches in the whole PC template set. Its wrapper is therefore
+			      spacing-only with no border or background, so the empty case leaves no empty frame
+			      and this shell does not have to duplicate the partial's gate to know that. --}}
+			<div class="v3-combatbottom">
+				<div class="v3-section">
+					{{> "systems/worldofdarkness/templates/actor/parts/combat_conditions.hbs"}}
+				</div>
+
+				<div class="v3-section">
+					{{> "systems/worldofdarkness/templates/actor/parts/stats_health.hbs"}}
+				</div>
+			</div>
+
+			<div class="v3-section v3-movement">
+				{{> "systems/worldofdarkness/templates/actor/parts/combat_movement.hbs"}}
+			</div>
+
+		</div>
+
+		<aside class="v3-macrorail">
+			{{> "systems/worldofdarkness/templates/actor/parts/macro_icons.hbs"}}
+		</aside>
+	</div>
+
+</section>

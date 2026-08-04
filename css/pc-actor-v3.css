@@ -41,9 +41,9 @@
    inline styles beat author rules. Nearly all live in the shells v3 rewrites, so they are removed
    rather than overridden. There is deliberately no `[style]` sledgehammer here.
 
-   PHASE 1: every part still renders the v2 template, so this file is intentionally almost empty.
-   It exists now so that registration, load order and the scoping mechanism are proven on a real
-   sheet BEFORE any markup changes.
+   MIGRATED SO FAR: `effects`, `gear`. Every other part still renders the v2 template, so a rule
+   below only ever reaches a tab that has been migrated — and reverting a part is one line in
+   `PCActorSheetV3.PARTS`, with its rules here becoming dead rather than wrong.
    =========================================================================================== */
 
 /* The scope marker. Every rule below begins with this, which is what stops the file reaching the
@@ -223,4 +223,203 @@
 	line-height: 1.45;
 	opacity: 0.8;
 	max-width: 60ch;
+}
+
+/* ── The tab body: content column + macro rail ──────────────────────────────────────────────
+   On v2 the dice strip is `<div class="pullRight">`, i.e. `float: right !important` (wod.css:589),
+   and every section below it flows AROUND it — so how wide the content is depends on how many dice
+   the splat happens to show, and a tall block re-wraps under the rail at an arbitrary point.
+
+   Two grid columns instead. A grid item's `float` computes to `none`, which is a computed-value
+   rule and therefore beats the `!important` without arguing with it (D4). It also gives each column
+   an independent formatting context, so a float ANYWHERE inside the content column is contained to
+   that column and can never displace the rail. That containment is what lets the Combat tab include
+   `combat_movement.hbs` (15 floats in 26 lines) without touching it. */
+.wod20.pc-actor-v3 .v3-tabbody {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 12px;
+	align-items: start;
+}
+
+/* `min-width: 0` is what actually lets the tables inside reflow: a grid item's automatic minimum
+   size is its content's min-content size, so without this a wide table sets the column width and
+   the sheet grows a horizontal scrollbar instead of wrapping. */
+.wod20.pc-actor-v3 .v3-tabmain {
+	min-width: 0;
+}
+
+.wod20.pc-actor-v3 .v3-macrorail {
+	align-self: start;
+	/* The strip's own `flex-direction: column` is an INLINE style on the partial
+	   (macro_icons.hbs:3) and cannot be reached from here, so the dice stack vertically. That is
+	   what a rail wants anyway, and no `[style]` override is added to force otherwise (D4). */
+}
+
+/* ── Sections ───────────────────────────────────────────────────────────────────────────────
+   Deliberately no border or background: `combat_conditions.hbs` renders NOTHING for the `spirit`
+   variant, and a section box would draw an empty frame for it. Spacing only, so an empty section
+   is invisible rather than wrong — and the shell does not have to duplicate the partial's own
+   variant gate to find that out. */
+.wod20.pc-actor-v3 .v3-section {
+	margin-bottom: 16px;
+}
+
+.wod20.pc-actor-v3 .v3-section:last-child {
+	margin-bottom: 0;
+}
+
+/* One heading rule for both the headings v3 authors (`.v3-sectiontitle`) and the ones the SHARED
+   partials bring with them (`description.hbs`'s `.headlineText`, and the `.sheet-banner` pair in
+   `stats_health.hbs` / `combat_conditions.hbs` / `combat_movement.hbs`). Restyling a shared
+   partial's output from this file is the whole point of the scope class: the partial is untouched,
+   so v2 is unaffected, and v3 does not have to fork it just to change a heading.
+
+   `background: none` removes the banner ARTWORK, which is a background image on `.sheet-banner`
+   (wod.css:755) — the ~44px of decoration whose removal pays for the taller rows (design "Density
+   costs 7%"). `text-align: left` beats `.wod-sheet .sheet-headline`'s `center` on specificity
+   alone (four classes to two), so no `!important` is spent. */
+.wod20.pc-actor-v3 .v3-sectiontitle,
+.wod20.pc-actor-v3 .v3-tabmain .headlineText,
+.wod20.pc-actor-v3 .v3-tabmain .sheet-banner,
+.wod20.pc-actor-v3 .v3-tabmain .sheet-banner-small {
+	width: auto;
+	min-width: 0;
+	margin: 0 0 6px 0;
+	padding: 0 0 3px 0;
+	border-bottom: 1px solid var(--main-mid-color);
+	background: none;
+	font-size: calc(1rem * var(--splat-display-scale, 1));
+	font-weight: normal;
+	line-height: 1.25;
+	text-align: left;
+}
+
+/* `.sheet-banner-text` paints a rounded pill behind the banner label so it reads over the artwork.
+   With the artwork gone the pill is a stray shape. */
+.wod20.pc-actor-v3 .v3-tabmain .sheet-banner-text {
+	background: none;
+	border-radius: 0;
+}
+
+/* ── Labelled fields ────────────────────────────────────────────────────────────────────────
+   Replaces `.floating-label-group`, which is pure CSS (wod.css:1001-1029) driven by `:valid` — it
+   needed `required` on every input to work, and `required` on an optional field makes the form fail
+   native validation. A real `<label>` wrapping its input needs neither, and needs no `id`: two PC
+   sheets can be open at once and a duplicated `id` binds both labels to the same input. */
+.wod20.pc-actor-v3 .v3-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 8px 16px;
+	align-items: end;
+}
+
+.wod20.pc-actor-v3 .v3-field {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.wod20.pc-actor-v3 .v3-fieldlabel {
+	font-size: 0.7rem;
+	line-height: 1.2;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	opacity: 0.8;
+}
+
+.wod20.pc-actor-v3 .v3-field input {
+	width: 100%;
+	min-width: 0;
+}
+
+/* Icons that arrive from `list_icons.hbs` — still `<a>` and `<i>` there, because that partial is
+   shared with v2 and turning them into buttons is a change to BOTH sheets, not a v3 layout matter.
+   Aligned here, not resized: `.icon.fa-ellipsis-vertical` is `display: none` on this sheet
+   (wod.css:699), so forcing a width would leave a 20px hole where the dead menu control is. */
+.wod20.pc-actor-v3 .v3-rowactions > a,
+.wod20.pc-actor-v3 .v3-rowactions > i {
+	display: inline-flex;
+	align-items: center;
+	line-height: 1;
+}
+
+/* ── GEAR ───────────────────────────────────────────────────────────────────────────────────
+   The tab had no floats to neutralise — its debt was fixed pixel widths (`width-namebox` and four
+   siblings, wod.css:1594-1690), which is what `css/responsive.css` then patches per language. The
+   `<table>` replaces all of them, so nothing here restates a width; the two rules below only stop
+   the two NON-DATA columns from claiming a share of it. `width: 1%` is the table idiom for "shrink
+   to content": a percentage below the content's minimum is clamped up to exactly that minimum. */
+.wod20.pc-actor-v3 .v3-geartable .v3-dragcol,
+.wod20.pc-actor-v3 .v3-geartable .v3-actioncol {
+	width: 1%;
+	white-space: nowrap;
+}
+
+.wod20.pc-actor-v3 .v3-geartable .v3-dragcol {
+	padding-left: 0;
+	padding-right: 0;
+	text-align: center;
+}
+
+/* ── COMBAT ─────────────────────────────────────────────────────────────────────────────────
+   The five weapon/armour lists stay on their SHARED partials (D5), which means they keep
+   `.item-row-area` plus the `width-*box` pixel columns — a melee row is nine of them, and armour on
+   a werewolf is fourteen. Those cannot be reflowed from here without forking five partials, so this
+   tab does the honest thing instead of the clever one: the block scrolls sideways rather than
+   clipping or forcing the whole sheet wider. That is the remaining Combat debt, in one declaration,
+   and it disappears the day those partials become tables. */
+.wod20.pc-actor-v3 .v3-weapons {
+	overflow-x: auto;
+}
+
+/* Conditions beside the mirrored health track. v2 gave both children `.two-columns` (48%,
+   wod.css:621) AND `.combat-bottomarea` / `.combat-bottomhealth` (33%, wod.css:2133) — two widths
+   for one element, settled only by which rule wod.css declares later — plus `style="width: 100%"`
+   on the health box inside. None of that is restated; the grid decides, and `auto-fit` folds the
+   two into one column when the sheet is narrow. */
+.wod20.pc-actor-v3 .v3-combatbottom {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 12px;
+	align-items: start;
+}
+
+/* ── Float neutralisers for the two combat partials that still float ────────────────────────
+   NOT in the `!important` budget below, because none of these IS an `!important`: every rule here
+   makes a container a grid or flex container, and a grid/flex item's `float` computes to `none`.
+   That is a computed-value rule, so it outranks `.wod20 .pullLeft { float: left !important }`
+   (wod.css:585) without competing with it. Scoped to `.v3-tabmain` so it reaches only the tabs v3
+   has migrated, and to the two partials that actually need it.
+
+   `combat_armor.hbs:2-6` — the chimerical soak header, three `.pullLeft` cells in a
+   `.clearareaBox`. Changeling only, which is 2 of the 88 live actors, and therefore exactly the
+   sort of block that would have gone unlooked-at. */
+.wod20.pc-actor-v3 .v3-tabmain .clearareaBox {
+	display: flex;
+	align-items: baseline;
+}
+
+/* `combat_movement.hbs` — 26 lines, 15 floats, 10 inline widths, and NOT ONE CHARACTER of it is
+   edited: it is shared with v2. Three nested levels each become a formatting context, so every
+   float inside computes to `none` from the outside in.
+
+   The inline widths (`100px` on the walk/jog/run labels, `250px` on the jump labels, `50px` on the
+   values) are unreachable — inline styles beat author rules and there is deliberately no `[style]`
+   override here. Flex makes them harmless anyway: `width` becomes the flex base and the default
+   `flex-shrink: 1` lets a 250px label shrink in a narrow column, which a floated block would not. */
+.wod20.pc-actor-v3 .v3-movement {
+	display: grid;
+}
+
+.wod20.pc-actor-v3 .v3-movement > .pullLeft {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 0 16px;
+	align-items: start;
+}
+
+.wod20.pc-actor-v3 .v3-movement .clearareaBox {
+	gap: 8px;
 }

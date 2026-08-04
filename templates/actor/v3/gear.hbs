@@ -1,0 +1,256 @@
+{{!-- v3 Gear tab.
+
+      SECOND PART MIGRATED. 155 lines on v2, thirteen includes, and — unlike Combat — almost none
+      of its debt is floats: the money row and the item list size themselves with fixed-width
+      classes (`width-namebox`, `width-mediumbox`, `width-abilitybox`, `width-valuebox`), which is
+      what `css/responsive.css` then patches per language. A `<table>` replaces every one of them
+      with columns that size to their content, which is the point of the exercise and the reason
+      the ES/DE/IT width patches can eventually go.
+
+      SHELL/ROW SPLIT (add-pc-sheet-v3 D5), AND WHERE THIS FILE CANNOT HONOUR IT
+      -------------------------------------------------------------------------
+      D5 says a v3 template may hold layout and `{{> …}}` includes, may not hold a row renderer,
+      and may not emit a `data-action` its v2 counterpart lacks. The third clause holds exactly:
+      every `data-action` below (`itemCreate`, `rollDice`, `itemActive`) and every `data-*` is one
+      `parts/gear.hbs` already emits, carried across unchanged.
+
+      The second clause CANNOT hold here, and that is a property of the tree rather than a choice.
+      There is no shared partial for a gear row: `parts/gear.hbs` renders its own, inline, and the
+      only shared thing it calls out to is `list_icons.hbs`. So a v3 shell either duplicates the
+      row or invents `gear_itemrow.hbs` — and that partial could not actually be shared, because v2
+      needs `<div class="width-namebox">` and v3 needs `<td>`. The row is therefore duplicated
+      here, deliberately, and `list_icons.hbs` is still included per type so the icon set and the
+      eye's behaviour stay in one file for both sheets.
+
+      THE DRAG CONTRACT, WHICH IS NOT A CSS SELECTOR AND IS NOT COVERED BY binder-selector-check
+      ------------------------------------------------------------------------------------------
+      `DropHelper.HandleDragDrop` (drop-helpers.js:350-357) does `clone = original.parentElement`
+      and then reads `clone.dataset.itemid` — so the DIRECT PARENT of `.draggable` must be the
+      element carrying `data-itemid`, or drag-between-actors silently stops working. On v2 that
+      parent is `.dragrow`. A `<tr data-itemid>` does NOT satisfy it, because the handle has to
+      live in a `<td>`; so `data-itemid` sits on the handle CELL below. Same guarantee, one
+      cosmetic difference recorded out loud: the drag ghost is the handle cell rather than the
+      whole row.
+
+      THE ELEVEN-BRANCH LADDER IS TEN HERE. `parts/gear.hbs:124-127` tests
+      `wod.types.device` TWICE with identical bodies; the second branch is unreachable. Dropping it
+      changes nothing that can render, and takes the include count 13 -> 12. --}}
+<section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}" data-drop-area="true">
+
+	<div class="v3-tabhead">
+		{{!-- v2 named this tab "Gear" twice — once in the nav and once in a banner — and named the
+		      thing below it nothing at all. One heading, in the content area. --}}
+		<h2 class="v3-tabtitle splatFont">{{localize "wod.tab.gear"}}</h2>
+
+		{{!-- Same two defects as the Effects tab: on v2 this is a 3x-scaled glyph floating in the
+		      corner carrying `aria-hidden="true"` ON THE INTERACTIVE ELEMENT, which removes a
+		      working control from the accessibility tree. `data-origin="gear"` is what selects the
+		      gear-flavoured create dialog, so it travels with the tab. --}}
+		<button type="button" class="v3-add" data-origin="gear" data-action="itemCreate">
+			<i class="fa-solid fa-square-plus" aria-hidden="true"></i>
+			<span>{{localize "wod.labels.add.item"}}</span>
+		</button>
+	</div>
+
+	{{!-- Two grid columns: content, and the macro rail. On v2 the rail is `float: right`, so the
+	      sections below flow AROUND it and their width depends on how many dice the splat happens
+	      to show. As a grid item it cannot float (D4: `float` computes to `none` on a grid item,
+	      which beats `!important` because it is not a cascade contest) and it establishes its own
+	      formatting context, so nothing in either column can leak into the other. --}}
+	<div class="v3-tabbody">
+		<div class="v3-tabmain">
+
+			<div class="v3-section">
+				{{!-- `proseheadline` is passed. It was the ONE omission among description.hbs's
+				      eleven callers, which rendered the notes heading as an empty emphasised div
+				      until it was fixed today; it stays passed here.
+
+				      NOTE, and this is a live finding rather than a v3 concern: `wod.labels.notes`
+				      is an OBJECT node in lang/en.json and lang/es.json (it has `.backgrounds`,
+				      `.merits`, … beneath it), not a string. `game.i18n.localize` returns the raw
+				      key when the lookup is not a string, so the heading currently reads
+				      "wod.tab.notes". Carried across verbatim rather than guessed at, because
+				      picking the replacement key is a content decision. --}}
+				{{> "systems/worldofdarkness/templates/actor/parts/description.hbs" proseheadline="wod.tab.notes" locked=locked headline=true prosename="system.gear.notes" prosevalue=gear proseenriched=enrichedGear}}
+			</div>
+
+			<div class="v3-section">
+				<h3 class="v3-sectiontitle splatFont">{{localize "wod.gear.money"}}</h3>
+
+				{{!-- v2 wrapped these two fields in `.clearareaBox > .pullLeft[style="display:flex"]
+				      > .area-box`, inside a `.sheet-area` carrying `style="flex-flow: row nowrap"`
+				      — a float, a clearfix and two inline styles to place two inputs side by side.
+				      A two-column grid does it with none of them.
+
+				      The label WRAPS the input rather than using `for=`/`id`: Foundry can have two
+				      PC sheets open at once, and a duplicated `id` would bind both labels to
+				      whichever input the document happens to hold first. Implicit association has
+				      no such failure mode. v2 used `.floating-label`, which is pure CSS (wod.css:
+				      1001-1029) with no binder behind it, so nothing is lost by replacing it.
+
+				      `autofocus` is dropped: BOTH v2 inputs carry it, which is invalid (one per
+				      document) and steals focus to the money field whenever the tab renders.
+				      `required` is dropped with it — it existed only to drive the `:valid`
+				      selector the floating label needed, and on an empty field it makes the form
+				      fail native validation. `name`, `data-name` and `data-dtype` are unchanged,
+				      which is everything the submit path reads. --}}
+				<div class="v3-fields">
+					<label class="v3-field">
+						<span class="v3-fieldlabel">{{localize "wod.gear.moneycarried"}}</span>
+						{{#if locked}}
+							<input class="sheet-infoValues" type="text" value="{{actor.system.gear.money.carried}}" autocomplete="off" readonly />
+						{{else}}
+							<input class="sheet-infoValues editable" name="system.gear.money.carried" type="text" value="{{actor.system.gear.money.carried}}" data-name="data.system.gear.money.carried" data-dtype="Number" autocomplete="off" />
+						{{/if}}
+					</label>
+
+					<label class="v3-field">
+						<span class="v3-fieldlabel">{{localize "wod.gear.moneybank"}}</span>
+						{{#if locked}}
+							<input class="sheet-infoValues" type="text" value="{{actor.system.gear.money.bank}}" autocomplete="off" readonly />
+						{{else}}
+							<input class="sheet-infoValues editable" name="system.gear.money.bank" type="text" value="{{actor.system.gear.money.bank}}" data-name="data.system.gear.money.bank" data-dtype="Number" autocomplete="off" />
+						{{/if}}
+					</label>
+				</div>
+			</div>
+
+			<div class="v3-section">
+				<h3 class="v3-sectiontitle splatFont">{{localize "wod.gear.otheritems"}}</h3>
+
+				{{#if (getItems actor)}}
+					{{!-- A real table: five columns of homogeneous data with a header row, which is
+					      what v2 drew with `div.headlineRow` plus five fixed pixel widths. The
+					      table gives a screen reader the column association those divs never had,
+					      and gives a long Spanish type name somewhere to go. --}}
+					<table class="v3-table v3-geartable">
+						<caption class="v3-sr-only">{{localize "wod.gear.otheritems"}}</caption>
+						<thead>
+							<tr>
+								{{!-- The handle and the action cluster get no heading: neither column holds
+								      data, and there is no honest one-word label for "chat, edit, delete,
+								      view, menu". An empty `<th>` announces as blank, which is true. --}}
+								<th scope="col" class="v3-dragcol"></th>
+								<th scope="col">{{localize "wod.gear.name"}}</th>
+								<th scope="col">{{localize "wod.gear.type"}}</th>
+								<th scope="col">{{localize "wod.dialog.dicepool"}}</th>
+								<th scope="col" class="v3-num">{{localize "wod.combat.weapon.diff"}}</th>
+								<th scope="col" class="v3-actioncol"></th>
+							</tr>
+						</thead>
+						<tbody>
+							{{#each (getItems actor) as |item id|}}
+								<tr>
+									{{!-- The handle cell carries `data-itemid` because HandleDragDrop clones
+									      `.draggable`'s parentElement and reads the id off it. See the header. --}}
+									<td class="v3-dragcol" data-itemid="{{item._id}}">
+										<i class="icon fa-solid fa-grip-vertical draggable" aria-hidden="true"></i>
+									</td>
+
+									{{#if item.system.isrollable}}
+										<td class="vrollable pointer"
+											data-type="{{../actor.type}}"
+											data-object="{{item.type}}"
+											data-rollitem="true"
+											data-itemid="{{item._id}}"
+											title="{{item.name}}"
+											data-action="rollDice">{{item.name}}</td>
+									{{else}}
+										<td>{{item.name}}</td>
+									{{/if}}
+
+									<td>{{localize item.system.type}}</td>
+
+									{{#if item.system.isrollable}}
+										<td>
+											{{#if (eq item.type "Fetish")}}
+												{{#if ../actor.system.settings.hasgnosis}}
+													{{localize "wod.advantages.gnosis"}}
+												{{else}}
+													{{localize "wod.advantages.willpower"}}
+												{{/if}}
+											{{else}}
+												{{#if (ne item.system.dice1 "")}}{{localize (getAttributes item.system.dice1)}}{{/if}}
+												{{#if (ne item.system.dice2 "")}} + {{localize (getAbility item.system.dice2 ../actor)}}{{/if}}
+												{{#if (gt item.system.bonus 0)}} + {{item.system.bonus}}{{/if}}
+											{{/if}}
+										</td>
+										<td class="v3-num">
+											{{#if (eq item.system.difficulty "-1")}}
+												{{localize "wod.labels.varies"}}
+											{{else}}
+												{{item.system.difficulty}}
+											{{/if}}
+										</td>
+									{{else}}
+										<td></td>
+										<td class="v3-num"></td>
+									{{/if}}
+
+									<td class="v3-rowactions">
+										{{!-- Equipped. A `<button>` for the same reason as on the Effects tab: on
+										      v2 this is an `<i>`, which no keyboard can reach, and the duotone /
+										      solid pair carries the whole state with nothing to announce it.
+										      `data-itemid="{{item.id}}"` is v2's spelling on THIS control (every
+										      other one in the row uses `_id`); carried across unchanged rather
+										      than tidied, because they resolve to the same value and a silent
+										      change here is exactly what this migration must not make.
+
+										      The solid/duotone glyph pair is v2's and is kept as-is: it is the
+										      established equipped-vs-not language on this sheet, and `aria-pressed`
+										      is what adds the state a glyph alone never carried. --}}
+										<button type="button" class="v3-iconbtn item-active"
+											data-itemid="{{item.id}}" data-type="isactive" data-action="itemActive"
+											aria-pressed="{{#if (isChecked item.system.isactive)}}true{{else}}false{{/if}}"
+											title="{{localize 'wod.combat.armor.equip'}}">
+											{{#if (isChecked item.system.isactive)}}
+												<i class="icon fa-solid fa-shield" aria-hidden="true"></i>
+											{{else}}
+												<i class="icon fa-duotone fa-solid fa-shield" aria-hidden="true"></i>
+											{{/if}}
+											<span class="v3-sr-only">{{localize "wod.combat.armor.equip"}}</span>
+										</button>
+
+										{{#if (eq item.system.type "wod.types.treasure")}}
+											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.treasure" deletetitle="wod.labels.remove.treasure"}}
+										{{else if (eq item.system.type "wod.types.relic")}}
+											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.relic" deletetitle="wod.labels.remove.relic"}}
+										{{else if (eq item.system.type "wod.types.device")}}
+											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.device" deletetitle="wod.labels.remove.device"}}
+										{{else if (eq item.system.type "wod.types.talisman")}}
+											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.talisman" deletetitle="wod.labels.remove.talisman"}}
+										{{else if (eq item.system.type "wod.types.periapt")}}
+											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.periapt" deletetitle="wod.labels.remove.periapt"}}
+										{{else if (eq item.system.type "wod.types.matrix")}}
+											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.matrix" deletetitle="wod.labels.remove.matrix"}}
+										{{else if (eq item.system.type "wod.types.trinket")}}
+											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.trinket" deletetitle="wod.labels.remove.trinket"}}
+										{{else if (eq item.system.type "wod.types.fetish")}}
+											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.fetish" deletetitle="wod.labels.remove.fetish"}}
+										{{else if (eq item.system.type "wod.types.talen")}}
+											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.talen" deletetitle="wod.labels.remove.talen"}}
+										{{else}}
+											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.headline" deletetitle="wod.labels.remove.headline"}}
+										{{/if}}
+									</td>
+								</tr>
+							{{/each}}
+						</tbody>
+					</table>
+				{{else}}
+					{{!-- The empty state (D9). v2 drew the four column headers over nothing, which
+					      reads as broken rather than as empty. The tab is never hidden and the
+					      create control above never moves: it is the only in-sheet route to
+					      making this list non-empty. --}}
+					<p class="v3-empty">{{localize "wod.gear.empty"}}</p>
+				{{/if}}
+			</div>
+
+		</div>
+
+		<aside class="v3-macrorail">
+			{{> "systems/worldofdarkness/templates/actor/parts/macro_icons.hbs"}}
+		</aside>
+	</div>
+
+</section>

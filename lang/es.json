@@ -1136,6 +1136,7 @@
 			"demonchi": "Chi Demoníaco"
 		},
 		"combat": {
+			"empty": "Todavía no hay armas, armaduras ni maniobras. Aquí aparecen los ataques naturales, las armas cuerpo a cuerpo y a distancia, las maniobras de combate y las armaduras; usa Añadir objeto para crear una. Las condiciones, la salud y el movimiento de abajo se muestran siempre.",
 			"conditions": {
 				"frenzy": "Frenesí",
 				"ignorepain": "Ignorar dolor",
@@ -1403,7 +1404,8 @@
 			"trinket": "Baratija",
 			"contains": "Contiene",
 			"name": "Nombre",
-			"type": "Tipo"
+			"type": "Tipo",
+			"empty": "Todavía no hay equipo. Aquí aparecen tesoros, reliquias, dispositivos, talismanes, periaptos, matrices, baratijas, fetiches y talens; usa Añadir objeto para crear uno. Las armas y las armaduras van en la pestaña de Combate."
 		},
 		"effects": {
 			"origin": "Orígen",

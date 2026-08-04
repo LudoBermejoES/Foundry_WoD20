@@ -144,6 +144,33 @@ export const registerHandlebarsHelpers = function () {
 	   the exception took the WHOLE Powers tab down for any actor holding a visible shapeform, i.e.
 	   every werewolf and every changing breed with a shape. Confirmed against real Handlebars 4.7.7.
 	   The rule itself stays on the Actor (`wod-actor-base.js:1888`); this is only the bridge. */
+	/* `or` and `and`, OVERRIDING Foundry's. Foundry's fold over `arguments`, and Handlebars always
+	   appends its options object as the last argument — an object, therefore truthy. So `(or a b)`
+	   is **unconditionally true**, for every a and b, everywhere in this system.
+
+	   That is not theoretical: all seven live uses intend a real OR and none of them has ever been
+	   false. `dialog-power.hbs:44` shows the custom-dice field whatever the selection is;
+	   `trait-sheet.html:142` never hides its block; and the three effects templates render the
+	   active/inactive toggle as an interactive control even for a bonus inherited from a parent
+	   item, which cannot be toggled. Verified against real Handlebars 4.7.7 before writing this.
+
+	   `and` survives Foundry's version by luck — a truthy extra term cannot change an `every` — but
+	   it is defined here too so the pair reads the same and neither depends on that accident.
+
+	   These are registered from `registerHandlebarsHelpers()`, which the system calls at `init`,
+	   after core has registered its own, so ours win. */
+	Handlebars.registerHelper("or", function (...args) {
+		args.pop();		// Handlebars' options object
+
+		return args.some(Boolean);
+	});
+
+	Handlebars.registerHelper("and", function (...args) {
+		args.pop();
+
+		return args.every(Boolean);
+	});
+
 	Handlebars.registerHelper("showTokenImage", function (actor, shapeid, image) {
 		return actor?.ShowTokenImage?.(actor, shapeid, image) ?? false;
 	});
