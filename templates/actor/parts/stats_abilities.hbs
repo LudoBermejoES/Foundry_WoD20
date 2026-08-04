@@ -24,21 +24,49 @@
 					<div class="pullLeft resource-counter"><input class="item-active pointer resource-value-step" name="ability.system.settings.isfavored" type="checkbox" data-type="{{../config.sheettype.exalted}}" data-key="{{ability._id}}" data-ability="true" {{isChecked ability.system.settings.isfavorited}}></input></div>
 				{{/if}}
 
-				<label for="data.system.abilities.{{ability.system.id}}.system.value"
-					class="pullLeft {{#if ../useroll}}vrollable{{/if}} {{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} {{#if ability.issecondary}}secondaryAbility{{/if}} ability-headlineWidth headlineNormal"
-					data-type="{{../config.sheettype.mortal}}"
-					data-key="{{ability._id}}"
-					{{#if ../useroll}}data-action="rollDice"{{/if}}
-					{{!-- A secondary ability sits in the same column as the primary ones (that is the
-					      point - it was rendering nowhere before), so the row still has to SAY which
-					      one it is. Marked the way the legacy sheets mark it: the `issecondary` flag,
-					      here as a class plus the localized type name on hover. data-ability stays
-					      "true" - it is what routes the click to the ability branch of
-					      ActionHelper.RollDialog, and "secondary" would silently stop the roll. --}}
-					{{#if ability.issecondary}}title="{{localize ability.secondarytype}}"{{/if}}
-					data-ability="true">
-							{{localize ability.system.label}}
-				</label>
+				{{!-- The description eye, sharing ONE name cell with the label (open-the-eye-on-abilities).
+				      Abilities had no description eye on the stat tab at all: the only one in this file lives
+				      inside the `showvisibleicon` block, i.e. the SETTINGS tab, and is further gated on
+				      `isremovable` - so a template-seeded primary never had one anywhere, even though
+				      v7.5.37 gives it a compendium description to show.
+
+				      The cell, rather than a floated icon, is copied from stats_attributes.hbs and the reason
+				      is a measured incident recorded there and in wod.css: `ability-headlineWidth` is
+				      `width: 50%`, so a `pullLeft` icon placed in FRONT of it pushes the pair past the row,
+				      the label drops to the next line and every dot row below it loses alignment. The label's
+				      own float and width therefore move onto the cell; `vrollable`/`headlineNormal`/
+				      `secondaryAbility` stay on the label because they style the text, not the box.
+
+				      `data-itemid` (not `data-traituuid`): an ability IS an embedded Item, so it takes the
+				      `.collapsible.button[data-itemid]` binder that opens the item's own sheet - the same one
+				      stats_feature_row.hbs uses for Backgrounds and Merits. `collapsible` is load-bearing
+				      TWICE, and dropping it breaks the click and the layout together: the binder selects on
+				      it, and `.icon.collapsible.button` is what caps the icon at 20px in a 19px row.
+
+				      A SIBLING of the label, never a child: the label carries `data-action="rollDice"` and
+				      ApplicationV2 dispatches to the nearest `[data-action]` ancestor, so an eye nested inside
+				      it would roll the ability on every click. Not gated on `locked` either - reading a
+				      description mutates nothing, the same choice the other two blocks already make. --}}
+				<div class="pullLeft {{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} ability-headlineWidth wod-namecell">
+					<i class="pointer icon collapsible button fa-solid fa-eye wod-namecell-eye"
+						title="{{localize 'wod.labels.show.description'}}"
+						data-itemid="{{ability._id}}"></i>
+					<label for="data.system.abilities.{{ability.system.id}}.system.value"
+						class="{{#if ../useroll}}vrollable{{/if}} {{#if ability.issecondary}}secondaryAbility{{/if}} headlineNormal wod-namecell-label"
+						data-type="{{../config.sheettype.mortal}}"
+						data-key="{{ability._id}}"
+						{{#if ../useroll}}data-action="rollDice"{{/if}}
+						{{!-- A secondary ability sits in the same column as the primary ones (that is the
+						      point - it was rendering nowhere before), so the row still has to SAY which
+						      one it is. Marked the way the legacy sheets mark it: the `issecondary` flag,
+						      here as a class plus the localized type name on hover. data-ability stays
+						      "true" - it is what routes the click to the ability branch of
+						      ActionHelper.RollDialog, and "secondary" would silently stop the roll. --}}
+						{{#if ability.issecondary}}title="{{localize ability.secondarytype}}"{{/if}}
+						data-ability="true">
+								{{localize ability.system.label}}
+					</label>
+				</div>
 
 				{{#if ../showvalues}}
 
@@ -111,21 +139,49 @@
 					<div class="pullLeft resource-counter"><input class="item-active pointer resource-value-step" name="ability.system.settings.isfavored" type="checkbox" data-type="{{../config.sheettype.exalted}}" data-key="{{ability._id}}" data-ability="true" {{isChecked ability.system.settings.isfavorited}}></input></div>
 				{{/if}}
 
-				<label for="data.system.abilities.{{ability.system.id}}.system.value"
-					class="pullLeft {{#if ../useroll}}vrollable{{/if}} {{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} {{#if ability.issecondary}}secondaryAbility{{/if}} ability-headlineWidth headlineNormal"
-					data-type="{{../config.sheettype.mortal}}"
-					data-key="{{ability._id}}"
-					{{#if ../useroll}}data-action="rollDice"{{/if}}
-					{{!-- A secondary ability sits in the same column as the primary ones (that is the
-					      point - it was rendering nowhere before), so the row still has to SAY which
-					      one it is. Marked the way the legacy sheets mark it: the `issecondary` flag,
-					      here as a class plus the localized type name on hover. data-ability stays
-					      "true" - it is what routes the click to the ability branch of
-					      ActionHelper.RollDialog, and "secondary" would silently stop the roll. --}}
-					{{#if ability.issecondary}}title="{{localize ability.secondarytype}}"{{/if}}
-					data-ability="true">
-							{{localize ability.system.label}}
-				</label>
+				{{!-- The description eye, sharing ONE name cell with the label (open-the-eye-on-abilities).
+				      Abilities had no description eye on the stat tab at all: the only one in this file lives
+				      inside the `showvisibleicon` block, i.e. the SETTINGS tab, and is further gated on
+				      `isremovable` - so a template-seeded primary never had one anywhere, even though
+				      v7.5.37 gives it a compendium description to show.
+
+				      The cell, rather than a floated icon, is copied from stats_attributes.hbs and the reason
+				      is a measured incident recorded there and in wod.css: `ability-headlineWidth` is
+				      `width: 50%`, so a `pullLeft` icon placed in FRONT of it pushes the pair past the row,
+				      the label drops to the next line and every dot row below it loses alignment. The label's
+				      own float and width therefore move onto the cell; `vrollable`/`headlineNormal`/
+				      `secondaryAbility` stay on the label because they style the text, not the box.
+
+				      `data-itemid` (not `data-traituuid`): an ability IS an embedded Item, so it takes the
+				      `.collapsible.button[data-itemid]` binder that opens the item's own sheet - the same one
+				      stats_feature_row.hbs uses for Backgrounds and Merits. `collapsible` is load-bearing
+				      TWICE, and dropping it breaks the click and the layout together: the binder selects on
+				      it, and `.icon.collapsible.button` is what caps the icon at 20px in a 19px row.
+
+				      A SIBLING of the label, never a child: the label carries `data-action="rollDice"` and
+				      ApplicationV2 dispatches to the nearest `[data-action]` ancestor, so an eye nested inside
+				      it would roll the ability on every click. Not gated on `locked` either - reading a
+				      description mutates nothing, the same choice the other two blocks already make. --}}
+				<div class="pullLeft {{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} ability-headlineWidth wod-namecell">
+					<i class="pointer icon collapsible button fa-solid fa-eye wod-namecell-eye"
+						title="{{localize 'wod.labels.show.description'}}"
+						data-itemid="{{ability._id}}"></i>
+					<label for="data.system.abilities.{{ability.system.id}}.system.value"
+						class="{{#if ../useroll}}vrollable{{/if}} {{#if ability.issecondary}}secondaryAbility{{/if}} headlineNormal wod-namecell-label"
+						data-type="{{../config.sheettype.mortal}}"
+						data-key="{{ability._id}}"
+						{{#if ../useroll}}data-action="rollDice"{{/if}}
+						{{!-- A secondary ability sits in the same column as the primary ones (that is the
+						      point - it was rendering nowhere before), so the row still has to SAY which
+						      one it is. Marked the way the legacy sheets mark it: the `issecondary` flag,
+						      here as a class plus the localized type name on hover. data-ability stays
+						      "true" - it is what routes the click to the ability branch of
+						      ActionHelper.RollDialog, and "secondary" would silently stop the roll. --}}
+						{{#if ability.issecondary}}title="{{localize ability.secondarytype}}"{{/if}}
+						data-ability="true">
+								{{localize ability.system.label}}
+					</label>
+				</div>
 
 				{{#if ../showvalues}}
 
@@ -195,21 +251,49 @@
 					<div class="pullLeft resource-counter"><input class="item-active pointer resource-value-step" name="ability.system.settings.isfavored" type="checkbox" data-type="{{../config.sheettype.exalted}}" data-key="{{ability._id}}" data-ability="true" {{isChecked ability.system.settings.isfavorited}}></input></div>
 				{{/if}}
 
-				<label for="data.system.abilities.{{ability.system.id}}.system.value"
-					class="pullLeft {{#if ../useroll}}vrollable{{/if}} {{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} {{#if ability.issecondary}}secondaryAbility{{/if}} ability-headlineWidth headlineNormal"
-					data-type="{{../config.sheettype.mortal}}"
-					data-key="{{ability._id}}"
-					{{#if ../useroll}}data-action="rollDice"{{/if}}
-					{{!-- A secondary ability sits in the same column as the primary ones (that is the
-					      point - it was rendering nowhere before), so the row still has to SAY which
-					      one it is. Marked the way the legacy sheets mark it: the `issecondary` flag,
-					      here as a class plus the localized type name on hover. data-ability stays
-					      "true" - it is what routes the click to the ability branch of
-					      ActionHelper.RollDialog, and "secondary" would silently stop the roll. --}}
-					{{#if ability.issecondary}}title="{{localize ability.secondarytype}}"{{/if}}
-					data-ability="true">
-							{{localize ability.system.label}}
-				</label>
+				{{!-- The description eye, sharing ONE name cell with the label (open-the-eye-on-abilities).
+				      Abilities had no description eye on the stat tab at all: the only one in this file lives
+				      inside the `showvisibleicon` block, i.e. the SETTINGS tab, and is further gated on
+				      `isremovable` - so a template-seeded primary never had one anywhere, even though
+				      v7.5.37 gives it a compendium description to show.
+
+				      The cell, rather than a floated icon, is copied from stats_attributes.hbs and the reason
+				      is a measured incident recorded there and in wod.css: `ability-headlineWidth` is
+				      `width: 50%`, so a `pullLeft` icon placed in FRONT of it pushes the pair past the row,
+				      the label drops to the next line and every dot row below it loses alignment. The label's
+				      own float and width therefore move onto the cell; `vrollable`/`headlineNormal`/
+				      `secondaryAbility` stay on the label because they style the text, not the box.
+
+				      `data-itemid` (not `data-traituuid`): an ability IS an embedded Item, so it takes the
+				      `.collapsible.button[data-itemid]` binder that opens the item's own sheet - the same one
+				      stats_feature_row.hbs uses for Backgrounds and Merits. `collapsible` is load-bearing
+				      TWICE, and dropping it breaks the click and the layout together: the binder selects on
+				      it, and `.icon.collapsible.button` is what caps the icon at 20px in a 19px row.
+
+				      A SIBLING of the label, never a child: the label carries `data-action="rollDice"` and
+				      ApplicationV2 dispatches to the nearest `[data-action]` ancestor, so an eye nested inside
+				      it would roll the ability on every click. Not gated on `locked` either - reading a
+				      description mutates nothing, the same choice the other two blocks already make. --}}
+				<div class="pullLeft {{#if (gt ability.system.max 5)}}supernaturalAttribute{{/if}} ability-headlineWidth wod-namecell">
+					<i class="pointer icon collapsible button fa-solid fa-eye wod-namecell-eye"
+						title="{{localize 'wod.labels.show.description'}}"
+						data-itemid="{{ability._id}}"></i>
+					<label for="data.system.abilities.{{ability.system.id}}.system.value"
+						class="{{#if ../useroll}}vrollable{{/if}} {{#if ability.issecondary}}secondaryAbility{{/if}} headlineNormal wod-namecell-label"
+						data-type="{{../config.sheettype.mortal}}"
+						data-key="{{ability._id}}"
+						{{#if ../useroll}}data-action="rollDice"{{/if}}
+						{{!-- A secondary ability sits in the same column as the primary ones (that is the
+						      point - it was rendering nowhere before), so the row still has to SAY which
+						      one it is. Marked the way the legacy sheets mark it: the `issecondary` flag,
+						      here as a class plus the localized type name on hover. data-ability stays
+						      "true" - it is what routes the click to the ability branch of
+						      ActionHelper.RollDialog, and "secondary" would silently stop the roll. --}}
+						{{#if ability.issecondary}}title="{{localize ability.secondarytype}}"{{/if}}
+						data-ability="true">
+								{{localize ability.system.label}}
+					</label>
+				</div>
 
 				{{#if ../showvalues}}
 

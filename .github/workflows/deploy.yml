@@ -157,6 +157,17 @@ jobs:
       - name: Syntax-check every committed JavaScript file
         run: bash .github/scripts/js-syntax-check.sh
 
+      # Templates were the one committed file class with NO gate at all: preflight reads the
+      # manifest and the import graph, js-syntax-check skips .hbs, and the three module-logic
+      # harnesses execute `module/`, never a template. A Handlebars comment closed with `--}`
+      # instead of `--}}` is unterminated, and Handlebars then SWALLOWS the markup up to the
+      # next `--}}` — on 2026-08-04 that ate a `<div>`, an `<i>` and a `<label>` opening tag
+      # from an ability row, and every gate above said OK. Caught only by diffing tag counts
+      # against HEAD by hand; this makes that a gate. Handlebars is not vendored here, so it is
+      # structural rather than a real compile.
+      - name: Structure-check every committed template
+        run: python3 .github/scripts/template-structure-check.py
+
       # The deploy job below drives Foundry's lifecycle through this script. A
       # syntax error in it would be discovered halfway through a deploy, i.e.
       # with Foundry stopped.
