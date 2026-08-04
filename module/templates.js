@@ -28,6 +28,10 @@ export const preloadHandlebarsTemplates = async function () {
 			"systems/worldofdarkness/templates/actor/parts/stats_renown.hbs",	
 			"systems/worldofdarkness/templates/actor/parts/stats_quintessence.hbs",
 			"systems/worldofdarkness/templates/actor/parts/stats_groupedadvantages.hbs",
+			// A partial only resolves at render time if it is listed HERE. Existing on disk is not
+			// enough, and `template-structure-check.py` only proves the file exists — it reported
+			// "partial includes resolve" while this line was missing and the sheet threw.
+			"systems/worldofdarkness/templates/actor/parts/stats_rotes.hbs",
 			"systems/worldofdarkness/templates/actor/parts/stats_features.hbs",
 			"systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs",
 		"systems/worldofdarkness/templates/actor/parts/powers.hbs",
