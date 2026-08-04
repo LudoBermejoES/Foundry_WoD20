@@ -1753,6 +1753,70 @@ export default class CreateHelper {
 					await this.CreateItem(actor, itemData);
 					return;
 				}
+			},
+
+			/*
+			 * The three SECONDARY-ability buttons.
+			 *
+			 * These mirror the legacy set at mortal-actor-sheet.js:1030-1058 -- the v1 sheets
+			 * have had this affordance all along and the v2 PC sheet did not, which is the gap
+			 * this closes. They are DELIBERATELY a delegation to AbilityHelper.CreateAbility
+			 * rather than a copy of the four buttons above, for three measured reasons:
+			 *
+			 *  1. A secondary ability is a `Trait`, not an `Ability`. `Ability` has a DataModel
+			 *     (CONFIG.Item.dataModels in wod.js) whose flags live NESTED under
+			 *     `system.settings`, which is why every button above writes
+			 *     `system.settings.isvisible`. `Trait` has no DataModel, so template.json's
+			 *     `settings` template is merged FLAT into `system` (system.isvisible,
+			 *     system.isremovable, ...). Copy-pasting the talent button and swapping the
+			 *     type would therefore invent a `system.settings` object that nothing on a
+			 *     Trait ever reads, while the sheet's eye toggle and stats_abilities.hbs go on
+			 *     using the flat path -- two carriers for one concept, the exact defect shape
+			 *     this change exists to remove. CreateAbility writes no settings at all, so
+			 *     template.json's flat defaults apply untouched.
+			 *  2. CreateAbility owns the `system.id` sealing for BOTH of its creation branches
+			 *     (see its comment): createEmbeddedDocuments() when the actor already exists --
+			 *     the only branch a sheet button can reach, since the sheet cannot be rendered
+			 *     before then -- and updateSource() during actor creation, which never runs
+			 *     WoDItem._preCreate. Creating the item here would have to re-implement that.
+			 *  3. It carries the duplicate check (CheckAbilityExists), so pressing one of these
+			 *     twice before renaming warns instead of silently producing a second item with
+			 *     the same placeholder name and the same derived key.
+			 *
+			 * The name is the PLACEHOLDER ("New secondary ability") and that is correct:
+			 * `autoopen` (the 7th argument, true here exactly as on the legacy sheet) opens the
+			 * item sheet so the user renames it at once, and WoDItem._preUpdate then settles the
+			 * real key over the placeholder's. Passing a real name here would freeze nothing and
+			 * gain nothing -- see AbilityHelper.PLACEHOLDER_SECONDABILITY_IDS for why the
+			 * placeholder key must stay overwritable.
+			 *
+			 * No `classes:` key, unlike the legacy trio: the four buttons above carry none and
+			 * Foundry styles this dialog's button row uniformly, so putting `fullSplatColor` on
+			 * three of seven would only make the dialog inconsistent with itself.
+			 *
+			 * Appended AFTER `advantage` on purpose: the object's key order is the button order,
+			 * and no existing button should move under a user who has learned where it is.
+			 */
+			talentsecondary: {
+				label: game.i18n.localize("wod.types.talentsecondability"),
+				callback: async () => {
+					await AbilityHelper.CreateAbility(actor, "wod.types.talentsecondability", game.i18n.localize("wod.labels.new.ability"), parseInt(actor.system.settings.abilities.defaultmaxvalue), false, false, true);
+					return;
+				}
+			},
+			skillsecondary: {
+				label: game.i18n.localize("wod.types.skillsecondability"),
+				callback: async () => {
+					await AbilityHelper.CreateAbility(actor, "wod.types.skillsecondability", game.i18n.localize("wod.labels.new.ability"), parseInt(actor.system.settings.abilities.defaultmaxvalue), false, false, true);
+					return;
+				}
+			},
+			knowledgesecondary: {
+				label: game.i18n.localize("wod.types.knowledgesecondability"),
+				callback: async () => {
+					await AbilityHelper.CreateAbility(actor, "wod.types.knowledgesecondability", game.i18n.localize("wod.labels.new.ability"), parseInt(actor.system.settings.abilities.defaultmaxvalue), false, false, true);
+					return;
+				}
 			}
 		}
 	}

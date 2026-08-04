@@ -223,6 +223,26 @@ jobs:
       - name: Prove ability enrichment accepts retyped secondaries and nothing more
         run: node .github/scripts/test-ability-enrichment-types.mjs
 
+      # Third of the same family, and the first that drives a SHEET AFFORDANCE:
+      # it calls the real `CreateHelper.CreateButtonsCore(actor)` and INVOKES the
+      # three secondary-ability buttons' callbacks, then runs the document that
+      # lands through the real `_preCreate`/`_preUpdate`. It exists because the
+      # obvious way to write those buttons is to copy the four beside them, and
+      # that copy is WRONG in a way nothing else here can see: `Ability` has a
+      # DataModel whose flags nest under `system.settings`, `Trait` has none, so
+      # template.json merges `settings` FLAT into `system` — a `system.settings`
+      # object on a secondary is dead weight that re-creates the two-carriers
+      # defect the change was raised to remove. It also sweeps EVERY `lang/*.json`
+      # to prove each language's placeholder key stays overwritable both in its
+      # own session and across sessions, so the rename can settle the real key
+      # instead of the placeholder's freezing and then BEATING the real name at
+      # import time. And it runs the real `ItemHelper._sortTraits` over the born
+      # item, so the claim "both sheet families read the same carrier" is executed
+      # rather than asserted. Mutation-tested: 35/24/15/1/10/9/2/1/17/4 of its 41
+      # checks fall across ten reversions. Offline, no Foundry, ~1s.
+      - name: Prove the PC sheet's secondary-ability buttons create the right shape
+        run: node .github/scripts/test-create-secondability-button.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server
