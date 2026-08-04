@@ -27,8 +27,24 @@
 
 	<div class="pullLeft sheet-boxcontainer item-row" style="width: 50%;">
 
+		{{!-- `.wod-pool` is the element that contains exactly ONE advantage. `getGetStatArea_v2` emits
+		      the banner and the two dot rows as flat siblings, so until this wrapper existed nothing
+		      in the DOM held a single stat and no stylesheet could draw a card round one, or put a
+		      label and its dots on one line (add-pc-sheet-v3 D6). All four call sites now use this
+		      same pair of classes; they used to use three different wrappers.
+
+		      `sheet-boxcontainer` is NOT decoration here and must not be dropped: this parent is
+		      `.item-row`, i.e. `display: flex; flex-wrap: wrap`, so the wrapper is a FLEX ITEM. With
+		      `width: auto` it would shrink to its content (~230px, the banner's min-width) inside a
+		      ~295px column and the whole block would stop being centred. `sheet-boxcontainer`'s
+		      `width: 100%` is exactly what the banner and the two rows each already had, so the
+		      wrapper takes one flex line just as they took three, and nothing moves. `.wod-pool`
+		      itself carries no rules at all today — it is a handle for the v3 stylesheet.
+
+		      The bloodpool/path `information-area` rows below stay OUTSIDE it: they are per-call-site
+		      annotations, not part of the pool the other three sites render. --}}
 		{{#each advantages as |advantage id|}}
-			{{{getGetStatArea_v2 ../actor advantage}}}
+			<div class="sheet-boxcontainer wod-pool">{{{getGetStatArea_v2 ../actor advantage}}}</div>
 
 			{{#if (eq advantage.system.id "bloodpool")}}
 				<div class="information-area centerText">{{localize "wod.advantages.perturn"}}: {{advantage.system.perturn}}</div>

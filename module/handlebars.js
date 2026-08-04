@@ -8,6 +8,117 @@ function getMeaningfulBonuses(bonuslist) {
 }
 
 /**
+ * Every DECISION the advantage block makes about one stat (Arete, Willpower, Quintessence, Renown,
+ * Virtues, Corpus, ...), as DATA. No markup.
+ *
+ * WHY THIS IS SEPARATE FROM THE RENDERER
+ * --------------------------------------
+ * `getGetStatArea_v2` emits a banner and two dot rows as FLAT SIBLINGS, so no element in the DOM
+ * contains exactly one stat: a stylesheet can restyle the dots and the typography but cannot draw a
+ * card per stat, because nothing you can write in CSS creates a containing box (add-pc-sheet-v3 D6).
+ * The v3 sheet therefore needs a second renderer — and the moment there are two, the splat switches,
+ * the wraith Corpus exception, the werewolf rank and the changeling imbalance would be duplicated
+ * into both and drift. They are rules, not markup, so they live here and are shared; only the string
+ * concatenation is forked.
+ *
+ * Pure apart from `game.i18n` and `actor.GetShifterRank()`, both of which the original called too.
+ *
+ * @param {Actor}  actor The actor the stat belongs to — read for its splat and its shifter rank.
+ * @param {Item}   stat  The Advantage item.
+ * @returns {object} `{id, label, headline, itemid, isrollable, splat, splattemporary, rank,
+ *                     permanent, temporary}`; `permanent`/`temporary` are `null` when the stat's
+ *                     settings say that row is not used.
+ */
+export function buildStatArea(actor, stat) {
+	const statname = stat.system.label;
+	const statid = stat.system.id;
+
+	let headline = game.i18n.localize(statname);
+	let splat = CONFIG.worldofdarkness.sheettype.mortal;
+	let splat_temporary = CONFIG.worldofdarkness.sheettype.mortal;
+	let rank = "";
+
+	// wraith corpus — the temporary row is the Corpus track, which is a wraith widget even though
+	// the banner and the permanent row stay on the mortal type.
+	if (statid == "corpus") {
+		splat_temporary = CONFIG.worldofdarkness.sheettype.wraith;
+	}
+
+	// werewolf and shifter renown. NOTE for a future renderer: unlike the v1 helper, which reaches for
+	// `GetShifterRenownName(tribe, statname)` here so a tribe can call Glory something else, v2 leaves
+	// the headline alone and only moves the block onto the werewolf type. That difference is
+	// deliberate on v2 (the Advantage item carries its own label) and must not be "fixed" by accident.
+	if (stat.system.group == "renown") {
+		splat = CONFIG.worldofdarkness.sheettype.werewolf;
+
+		if (stat.system.id == "rank") {
+			rank = actor.GetShifterRank();
+		}
+	}
+
+	const area = {
+		id: statid,
+		label: statname,
+		headline: headline,
+		itemid: stat._id,
+		isrollable: stat.system.settings.useroll,
+		splat: splat,
+		splattemporary: splat_temporary,
+		// The shifter's rank NAME, printed inside the permanent row. "" for every other stat.
+		rank: rank,
+		permanent: null,
+		temporary: null
+	};
+
+	if (stat.system.settings.usepermanent) {
+		// The changeling Willpower row is the only one whose dots carry a second meaning: the top
+		// `imbalance` dots are Willpower the character cannot spend. Decided once per row rather
+		// than once per dot — nothing inside the loop can change the answer.
+		const isimbalancerow =
+			(actor.system.settings.splat == CONFIG.worldofdarkness.splat.changeling) && (statid == "willpower");
+		const imbalanceValue = stat.system.permanent - stat.system.imbalance;
+
+		const steps = [];
+
+		for (let value = 0; value <= stat.system.max - 1; value++) {
+			steps.push({
+				index: value,
+				isimbalance: isimbalancerow && (value >= imbalanceValue) && (value < stat.system.permanent)
+			});
+		}
+
+		area.permanent = {
+			value: stat.system.permanent,
+			max: stat.system.max,
+			isimbalancerow: isimbalancerow,
+			imbalancetitle: isimbalancerow ? game.i18n.localize(`wod.advantages.imbalance`) : "",
+			steps: steps
+		};
+	}
+
+	if (stat.system.settings.usetemporary) {
+		const steps = [];
+
+		for (let value = 0; value <= stat.system.max - 1; value++) {
+			// `data-state` is what the stylesheet paints the square from, and what the wraith health
+			// track overloads on the v1 helper; here a spent point is simply marked.
+			steps.push({
+				index: value,
+				state: stat.system.temporary > value ? "x" : ""
+			});
+		}
+
+		area.temporary = {
+			value: stat.system.temporary,
+			max: stat.system.max,
+			steps: steps
+		};
+	}
+
+	return area;
+}
+
+/**
  * Registers all Handlebars helpers used throughout the system.
  * This function registers over 50 Handlebars helpers for various template operations.
  */
@@ -407,94 +518,64 @@ export const registerHandlebarsHelpers = function () {
 		return html;
 	});
 
-	/* get advantages box mainly used on Core (application v2) */
+	/* get advantages box mainly used on Core (application v2)
+
+	   The DECISIONS live in `buildStatArea` at the top of this file; what is left here is only the v2
+	   string template. Its output is byte-frozen by `.github/scripts/test-statarea-identity.mjs`,
+	   which runs a vendored copy of the pre-refactor function against this one over a fixture table,
+	   so a change here that was not meant to move the markup fails preflight. */
 	Handlebars.registerHelper("getGetStatArea_v2", function (actor, stat, showbanner = true) {
 
-		const statname = stat.system.label;
-		const statid = stat.system.id;
-		const isrollable = stat.system.settings.useroll;
-		const ispermanent = stat.system.settings.usepermanent;
-		const istemporary = stat.system.settings.usetemporary;
+		const area = buildStatArea(actor, stat);
 
 		let html = "";
 		let permanent_html = "";
 		let temporary_html = "";
-		let stat_headline_text = game.i18n.localize(statname);
 		let rollable = "";
 		let rollaction = "";
-		let splat = CONFIG.worldofdarkness.sheettype.mortal;	
-		let splat_temporary = CONFIG.worldofdarkness.sheettype.mortal;	
 
-		let rankname = "";
-
-		if (isrollable) {
+		if (area.isrollable) {
 			rollable = " vrollable";
 			rollaction = `data-action="rollDice"`;
 		}
 
-		// wraith corpus
-		if (statid == "corpus") {
-			splat_temporary = CONFIG.worldofdarkness.sheettype.wraith;
-		}
-
-		// wereweolf and shifter renown
-		if (stat.system.group == "renown") {
-			splat = CONFIG.worldofdarkness.sheettype.werewolf;
-			stat_headline_text = game.i18n.localize(statname);
-
-			if (stat.system.id == "rank") {
-				rankname = `<span class="splatFont">${actor.GetShifterRank()}</span>`;
-			}			
-		}
+		const rankname = area.rank !== "" ? `<span class="splatFont">${area.rank}</span>` : "";
 
 		if (showbanner) {
-			html += `<div class="sheet-headline sheet-banner-small splatFont ${rollable}" data-type="${splat}" data-key="${statid}" data-noability="true" ${rollaction}><span class="sheet-banner-text">${stat_headline_text}</span></div>`;	
+			html += `<div class="sheet-headline sheet-banner-small splatFont ${rollable}" data-type="${area.splat}" data-key="${area.id}" data-noability="true" ${rollaction}><span class="sheet-banner-text">${area.headline}</span></div>`;	
 		}
 		else {
-			html += `<div class="sheet-headline splatFont ${rollable}" data-type="${splat}" data-key="${statname}" data-noability="true" ${rollaction}><span class="sheet-banner-text">${stat_headline_text}</span></div>`;
+			html += `<div class="sheet-headline splatFont ${rollable}" data-type="${area.splat}" data-key="${area.label}" data-noability="true" ${rollaction}><span class="sheet-banner-text">${area.headline}</span></div>`;
 		}		
 
-		if (ispermanent) {
-			let header = `<div class="sheet-boxcontainer ${statid}"><div class="resource-value permValueRow" data-itemid="${stat._id}" data-key="${statid}" data-value="${stat.system.permanent}" data-name="system.permanent">`;
+		if (area.permanent != null) {
+			let header = `<div class="sheet-boxcontainer ${area.id}"><div class="resource-value permValueRow" data-itemid="${area.itemid}" data-key="${area.id}" data-value="${area.permanent.value}" data-name="system.permanent">`;
 			let footer = `</div></div>`;
 
-			
+			for (const step of area.permanent.steps) {
+				// The imbalance row carries two attributes the plain row does not, so it stays its own
+				// template rather than an interpolated class on a shared one.
+				if (area.permanent.isimbalancerow) {
+					const imbalance = step.isimbalance ? `imbalance` : ``;
+					const imbalance_title_text = step.isimbalance ? area.permanent.imbalancetitle : ``;
 
-			for (let value = 0; value <= stat.system.max - 1; value++) {
-				if ((actor.system.settings.splat == CONFIG.worldofdarkness.splat.changeling) && (statid == "willpower")) {
-					let imbalance = "";
-					let imbalance_title_text = "";
-
-					let imbalanceValue = stat.system.permanent - stat.system.imbalance;
-
-					if ((value >= imbalanceValue) && (value < stat.system.permanent)) {
-						imbalance = `imbalance`;
-						imbalance_title_text = game.i18n.localize(`wod.advantages.imbalance`);
-					}
-
-					permanent_html += `<span class="resource-value-step ${imbalance}" title="${imbalance_title_text}" data-itemid="${stat._id}" data-action="editDot" data-type="${splat}" data-index="${value}"></span>`;
+					permanent_html += `<span class="resource-value-step ${imbalance}" title="${imbalance_title_text}" data-itemid="${area.itemid}" data-action="editDot" data-type="${area.splat}" data-index="${step.index}"></span>`;
 				}
 				else {
-					permanent_html += `<span class="resource-value-step" data-action="editDot" data-type="${splat}" data-index="${value}"></span>`;
+					permanent_html += `<span class="resource-value-step" data-action="editDot" data-type="${area.splat}" data-index="${step.index}"></span>`;
 				}
 			}
-					
+
 			permanent_html = header + permanent_html + rankname + footer;
 		}		
 
-		if (istemporary) {
-			let header = `<div class="sheet-boxcontainer"><div class="resource-counter tempSquareRow" data-itemid="${stat._id}" data-key="${statid}" data-value="${stat.system.temporary}" data-name="system.temporary">`;
+		if (area.temporary != null) {
+			let header = `<div class="sheet-boxcontainer"><div class="resource-counter tempSquareRow" data-itemid="${area.itemid}" data-key="${area.id}" data-value="${area.temporary.value}" data-name="system.temporary">`;
 			let footer = `</div></div>`;
 
-			for (let value = 0; value <= stat.system.max - 1; value++) {
-				let mark = "";
-
-				if (stat.system.temporary > value) {
-					mark = "x";
-				}
-
-				temporary_html += `<span class="resource-value-step" data-action="editDot" data-type="${splat_temporary}" data-index="${value}" data-state="${mark}"></span>`;
-			}			
+			for (const step of area.temporary.steps) {
+				temporary_html += `<span class="resource-value-step" data-action="editDot" data-type="${area.splattemporary}" data-index="${step.index}" data-state="${step.state}"></span>`;
+			}
 
 			temporary_html = header + temporary_html + footer;
 		}

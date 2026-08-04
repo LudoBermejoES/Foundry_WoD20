@@ -29,8 +29,10 @@
 		{{/if}}
 	</div>
 
+	{{!-- `.wod-pool` added to the wrapper this partial already had; see stats_advantages.hbs for what
+	      it is for. The element and its `sheet-boxcontainer` are unchanged, so nothing moves here. --}}
 	{{#each groupData.items as |advantage id|}}
-		<div class="sheet-boxcontainer">
+		<div class="sheet-boxcontainer wod-pool">
 			{{{getGetStatArea_v2 ../../actor advantage}}}
 		</div>
 	{{/each}}

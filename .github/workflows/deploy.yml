@@ -309,6 +309,23 @@ jobs:
       - name: Prove the eye's window is titled in the reader's language
         run: node .github/scripts/test-item-viewer-title.mjs
 
+      # The advantage block (Arete, Willpower, Quintessence, Renown, Virtues, Corpus — every line)
+      # is built by string concatenation in `getGetStatArea_v2`, and add-pc-sheet-v3 D6 splits it
+      # into `buildStatArea()` (the decisions: the wraith Corpus type switch, the werewolf renown and
+      # rank, the changeling Willpower imbalance, the `data-state` marker) plus a renderer, so v3 can
+      # add a SECOND renderer without forking those four rules into it. This harness vendors the
+      # pre-refactor function verbatim and byte-compares it against the real registered helper over
+      # 23 fixtures x 4 banner modes. It is the only thing standing between that refactor and 88 live
+      # sheets: nothing else here can see markup move, and the failure mode is silent — a dropped
+      # `data-state` simply stops the temporary squares painting, and a dropped `data-index` stops
+      # dots persisting, with no error either way. (A hand transcription of the same function during
+      # this change DID drop `data-state`; the harness caught it before anything was pushed.)
+      # Mutation-tested: dropping the corpus switch, the renown switch or the rank, or moving the
+      # imbalance bound or the spent-square bound by one, each fails it with the fixture named and
+      # the differing byte printed. Offline, no Foundry, ~1s.
+      - name: Prove the advantage block's markup has not moved by one byte
+        run: node .github/scripts/test-statarea-identity.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server

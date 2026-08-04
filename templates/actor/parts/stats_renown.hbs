@@ -1,7 +1,11 @@
 {{!-- <div class="sheet-headline sheet-banner-small splatFont"><span class="sheet-banner-text">{{localize "wod.advantages.renown"}}</span></div>	 --}}
 
+{{!-- The bare `<div>` this used to open is now the shared `.wod-pool` wrapper — see
+      stats_advantages.hbs for why the pair of classes is what it is. This parent is an ordinary
+      floated block column, so the wrapper was already full width and `sheet-boxcontainer` only
+      restates it; the class is carried anyway so all four call sites are one thing. --}}
 {{#each renowns as |renown id|}}
-	<div>
+	<div class="sheet-boxcontainer wod-pool">
 		{{{getGetStatArea_v2 ../actor renown}}}
 	</div>
 {{/each}}	

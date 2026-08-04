@@ -74,7 +74,7 @@ TWO LIMITS, BOTH DELIBERATE, BOTH MEASURED
    NOT a span. Neither check subsumes the other; run both.
 2. `.willpower` is authored by no literal class anywhere. It exists only because
    `getGetStatArea_v2` interpolates the stat id into
-   `class="sheet-boxcontainer ${statid}"` (module/handlebars.js:458). No static reading can
+   `class="sheet-boxcontainer ${area.id}"` (module/handlebars.js:552). No static reading can
    confirm that `statid` is ever the string "willpower", and attempts to infer it from
    structure find plausible-looking impostors — measured 2026-08-04: the dynamic-class
    grandparents of a `.resource-value > .resource-value-step` pair are
@@ -122,14 +122,14 @@ JS_EXTRA = ("wod.js",)
 #:
 #: `willpower` is authored by no literal `class="..."` anywhere in the system. It reaches
 #: the DOM only through `getGetStatArea_v2`'s
-#: `<div class="sheet-boxcontainer ${statid}">` (module/handlebars.js:458), where `statid`
+#: `<div class="sheet-boxcontainer ${area.id}">` (module/handlebars.js:552), where `area.id`
 #: is `stat.system.id` — a value that comes from actor DATA, not from this repo. Inferring
 #: it from structure was tried and rejected: measured 2026-08-04, the dynamic-class
 #: grandparents of a `.resource-value > .resource-value-step` pair are
 #: `power_spheres.hbs:13` and `power_realms.hbs:13`, so a structural inference would
 #: "confirm" the willpower chain using two elements that have nothing to do with willpower.
 INTERPOLATED_CLASSES: dict[str, str] = {
-    "willpower": "built by `${statid}` in getGetStatArea_v2 (module/handlebars.js:458); "
+    "willpower": "built by `${area.id}` in getGetStatArea_v2 (module/handlebars.js:552); "
                  "`statid` is actor data, so no static reading can confirm it",
 }
 

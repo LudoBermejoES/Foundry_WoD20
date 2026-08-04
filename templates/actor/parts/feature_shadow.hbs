@@ -51,8 +51,10 @@
           over the whole sheet element in `_onRender`, so this pool is as editable here as it is in
           the Advantages block on the Attributes tab. --}}
     {{#if (gt shadowadvantages.length 0)}}
+        {{!-- `.wod-pool` added to the wrapper this block already had; see stats_advantages.hbs for
+              what it is for. The element and its `sheet-boxcontainer` are unchanged. --}}
         {{#each shadowadvantages as |advantage id|}}
-            <div class="sheet-boxcontainer">
+            <div class="sheet-boxcontainer wod-pool">
                 {{{getGetStatArea_v2 ../actor advantage}}}
             </div>
         {{/each}}
