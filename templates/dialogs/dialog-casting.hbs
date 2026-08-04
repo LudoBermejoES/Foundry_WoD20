@@ -12,7 +12,15 @@
 		{{!-- ── What you are casting with ─────────────────────────────────────────────── --}}
 		<section class="casting-panel casting-spheres" aria-labelledby="cast-h-spheres">
 			<h3 class="casting-panel-title splatFont" id="cast-h-spheres">{{localize "wod.dialog.aretecasting.availspheres"}}</h3>
-			<p class="casting-hint">{{localize "wod.dialog.casting.spherehint"}}</p>
+
+			{{!-- A Rote arrives with its spheres, spell type and instrument flags already set, so the
+			      "pick your ranks" hint is wrong for it — and until now NEITHER screen showed which
+			      rote you had clicked, even though `Rote` has carried the name all along. --}}
+			{{#if object.isRote}}
+				<p class="casting-rote-name headlineNormal">{{object.name}}</p>
+			{{else}}
+				<p class="casting-hint">{{localize "wod.dialog.casting.spherehint"}}</p>
+			{{/if}}
 
 			{{!-- Legacy actors keep their own shape; PC actors carry Sphere Items. --}}
 			{{#each actorData.spheres as |sphere key|}}

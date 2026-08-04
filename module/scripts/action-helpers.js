@@ -212,10 +212,17 @@ export default class ActionHelper {
 			}
 			
 			// used a Rote
+			//
+			// Opens the REDESIGNED screen, same as clicking a Sphere's name. `new Rote(item)` already
+			// pre-fills the spheres, spell type, personalised/unique instrument and extended-casting
+			// flags from the Rote item, and DialogCasting is a subclass, so none of that changes —
+			// only how it is presented. The rote's NAME reaches the screen for the first time here:
+			// `Rote` has carried it since forever and neither template ever showed it, so you could
+			// not tell from the dialog which rote you had clicked.
 			if (dataset.object == "wod.types.rote") {
 				const rote = new Rote(item);
-				let areteCasting = new DialogAreteCasting(actor, rote);
-				areteCasting.render(true);
+				let casting = new DialogCasting(actor, rote);
+				casting.render(true);
 
 				return;
 			}

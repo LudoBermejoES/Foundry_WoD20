@@ -91,6 +91,18 @@
   opacity: 0.75;
 }
 
+/* Takes the hint's place when a Rote is being cast: it answers "which rote is this?", so unlike the
+   hint it is stated rather than murmured. Wraps rather than ellipsizing - a rote name is the one
+   string here that must never be cut - and keeps the row's height off the panel's grid. */
+.wod20.casting-dialog .casting-rote-name {
+  margin: 0 0 6px;
+  padding-left: 6px;
+  border-left: 3px solid var(--main-full-color);
+  font-size: var(--wod-font-md);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
 /* Two columns while there is room, one when there is not. `auto-fit` reacts to the DIALOG's width -
    the window is resizable, so a viewport media query would measure the wrong box. */
 .wod20.casting-dialog .casting-body {
