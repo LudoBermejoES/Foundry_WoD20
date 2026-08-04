@@ -134,10 +134,9 @@ INTERPOLATED_CLASSES: dict[str, str] = {
 }
 
 ALLOWLIST_UNPRODUCIBLE: dict[str, str] = {
-    ".ability-statArea[data-droparea]":
-        "dead branch in _onDragOver: `data-droparea` is authored only by the SPLAT ITEM "
-        "sheet's templates, never by any PC-sheet part, so this highlight has never "
-        "fired. Delete the branch or give the PC sheet's ability columns the attribute",
+    # Empty on purpose. Its only entry was `.ability-statArea[data-droparea]`, a drag highlight
+    # whose attribute no PC-sheet template authors, so it had never fired. The branch was deleted
+    # rather than tolerated. The dict and the STALE check stay for the next one.
 }
 
 errors: list[str] = []

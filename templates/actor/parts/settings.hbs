@@ -32,9 +32,14 @@
 							{{else}}
 								<i class="item-active pointer icon fa-solid fa-eye-slash" data-type="system.bio.splatfields.{{key}}.isvisible" data-action="actorSwitch"></i>
 							{{/if}}
-							{{#if field.isremovable}}
-								<a class="pointer item-delete" title="{{localize 'wod.labels.remove.headline'}}" data-type="system.bio.splatfields.{{key}}" data-action="actorDelete"><i class="icon fa-solid fa-trash-can"></i></a>
-							{{/if}}
+							{{!-- The `isremovable` trash can was removed here. It carried
+							      data-action="actorDelete", which is not one of the 22 actions
+							      PCActorSheet registers, so ApplicationV2 found no handler and the
+							      anchor rendered live, took the pointer cursor and did nothing. It
+							      was reachable in two clicks (Ajustes > Bio). Deleting a splatfield
+							      is a real operation and if it is wanted it needs a handler, not a
+							      re-added anchor — `removeSplat`, three blocks down, shows the
+							      shape. Caught by sheet-invariants.py's I1. --}}
 						{{/if}}
 					</div>
 				</div>

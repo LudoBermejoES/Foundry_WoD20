@@ -812,11 +812,13 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 			}
 		}
 
-		// Highlight ability category drop zone
-		const abilityZone = event.target.closest('.ability-statArea[data-droparea]');
-		if (abilityZone) {
-			abilityZone.classList.add('drag-over');
-		}
+		// The ability-column drop highlight was removed here. It selected
+		// `.ability-statArea[data-droparea]`, and `data-droparea` is authored only by the SPLAT
+		// ITEM sheet's templates — no part of this sheet emits it on an ability column, so the
+		// branch has never fired since it was written. Dropping onto an ability column still
+		// works; only the highlight was missing, and it was missing silently. Found by
+		// binder-selector-check.py, which parses these selectors out of this file and asserts
+		// some template can still produce each one.
 	}
 
     async _onDrop(event) {

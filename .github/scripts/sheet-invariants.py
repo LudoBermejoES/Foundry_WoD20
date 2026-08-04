@@ -116,12 +116,11 @@ CORE_ACTIONS = {"tab", "close", "minimize", "maximize", "toggleControls"}
 #: the anchor — and then this entry goes away. It is counted, so a SECOND unregistered
 #: action anywhere (including a second `actorDelete`) is an error.
 ALLOWLIST_UNREGISTERED_ACTIONS: dict[tuple[str, str], tuple[int, str]] = {
-    ("templates/actor/parts/settings.hbs", "actorDelete"): (
-        1,
-        "reachable and inert: a trash can on Ajustes>Bio wired to no handler (verified "
-        "2026-08-04 against the 22 registered actions). Harmless because an unwired "
-        "delete deletes nothing. Fix by wiring the action or deleting the anchor",
-    ),
+    # Empty on purpose. Its only entry was `actorDelete` in settings.hbs — a trash can wired to an
+    # action PCActorSheet does not register, so it rendered live, took the pointer cursor and did
+    # nothing. It was deleted rather than tolerated. The dict and the STALE check below stay: the
+    # next unregistered action needs somewhere to be recorded, and needs to be unable to sit there
+    # once it stops being true.
 }
 
 #: template path -> (expected occurrences, reason). `LANG:` is this fork's marker for a
