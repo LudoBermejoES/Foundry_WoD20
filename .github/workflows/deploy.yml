@@ -300,6 +300,30 @@ jobs:
       - name: Prove the PC sheet's secondary-ability buttons create the right shape
         run: node .github/scripts/test-create-secondability-button.mjs
 
+      # I12, and the ONLY gate here that RENDERS A TEMPLATE. Everything above reads a template
+      # against itself or against the JS statically; this one runs the nine real `prepare*Context`
+      # functions over a fixture actor of every structure `config.js` declares (13 splats x
+      # variantsheet + the variant branches the templates themselves are found to make = 173) and
+      # renders all nine parts for each.
+      #
+      # It exists for one failure that nothing else can see: a template reading a context key its
+      # PART's preparer never built. An ApplicationV2 part only carries the context its own preparer
+      # produced, so moving an include without moving the context renders the block EMPTY — no
+      # exception, no console warning, nothing in any log. That happened THREE times in the week of
+      # 2026-08-04 (Spheres, Rotes, an unregistered partial) and a human found it each time. The
+      # renderer here is instrumented, so it reports the structure, the part, the template, the line
+      # and the key.
+      #
+      # Handlebars is not vendored and no dependency may be added, so the renderer is a strict
+      # SUBSET that THROWS on anything it does not implement — it can be incomplete, but it cannot
+      # pass by rendering a construct it does not understand as nothing. Validated once offline
+      # against real Handlebars 4.7.7: 1384/1384 renders identical modulo whitespace.
+      # Counted allowlists carry the pre-existing findings and print ::warning:: every run; each is
+      # checked for staleness, so an entry that stops firing fails the build instead of quietly
+      # masking the next occurrence. Offline, no Foundry, ~1s.
+      - name: Prove every sheet part renders for every splat the config declares
+        run: node .github/scripts/test-part-render.mjs
+
       # The eye's window was titled from the document's `name`, which for a template-seeded
       # primary is the ENGLISH string ("Firearms") while every surface that DISPLAYS the row
       # localizes `system.label` ("Armas de Fuego"). Reported from the live sheet. The fallback

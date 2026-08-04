@@ -266,17 +266,15 @@
             {{/each}}
         {{/if}}
 
-        {{#if (gt shapeforms.length 0)}}
-            <div class="feature-itemlistarea">
+        {{!-- A `shapeforms` block stood here, gated on `(gt shapeforms.length 0)`. NOTHING in the
+              system has ever built that key — the context key is `shapes`, and `shapeforms`
+              appeared exactly twice in the whole tree, both inside this block. So it never
+              rendered, for any splat, since the day it was written. Found by
+              test-part-render.mjs's orphan sweep.
 
-                {{#each shapeforms as |item id|}}
-
-                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.headline" deletetitle="wod.labels.remove.headline" showtype=true}}
-
-                {{/each}}
-
-            </div>
-        {{/if}}
+              Deleted rather than repointed at `shapes`: the Shape panels already render on the
+              Powers tab (`power_shapes.hbs`), so showing them a second time here would be a design
+              decision, not a bug fix. --}}
 
         {{#if (gt othertraits.length 0)}}
             <div class="feature-itemlistarea">

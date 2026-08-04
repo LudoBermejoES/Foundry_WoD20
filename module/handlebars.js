@@ -137,6 +137,17 @@ export const registerHandlebarsHelpers = function () {
 	   system uses it, so there is no evidence here that it still exists under the Foundry version
 	   we target — and a missing helper renders as nothing, silently. Three lines of our own beat
 	   an untested assumption on a repo that deploys straight to the live server. */
+	/* `power_shapes.hbs` needs to ask an ACTOR METHOD whether a shapeform has a usable image.
+	   It used to write `{{#if (actor.ShowTokenImage ../actor shapeform._id 'tokenimage')}}`, which
+	   cannot work: a Handlebars sub-expression `(x y)` resolves `x` as a HELPER NAME, and no helper
+	   called "actor.ShowTokenImage" was ever registered — so Handlebars raised `Missing helper` and
+	   the exception took the WHOLE Powers tab down for any actor holding a visible shapeform, i.e.
+	   every werewolf and every changing breed with a shape. Confirmed against real Handlebars 4.7.7.
+	   The rule itself stays on the Actor (`wod-actor-base.js:1888`); this is only the bridge. */
+	Handlebars.registerHelper("showTokenImage", function (actor, shapeid, image) {
+		return actor?.ShowTokenImage?.(actor, shapeid, image) ?? false;
+	});
+
 	Handlebars.registerHelper("signed", function (num) {
 		const value = parseInt(num) || 0;
 

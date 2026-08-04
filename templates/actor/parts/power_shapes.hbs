@@ -8,9 +8,9 @@
                 <div class="shape-panel {{#if shapeform.system.isactive}}shape-panel-active{{/if}}"
                      data-form="{{shapeform._id}}" data-itemid="{{shapeform._id}}" data-type="isactive" data-action="formActive">
                     <div class="shape-panel-image">
-                        {{#if (actor.ShowTokenImage ../actor shapeform._id 'tokenimage')}}
+                        {{#if (showTokenImage ../actor shapeform._id 'tokenimage')}}
                             <img class="shape-image" src="{{shapeform.system.tokenimage}}" />
-                        {{else if (actor.ShowTokenImage ../actor shapeform._id 'icon')}}
+                        {{else if (showTokenImage ../actor shapeform._id 'icon')}}
                             <img class="shape-image" src="{{shapeform.system.icon}}" />
                         {{/if}}
                     </div>

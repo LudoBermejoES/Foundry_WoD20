@@ -1,0 +1,560 @@
+{
+  "$comment": [
+    "Fixture items for .github/scripts/test-part-render.mjs (add-pc-sheet-v3 task 6.1/6.2).",
+    "",
+    "ONE catalogue, put on EVERY structure's fixture actor, on purpose. The PC sheet is one",
+    "template set switched by settings.splat / settings.variantsheet / the has* flags, so an item a",
+    "splat cannot show is simply not shown -- and giving every structure the full catalogue is what",
+    "makes the matrix mean something: it exercises every block on every splat instead of only the",
+    "blocks that splat's 'realistic' character happens to fill. D9c says to cover the six splats with",
+    "no live actor at all for exactly that reason.",
+    "",
+    "THIS FILE IS AUTHORED, AND THE HARNESS REFUSES TO TRUST IT. Two derived cross-checks run over it",
+    "on every invocation and both are hard failures:",
+    "  1. every `wod.types.*` literal that appears in module/actor/template/pc-actor-sheet.js -- i.e.",
+    "     every sub-kind one of the nine preparers actually asks for -- must have an entry here.",
+    "     Adding a predicate to a preparer without a fixture for it therefore goes red rather than",
+    "     silently rendering an empty block forever.",
+    "  2. every power-section id in assets/data/sheet/powertab.js (primary + defaultOrder) must have",
+    "     an entry whose `section` names it.",
+    "",
+    "`system` is a SPARSE overlay. The full default document is derived at run time from the item's",
+    "DataModel (Ability/Advantage/Sphere/Realm/Splat) or from template.json's template composition",
+    "(everything else), so nothing here restates a schema and a schema change cannot rot it.",
+    "",
+    "Field meanings:",
+    "  key      unique, used in failure messages and in the `parent` back-reference",
+    "  type     the Foundry Item document type",
+    "  section  optional: the powertab.js section id this item is meant to fill",
+    "  parent   optional: `key` of another entry; its generated _id is written to system.parentid",
+    "  why      what would stop being covered if this entry were deleted"
+  ],
+
+  "items": [
+    {
+      "key": "ability-talent",
+      "type": "Ability",
+      "name": "Alertness",
+      "system": { "id": "alertness", "type": "wod.abilities.talent", "label": "wod.abilities.alertness", "value": 3, "speciality": "Ambushes", "settings": { "isvisible": true, "isrollable": true } },
+      "why": "the Talents column of stats_abilities.hbs and the Settings tab's ability list"
+    },
+    {
+      "key": "ability-skill",
+      "type": "Ability",
+      "name": "Firearms",
+      "system": { "id": "firearms", "type": "wod.abilities.skill", "label": "wod.abilities.firearms", "value": 2, "settings": { "isvisible": true, "isrollable": true } },
+      "why": "the Skills column"
+    },
+    {
+      "key": "ability-knowledge",
+      "type": "Ability",
+      "name": "Occult",
+      "system": { "id": "occult", "type": "wod.abilities.knowledge", "label": "wod.abilities.occult", "value": 4, "settings": { "isvisible": true, "isrollable": true } },
+      "why": "the Knowledges column"
+    },
+
+    {
+      "key": "trait-talentsecondability",
+      "type": "Trait",
+      "name": "Arte",
+      "system": { "id": "arte", "type": "wod.types.talentsecondability", "placement": "feature", "label": "Arte", "value": 3, "isvisible": true },
+      "why": "the secondary-ability rows, which reach the sheet on a DIFFERENT carrier (Trait, flat settings) from the primary ones -- the make-secondary-abilities-secondary-everywhere defect class"
+    },
+    {
+      "key": "trait-skillsecondability",
+      "type": "Trait",
+      "name": "Tiro con arco",
+      "system": { "id": "tiro_con_arco", "type": "wod.types.skillsecondability", "placement": "feature", "label": "Tiro con arco", "value": 2, "isvisible": true },
+      "why": "same, Skills column"
+    },
+    {
+      "key": "trait-knowledgesecondability",
+      "type": "Trait",
+      "name": "Criptografia",
+      "system": { "id": "criptografia", "type": "wod.types.knowledgesecondability", "placement": "feature", "label": "Criptografia", "value": 1, "isvisible": true },
+      "why": "same, Knowledges column"
+    },
+
+    {
+      "key": "advantage-willpower",
+      "type": "Advantage",
+      "name": "Willpower",
+      "system": { "id": "willpower", "type": "wod.advantages.advantages", "group": "", "label": "wod.advantages.willpower", "permanent": 6, "temporary": 4, "max": 10, "imbalance": 2, "settings": { "isvisible": true, "usepermanent": true, "usetemporary": true, "useroll": true, "order": 0 } },
+      "why": "the ungrouped advantage column, getGetStatArea_v2's both-rows case, and (on changeling) the imbalance dots -- `imbalance` is non-zero so the changeling branch of the helper is exercised"
+    },
+    {
+      "key": "advantage-bloodpool",
+      "type": "Advantage",
+      "name": "Blood Pool",
+      "system": { "id": "bloodpool", "type": "wod.advantages.advantages", "group": "", "label": "wod.advantages.bloodpool", "permanent": 10, "temporary": 7, "max": 10, "perturn": 1, "settings": { "isvisible": true, "usepermanent": true, "usetemporary": true, "order": 1 } },
+      "why": "the `eq advantage.system.id \"bloodpool\"` per-turn readout in stats_advantages.hbs:33"
+    },
+    {
+      "key": "advantage-path",
+      "type": "Advantage",
+      "name": "Path",
+      "system": { "id": "path", "type": "wod.advantages.advantages", "group": "", "label": "wod.advantages.path", "permanent": 5, "max": 10, "bearing": 2, "bearingtext": "Conviction", "settings": { "isvisible": true, "usepermanent": true, "order": 2 } },
+      "why": "the `eq advantage.system.id \"path\"` bearing readout in stats_advantages.hbs:36, the only block that reads actor.system.advantages.path"
+    },
+    {
+      "key": "advantage-arete",
+      "type": "Advantage",
+      "name": "Arete",
+      "system": { "id": "arete", "type": "wod.advantages.advantages", "group": "", "label": "wod.advantages.arete", "permanent": 3, "max": 10, "settings": { "isvisible": true, "usepermanent": true, "order": 3 } },
+      "why": "a permanent-ONLY row -- the other branch of getGetStatArea_v2 from willpower's both-rows"
+    },
+    {
+      "key": "advantage-virtue",
+      "type": "Advantage",
+      "name": "Conscience",
+      "system": { "id": "conscience", "type": "wod.advantages.advantages", "group": "virtue", "label": "wod.advantages.virtue.conscience", "permanent": 3, "max": 5, "settings": { "isvisible": true, "usepermanent": true, "order": 0 } },
+      "why": "stats_virtue.hbs, gated on the DERIVED hasvirtue (D9b 9.1) -- one of the six flags that had no writer a PC could reach"
+    },
+    {
+      "key": "advantage-renown",
+      "type": "Advantage",
+      "name": "Glory",
+      "system": { "id": "glory", "type": "wod.advantages.advantages", "group": "renown", "label": "wod.advantages.glory", "permanent": 2, "temporary": 3, "max": 10, "settings": { "isvisible": true, "usepermanent": true, "usetemporary": true, "order": 0 } },
+      "why": "stats_renown.hbs, gated on the derived hasrenown"
+    },
+    {
+      "key": "advantage-rank",
+      "type": "Advantage",
+      "name": "Rank",
+      "system": { "id": "rank", "type": "wod.advantages.advantages", "group": "renown", "label": "wod.advantages.rank", "permanent": 2, "max": 5, "settings": { "isvisible": true, "usepermanent": true, "order": 1 } },
+      "why": "the renown+rank branch of getGetStatArea_v2, which calls actor.GetShifterRank()"
+    },
+    {
+      "key": "advantage-quintessence",
+      "type": "Advantage",
+      "name": "Quintessence",
+      "system": { "id": "quintessence", "type": "wod.advantages.advantages", "group": "quintessence", "label": "wod.advantages.quintessence", "permanent": 5, "temporary": 5, "max": 20, "settings": { "isvisible": true, "usepermanent": true, "usetemporary": true, "order": 0 } },
+      "why": "the Quintessence wheel (stats_quintessence.hbs), gated on the derived hasquintessence"
+    },
+    {
+      "key": "advantage-paradox",
+      "type": "Advantage",
+      "name": "Paradox",
+      "system": { "id": "paradox", "type": "wod.advantages.advantages", "group": "quintessence", "label": "wod.advantages.paradox", "permanent": 3, "temporary": 3, "max": 20, "settings": { "isvisible": true, "usepermanent": true, "usetemporary": true, "order": 1 } },
+      "why": "showParadox, the other half of the wheel -- prepareStatContext looks it up by system.id, not by group"
+    },
+    {
+      "key": "advantage-shadow",
+      "type": "Advantage",
+      "name": "Angst",
+      "system": { "id": "angst", "type": "wod.advantages.advantages", "group": "shadow", "label": "wod.advantages.angst", "permanent": 3, "temporary": 2, "max": 10, "settings": { "isvisible": true, "usepermanent": true, "usetemporary": true, "order": 0 } },
+      "why": "the Shadow area's own pool (feature_shadow.hbs) AND the generic grouped-advantage block on Stats -- the same item rendered by two parts from two preparers"
+    },
+    {
+      "key": "advantage-othergroup",
+      "type": "Advantage",
+      "name": "Yin Chi",
+      "system": { "id": "yinchi", "type": "wod.advantages.advantages", "group": "yinchi", "label": "wod.advantages.yin", "permanent": 4, "max": 10, "settings": { "isvisible": true, "usepermanent": true, "order": 0 } },
+      "why": "stats_groupedadvantages.hbs's GENERIC branch -- a group with no named case, which is the contract that block makes"
+    },
+
+    {
+      "key": "sphere",
+      "type": "Sphere",
+      "name": "Forces",
+      "system": { "id": "forces", "label": "wod.spheres.forces", "value": 3, "speciality": "Fire", "settings": { "isvisible": true, "order": 2 } },
+      "why": "power_spheres.hbs, which renders on the STATS part now and on Settings -- the move that produced one of the three silent empty-render bugs"
+    },
+    {
+      "key": "realm",
+      "type": "Realm",
+      "name": "Actor",
+      "system": { "id": "actor", "label": "wod.realms.actor", "value": 2, "settings": { "isvisible": true, "order": 0 } },
+      "why": "power_realms.hbs, gated on the derived hasrealms"
+    },
+    {
+      "key": "rote",
+      "type": "Rote",
+      "name": "Fuego de Prime",
+      "section": "rotes",
+      "system": { "type": "wod.types.rote", "isrollable": true, "forces": 2, "prime": 2, "difficulty": 6, "isvisible": true },
+      "why": "stats_rotes.hbs -- the Rote list moved from Powers to Stats and the preparer was not moved with it (7.5.44/7.5.48). This is that bug's fixture."
+    },
+
+    {
+      "key": "power-discipline",
+      "type": "Power",
+      "name": "Auspex",
+      "section": "disciplines",
+      "system": { "type": "wod.types.discipline", "level": "3", "value": 3, "isvisible": true },
+      "why": "the hierarchical `disciplines` section container"
+    },
+    {
+      "key": "power-disciplinepower",
+      "type": "Power",
+      "name": "Heightened Senses",
+      "parent": "power-discipline",
+      "system": { "type": "wod.types.disciplinepower", "level": "1", "isrollable": true, "isvisible": true },
+      "why": "a PARENTED child power -- power_listmainpower.hbs's nested rows"
+    },
+    {
+      "key": "power-disciplinepower-orphan",
+      "type": "Power",
+      "name": "Spirit's Touch",
+      "system": { "type": "wod.types.disciplinepower", "level": "2", "isrollable": true, "isvisible": true },
+      "why": "an UNPARENTED child power -- the `unsorteddisciplines` section, which exists so a power dragged in without its container is not invisible"
+    },
+    {
+      "key": "power-art",
+      "type": "Power",
+      "name": "Chicanery",
+      "section": "arts",
+      "system": { "type": "wod.types.art", "level": "2", "value": 2, "isvisible": true },
+      "why": "the changeling power axis"
+    },
+    {
+      "key": "power-artpower",
+      "type": "Power",
+      "name": "Fuddle",
+      "parent": "power-art",
+      "system": { "type": "wod.types.artpower", "level": "1", "isrollable": true, "isvisible": true },
+      "why": "parented art power"
+    },
+    {
+      "key": "power-artpower-orphan",
+      "type": "Power",
+      "name": "Veiled Eyes",
+      "system": { "type": "wod.types.artpower", "level": "2", "isrollable": true, "isvisible": true },
+      "why": "unsortedarts"
+    },
+    {
+      "key": "power-lore",
+      "type": "Power",
+      "name": "Lore of the Fundament",
+      "section": "lores",
+      "system": { "type": "wod.types.lore", "level": "2", "value": 2, "isvisible": true },
+      "why": "the demon power axis"
+    },
+    {
+      "key": "power-lorepower",
+      "type": "Power",
+      "name": "Sense the Fundament",
+      "parent": "power-lore",
+      "system": { "type": "wod.types.lorepower", "level": "1", "isrollable": true, "isvisible": true },
+      "why": "parented lore power"
+    },
+    {
+      "key": "power-lorepower-orphan",
+      "type": "Power",
+      "name": "Aura of Legend",
+      "system": { "type": "wod.types.lorepower", "level": "1", "isrollable": true, "isvisible": true },
+      "why": "unsortedlores"
+    },
+    {
+      "key": "power-edge",
+      "type": "Power",
+      "name": "Vision",
+      "section": "edges",
+      "system": { "type": "wod.types.edge", "level": "1", "value": 1, "isvisible": true },
+      "why": "the hunter power axis"
+    },
+    {
+      "key": "power-edgepower",
+      "type": "Power",
+      "name": "Sense the Unnatural",
+      "parent": "power-edge",
+      "system": { "type": "wod.types.edgepower", "level": "1", "isrollable": true, "isvisible": true },
+      "why": "parented edge power"
+    },
+    {
+      "key": "power-edgepower-orphan",
+      "type": "Power",
+      "name": "Foresee",
+      "system": { "type": "wod.types.edgepower", "level": "2", "isrollable": true, "isvisible": true },
+      "why": "unsortededges"
+    },
+    {
+      "key": "power-numina",
+      "type": "Power",
+      "name": "Hedge Magic",
+      "section": "numinas",
+      "system": { "type": "wod.types.numina", "level": "2", "value": 2, "isvisible": true },
+      "why": "the sorcerer/creature numina axis, reached only through defaultOrder (no splat lists it in `primary`)"
+    },
+    {
+      "key": "power-numinapower",
+      "type": "Power",
+      "name": "Alchemy",
+      "parent": "power-numina",
+      "system": { "type": "wod.types.numinapower", "level": "1", "isrollable": true, "isvisible": true },
+      "why": "parented numina power"
+    },
+    {
+      "key": "power-numinapower-orphan",
+      "type": "Power",
+      "name": "Conveyance",
+      "system": { "type": "wod.types.numinapower", "level": "1", "isrollable": true, "isvisible": true },
+      "why": "unsortednuminas"
+    },
+    {
+      "key": "power-arcanoi",
+      "type": "Power",
+      "name": "Argos",
+      "section": "arcanoi",
+      "system": { "type": "wod.types.arcanoi", "level": "2", "value": 2, "isvisible": true },
+      "why": "the wraith power axis (add-wraith-pc-splat 3.4)"
+    },
+    {
+      "key": "power-arcanoipower",
+      "type": "Power",
+      "name": "Enshroud",
+      "parent": "power-arcanoi",
+      "system": { "type": "wod.types.arcanoipower", "level": "1", "isrollable": true, "isvisible": true },
+      "why": "parented arcanos power"
+    },
+    {
+      "key": "power-arcanoipower-orphan",
+      "type": "Power",
+      "name": "Phantom Wings",
+      "system": { "type": "wod.types.arcanoipower", "level": "2", "isrollable": true, "isvisible": true },
+      "why": "unsortedarcanois -- the shipped wraith-arcanoi pack's 294 documents arrive unparented, so this is the normal case there, not the edge one"
+    },
+    {
+      "key": "power-gift",
+      "type": "Power",
+      "name": "Heightened Senses",
+      "section": "gifts",
+      "system": { "type": "wod.types.gift", "level": "1", "isactive": true, "isrollable": true, "isvisible": true },
+      "why": "the gifts section, which has its OWN template branch (grouped by rank) -- and `isactive` also puts it in the Combat tab's powercombat list"
+    },
+    {
+      "key": "power-rite",
+      "type": "Power",
+      "name": "Rite of Cleansing",
+      "section": "rites",
+      "system": { "type": "wod.types.rite", "level": "1", "isvisible": true },
+      "why": "the simple-list section template"
+    },
+    {
+      "key": "power-ritual",
+      "type": "Power",
+      "name": "Defense of the Sacred Haven",
+      "section": "rituals",
+      "system": { "type": "wod.types.ritual", "level": "1", "category": "wod.power.thaumaturgy", "isvisible": true },
+      "why": "rituals"
+    },
+    {
+      "key": "power-combination",
+      "type": "Power",
+      "name": "Scalpel Tongue",
+      "section": "combinations",
+      "system": { "type": "wod.types.combination", "level": "2", "isvisible": true },
+      "why": "combinations"
+    },
+    {
+      "key": "power-charm",
+      "type": "Power",
+      "name": "Airt Sense",
+      "section": "charms",
+      "system": { "type": "wod.types.charm", "level": "1", "isvisible": true },
+      "why": "creature Charms -- D9c's one Tier A case that bites now: 6 live actors, a section definition, a powertab entry, and until 9.1 a flag with no writer"
+    },
+    {
+      "key": "power-sliver",
+      "type": "Power",
+      "name": "Verdage",
+      "system": { "type": "wod.types.sliver", "level": "1", "isvisible": true },
+      "why": "changeling `inanimae` Slivers. KNOWN TO RENDER NOWHERE (D9b, task 9.2, and pc-actor-sheet.js:1399): no section definition, no powertab entry. Here so the orphan sweep keeps counting it rather than forgetting it exists."
+    },
+    {
+      "key": "trait-resonance",
+      "type": "Trait",
+      "name": "Dinamica",
+      "section": "resonances",
+      "system": { "type": "wod.types.resonance", "placement": "power", "value": 2, "isvisible": true },
+      "why": "the `simpledots` section template -- the only user of power_listpowerdots.hbs"
+    },
+
+    {
+      "key": "trait-shapeform",
+      "type": "Trait",
+      "name": "Crinos",
+      "system": { "type": "wod.types.shapeform", "placement": "power", "isvisible": true, "icon": "", "tokenimage": "" },
+      "why": "power_shapes.hbs, gated on the derived hasshapes"
+    },
+    {
+      "key": "trait-apocalypticform",
+      "type": "Trait",
+      "name": "Apocalyptic Form",
+      "system": { "type": "wod.types.apocalypticform", "placement": "power", "isvisible": true },
+      "why": "power_apocalypticforms.hbs, gated on the derived hasapocalypticforms"
+    },
+    {
+      "key": "trait-othertraits-power",
+      "type": "Trait",
+      "name": "Paradigma",
+      "system": { "type": "wod.types.othertraits", "placement": "power", "level": "1", "isvisible": true },
+      "why": "the `powertraits` block at the foot of powers.hbs -- placement is what separates it from the Features-tab copy"
+    },
+    {
+      "key": "trait-othertraits-feature",
+      "type": "Trait",
+      "name": "Clan Ventrue",
+      "system": { "type": "wod.types.othertraits", "placement": "feature", "level": "1", "isvisible": true },
+      "why": "Other Traits on the Features tab AND in the Stats tab's advantage block, from ONE shared list (prepareAdvantageLists)"
+    },
+    {
+      "key": "trait-maneuver",
+      "type": "Trait",
+      "name": "Sweep",
+      "system": { "type": "wod.types.maneuver", "placement": "feature", "isvisible": true, "difficulty": 7, "bonus": 0 },
+      "why": "combat_maneuvers.hbs"
+    },
+    {
+      "key": "trait-specialadvantage",
+      "type": "Trait",
+      "name": "Ventaja Especial",
+      "system": { "type": "wod.types.specialadvantage", "placement": "feature", "level": "2", "isvisible": true },
+      "why": "KNOWN TO RENDER NOWHERE. Has a label in all seven language files and appears in zero predicates; it hid seven of Carl el Cuervo's eight extra traits (add-wraith-pc-splat 3.6). Kept so the orphan sweep counts it."
+    },
+
+    {
+      "key": "feature-background",
+      "type": "Feature",
+      "name": "Contactos",
+      "system": { "type": "wod.types.background", "placement": "feature", "value": 3, "isvisible": true },
+      "flags": { "wod20-char": { "id": "contacts" } },
+      "why": "Backgrounds, on both the Stats and Features tabs; the wod20-char flag is what lets the connection roster resolve its heading and dots off this item"
+    },
+    {
+      "key": "feature-merit",
+      "type": "Feature",
+      "name": "Ojo Avizor",
+      "system": { "type": "wod.types.merit", "placement": "feature", "level": "1", "value": 1, "isvisible": true },
+      "why": "Merits"
+    },
+    {
+      "key": "feature-flaw",
+      "type": "Feature",
+      "name": "Enemigo",
+      "system": { "type": "wod.types.flaw", "placement": "feature", "level": "1 a 5", "value": 0, "isvisible": true },
+      "why": "Flaws -- and `level` is deliberately the STRING form the packs ship (88 merits/flaws carry a range), which is what the pointValue helper exists for"
+    },
+    {
+      "key": "feature-othertraits",
+      "type": "Feature",
+      "name": "Kith Sidhe",
+      "system": { "type": "wod.types.othertraits", "placement": "feature", "level": "0", "isvisible": true },
+      "why": "the OTHER carrier of Other Traits: the compendium exporter emits Features, not Traits, and reading only Trait once made every exported clan/kith/totem render nowhere"
+    },
+    {
+      "key": "feature-bloodbound",
+      "type": "Feature",
+      "name": "Vinculo con Lucian",
+      "system": { "type": "wod.types.bloodbound", "placement": "feature", "level": "2", "isvisible": true },
+      "why": "feature.hbs:75, now line-gated (task 9.5)"
+    },
+    {
+      "key": "feature-boon",
+      "type": "Feature",
+      "name": "Deuda menor",
+      "system": { "type": "wod.types.boon", "placement": "feature", "level": "1", "isvisible": true },
+      "why": "feature.hbs:87, now line-gated -- before 9.5 a mummy could author one"
+    },
+    {
+      "key": "feature-oath",
+      "type": "Feature",
+      "name": "Juramento del Escudo",
+      "system": { "type": "wod.types.oath", "placement": "feature", "level": "1", "isvisible": true },
+      "why": "feature.hbs:99, now line-gated"
+    },
+    {
+      "key": "feature-passion",
+      "type": "Feature",
+      "name": "Proteger a mi hermana",
+      "system": { "type": "wod.types.passion", "placement": "feature", "value": 3, "isvisible": true },
+      "why": "the wraith Passions block; also the numerator of the Dark-Passion ceiling readout"
+    },
+    {
+      "key": "feature-darkpassion",
+      "type": "Feature",
+      "name": "Devorar",
+      "system": { "type": "wod.types.darkpassion", "placement": "feature", "value": 4, "isvisible": true },
+      "why": "Dark Passions, in the SHADOW area only -- rated 4 against the Passion's 3 so darkpassionsexceeded is true and the over-budget branch renders"
+    },
+    {
+      "key": "feature-fetter",
+      "type": "Feature",
+      "name": "La casa de mi infancia",
+      "system": { "type": "wod.types.fetter", "placement": "feature", "value": 2, "isvisible": true },
+      "why": "Fetters"
+    },
+    {
+      "key": "feature-thorn",
+      "type": "Feature",
+      "name": "Susurros",
+      "system": { "type": "wod.types.thorn", "placement": "feature", "value": 1, "isvisible": true },
+      "why": "a Thorn by sub-kind -- recogniser 1 of isThornFeature"
+    },
+    {
+      "key": "feature-thorn-by-flag",
+      "type": "Feature",
+      "name": "Pesadilla",
+      "system": { "type": "wod.types.othertraits", "placement": "feature", "value": 1, "isvisible": true },
+      "flags": { "wod20-char": { "key": "thorn:pesadilla", "category": "thorn", "unresolved": true } },
+      "why": "a Thorn by the GENERATOR's flag -- recogniser 3, the shape every wraith in the live world actually holds. On a wraith it must leave Other Traits and appear in the Shadow area; on every other line it must STAY in Other Traits."
+    },
+    {
+      "key": "feature-connection",
+      "type": "Feature",
+      "name": "Marta la periodista",
+      "system": { "type": "wod.types.connection", "placement": "feature", "relation": "contacts", "description": "Le debe un favor.", "isvisible": true },
+      "why": "the contacts/allies roster, grouped by system.relation and headed from feature-background above"
+    },
+
+    {
+      "key": "weapon-natural",
+      "type": "Melee Weapon",
+      "name": "Garras",
+      "system": { "type": "wod.types.meleeweapon", "isnatural": true, "difficulty": 6, "attack": { "accuracy": 0 }, "damage": { "value": 2, "type": "aggravated" } },
+      "why": "combat_natural.hbs"
+    },
+    {
+      "key": "weapon-melee",
+      "type": "Melee Weapon",
+      "name": "Katana",
+      "system": { "type": "wod.types.meleeweapon", "isnatural": false, "difficulty": 6, "conceal": "T", "attack": { "accuracy": 0 }, "damage": { "value": 3, "type": "lethal" } },
+      "why": "combat_melee.hbs -- and `conceal` is the ONE place era reaches the sheet (the translateConceal label helper)"
+    },
+    {
+      "key": "weapon-ranged",
+      "type": "Ranged Weapon",
+      "name": "Glock 17",
+      "system": { "type": "wod.types.rangedweapon", "difficulty": 6, "range": "20", "rate": "4", "conceal": "P", "clip": { "value": 17, "max": 17 }, "attack": { "accuracy": 0 }, "damage": { "value": 4, "type": "lethal" } },
+      "why": "combat_ranged.hbs"
+    },
+    {
+      "key": "armor",
+      "type": "Armor",
+      "name": "Chaleco reforzado",
+      "system": { "type": "wod.types.armor", "soak": 2, "dexpenalty": 1, "isactive": true },
+      "why": "combat_armor.hbs"
+    },
+    {
+      "key": "gear-item",
+      "type": "Item",
+      "name": "Cuerda",
+      "system": { "type": "wod.types.trinket", "amount": 1, "isrollable": false },
+      "why": "the gear list (GetAllItems reads Item and Fetish only)"
+    },
+    {
+      "key": "gear-fetish",
+      "type": "Fetish",
+      "name": "Espejo de Luna",
+      "system": { "type": "wod.types.fetish", "gnosis": 3, "difficulty": 6, "isrollable": true, "isactive": true },
+      "why": "the OTHER gear carrier, and the branch of gear.hbs that prints Gnosis-or-Willpower for a Fetish"
+    },
+    {
+      "key": "bonus",
+      "type": "Bonus",
+      "name": "Bono de Fuerza",
+      "system": { "type": "attribute_buff", "settingtype": "strength", "value": 1, "isactive": true, "isremovable": true },
+      "why": "the Effects tab, whose preparer is 16 generic BonusHelper sweeps -- this is the only item that makes it non-empty"
+    }
+  ]
+}

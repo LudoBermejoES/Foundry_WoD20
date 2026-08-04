@@ -1909,6 +1909,25 @@ export const prepareCombatContext = async function (context, actor) {
 
 	context.health = await calculateHealth(actor, CONFIG.worldofdarkness.sheettype.mortal);
 
+	// `stats_health.hbs` is included by BOTH `stats_advantages.hbs` and `combat.hbs`, and it reads
+	// three tracks: `health`, `chimericalhealth` and `corpushealth`. Only `prepareStatContext` built
+	// the last two, so on the COMBAT tab a changeling's chimerical damage marks came out blank and a
+	// wraith's Corpus track did not draw at all — while both were correct one tab away, which is
+	// exactly why nobody reported it. Found by test-part-render.mjs. Same gates as the Stats tab:
+	// `usechimerical` for the chimerical track, and the SPLAT for Corpus (`hascorpus` was deleted by
+	// add-wraith-pc-splat because no writer could be trusted to set it).
+	context.chimericalhealth = undefined;
+
+	if (actor.system.settings.usechimerical) {
+		context.chimericalhealth = await calculateHealth(actor, CONFIG.worldofdarkness.sheettype.changeling);
+	}
+
+	context.corpushealth = undefined;
+
+	if (getSplat(actor) === CONFIG.worldofdarkness.splat.wraith) {
+		context.corpushealth = await calculateHealth(actor, CONFIG.worldofdarkness.sheettype.wraith);
+	}
+
   	return context;
 }
 
