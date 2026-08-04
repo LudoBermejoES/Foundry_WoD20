@@ -1,0 +1,1016 @@
+/* Spell-casting dialog (templates/dialogs/dialog-casting.hbs, module/dialogs/dialog-casting.js).
+
+   EVERYTHING here is scoped under `.casting-dialog`, which only `DialogCasting` sets. The old
+   `.aretecasting-dialog` screen still serves the rote flow and must stay pixel-identical, so not one
+   rule in this file may reach it. `.casting-dialog` is on BOTH the window root and the form, so the
+   `.wod20.casting-dialog` prefix used below pins each rule to the ROOT (the form has no `.wod20`).
+
+   Colours are the ones the rest of the system already uses: `--main-full-color` (the splat colour,
+   mage purple here), `--main-mid-color`, `--main-dim-color`, and the hard-coded green/red/amber that
+   `responsive.css` and `darkmode.css` use for `.item-notice` / `.item-delete` / `.item-warning`.
+   No new variable layer. */
+
+/* START - Window */
+
+/* Mirrors `.wod-dialog.aretecasting-dialog:not(.minimized)` (wod.css:349) but sized for the three
+   regions instead of the old flat page: narrower, because the modifier rows are one per line now,
+   and taller, because the list scrolls behind a pinned footer. `height` is only a SEED - Foundry's
+   `setPosition` measures `offsetHeight` on first render and then pins it inline - which is why the
+   guard below is `max-height`: that one still clamps an inline height. */
+.wod-dialog.casting-dialog:not(.minimized) {
+  min-width: 700px;
+  width: 860px;
+  min-height: 520px;
+  height: 780px;
+  max-height: 96vh;
+  max-width: 98vw;
+}
+
+/* START - Sticky footer scaffolding */
+
+/* The scroll container is the FORM, not `.window-content`. Foundry's `.window-content` is itself a
+   scrolling flex column; left alone it scrolls the whole form, the footer scrolls with it, and the
+   redesign's entire point is lost. So: `.window-content` stops scrolling and just gives the form a
+   full-height box, the form scrolls, and the footer is `position: sticky; bottom: 0` inside that
+   scrollport. Sticky (rather than a fixed-height middle wrapper) is what the markup allows - regions
+   1 and 2 are two SIBLINGS with no wrapper around them, so there is no single element to hand the
+   overflow to. `margin-top: auto` on the footer covers the other end of the range: with little
+   content there is nothing to scroll and the bar would otherwise float up under the panels. */
+.wod20.casting-dialog .window-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* The regions carry their own padding so the footer can sit flush against the window edge. */
+  padding: 0;
+}
+
+.wod20.casting-dialog form.casting-dialog {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  /* Without this a flex item refuses to shrink below its content height and nothing ever scrolls. */
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  gap: 8px;
+  padding: 8px 10px 0;
+  box-sizing: border-box;
+}
+
+/* END - Sticky footer scaffolding */
+/* END - Window */
+
+/* START - Panels */
+
+.wod20.casting-dialog .casting-panel,
+.wod20.casting-dialog .casting-modifiers {
+  /* Same surface treatment as `.wod-dialog .dialog-area` (wod.css:1294), which this screen does not
+     use because that class also carries fixed margins built for the old float layout. */
+  background: #fff;
+  border: 1px solid var(--main-full-color);
+  border-radius: 5px;
+  padding: 6px 10px 10px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.wod20.casting-dialog .casting-panel-title {
+  margin: 0 0 6px;
+  padding-bottom: 3px;
+  border: 0;
+  border-bottom: 1px solid var(--main-mid-color);
+  font-size: var(--wod-font-xl);
+  font-weight: normal;
+  line-height: 1.2;
+}
+
+.wod20.casting-dialog .casting-hint {
+  margin: 0 0 6px;
+  font-size: var(--wod-font-xs);
+  line-height: 1.3;
+  opacity: 0.75;
+}
+
+/* Two columns while there is room, one when there is not. `auto-fit` reacts to the DIALOG's width -
+   the window is resizable, so a viewport media query would measure the wrong box. */
+.wod20.casting-dialog .casting-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  /* Stretch, so the two panels read as a matched pair of cards; the sphere list is always the
+     shorter of the two and `start` leaves a ragged hole under it. */
+  align-items: stretch;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+/* END - Panels */
+
+/* START - Spheres */
+
+.wod20.casting-dialog .casting-sphere-row {
+  display: grid;
+  /* Name / dots / speciality icon. Both trailing tracks are FIXED, so a rank-1 sphere and a rank-5
+     sphere start their dots at the same x and the icon column stays reserved whether or not the
+     sphere is high enough to have one. An `auto` dots track right-aligns each row to a different
+     edge, which is unreadable as a column. The dots track is five dots at their LARGER possible
+     size - 5 x 16px + 4 x 3px of gap - because a dot is 16px wide under content-box and 14px under
+     border-box (see the dot reset below); sizing it for 14px overflows the track in the first case,
+     and the 10px of slack is invisible in the second since the dots are packed left. */
+  grid-template-columns: minmax(0, 1fr) 92px 16px;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+}
+
+.wod20.casting-dialog .casting-sphere-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Layout only - the dots keep the global `.resource-value-step` look (wod.css:2540). Without a gap
+   the 14px circles touch, because only `.tempSquareRow` / `.permValueRow` space them. */
+.wod20.casting-dialog .casting-sphere-dots {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+}
+
+/* A dot is a `<button>` on this screen (it was a span with a click handler, which left the ONLY
+   control that can produce a base difficulty unreachable by keyboard). The global rule that gives it
+   its look was written for a span, so everything below neutralises the button box that the UA and
+   Foundry's own `button` rule wrap around it - Foundry's `margin: 0 0 5px` alone drops every dot and
+   pulls the row apart, and its `padding: 1px 6px` turns a 14px circle into a 26px pill under
+   content-box sizing.
+
+   Deliberately absent: width, height, border, border-radius, background and cursor. Those must keep
+   coming from `.wod20 .resource-value .resource-value-step` so a dot here and a dot on the actor
+   sheet cannot drift. That rule is 3 classes and outranks both `.wod20 button:not(.header-control)`
+   (2 classes + a type, which would otherwise strip the border) and Foundry's bare `button`. */
+.wod20.casting-dialog .resource-value .resource-value-step {
+  font: inherit;
+  /* `inherit`, NOT `border-box`. The global rule sizes the dot as `width/height: 14px` + a 1px
+     border, so the painted diameter depends entirely on the box model - 16px under content-box,
+     14px under border-box. A `<span>` has no UA box-sizing and therefore always lands on whatever
+     the ambient value is; a `<button>` is forced to border-box by the UA. Inheriting is the only
+     value that reproduces the span in BOTH environments: with no global reset the parent is
+     content-box (the initial value) and the dot is 16px like the actor sheet's, and under a
+     `html { box-sizing: border-box }` reset the parent is border-box and so is the dot. Hard-coding
+     either one is right in one environment and 2px wrong in the other. Measured both ways. */
+  box-sizing: inherit;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  line-height: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  /* A flex item that may not shrink: `gap: 3px` plus a default `flex-shrink: 1` would squeeze the
+     dots of a 5-rank sphere out of round. */
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+/* Foundry glows every button on hover and focus. The span never did, and on a 14px circle the glow
+   reads as a smudge; the focus ring further down replaces it for keyboard users. */
+.wod20.casting-dialog .resource-value .resource-value-step:hover,
+.wod20.casting-dialog .resource-value .resource-value-step:focus {
+  box-shadow: none;
+}
+
+.wod20.casting-dialog .casting-speciality {
+  /* `.icon` is not on these, so nothing else sizes them; keep them inside the row's line box. */
+  font-size: var(--wod-font-sm);
+  line-height: 20px;
+  text-align: center;
+  cursor: help;
+}
+
+.wod20.casting-dialog .casting-successes {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--main-mid-color);
+}
+
+.wod20.casting-dialog .casting-successes-label {
+  font-size: var(--wod-font-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+
+.wod20.casting-dialog .casting-successes-value {
+  font-size: var(--wod-font-lg);
+  font-weight: var(--headline-normal-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+/* END - Spheres */
+
+/* START - Casting options */
+
+/* Label and control on one line while the label is short, stacked when it is not. Spanish and German
+   labels here run ~1.8x the English ones ("Dificultad adicional", "Modificador de Arete"), and the
+   quintessence control alone is six segments wide - wrapping is what keeps that off the row's edge
+   without a per-language width like `responsive.css` needs for the old screen. */
+.wod20.casting-dialog .casting-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px 10px;
+  margin-bottom: 8px;
+}
+
+.wod20.casting-dialog .casting-field-label {
+  flex: 1 1 130px;
+  min-width: 0;
+  font-size: var(--wod-font-sm);
+  font-weight: var(--headline-normal-weight);
+  line-height: 1.25;
+}
+
+.wod20.casting-dialog .casting-field-control {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* `.sheet-infoValues` is `width: 100%; height: 30px` (wod.css:615), which for a two-character
+   modifier is a text field the width of the panel. */
+.wod20.casting-dialog input.casting-number {
+  width: 64px;
+  height: 26px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  box-sizing: border-box;
+}
+
+.wod20.casting-dialog .casting-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 2px 10px;
+  margin-top: 10px;
+}
+
+/* Three toggles carry an info icon and an `aria-describedby` target, and both now sit BESIDE the
+   label instead of inside it - inside, a click on the icon toggled the checkbox. The wrapper
+   reproduces the row the label used to draw on its own, and the label keeps the whole clickable
+   area to itself. */
+.wod20.casting-dialog .casting-toggle-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* `flex-grow: 0` matters: growing the label to fill the wrapper strands the icon against the right
+   edge of the column, yards from the text it annotates. At 0 the label is content-sized and the icon
+   follows the words, exactly where it sat when it was a child of the label. It still SHRINKS, so a
+   long Spanish label wraps inside the label rather than pushing the icon off the row. */
+.wod20.casting-dialog .casting-toggle-wrap > .casting-toggle {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* Matches the label's own `padding: 3px 4px`, so the icon lands on the first line exactly where it
+   did while it was a child of the label. */
+.wod20.casting-dialog .casting-toggle-wrap > .casting-info {
+  padding-top: 3px;
+}
+
+/* The described-by text is reachable only through the ARIA reference and must never become a flex
+   item. Restated because a flex container is exactly the context where a stray `display` rule on a
+   span would beat the `hidden` attribute's UA style. */
+.wod20.casting-dialog .casting-toggle-wrap > [hidden] {
+  display: none;
+}
+
+.wod20.casting-dialog .casting-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  font-size: var(--wod-font-sm);
+  line-height: 1.3;
+  cursor: pointer;
+  user-select: none;
+}
+
+.wod20.casting-dialog .casting-toggle:hover {
+  background: var(--main-dim-color);
+}
+
+.wod20.casting-dialog .casting-toggle > span {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.wod20.casting-dialog .casting-info {
+  flex: 0 0 auto;
+  font-size: var(--wod-font-sm);
+  color: var(--main-full-color);
+  opacity: 0.7;
+  cursor: help;
+}
+
+/* END - Casting options */
+
+/* START - Segmented controls */
+
+/* The bug this replaces: `mage.css:434` narrows `.setting-radiospan` from 45px to 30px for the old
+   screen, and since that span has no padding, no box-sizing and no border, the quintessence labels
+   ran into each other. Here every segment is a real box - `box-sizing: border-box`, a min-width that
+   fits "-3" plus padding, and `white-space: nowrap` - so a label can never be wider than its cell
+   without the cell growing with it. */
+.wod20.casting-dialog .casting-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.wod20.casting-dialog .casting-segment {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Collapse the shared border between neighbours so the group reads as one control. */
+.wod20.casting-dialog .casting-segment + .casting-segment {
+  margin-left: -1px;
+}
+
+/* Visually hidden but still focusable and still the hit target: it covers the whole label, so the
+   click area is the chip rather than a 13px radio dot. */
+.wod20.casting-dialog .casting-segment > input[type="radio"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.wod20.casting-dialog .casting-segment > span {
+  display: block;
+  box-sizing: border-box;
+  min-width: 64px;
+  padding: 4px 8px;
+  border: 1px solid var(--main-mid-color);
+  background: rgba(255, 255, 255, 0.9);
+  color: #121212;
+  font-size: var(--wod-font-sm);
+  line-height: 16px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.wod20.casting-dialog .casting-segment:first-child > span {
+  border-radius: 3px 0 0 3px;
+}
+
+.wod20.casting-dialog .casting-segment:last-child > span {
+  border-radius: 0 3px 3px 0;
+}
+
+/* The numeric groups: wide enough for a sign plus a digit at the 12px body size, and tabular so the
+   digits sit on the same axis down a column of rows. */
+.wod20.casting-dialog .casting-segment-narrow > span {
+  min-width: 34px;
+  padding: 4px 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wod20.casting-dialog .casting-segment:hover > span {
+  background: var(--main-dim-color);
+}
+
+/* Selected. Bold as well as filled, so the state survives a greyscale or colour-blind reading. */
+.wod20.casting-dialog .casting-segment > input:checked + span {
+  position: relative;
+  z-index: 1;
+  background: var(--main-full-color);
+  border-color: var(--main-full-color);
+  color: #fff;
+  font-weight: var(--headline-normal-weight);
+}
+
+.wod20.casting-dialog .casting-segmented-compact .casting-segment > span {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+/* END - Segmented controls */
+
+/* START - Modifier accordions */
+
+.wod20.casting-dialog .casting-modifiers {
+  /* Region 2 is the tall one, but it does NOT own the scrolling - the form does (see the scaffolding
+     block). It only needs to stop shrinking under the panels above it. */
+  flex: 0 0 auto;
+  margin-bottom: 8px;
+}
+
+.wod20.casting-dialog .casting-modifier-group {
+  border: 1px solid var(--main-mid-color);
+  border-radius: 4px;
+  margin-bottom: 5px;
+  overflow: hidden;
+}
+
+/* Fixed tracks, not `auto`: the badge and the sum are conditionally rendered, and with `auto` tracks
+   the group name would jump sideways the moment a row in the group is ticked. The tracks stay
+   reserved whether the two spans exist or not. First track is the disclosure triangle. */
+.wod20.casting-dialog .casting-modifier-group > summary {
+  display: grid;
+  /* The sum track holds the widest sum this screen can produce plus its stem: the general group tops
+     out at +13 (+1 and four 0..3 selects), which is ~26px of tabular digits on top of the 4px stem
+     and its 5px padding. */
+  grid-template-columns: 10px minmax(0, 1fr) 26px 46px;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--main-dim-color);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.wod20.casting-dialog .casting-modifier-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.wod20.casting-dialog .casting-modifier-group > summary:hover {
+  background: var(--main-mid-color);
+}
+
+/* Drawn rather than a glyph: no font in this system is guaranteed to carry a triangle. */
+.wod20.casting-dialog .casting-modifier-group > summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 6px solid var(--main-full-color);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.12s ease-in-out;
+}
+
+.wod20.casting-dialog .casting-modifier-group[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.wod20.casting-dialog .casting-group-name {
+  min-width: 0;
+  font-size: var(--wod-font-lg);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* How many rows are on. Fixed size and centred in its reserved track, so it drops in and out without
+   moving anything. */
+.wod20.casting-dialog .casting-group-badge {
+  justify-self: center;
+  box-sizing: border-box;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--main-full-color);
+  color: #fff;
+  font-size: var(--wod-font-xs);
+  font-weight: var(--headline-normal-weight);
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* What they add. Two non-colour cues carry it in greyscale: the sign the template prints, and the
+   same stem convention the chips use - solid for worse, dashed for better, dotted for a group whose
+   rows cancel out. The stem is always 4px, transparent on the base rule, so switching class can
+   never move the number inside its fixed track. */
+.wod20.casting-dialog .casting-group-sum {
+  justify-self: end;
+  padding-left: 5px;
+  border-left: 4px solid transparent;
+  font-size: var(--wod-font-md);
+  font-weight: var(--headline-normal-weight);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wod20.casting-dialog .casting-group-sum.is-worse {
+  color: rgb(167, 2, 2);
+  border-left-color: rgb(167, 2, 2);
+}
+
+.wod20.casting-dialog .casting-group-sum.is-better {
+  color: rgb(5, 99, 5);
+  border-left-style: dashed;
+  border-left-color: rgb(5, 99, 5);
+}
+
+/* Rows are on but they cancel (-1 and +1). It is NOT good news, so it must not be green; it is not
+   bad news either, so it must not be red. Muted, unbolded and dotted - and the template still prints
+   the `+0`, which is the point: something is ticked in there. */
+.wod20.casting-dialog .casting-group-sum.is-neutral {
+  color: inherit;
+  opacity: 0.65;
+  font-weight: normal;
+  border-left-style: dotted;
+  border-left-color: currentColor;
+}
+
+.wod20.casting-dialog .casting-modifier-rows {
+  padding: 4px 8px 6px;
+  /* Keeps the control column within eye-scanning distance of the label on a wide window instead of
+     stranding it against the right edge. */
+  max-width: 720px;
+}
+
+/* END - Modifier accordions */
+
+/* START - Modifier rows */
+
+/* Label / weight / control. The control track is sized for the widest case in the template (four
+   narrow segments), so a checkbox row and a segmented row put their control at the same x. */
+.wod20.casting-dialog .casting-modifier-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px 152px;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--main-dim-color);
+  border-radius: 3px;
+  min-height: 26px;
+}
+
+.wod20.casting-dialog .casting-modifier-row:last-child {
+  border-bottom: 0;
+}
+
+/* A segmented row has no weight chip, so auto-placement would drop the control into the 30px weight
+   track and squash it. Pin it to the control track instead. */
+.wod20.casting-dialog .casting-modifier-row > .casting-segmented {
+  grid-column: 3;
+}
+
+/* Only the checkbox rows are labels; the radio rows are divs and are not clickable as a whole. */
+.wod20.casting-dialog label.casting-modifier-row {
+  cursor: pointer;
+  user-select: none;
+}
+
+.wod20.casting-dialog .casting-modifier-row:hover {
+  background: var(--main-dim-color);
+}
+
+/* Wrap rather than ellipsize: these are sentences, not names, and a Spanish label routinely needs a
+   second line. `min-width: 0` is what stops a long unbroken word from widening the track and
+   shoving the control off the row. */
+.wod20.casting-dialog .casting-modifier-label {
+  min-width: 0;
+  font-size: var(--wod-font-sm);
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+
+/* The fixed cost of a checkbox row. Same colour pairing as the chips, same non-colour cues. */
+.wod20.casting-dialog .casting-modifier-weight {
+  justify-self: center;
+  font-size: var(--wod-font-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wod20.casting-dialog .casting-modifier-weight.is-worse {
+  color: rgb(167, 2, 2);
+  font-weight: var(--headline-normal-weight);
+}
+
+.wod20.casting-dialog .casting-modifier-weight.is-better {
+  color: rgb(5, 99, 5);
+}
+
+.wod20.casting-dialog .casting-modifier-row > input[type="checkbox"],
+.wod20.casting-dialog .casting-toggle > input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--main-full-color);
+  cursor: pointer;
+}
+
+.wod20.casting-dialog .casting-modifier-row > input[type="checkbox"] {
+  justify-self: start;
+}
+
+.wod20.casting-dialog .casting-toggle > input[type="checkbox"] {
+  /* Optical alignment with the first line of a label that wraps. */
+  margin-top: 1px;
+}
+
+/* Shown only when `ignoreSphereBaseDifficulty` makes the buttons do something. */
+.wod20.casting-dialog .casting-manual-difficulty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--main-mid-color);
+}
+
+/* Here the label is a caption, not a form label sharing a row with a control, so it must not take a
+   1fr share and shove the nine buttons into the middle of the panel. */
+.wod20.casting-dialog .casting-manual-difficulty .casting-field-label {
+  flex: 0 0 auto;
+}
+
+/* `.dialog-difficulty-button` is `width: 8%` (wod.css:1417); inside this narrower container that
+   collapses to a few pixels per button. */
+.wod20.casting-dialog .casting-difficulty-buttons {
+  flex: 1 1 auto;
+  justify-content: flex-start;
+}
+
+.wod20.casting-dialog .casting-difficulty-buttons .dialog-difficulty-button {
+  width: auto;
+  min-width: 34px;
+  max-width: 40px;
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* END - Modifier rows */
+
+/* START - Action bar */
+
+/* Region 3. Pinned: it is the last child of the scrolling form, so `bottom: 0` holds it against the
+   bottom of the scrollport while the panels and the modifier list run underneath. It has to be
+   OPAQUE for that (content scrolls behind it) and it has to be above the content in the stack.
+   `margin-top: auto` handles the short-content case, where there is nothing to scroll and the bar
+   would otherwise sit halfway up the window. The negative side margins undo the form's padding so
+   the bar reaches both window edges. */
+.wod20.casting-dialog .casting-actionbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: auto -10px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 14px;
+  padding: 8px 10px;
+  /* The window is resizable and Foundry's grab handle sits in the bottom-right corner, over the
+     close button unless the bar keeps clear of it. */
+  padding-right: 22px;
+  background: #fff;
+  border-top: 2px solid var(--main-full-color);
+  box-shadow: 0 -3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.wod20.casting-dialog .casting-readouts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.wod20.casting-dialog .casting-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+  line-height: 1.1;
+}
+
+.wod20.casting-dialog .casting-readout-label {
+  font-size: var(--wod-font-xxs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+/* The two numbers the player is actually deciding about. */
+.wod20.casting-dialog .casting-readout-value {
+  font-size: var(--wod-font-xxl);
+  font-weight: var(--headline-normal-weight);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--main-full-color);
+}
+
+/* No sphere picked yet: an em dash, and it should read as absent rather than as a value. */
+.wod20.casting-dialog .casting-readout-value.is-empty {
+  color: inherit;
+  opacity: 0.35;
+  font-weight: normal;
+}
+
+.wod20.casting-dialog .casting-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 4px;
+  flex: 1 1 200px;
+  min-width: 0;
+  /* At most four rows are ever produced, so this is two lines and a scrollbar that should never
+     appear - it is here so a future fifth row cannot grow the bar over the buttons. */
+  max-height: 42px;
+  overflow-y: auto;
+}
+
+/* Itemised difficulty. Colour is never the only cue: the template already prints an explicit sign,
+   `is-worse` is bold behind a solid stem and `is-better` is normal weight behind a dashed one, so
+   the three read apart in greyscale. */
+.wod20.casting-dialog .casting-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: 1px 7px;
+  border: 1px solid var(--main-mid-color);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: var(--wod-font-xs);
+  line-height: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* The label is the only part allowed to be cut. Ellipsizing the chip as a whole - which is what a
+   single text node forces - eats the number off the right-hand end, and the number is the reason the
+   chip exists. */
+.wod20.casting-dialog .casting-chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wod20.casting-dialog .casting-chip-value {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The placeholder has no inner spans - a bare text node in a flex box will not ellipsize, so this
+   one variant stays a block and clips itself. */
+.wod20.casting-dialog .casting-chip.is-hint {
+  display: inline-block;
+  text-overflow: ellipsis;
+}
+
+.wod20.casting-dialog .casting-chip.is-base {
+  border-left: 4px solid var(--main-full-color);
+  font-weight: var(--headline-normal-weight);
+}
+
+.wod20.casting-dialog .casting-chip.is-worse {
+  border-color: rgb(167, 2, 2);
+  border-left: 4px solid rgb(167, 2, 2);
+  color: rgb(167, 2, 2);
+  font-weight: var(--headline-normal-weight);
+}
+
+.wod20.casting-dialog .casting-chip.is-better {
+  border-color: rgb(5, 99, 5);
+  border-left: 4px dashed rgb(5, 99, 5);
+  color: rgb(5, 99, 5);
+  font-weight: normal;
+}
+
+.wod20.casting-dialog .casting-chip.is-hint {
+  border-style: dotted;
+  background: transparent;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.wod20.casting-dialog .casting-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.wod20.casting-dialog .casting-buttons .button {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 3px;
+  font-size: var(--wod-font-sm);
+  white-space: nowrap;
+}
+
+.wod20.casting-dialog .casting-buttons .casting-cast {
+  min-width: 150px;
+  font-weight: var(--headline-normal-weight);
+}
+
+.wod20.casting-dialog .casting-buttons .casting-close {
+  min-width: 90px;
+  opacity: 0.85;
+}
+
+.wod20.casting-dialog .casting-buttons .button:hover {
+  filter: brightness(1.25);
+}
+
+/* END - Action bar */
+
+/* START - Focus */
+
+/* Keyboard users got nothing on the old screen. One ring, on every interactive control, including
+   the ones whose real input is hidden (the segments), the accordion headers, and the sphere dots
+   now that they are buttons rather than click-handling spans.
+
+   `outline` on purpose, everywhere: it is painted outside the box and takes part in no layout, so
+   tabbing across a row of dots cannot reflow the row. A border or a box-shadow ring would. */
+.wod20.casting-dialog .casting-toggle > input:focus-visible,
+.wod20.casting-dialog .casting-modifier-row > input:focus-visible,
+.wod20.casting-dialog input.casting-number:focus-visible,
+.wod20.casting-dialog .casting-buttons .button:focus-visible,
+.wod20.casting-dialog .casting-difficulty-buttons .dialog-difficulty-button:focus-visible,
+.wod20.casting-dialog .casting-modifier-group > summary:focus-visible,
+.wod20.casting-dialog .resource-value .resource-value-step:focus-visible {
+  outline: 2px solid var(--main-full-color);
+  outline-offset: 2px;
+}
+
+/* Chromium follows `border-radius` for outlines, so the dot's ring is a circle - but the 50% radius
+   comes from the global rule, and an offset ring on a 14px circle needs the smaller gap to stay
+   inside the 82px dots track. */
+.wod20.casting-dialog .resource-value .resource-value-step:focus-visible {
+  outline-offset: 1px;
+}
+
+/* The radio itself is transparent, so the ring has to be drawn on the span that stands in for it. */
+.wod20.casting-dialog .casting-segment > input:focus-visible + span {
+  position: relative;
+  z-index: 2;
+  outline: 2px solid var(--main-full-color);
+  outline-offset: 1px;
+}
+
+/* END - Focus */
+
+/* START - Dark mode */
+
+/* `wod-theme-dark` lands on the window root beside `casting-dialog` (module/hooks.js:471), the same
+   element the light rules above are scoped to - so these are one class heavier to win the cascade
+   whatever order this file ends up in. `.wod-theme-dark.wod20 .window-content` already supplies the
+   dark background and the light text; what needs restating is every surface that was white. */
+
+.wod20.wod-theme-dark.casting-dialog .casting-panel,
+.wod20.wod-theme-dark.casting-dialog .casting-modifiers,
+.wod20.wod-theme-dark.casting-dialog .casting-actionbar {
+  background: var(--darkmode-area10-background);
+  color: var(--darkmode-textcolor-dark);
+}
+
+.wod20.wod-theme-dark.casting-dialog .casting-actionbar {
+  box-shadow: 0 -3px 8px rgba(0, 0, 0, 0.55);
+}
+
+.wod20.wod-theme-dark.casting-dialog .casting-segment > span,
+.wod20.wod-theme-dark.casting-dialog .casting-chip {
+  background: var(--darkmode-background-dark);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--darkmode-textcolor-dark);
+}
+
+.wod20.wod-theme-dark.casting-dialog .casting-segment > input:checked + span {
+  background: var(--main-full-color);
+  border-color: var(--darkmode-textcolor-dark);
+  color: #fff;
+}
+
+.wod20.wod-theme-dark.casting-dialog .casting-readout-value {
+  /* Mage purple on near-black is unreadable; the pinned numbers stay the brightest thing here. */
+  color: var(--darkmode-textcolor-dark);
+}
+
+.wod20.wod-theme-dark.casting-dialog .casting-info {
+  color: var(--darkmode-textcolor-dark);
+}
+
+/* The same greens and reds `darkmode.css` lifts for `.item-notice` / `.item-delete`. */
+.wod20.wod-theme-dark.casting-dialog .casting-chip.is-worse,
+.wod20.wod-theme-dark.casting-dialog .casting-group-sum.is-worse,
+.wod20.wod-theme-dark.casting-dialog .casting-modifier-weight.is-worse {
+  color: rgb(233, 92, 92);
+}
+
+.wod20.wod-theme-dark.casting-dialog .casting-chip.is-worse {
+  border-color: rgb(233, 92, 92);
+  border-left-color: rgb(233, 92, 92);
+}
+
+.wod20.wod-theme-dark.casting-dialog .casting-chip.is-better,
+.wod20.wod-theme-dark.casting-dialog .casting-group-sum.is-better,
+.wod20.wod-theme-dark.casting-dialog .casting-modifier-weight.is-better {
+  color: rgb(96, 190, 96);
+}
+
+.wod20.wod-theme-dark.casting-dialog .casting-chip.is-better {
+  border-color: rgb(96, 190, 96);
+  border-left-color: rgb(96, 190, 96);
+}
+
+.wod20.wod-theme-dark.casting-dialog .casting-chip.is-base {
+  border-left-color: var(--darkmode-textcolor-dark);
+}
+
+/* A cancelled-out group: `currentColor` already resolves to the dark theme's light text, so only the
+   red/green pair above needed lifting - this is here to state that the neutral case was considered
+   in both themes rather than inherited by accident. */
+.wod20.wod-theme-dark.casting-dialog .casting-group-sum.is-neutral {
+  color: var(--darkmode-textcolor-dark);
+  border-left-color: currentColor;
+  opacity: 0.7;
+}
+
+.wod20.wod-theme-dark.casting-dialog .casting-modifier-group,
+.wod20.wod-theme-dark.casting-dialog .casting-modifier-row {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.wod20.wod-theme-dark.casting-dialog .casting-modifier-group > summary::before {
+  border-left-color: var(--darkmode-textcolor-dark);
+}
+
+/* The splat colour is not a visible focus ring against a near-black window. */
+.wod20.wod-theme-dark.casting-dialog .casting-toggle > input:focus-visible,
+.wod20.wod-theme-dark.casting-dialog .casting-modifier-row > input:focus-visible,
+.wod20.wod-theme-dark.casting-dialog input.casting-number:focus-visible,
+.wod20.wod-theme-dark.casting-dialog .casting-buttons .button:focus-visible,
+.wod20.wod-theme-dark.casting-dialog .casting-difficulty-buttons .dialog-difficulty-button:focus-visible,
+.wod20.wod-theme-dark.casting-dialog .casting-modifier-group > summary:focus-visible,
+.wod20.wod-theme-dark.casting-dialog .resource-value .resource-value-step:focus-visible,
+.wod20.wod-theme-dark.casting-dialog .casting-segment > input:focus-visible + span {
+  outline-color: var(--darkmode-white);
+}
+
+/* END - Dark mode */
+
+/* START - Narrow windows */
+
+/* The dialog can be dragged down to `min-width`, and on a small display `responsive.css` clamps every
+   `.wod-dialog` to 400px wide. Below that the fixed control track is most of the row, so give it
+   back to the label and let the segments wrap under it. */
+@media all and (max-width: 1024px) {
+  .wod-dialog.casting-dialog:not(.minimized) {
+    min-width: 400px;
+    width: 400px;
+  }
+
+  /* The control track shrinks to just a checkbox; a segmented control instead spans the row and
+     drops onto a second line, which is the only way four segments and a Spanish sentence coexist in
+     400px. The checkbox rows keep label / weight / box on ONE line - a two-column grid would push
+     the checkbox onto a line of its own too. */
+  .wod20.casting-dialog .casting-modifier-row {
+    grid-template-columns: minmax(0, 1fr) 30px 20px;
+  }
+
+  .wod20.casting-dialog .casting-modifier-row > .casting-segmented {
+    grid-column: 1 / -1;
+  }
+
+  .wod20.casting-dialog .casting-actionbar {
+    justify-content: flex-start;
+  }
+
+  /* The two numbers and the buttons come first at this width; the itemisation gets its own line, and
+     a third row of it, because at 400px a chip is a whole line. Both caps are WHOLE chip rows
+     (19px each plus the 4px gap) - a fractional cap slices the last row's glyphs in half. */
+  .wod20.casting-dialog .casting-breakdown {
+    flex: 1 1 100%;
+    max-height: 65px;
+  }
+}
+
+/* A CLAMP, not a resize: 88vh is below the 780px seed at this breakpoint and shrinks from there, so
+   a short display never gets a dialog taller than itself. `responsive.css` does the same thing to
+   every `.wod-dialog` at 1024px, but its rule is one class lighter than the sizing rule above. */
+@media all and (max-height: 900px) {
+  .wod-dialog.casting-dialog:not(.minimized) {
+    min-height: 400px;
+    height: 88vh;
+  }
+}
+
+/* END - Narrow windows */

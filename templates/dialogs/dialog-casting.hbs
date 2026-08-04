@@ -1,0 +1,447 @@
+{{!-- Redesigned spell-casting screen. See module/dialogs/dialog-casting.js for WHY this exists as
+      a second screen instead of an edit to dialog-aretecasting.hbs, which is untouched and still
+      serves the rote flow and the wand macro icon.
+
+      Field NAMES are identical to the old template on purpose: `_updateObject` reads the form by
+      name, so this is a re-presentation of the same form, not a new one. Renaming anything here
+      silently stops that field reaching the roll. --}}
+<form class="{{cssClass}} casting-dialog" autocomplete="off">
+
+	<div class="casting-body">
+
+		{{!-- ── What you are casting with ─────────────────────────────────────────────── --}}
+		<section class="casting-panel casting-spheres" aria-labelledby="cast-h-spheres">
+			<h3 class="casting-panel-title splatFont" id="cast-h-spheres">{{localize "wod.dialog.aretecasting.availspheres"}}</h3>
+			<p class="casting-hint">{{localize "wod.dialog.casting.spherehint"}}</p>
+
+			{{!-- Legacy actors keep their own shape; PC actors carry Sphere Items. --}}
+			{{#each actorData.spheres as |sphere key|}}
+				{{#if (gt sphere.value 0)}}
+					<div class="casting-sphere-row">
+						<span class="casting-sphere-name headlineNormal">{{localize sphere.label}}</span>
+						<div class="resource-value casting-sphere-dots" role="group" aria-label="{{localize sphere.label}}" data-name="{{key}}">
+							{{#numLoop sphere.value}}
+								{{!-- data-type is inert on these dots: nothing in CSS matches it and
+								      `_onDotSphereChange` only reads data-index and the parent's
+								      data-name. Written the same way the old template writes it so
+								      the two screens stay comparable, not because it does anything. --}}
+								<button type="button" class="resource-value-step" data-type="{{../config.sheettype.mage}}" data-index="{{this}}" aria-label="{{localize 'wod.labels.level'}} {{add this 1}}"></button>
+							{{/numLoop}}
+						</div>
+					</div>
+				{{/if}}
+			{{/each}}
+
+			{{#each spheres as |sphere key|}}
+				{{!-- fix-zero-rank-sphere-rows: the old template tested `sphere.value`, which is
+				      undefined on a PC actor's Sphere Item, so every 0-rank sphere rendered as a
+				      label with no dots beside it. The value lives at `sphere.system.value`. --}}
+				{{#if (gt sphere.system.value 0)}}
+					<div class="casting-sphere-row">
+						<span class="casting-sphere-name headlineNormal">{{localize sphere.system.label}}</span>
+						<div class="resource-value casting-sphere-dots" role="group" aria-label="{{localize sphere.system.label}}" data-name="{{sphere.system.id}}">
+							{{#numLoop sphere.system.value}}
+								<button type="button" class="resource-value-step" data-type="{{../config.sheettype.mage}}" data-index="{{this}}" aria-label="{{localize 'wod.labels.level'}} {{add this 1}}"></button>
+							{{/numLoop}}
+						</div>
+						{{#if (gte sphere.system.value 4)}}
+							<i class="fa-solid fa-circle-exclamation casting-speciality {{#if (eq sphere.system.speciality '')}}item-warning{{else}}item-notice{{/if}}"
+							   role="img"
+							   aria-label="{{localize 'wod.dialog.attribute.speciality'}}{{#unless (eq sphere.system.speciality '')}}: {{sphere.system.speciality}}{{/unless}}"
+							   title="{{sphere.system.speciality}}"></i>
+						{{/if}}
+					</div>
+				{{/if}}
+			{{/each}}
+
+			{{#if (gt object.totalSuccesses 0)}}
+				<div class="casting-successes">
+					<span class="casting-successes-label">{{localize "wod.dice.successes"}}</span>
+					<span class="casting-successes-value">{{object.totalSuccesses}}</span>
+				</div>
+			{{/if}}
+		</section>
+
+		{{!-- ── How you are casting it ────────────────────────────────────────────────── --}}
+		<section class="casting-panel casting-options" aria-labelledby="cast-h-options">
+			<h3 class="casting-panel-title splatFont" id="cast-h-options">{{localize "wod.dialog.aretecasting.castingsettings"}}</h3>
+
+			<div class="casting-field">
+				<span class="casting-field-label" id="cast-lbl-spelltype">{{localize 'wod.dialog.aretecasting.castingtype'}}</span>
+				<div class="casting-field-control casting-segmented" role="radiogroup" aria-labelledby="cast-lbl-spelltype">
+					<label class="casting-segment">
+						<input type="radio" name="object.spelltype" value="coincidental" {{isChecked (eq object.spelltype "coincidental")}}>
+						<span>{{localize "wod.spheres.coincidental"}}</span>
+					</label>
+					<label class="casting-segment">
+						<input type="radio" name="object.spelltype" value="vulgar" {{isChecked (eq object.spelltype "vulgar")}}>
+						<span>{{localize "wod.spheres.vulgar"}}</span>
+					</label>
+				</div>
+			</div>
+
+			<div class="casting-field">
+				<span class="casting-field-label" id="cast-lbl-quintessence">{{localize "wod.dialog.aretecasting.quintessence"}}</span>
+				<div class="casting-field-control casting-segmented" role="radiogroup" aria-labelledby="cast-lbl-quintessence">
+					{{#numDownToLoop 0 -5}}
+						<label class="casting-segment casting-segment-narrow">
+							<input type="radio" name="object.quintessence" value="{{this}}" aria-label="{{localize 'wod.labels.difficulty'}} {{this}}" {{isChecked (eq ../object.quintessence this)}}>
+							<span>{{this}}</span>
+						</label>
+					{{/numDownToLoop}}
+				</div>
+			</div>
+
+			<div class="casting-field">
+				<span class="casting-field-label" id="cast-lbl-difficultyModifier">{{localize "wod.dialog.aretecasting.additionaldifficulty"}}</span>
+				<div class="casting-field-control">
+					<input class="sheet-infoValues editable casting-number" type="text" inputmode="numeric" name="object.difficultyModifier" aria-labelledby="cast-lbl-difficultyModifier" value="{{object.difficultyModifier}}" />
+				</div>
+			</div>
+
+			<div class="casting-field">
+				<span class="casting-field-label" id="cast-lbl-areteModifier">{{localize "wod.dialog.aretecasting.modifierarete"}}</span>
+				<div class="casting-field-control">
+					<input class="sheet-infoValues editable casting-number" type="text" inputmode="numeric" name="object.areteModifier" aria-labelledby="cast-lbl-areteModifier" value="{{object.areteModifier}}" />
+				</div>
+			</div>
+
+			<div class="casting-toggles">
+				<label class="casting-toggle">
+					<input name="object.witnesses" type="checkbox" {{isChecked object.witnesses}} />
+					<span>{{localize "wod.dialog.aretecasting.witnesses"}}</span>
+				</label>
+
+				<label class="casting-toggle">
+					<input name="object.useSpeciality" type="checkbox" {{isChecked object.useSpeciality}} />
+					<span>{{localize "wod.labels.specialty"}}</span>
+				</label>
+
+				<label class="casting-toggle">
+					<input name="object.useWillpower" type="checkbox" {{isChecked object.useWillpower}} />
+					<span>{{localize "wod.labels.usewillpower"}}</span>
+				</label>
+
+				{{!-- The info icon and the describedby text sit OUTSIDE the label on purpose: inside it,
+				      clicking the icon toggled the checkbox, and the hidden span risked being folded
+				      into the checkbox's accessible name. `aria-describedby` resolves the span from
+				      anywhere in the document, so moving it out costs nothing. --}}
+				<div class="casting-toggle-wrap">
+					<label class="casting-toggle">
+						<input name="object.isExtendedCasting" type="checkbox" aria-describedby="cast-hint-extended" {{isChecked object.isExtendedCasting}} />
+						<span>{{localize "wod.dialog.aretecasting.extendedcasting"}}</span>
+					</label>
+					<i class="fa-solid fa-circle-info casting-info" aria-hidden="true" title="{{localize 'wod.dialog.aretecasting.extendedcastingdesc'}}"></i>
+					<span id="cast-hint-extended" hidden>{{localize "wod.dialog.aretecasting.extendedcastingdesc"}}</span>
+				</div>
+
+				<div class="casting-toggle-wrap">
+					<label class="casting-toggle">
+						<input name="object.keepDifficulty" type="checkbox" aria-describedby="cast-hint-keepdiff" {{isChecked object.keepDifficulty}} />
+						<span>{{localize "wod.dialog.aretecasting.keepdiff"}}</span>
+					</label>
+					<i class="fa-solid fa-circle-info casting-info" aria-hidden="true" title="{{localize 'wod.dialog.aretecasting.keepdiffdesc'}}"></i>
+					<span id="cast-hint-keepdiff" hidden>{{localize "wod.dialog.aretecasting.keepdiffdesc"}}</span>
+				</div>
+
+				<div class="casting-toggle-wrap">
+					<label class="casting-toggle">
+						<input name="object.ignoreSphereBaseDifficulty" type="checkbox" aria-describedby="cast-hint-ignoresphere" {{isChecked object.ignoreSphereBaseDifficulty}} />
+						<span>{{localize "wod.labels.ignoreshpehre"}}</span>
+					</label>
+					<i class="fa-solid fa-circle-info casting-info" aria-hidden="true" title="{{localize 'wod.dialog.casting.ignorespherehint'}}"></i>
+					<span id="cast-hint-ignoresphere" hidden>{{localize "wod.dialog.casting.ignorespherehint"}}</span>
+				</div>
+			</div>
+		</section>
+	</div>
+
+	{{!-- ── Difficulty modifiers, collapsed until you need them ───────────────────────
+	      Each group reports how many of its rows are on and what they add, so the 20-odd rows
+	      can stay shut without hiding state. --}}
+	<section class="casting-modifiers" aria-labelledby="cast-h-modifiers">
+		<h3 class="casting-panel-title splatFont" id="cast-h-modifiers">{{localize "wod.dialog.aretecasting.difficultymod"}}</h3>
+
+		<details class="casting-modifier-group" data-group-id="instruments" {{#if casting.groups.instruments.open}}open{{/if}}>
+			<summary>
+				<span class="casting-group-name splatFont">{{localize "wod.dialog.aretecasting.instruments"}}</span>
+				{{#if casting.groups.instruments.count}}
+					<span class="casting-group-badge" role="img" aria-label="{{casting.groups.instruments.count}} {{localize 'wod.dialog.casting.activemods'}}">{{casting.groups.instruments.count}}</span>
+					<span class="casting-group-sum {{#if (eq casting.groups.instruments.sum 0)}}is-neutral{{else if (gt casting.groups.instruments.sum 0)}}is-worse{{else}}is-better{{/if}}" role="img" aria-label="{{localize 'wod.labels.difficulty'}} {{signed casting.groups.instruments.sum}}">{{signed casting.groups.instruments.sum}}</span>
+				{{/if}}
+			</summary>
+
+			<div class="casting-modifier-rows">
+				<label class="casting-modifier-row">
+					<span class="casting-modifier-label">{{localize "wod.dialog.aretecasting.instrumentperson"}}</span>
+					<span class="casting-modifier-weight is-better">-1</span>
+					<input name="object.check_instrumentPerson" type="checkbox" value="-1" {{isChecked object.check_instrumentPerson}} />
+				</label>
+
+				<label class="casting-modifier-row">
+					<span class="casting-modifier-label">{{localize "wod.dialog.aretecasting.instrumentunique"}}</span>
+					<span class="casting-modifier-weight is-better">-1</span>
+					<input name="object.check_instrumentUnique" type="checkbox" value="-1" {{isChecked object.check_instrumentUnique}} />
+				</label>
+
+				<div class="casting-modifier-row">
+					<span class="casting-modifier-label" id="cast-lbl-select_instrumentUnfamiliar">{{localize "wod.dialog.aretecasting.instrumentunfamiliar"}}</span>
+					<div class="casting-segmented casting-segmented-compact" role="radiogroup" aria-labelledby="cast-lbl-select_instrumentUnfamiliar">
+						{{#numFromLoop 0 2}}
+							<label class="casting-segment casting-segment-narrow">
+								<input type="radio" name="object.select_instrumentUnfamiliar" value="{{this}}" aria-label="{{localize 'wod.labels.difficulty'}} {{this}}" {{isChecked (eq ../object.select_instrumentUnfamiliar this)}}>
+								<span>{{this}}</span>
+							</label>
+						{{/numFromLoop}}
+					</div>
+				</div>
+
+				<label class="casting-modifier-row">
+					<span class="casting-modifier-label">{{localize "wod.dialog.aretecasting.instrumentwithout"}}</span>
+					<span class="casting-modifier-weight is-worse">+3</span>
+					<input name="object.check_instrumentWithout" type="checkbox" value="3" {{isChecked object.check_instrumentWithout}} />
+				</label>
+
+				<label class="casting-modifier-row">
+					<span class="casting-modifier-label">{{localize "wod.dialog.aretecasting.instrumentnotusing"}}</span>
+					<span class="casting-modifier-weight is-better">-1</span>
+					<input name="object.check_instrumentUnnecessary" type="checkbox" value="-1" {{isChecked object.check_instrumentUnnecessary}} />
+				</label>
+
+				<div class="casting-modifier-row">
+					<span class="casting-modifier-label" id="cast-lbl-select_instrumentPersonalItem">{{localize "wod.dialog.aretecasting.instrumentpersonalitem"}}</span>
+					<div class="casting-segmented casting-segmented-compact" role="radiogroup" aria-labelledby="cast-lbl-select_instrumentPersonalItem">
+						{{#numDownToLoop 0 -3}}
+							<label class="casting-segment casting-segment-narrow">
+								<input type="radio" name="object.select_instrumentPersonalItem" value="{{this}}" aria-label="{{localize 'wod.labels.difficulty'}} {{this}}" {{isChecked (eq ../object.select_instrumentPersonalItem this)}}>
+								<span>{{this}}</span>
+							</label>
+						{{/numDownToLoop}}
+					</div>
+				</div>
+			</div>
+		</details>
+
+		<details class="casting-modifier-group" data-group-id="resonance" {{#if casting.groups.resonance.open}}open{{/if}}>
+			<summary>
+				<span class="casting-group-name splatFont">{{localize "wod.dialog.aretecasting.resonance"}}</span>
+				{{#if casting.groups.resonance.count}}
+					<span class="casting-group-badge" role="img" aria-label="{{casting.groups.resonance.count}} {{localize 'wod.dialog.casting.activemods'}}">{{casting.groups.resonance.count}}</span>
+					<span class="casting-group-sum {{#if (eq casting.groups.resonance.sum 0)}}is-neutral{{else if (gt casting.groups.resonance.sum 0)}}is-worse{{else}}is-better{{/if}}" role="img" aria-label="{{localize 'wod.labels.difficulty'}} {{signed casting.groups.resonance.sum}}">{{signed casting.groups.resonance.sum}}</span>
+				{{/if}}
+			</summary>
+
+			<div class="casting-modifier-rows">
+				<label class="casting-modifier-row">
+					<span class="casting-modifier-label">{{localize "wod.dialog.aretecasting.resonanceappropriate"}}</span>
+					<span class="casting-modifier-weight is-better">-1</span>
+					<input name="object.check_resonanceAppropriate" type="checkbox" value="-1" {{isChecked object.check_resonanceAppropriate}} />
+				</label>
+
+				<label class="casting-modifier-row">
+					<span class="casting-modifier-label">{{localize "wod.dialog.aretecasting.resonanceopposed"}}</span>
+					<span class="casting-modifier-weight is-worse">+1</span>
+					<input name="object.check_resonanceOpposed" type="checkbox" value="1" {{isChecked object.check_resonanceOpposed}} />
+				</label>
+
+				<label class="casting-modifier-row">
+					<span class="casting-modifier-label">{{localize "wod.dialog.aretecasting.resonancemysic"}}</span>
+					<span class="casting-modifier-weight is-better">-1</span>
+					<input name="object.check_resonanceMysic" type="checkbox" value="-1" {{isChecked object.check_resonanceMysic}} />
+				</label>
+			</div>
+		</details>
+
+		<details class="casting-modifier-group" data-group-id="time" {{#if casting.groups.time.open}}open{{/if}}>
+			<summary>
+				<span class="casting-group-name splatFont">{{localize "wod.dialog.aretecasting.time"}}</span>
+				{{#if casting.groups.time.count}}
+					<span class="casting-group-badge" role="img" aria-label="{{casting.groups.time.count}} {{localize 'wod.dialog.casting.activemods'}}">{{casting.groups.time.count}}</span>
+					<span class="casting-group-sum {{#if (eq casting.groups.time.sum 0)}}is-neutral{{else if (gt casting.groups.time.sum 0)}}is-worse{{else}}is-better{{/if}}" role="img" aria-label="{{localize 'wod.labels.difficulty'}} {{signed casting.groups.time.sum}}">{{signed casting.groups.time.sum}}</span>
+				{{/if}}
+			</summary>
+
+			<div class="casting-modifier-rows">
+				<div class="casting-modifier-row">
+					<span class="casting-modifier-label" id="cast-lbl-select_spendingTime">{{localize "wod.dialog.aretecasting.spendingtime"}}</span>
+					<div class="casting-segmented casting-segmented-compact" role="radiogroup" aria-labelledby="cast-lbl-select_spendingTime">
+						{{#numDownToLoop 0 -3}}
+							<label class="casting-segment casting-segment-narrow">
+								<input type="radio" name="object.select_spendingTime" value="{{this}}" aria-label="{{localize 'wod.labels.difficulty'}} {{this}}" {{isChecked (eq ../object.select_spendingTime this)}}>
+								<span>{{this}}</span>
+							</label>
+						{{/numDownToLoop}}
+					</div>
+				</div>
+
+				<label class="casting-modifier-row">
+					<span class="casting-modifier-label">{{localize "wod.dialog.aretecasting.timefast"}}</span>
+					<span class="casting-modifier-weight is-worse">+1</span>
+					<input name="object.check_timeFast" type="checkbox" value="1" {{isChecked object.check_timeFast}} />
+				</label>
+
+				<label class="casting-modifier-row">
+					<span class="casting-modifier-label">{{localize "wod.dialog.aretecasting.timebackwards"}}</span>
+					<span class="casting-modifier-weight is-worse">+3</span>
+					<input name="object.check_timeBackwards" type="checkbox" value="3" {{isChecked object.check_timeBackwards}} />
+				</label>
+			</div>
+		</details>
+
+		<details class="casting-modifier-group" data-group-id="general" {{#if casting.groups.general.open}}open{{/if}}>
+			<summary>
+				<span class="casting-group-name splatFont">{{localize "wod.dialog.aretecasting.circumstances"}}</span>
+				{{#if casting.groups.general.count}}
+					<span class="casting-group-badge" role="img" aria-label="{{casting.groups.general.count}} {{localize 'wod.dialog.casting.activemods'}}">{{casting.groups.general.count}}</span>
+					<span class="casting-group-sum {{#if (eq casting.groups.general.sum 0)}}is-neutral{{else if (gt casting.groups.general.sum 0)}}is-worse{{else}}is-better{{/if}}" role="img" aria-label="{{localize 'wod.labels.difficulty'}} {{signed casting.groups.general.sum}}">{{signed casting.groups.general.sum}}</span>
+				{{/if}}
+			</summary>
+
+			<div class="casting-modifier-rows">
+				<div class="casting-modifier-row">
+					<span class="casting-modifier-label" id="cast-lbl-select_researchDone">{{localize "wod.dialog.aretecasting.researchdone"}}</span>
+					<div class="casting-segmented casting-segmented-compact" role="radiogroup" aria-labelledby="cast-lbl-select_researchDone">
+						{{#numDownToLoop 0 -3}}
+							<label class="casting-segment casting-segment-narrow">
+								<input type="radio" name="object.select_researchDone" value="{{this}}" aria-label="{{localize 'wod.labels.difficulty'}} {{this}}" {{isChecked (eq ../object.select_researchDone this)}}>
+								<span>{{this}}</span>
+							</label>
+						{{/numDownToLoop}}
+					</div>
+				</div>
+
+				<div class="casting-modifier-row">
+					<span class="casting-modifier-label" id="cast-lbl-select_nodePresence">{{localize "wod.dialog.aretecasting.nodepresence"}}</span>
+					<div class="casting-segmented casting-segmented-compact" role="radiogroup" aria-labelledby="cast-lbl-select_nodePresence">
+						{{#numDownToLoop 0 -3}}
+							<label class="casting-segment casting-segment-narrow">
+								<input type="radio" name="object.select_nodePresence" value="{{this}}" aria-label="{{localize 'wod.labels.difficulty'}} {{this}}" {{isChecked (eq ../object.select_nodePresence this)}}>
+								<span>{{this}}</span>
+							</label>
+						{{/numDownToLoop}}
+					</div>
+				</div>
+
+				<label class="casting-modifier-row">
+					<span class="casting-modifier-label">{{localize "wod.dialog.aretecasting.distanttarget"}}</span>
+					<span class="casting-modifier-weight is-worse">+1</span>
+					<input name="object.check_targetDistant" type="checkbox" value="1" {{isChecked object.check_targetDistant}} />
+				</label>
+
+				<div class="casting-modifier-row">
+					<span class="casting-modifier-label" id="cast-lbl-select_effectsSeveral">{{localize "wod.dialog.aretecasting.effectsseveral"}}</span>
+					<div class="casting-segmented casting-segmented-compact" role="radiogroup" aria-labelledby="cast-lbl-select_effectsSeveral">
+						{{#numFromLoop 0 3}}
+							<label class="casting-segment casting-segment-narrow">
+								<input type="radio" name="object.select_effectsSeveral" value="{{this}}" aria-label="{{localize 'wod.labels.difficulty'}} {{this}}" {{isChecked (eq ../object.select_effectsSeveral this)}}>
+								<span>{{this}}</span>
+							</label>
+						{{/numFromLoop}}
+					</div>
+				</div>
+
+				<div class="casting-modifier-row">
+					<span class="casting-modifier-label" id="cast-lbl-select_mageDistracted">{{localize "wod.dialog.aretecasting.magedistracted"}}</span>
+					<div class="casting-segmented casting-segmented-compact" role="radiogroup" aria-labelledby="cast-lbl-select_mageDistracted">
+						{{#numFromLoop 0 3}}
+							<label class="casting-segment casting-segment-narrow">
+								<input type="radio" name="object.select_mageDistracted" value="{{this}}" aria-label="{{localize 'wod.labels.difficulty'}} {{this}}" {{isChecked (eq ../object.select_mageDistracted this)}}>
+								<span>{{this}}</span>
+							</label>
+						{{/numFromLoop}}
+					</div>
+				</div>
+
+				<div class="casting-modifier-row">
+					<span class="casting-modifier-label" id="cast-lbl-select_mageAvatarConflict">{{localize "wod.dialog.aretecasting.mageavatarconflict"}}</span>
+					<div class="casting-segmented casting-segmented-compact" role="radiogroup" aria-labelledby="cast-lbl-select_mageAvatarConflict">
+						{{#numFromLoop 0 3}}
+							<label class="casting-segment casting-segment-narrow">
+								<input type="radio" name="object.select_mageAvatarConflict" value="{{this}}" aria-label="{{localize 'wod.labels.difficulty'}} {{this}}" {{isChecked (eq ../object.select_mageAvatarConflict this)}}>
+								<span>{{this}}</span>
+							</label>
+						{{/numFromLoop}}
+					</div>
+				</div>
+
+				<div class="casting-modifier-row">
+					<span class="casting-modifier-label" id="cast-lbl-select_dominoEffect">{{localize "wod.dialog.aretecasting.dominoeffect"}}</span>
+					<div class="casting-segmented casting-segmented-compact" role="radiogroup" aria-labelledby="cast-lbl-select_dominoEffect">
+						{{#numFromLoop 0 3}}
+							<label class="casting-segment casting-segment-narrow">
+								<input type="radio" name="object.select_dominoEffect" value="{{this}}" aria-label="{{localize 'wod.labels.difficulty'}} {{this}}" {{isChecked (eq ../object.select_dominoEffect this)}}>
+								<span>{{this}}</span>
+							</label>
+						{{/numFromLoop}}
+					</div>
+				</div>
+
+				<div class="casting-modifier-row">
+					<span class="casting-modifier-label" id="cast-lbl-select_deedOutlandish">{{localize "wod.dialog.aretecasting.deedoutlandish"}}</span>
+					<div class="casting-segmented casting-segmented-compact" role="radiogroup" aria-labelledby="cast-lbl-select_deedOutlandish">
+						{{#numFromLoop 0 3}}
+							<label class="casting-segment casting-segment-narrow">
+								<input type="radio" name="object.select_deedOutlandish" value="{{this}}" aria-label="{{localize 'wod.labels.difficulty'}} {{this}}" {{isChecked (eq ../object.select_deedOutlandish this)}}>
+								<span>{{this}}</span>
+							</label>
+						{{/numFromLoop}}
+					</div>
+				</div>
+			</div>
+		</details>
+
+		{{#if casting.canPickDifficulty}}
+			{{!-- Only shown when it does something: `_setDifficulty` returns early unless
+			      `ignoreSphereBaseDifficulty` is on, so on the old screen these nine buttons were
+			      dead almost all of the time. --}}
+			<div class="casting-manual-difficulty">
+				<span class="casting-field-label" id="cast-lbl-manualdifficulty">{{localize "wod.labels.difficulty"}}</span>
+				<div class="casting-difficulty-buttons" role="group" aria-labelledby="cast-lbl-manualdifficulty">
+					{{#numFromLoop config.lowestDifficulty 10}}
+						<button type="button" class="button fullSplatColor pointer dialog-difficulty-button {{#if (eq ../object.shownDifficulty this)}}active{{/if}}" aria-pressed="{{#if (eq ../object.shownDifficulty this)}}true{{else}}false{{/if}}" value="{{this}}" data-index="{{this}}">{{this}}</button>
+					{{/numFromLoop}}
+				</div>
+			</div>
+		{{/if}}
+	</section>
+
+	{{!-- ── The bar that stays put ────────────────────────────────────────────────────
+	      The whole point of the redesign: the result and the action never scroll away while you
+	      are ticking the modifiers that change them. --}}
+	<div class="casting-actionbar">
+		<div class="casting-readouts" role="status">
+			<div class="casting-readout">
+				<span class="casting-readout-label">{{localize "wod.labels.difficulty"}}</span>
+				<span class="casting-readout-value {{#unless casting.hasDifficulty}}is-empty{{/unless}}">
+					{{#if casting.hasDifficulty}}{{casting.difficulty}}{{else}}—{{/if}}
+				</span>
+			</div>
+
+			<div class="casting-readout">
+				<span class="casting-readout-label">{{localize "wod.dialog.dicepool"}}</span>
+				<span class="casting-readout-value">{{casting.dicePool}}</span>
+			</div>
+
+			<div class="casting-breakdown">
+				{{#if casting.breakdown.length}}
+					{{#each casting.breakdown as |row|}}
+						{{!-- Label and value are separate elements so the chip can ellipsize the LABEL when
+						      it does not fit and never the number, which is the part worth reading. The
+						      printed text is unchanged, including the isBase branch's unsigned value. --}}
+						<span class="casting-chip {{#if row.isBase}}is-base{{else if (gt row.value 0)}}is-worse{{else}}is-better{{/if}}">
+							<span class="casting-chip-label">{{row.label}}</span>
+							<span class="casting-chip-value">{{#unless row.isBase}}{{signed row.value}}{{/unless}}{{#if row.isBase}}{{row.value}}{{/if}}</span>
+						</span>
+					{{/each}}
+				{{else}}
+					<span class="casting-chip is-hint">{{localize "wod.dialog.aretecasting.selectsphere"}}</span>
+				{{/if}}
+			</div>
+		</div>
+
+		<div class="casting-buttons">
+			<button type="button" class="button fullSplatColor pointer actionbutton casting-cast">{{localize "wod.dialog.aretecasting.castspell"}}</button>
+			<button type="button" class="button fullSplatColor pointer closebutton casting-close">{{localize "wod.dialog.close"}}</button>
+		</div>
+	</div>
+</form>

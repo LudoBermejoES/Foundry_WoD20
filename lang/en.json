@@ -2091,9 +2091,15 @@
 			"usewoundpenalty": "Use wound penalty",
 			"dicepool": "Dice pool",
 			"nonelisted": "None listed",
+			"casting": {
+				"spherehint": "Set each Sphere to the rank this effect uses. The highest one sets the base difficulty.",
+				"basedifficulty": "Base",
+				"activemods": "active modifiers",
+				"ignorespherehint": "Lets you set the difficulty by hand. The difficulty buttons only do anything while this is on."
+			},
 			"aretecasting": {
 				"castspell": "Cast spell",
-				"castingspell": "Casting spell",	
+				"castingspell": "Casting spell",
 				"casting": "Casting",
 				"modifierarete": "Arete modifier",
 				"castingtype": "Spell type",

@@ -1486,7 +1486,7 @@
 			"both": "Ambos",
 			"nochange": "Sin cambio",
 			"usewillpower": "Usar Fuerza de Voluntad",
-			"ignoreshpehre": "Ignore sphere when setting base difficulty",
+			"ignoreshpehre": "Ignorar la Esfera al fijar la dificultad base",
 			"bio": {
 				"wronggeneration": "Generación no válida",
 				"wrongtempgeneration": "No se puede bajar de Cuarta Generación",
@@ -2077,6 +2077,12 @@
 			"usewoundpenalty": "Usar penalizador de heridas",
 			"dicepool": "Reserva de dados",
 			"nonelisted": "Ninguno listado",
+			"casting": {
+				"spherehint": "Ajusta cada Esfera al nivel que usa este efecto. La más alta fija la dificultad base.",
+				"basedifficulty": "Base",
+				"activemods": "modificadores activos",
+				"ignorespherehint": "Te permite fijar la dificultad a mano. Los botones de dificultad solo hacen algo mientras esto está marcado."
+			},
 			"aretecasting": {
 				"castspell": "Lanzar hechizo",
 				"castingspell": "Lanzando hechizo",
@@ -2121,7 +2127,7 @@
 				"additionaldifficulty": "Modificador de dificultad adicional",
 				"castingsettings": "Opciones de Lanzamiento",
 				"extendedcasting": "Lanzamiento extendido",
-				"extendedcastingdesc": "Extended casting is when you roll for the same magic time and time again adding the successes together for each roll, each fail adds +1 to the difficulty.",
+				"extendedcastingdesc": "El lanzamiento extendido consiste en tirar por la misma magia una y otra vez, sumando los éxitos de cada tirada; cada fallo añade +1 a la dificultad.",
 				"selectsphere": "Se necesita primero seleccionar las Esferas",
 				"keepdifficulty": "Mantener la misma dificultad",
 				"keepdiff": "Mantener dificultad",

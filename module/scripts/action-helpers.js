@@ -26,6 +26,7 @@ import { DialogGeneralRoll, GeneralRoll } from "../dialogs/dialog-generalroll.js
 
 import { Rote } from "../dialogs/dialog-aretecasting.js";
 import { DialogAreteCasting } from "../dialogs/dialog-aretecasting.js";
+import { DialogCasting } from "../dialogs/dialog-casting.js";
 
 import { VampireFrenzy } from "../dialogs/dialog-checkfrenzy.js";
 import { WerewolfFrenzy } from "../dialogs/dialog-checkfrenzy.js";
@@ -426,9 +427,14 @@ export default class ActionHelper {
 			return;
 		}
 		// cast-from-sphere-name: clicking a Sphere's NAME on the sheet opens the spell-casting
-		// dialog with that Sphere already selected, instead of doing nothing (the label carried
-		// `vrollable` but no action). This is the same dialog the "cast a spell" macro icon opens
-		// (`dataset.rollaretecatsing` below) — the only difference is the pre-selection.
+		// screen with that Sphere already selected, instead of doing nothing (the label carried
+		// `vrollable` but no action).
+		//
+		// This entry point opens `DialogCasting` — the REDESIGNED screen. The "cast a spell" macro
+		// icon (`dataset.rollaretecatsing` below) still opens the original `DialogAreteCasting`, so
+		// both are reachable side by side while the new one is being judged. DialogCasting is a
+		// subclass, so the two share every rule; only the presentation differs. When the redesign
+		// is accepted, point the macro icon here too and the old screen can go.
 		//
 		// `selectedSpheres[id] = rank` is the exact shape the dialog's own dot handler writes
 		// (`dialog-aretecasting.js:417`), and `_calculateDifficulty(false)` is what it calls right
@@ -443,9 +449,9 @@ export default class ActionHelper {
 				rote.selectedSpheres[dataset.key] = rank;
 			}
 
-			let areteCasting = new DialogAreteCasting(actor, rote);
-			areteCasting.object.canCast = areteCasting._calculateDifficulty(false);
-			areteCasting.render(true);
+			let casting = new DialogCasting(actor, rote);
+			casting.object.canCast = casting._calculateDifficulty(false);
+			casting.render(true);
 
 			return;
 		}

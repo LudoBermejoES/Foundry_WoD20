@@ -21,6 +21,17 @@ export const registerHandlebarsHelpers = function () {
 		return parseInt(num1) - parseInt(num2);
 	});
 
+	/* Prints a number with an explicit sign: 2 -> "+2", -1 -> "-1", 0 -> "0".
+	   Foundry's core `numberFormat` helper takes `sign=true` and would do this, but nothing in this
+	   system uses it, so there is no evidence here that it still exists under the Foundry version
+	   we target — and a missing helper renders as nothing, silently. Three lines of our own beat
+	   an untested assumption on a repo that deploys straight to the live server. */
+	Handlebars.registerHelper("signed", function (num) {
+		const value = parseInt(num) || 0;
+
+		return value > 0 ? `+${value}` : `${value}`;
+	});
+
 	Handlebars.registerHelper("concat", function (...args) {
 		// Remove the last argument (options object) if present
 		const strings = args.filter(arg => typeof arg === 'string');
