@@ -1423,7 +1423,9 @@
 			"unnamedboon": "Unnamed boon",
 			"unnamedoath": "Unnamed oath",
 			"descriptionmissing": "Description missing",
-			"unspent": "Unspent"
+			"unspent": "Unspent",
+			"unnamedpassion": "Unnamed passion",
+			"unnamedfetter": "Unnamed fetter"
 		},
 		"experience": {
 			"amount": "Amount",
@@ -2020,7 +2022,9 @@
 			"no": "no",
 			"numdices": "Number of dice",
 			"send": "Send to chat",
-			"menu": "Menu"
+			"menu": "Menu",
+			"placement": "Placement",
+			"soakoverrideinfo": "With this setting you can override the actor's setting for when soak is allowed."
 		},
 		"info": {
 			"spendexp": "If you have spent the experience or not",

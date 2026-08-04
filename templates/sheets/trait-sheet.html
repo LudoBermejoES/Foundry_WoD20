@@ -69,7 +69,7 @@
 							<select class="sheet-infoValues editable" name="system.placement" data-dtype="String">
 								{{selectOptions listData.PlacementList selected=data.system.placement localize=true}}
 							</select>
-							<span class="floating-label">LANG: Placement</span>
+							<span class="floating-label">{{localize 'wod.labels.placement'}}</span>
 						</div>
 					{{/if}}
 				{{/if}}
@@ -189,7 +189,7 @@
 
 							{{/if}}
 
-							<div class="information-area">LANG: With this setting you are able to override the actor setting of when soak is allowed.</div>
+							<div class="information-area">{{localize 'wod.labels.soakoverrideinfo'}}</div>
 
 						</div>
 					</div>

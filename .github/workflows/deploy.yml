@@ -176,6 +176,44 @@ jobs:
       - name: Check no power section renders on two tabs
         run: python3 .github/scripts/power-section-check.py
 
+      # The first gate that reads a template AGAINST THE JAVASCRIPT THAT RENDERS IT.
+      # `template-structure-check.py` above checks a template against itself — comments,
+      # nesting, tag balance, partial registration — and every one of these four passes that
+      # while being wrong, because each file is correct on its own:
+      #   I1  a `data-action` no sheet registered. ApplicationV2 looks the name up in
+      #       `options.actions` and, finding nothing, does nothing: the control renders, takes
+      #       the pointer cursor, and is dead. There is one on the live sheet today.
+      #   I5  a part with no `case` in `_preparePartContext` renders with only the shared
+      #       context, so the tab comes up BLANK — the failure this sheet hit TWICE in the week
+      #       of 2026-08-04, with no error and no console warning either time.
+      #   I7  a dot that is not a `<span>`. `SetupDotCounters_v2` paints `.resource-value-step`
+      #       with no tag; `OnDotCounterChange` indexes `span.resource-value-step` and returns
+      #       early on `index >= steps.length`. The two disagreeing means the dot highlights on
+      #       load and silently refuses to persist on click.
+      #   I11 a `LANG:` placeholder, or a `{{localize}}` key missing from lang/en.json or
+      #       lang/es.json. Foundry renders a missing key VERBATIM, and the live world runs ES,
+      #       so an EN-only key is invisible to everyone who reads the sheet in English.
+      # Scoped to actor templates (I1/I5/I7) and to every template (I11). Three counted
+      # allowlists carry the pre-existing findings; each prints a ::warning:: on every run.
+      # Runnable locally: python3 .github/scripts/sheet-invariants.py
+      - name: Check the actor sheet's actions, parts and strings
+        run: python3 .github/scripts/sheet-invariants.py
+
+      # I3/I4. `_onRender` binds behaviour with 21 hard-coded CSS selectors, one of them a
+      # direct-child chain. An empty NodeList is not an error and every binder starts
+      # `if (!x?.length) return;`, so a renamed class or an inserted wrapper `<div>` removes a
+      # feature with no exception, no console warning and no visual difference — which is what
+      # nothing else here can see: the JS parses, the template is well-formed, and only the two
+      # read TOGETHER are wrong. It matters now because `add-pc-sheet-v3` adds the first
+      # ApplicationV2 SUBCLASS in this repo: a subclass inherits those binders while replacing
+      # the markup they run against, so the check evaluates them PER SHEET and a v3 shell that
+      # drops a class goes red on its own. The selector list and the files it comes from are
+      # both PARSED out of the source — a hand-copied list rots, which is the same reasoning
+      # that makes power-section-check.py read both powertab lists instead of trusting either.
+      # Runnable locally: python3 .github/scripts/binder-selector-check.py
+      - name: Check every hard-coded binder selector is still producible
+        run: python3 .github/scripts/binder-selector-check.py
+
       # The deploy job below drives Foundry's lifecycle through this script. A
       # syntax error in it would be discovered halfway through a deploy, i.e.
       # with Foundry stopped.

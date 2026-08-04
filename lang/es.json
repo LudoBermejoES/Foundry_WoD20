@@ -1419,7 +1419,9 @@
 			"unnamedboon": "Favor sin nombre",
 			"unnamedoath": "Juramento sin nombre",
 			"descriptionmissing": "Sin descripción",
-			"unspent": "Sin gastar"
+			"unspent": "Sin gastar",
+			"unnamedpassion": "Pasión sin nombre",
+			"unnamedfetter": "Atadura sin nombre"
 		},
 		"experience": {
 			"amount": "Cantidad",
@@ -1640,7 +1642,7 @@
 				},
 				"savesuccess": "Cambios de modificadores guardados",
 				"savefail": "¡Fallo al guardar los cambios de modificadores!",
-				"attributefixedvalue": "Fixed attribute value",
+				"attributefixedvalue": "Valor fijo del Atributo",
 				"attackbuff": "Attack bonus",
 				"attackdiff": "Attack difficulty",
 				"frenzybuff": "Frenzy bonus",
@@ -1651,7 +1653,8 @@
 				"frenzybuffhint": "This bonus adds/subracts a value to frenzy rolls altering the total value by the selected amount.",
 				"frenzydiffhint": "This bonus changes the difficulty of any frenzy roll.",
 				"frenzydiffchat": "Frenzy difficulty modifier:",
-				"frenzybonuschat": "Frenzy dice bonus:"
+				"frenzybonuschat": "Frenzy dice bonus:",
+				"bonusvalue": "Valor del bonificador"
 			},
 			"ability": {
 				"worldname": "Item name in world",
@@ -2006,7 +2009,9 @@
 			"no": "No",
 			"numdices": "Número de Dados",
 			"send": "Enviar al chat",
-			"menu": "Menú"
+			"menu": "Menú",
+			"placement": "Colocación",
+			"soakoverrideinfo": "Con esta opción puedes anular la configuración del personaje sobre cuándo se permite absorber."
 		},
 		"info": {
 			"spendexp": "Si gastaste Experiencia o no",
@@ -2179,7 +2184,7 @@
 				"attackrollbonus": "Attack roll bonus:",
 				"dodgemodifier": "Dodge modifier",
 				"generalmodifier": "General modifier",
-				"secondaryabilityinfo": "Pick what secodary ability to use for this weapon if no ability have been selected.",
+				"secondaryabilityinfo": "Elige qué Habilidad secundaria usar para esta arma si no se ha seleccionado ninguna.",
 				"noattackordamage": "Tu arma no tiene ni tirada de ataque ni tirada de daño."
 			},
 			"soak": {
