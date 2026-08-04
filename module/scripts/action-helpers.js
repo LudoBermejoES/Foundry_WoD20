@@ -430,11 +430,12 @@ export default class ActionHelper {
 		// screen with that Sphere already selected, instead of doing nothing (the label carried
 		// `vrollable` but no action).
 		//
-		// This entry point opens `DialogCasting` — the REDESIGNED screen. The "cast a spell" macro
-		// icon (`dataset.rollaretecatsing` below) still opens the original `DialogAreteCasting`, so
-		// both are reachable side by side while the new one is being judged. DialogCasting is a
-		// subclass, so the two share every rule; only the presentation differs. When the redesign
-		// is accepted, point the macro icon here too and the old screen can go.
+		// This entry point opens `DialogCasting` — the REDESIGNED screen, and on a PC sheet it is now
+		// the ONLY way in: the wand macro icon was removed from macro_icons.hbs once the Spheres
+		// moved onto the Stats tab, because it opened the same dialog with nothing pre-selected.
+		// `dataset.rollaretecatsing` below is NOT dead — it still fires from macro_icons.html, the V1
+		// partial used by the `Mage` actor type, whose Sphere names are not click-to-cast.
+		// DialogCasting is a subclass, so the two screens share every rule; only presentation differs.
 		//
 		// `selectedSpheres[id] = rank` is the exact shape the dialog's own dot handler writes
 		// (`dialog-aretecasting.js:417`), and `_calculateDifficulty(false)` is what it calls right

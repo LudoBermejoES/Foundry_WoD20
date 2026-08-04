@@ -20,9 +20,16 @@
             <a class="macroBtn pointer" data-action="useMacro" data-macroimage="true" data-rollshapechange="true" data-type="{{actor.system.settings.splat}}" title="{{localize 'wod.dialog.shapechange.headline'}}">{{> (dtSvgDie 'shapechange' actor.system.settings.splat actor.system.settings.variantsheet)}}</a>
         {{/if}}
 
-        {{#if actor.system.settings.hasspheres}}
-            <a class="macroBtn pointer" data-action="useMacro" data-macroimage="true" data-rollaretecatsing="true"  data-type="{{config.splat.mage}}" title="{{localize 'wod.dialog.aretecasting.castspell'}}">{{> (dtSvgDie 'spellcasting' actor.system.settings.splat actor.system.settings.variantsheet)}}</a>
-        {{/if}}
+        {{!-- The spell-casting wand is GONE from this (V2 / PC) sheet: the Spheres block moved onto
+              the Stats tab and each Sphere's name now opens the casting screen with that Sphere
+              already selected (`castsphere` in action-helpers.js), so a separate button that opened
+              it with nothing selected was one more icon for strictly less.
+
+              It is still in macro_icons.html, the V1 partial, ON PURPOSE. That serves the `Mage`
+              actor type (registered at wod.js:229), where the Spheres are still on their own tab and
+              their names are NOT click-to-cast — removing the wand there would leave those actors
+              with no way to cast at all. `dataset.rollaretecatsing` in action-helpers.js is therefore
+              still live code, and it is the last entry point to the ORIGINAL casting dialog. --}}
 
         <a class="macroBtn pointer" data-action="useMacro" data-macroimage="true" data-rollinitiative="true" title="{{localize 'wod.info.rollinititative'}} ({{#if (gt actor.system.initiative.total -1)}}+{{else}}-{{/if}}{{actor.system.initiative.total}})">{{> (dtSvgDie 'initiative' actor.system.settings.splat actor.system.settings.variantsheet)}}</a>
         <a class="macroBtn pointer" data-action="useMacro" data-macroimage="true" data-rollsoak="true" title="{{localize 'wod.info.rollsoak'}}">{{> (dtSvgDie 'soak' actor.system.settings.splat actor.system.settings.variantsheet)}}</a>

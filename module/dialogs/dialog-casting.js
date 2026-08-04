@@ -9,8 +9,11 @@ import { DialogAreteCasting } from "./dialog-aretecasting.js";
  * card, `_updateObject`'s modifier tally) must never fork: a copy would drift the moment one side
  * is fixed. So this class overrides exactly three things — the template, the context it adds, and
  * the extra listeners the new layout needs — and inherits `_calculateDifficulty`, `_castSpell`,
- * `_updateObject`, `_onDotSphereChange` and the rest verbatim. The old dialog is left untouched and
- * still serves the rote flow and the wand macro icon.
+ * `_updateObject`, `_onDotSphereChange` and the rest verbatim.
+ *
+ * The old dialog is left untouched and still serves two callers: the rote flow, and the wand macro
+ * icon on the V1 sheet (`macro_icons.html`, the `Mage` actor type). The wand is gone from the V2/PC
+ * sheet — there, clicking a Sphere's name is the way in, and it pre-selects that Sphere.
  *
  * ## What the redesign fixes (all measured on the live sheet, 2026-08-04)
  *
