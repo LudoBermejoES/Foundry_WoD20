@@ -1,0 +1,284 @@
+{{!-- v3 Bio tab.
+
+      FOURTH PART MIGRATED. 123 lines on v2, four inline styles, ten `autofocus` and ten `required`,
+      and — for nine of the thirteen splats — almost nothing in it.
+
+      WHAT THE CENSUS SAYS THIS TAB IS, WHICH IS NOT WHAT IT LOOKS LIKE
+      -----------------------------------------------------------------
+      Only FOUR splats declare bio splatfields at all (`assets/data/sheet/biotab.js`, counted
+      2026-08-04: vampire 6, werewolf 5, mage 7, wraith 7). `mortal` declares `{}` and eight declare
+      nothing. So for nine of thirteen this tab is a portrait, a name, four generic fields and two
+      prose boxes — which is why the layout below must look deliberate when it is nearly empty, not
+      merely un-full. Two consequences are designed in rather than discovered later:
+
+        * the identity row is a WRAPPING FLEX ROW, not a three-column grid. A grid reserves its
+          third track whether or not anything lands in it; a flex row simply has two children.
+        * the splatfield column is REMOVED, not merely emptied, when the partial produced no field
+          — see `.v3-biosplat` in css/pc-actor-v3.css. The alternative is a 320px hole on nine
+          splats, and 320px is an INLINE width inside a shared partial, so it cannot be un-set from
+          a stylesheet (D4: inline styles beat author rules, and there is no `[style]` sledgehammer
+          in this project).
+
+      THE PROSE, WHICH IS THE ACTUAL PROBLEM ON THIS TAB
+      -------------------------------------------------
+      A mage carries roughly 7,000 characters across three splatfield textboxes (paradigma ~1,000,
+      práctica ~3,500, instrumentos ~2,500); a wraith has four (life, death, regret, thorns). No
+      other splat declares a textbox at all. On v2 those render as undifferentiated stacked blocks,
+      each with `min-height: 150px` (`.textarea`, wod.css:556) and no upper bound — a wall.
+
+      Long ones are therefore wrapped in a native `<details>` when the sheet is LOCKED. Three things
+      about that choice, each of which is a compromise stated out loud rather than papered over:
+
+      1. IT IS DISCLOSURE, NOT A CLAMP. `<details>` hides its content; it cannot show the first six
+         lines of it. A real clamp needs either a duplicated preview (the same 3,500 characters in
+         the DOM twice, and a `<summary>` whose accessible NAME would be that whole text) or the
+         prose inside the `<summary>`, which is invalid content and announces catastrophically. So
+         the threshold below exists to make disclosure behave like a clamp where it matters: a field
+         SHORTER than `CLAMP_AT` characters is never hidden, because hiding an 80-character paradigm
+         behind a click is a regression, and a field longer than it is worth one click.
+
+      2. IT DOES NOT PERSIST, and it resets on every re-render, not merely on reopen. The store that
+         would persist it (`game.user.flags.wod[<actorId>]`, driven by `_handleUnfoldClick` /
+         `_restoreUnfoldState`) is reachable only by reproducing an exact DOM shape: the handler
+         walks `parentElement` three times and toggles `.hide`/`.show` on that ancestor's SIBLINGS by
+         class name. Satisfying it here would have meant one wrapper `<div>` that exists for no
+         reason but the walk, plus a marker element whose only job is to receive a class (because
+         `.hide` is `display: none !important`, wod.css:609, so the class cannot be repurposed to
+         mean "clamped" without spending the `!important` budget on it). That is not reuse, it is a
+         shape-dependency on machinery the design already records as fragile — so `<details>` it is,
+         per the brief's own fallback. It buys back native keyboard operability and a real
+         `aria-expanded`, which the v2 unfold `<i>` has never had.
+
+      3. IT APPLIES TO SPLATFIELD TEXTBOXES ONLY. Appearance, Biography and the GM tips render open,
+         exactly as on v2. They are the only prose the other nine splats have, and collapsing the
+         sole content of a nearly-empty tab is the opposite of the fix.
+
+      SHELL/ROW SPLIT (add-pc-sheet-v3 D5), AND THE ONE PLACE IT BENDS
+      ---------------------------------------------------------------
+      Every `data-action` below (`editImage`) and every `data-*` is one `parts/bio.hbs` already
+      emits, carried across unchanged; nothing is added and nothing is dropped. `bio_splatfields.hbs`
+      is still INCLUDED, untouched — it is a row renderer (a per-field loop carrying the
+      `generationChange` controls) and forking it is exactly what D5 forbids.
+
+      `bio_splatboxes.hbs` is NOT included, and this is the bend. That partial is nine lines: an
+      `{{#each splatfields}}`, a `type == "textbox"` test, and one `{{> description.hbs}}`. To wrap
+      each textbox in its own `<details>` the wrapper has to be INSIDE that loop, so the loop is
+      reproduced here. What is duplicated is three lines of iteration; the row renderer itself
+      (`description.hbs`) is still the shared one, called with the same six arguments in the same
+      order. `bio_splatboxes.hbs` stays registered and is what the v2 sheet still renders.
+
+      TWO DEFECTS FIXED, NEITHER OF THEM COSMETIC
+      -------------------------------------------
+      * `required` and `autofocus` are GONE (ten of each on v2). `required` was never a validation
+        intent: it is the CSS hook `.floating-label-group input:not(:focus):valid ~ .floating-label`
+        needs (wod.css:1001-1029), so every EMPTY bio field on v2 is `:invalid` and announces to
+        assistive technology as an invalid form field — on a sheet where every one of these fields is
+        genuinely optional. `autofocus` is undefined behaviour past the first instance and steals
+        focus on open. A real `<label>` wrapping its input needs neither, and needs no `id` either:
+        two PC sheets can be open at once and a duplicated `id` binds both labels to one input.
+        `name`, `type` and `data-dtype` are carried across exactly — that is what the submit path
+        reads, and v2's bio inputs carry no `data-name` at all, so none is added here.
+
+        THREE `autofocus` AND THREE `required` SURVIVE, in `bio_splatfields.hbs:12,14,23`. They
+        cannot be removed from here: it is a shared partial and editing it changes the v2 sheet.
+
+      * LOCKED FIELDS ARE `readonly`, not merely nameless. v2 renders a locked field as an ordinary
+        editable `<input>` with no `name` attribute — it takes focus, accepts typing, and throws the
+        value away on submit because nothing names it. `readonly` + `aria-readonly` says so to the
+        user and to assistive technology. --}}
+<section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}" data-drop-area="true">
+
+	<div class="v3-tabhead">
+		{{!-- No create control, deliberately: the v2 Bio tab authors nothing, and D5 forbids v3
+		      emitting a `data-action` its counterpart lacks. The header is title-only. --}}
+		<h2 class="v3-tabtitle splatFont">{{localize "wod.tab.bio"}}</h2>
+	</div>
+
+	<div class="v3-tabbody">
+		<div class="v3-tabmain">
+
+			{{!-- The identity row. On v2 this is `<div style="display: flex">` holding a
+			      `style="flex: 1; margin-left: auto"` portrait, a `style="width: 320px"` field column
+			      and a second `style="width: 320px"` column inside the splatfields partial — three of
+			      the tab's four inline styles. Two of them are removed here; the third belongs to the
+			      shared partial and is neutralised by making its parent a flex container, where a
+			      `width` becomes a flex BASIS that shrinks instead of a floor that overflows. --}}
+			<div class="v3-section v3-bioidentity">
+
+				<div class="v3-portrait">
+					{{#if locked}}
+						<img class="profile-img {{#if (eq actor.img 'icons/svg/mystery-man.svg')}}defaultimage{{/if}}" src="{{actor.img}}" alt="{{actor.name}}" />
+					{{else}}
+						{{#if userpermissions.changeActorImage}}
+							{{!-- `data-action="editImage"` + `data-edit="img"` is the ONLY in-sheet route to
+							      changing a PC's portrait (`OnEditImage`, action-helpers.js), so it travels
+							      with the tab exactly as authored. `pointer` is v2's cursor class and is kept
+							      because the control is genuinely clickable here. --}}
+							<img class="profile-img {{#if (eq actor.img 'icons/svg/mystery-man.svg')}}defaultimage{{/if}} pointer" src="{{actor.img}}" title="{{actor.name}}" alt="{{actor.name}}" data-action="editImage" data-edit="img" />
+						{{else}}
+							<img class="profile-img {{#if (eq actor.img 'icons/svg/mystery-man.svg')}}defaultimage{{/if}}" src="{{actor.img}}" alt="{{actor.name}}" />
+						{{/if}}
+					{{/if}}
+				</div>
+
+				<div class="v3-biocore">
+					<div class="v3-fields">
+						<label class="v3-field">
+							<span class="v3-fieldlabel">{{localize 'wod.bio.name'}}</span>
+							{{#if locked}}
+								<input class="sheet-infoValues" type="text" value="{{actor.name}}" autocomplete="off" readonly aria-readonly="true" />
+							{{else}}
+								<input class="sheet-infoValues editable" name="name" type="text" value="{{actor.name}}" data-dtype="String" autocomplete="off" />
+							{{/if}}
+						</label>
+
+						{{!-- Nature and Demeanour are a changeling's Legacies instead, declared in that
+						      splat's own field set, so v2 suppresses the generic pair for changelings. Both
+						      gates are carried across verbatim, including the `mini` permission level, which
+						      is a GM setting rather than a splat property. --}}
+						{{#if (ne actor.system.settings.splat config.splat.changeling)}}
+							{{#if (ne (checkSystemsetting "viewBiotabPermission") "mini")}}
+								<label class="v3-field">
+									<span class="v3-fieldlabel">{{localize 'wod.bio.nature'}}</span>
+									{{#if locked}}
+										<input class="sheet-infoValues" type="text" value="{{actor.system.bio.nature}}" autocomplete="off" readonly aria-readonly="true" />
+									{{else}}
+										<input class="sheet-infoValues editable" name="system.bio.nature" type="text" value="{{actor.system.bio.nature}}" data-dtype="String" autocomplete="off" />
+									{{/if}}
+								</label>
+							{{/if}}
+
+							<label class="v3-field">
+								<span class="v3-fieldlabel">{{localize 'wod.bio.demeanor'}}</span>
+								{{#if locked}}
+									<input class="sheet-infoValues" type="text" value="{{actor.system.bio.demeanor}}" autocomplete="off" readonly aria-readonly="true" />
+								{{else}}
+									<input class="sheet-infoValues editable" name="system.bio.demeanor" type="text" value="{{actor.system.bio.demeanor}}" data-dtype="String" autocomplete="off" />
+								{{/if}}
+							</label>
+						{{/if}}
+
+						{{#if (ne (checkSystemsetting "viewBiotabPermission") "mini")}}
+							<label class="v3-field">
+								<span class="v3-fieldlabel">{{localize 'wod.bio.concept'}}</span>
+								{{#if locked}}
+									<input class="sheet-infoValues" type="text" value="{{actor.system.bio.concept}}" autocomplete="off" readonly aria-readonly="true" />
+								{{else}}
+									<input class="sheet-infoValues editable" name="system.bio.concept" type="text" value="{{actor.system.bio.concept}}" data-dtype="String" autocomplete="off" />
+								{{/if}}
+							</label>
+
+							<label class="v3-field">
+								<span class="v3-fieldlabel">{{localize 'wod.bio.derangement'}}</span>
+								{{#if locked}}
+									<input class="sheet-infoValues" type="text" value="{{actor.system.bio.derangement}}" autocomplete="off" readonly aria-readonly="true" />
+								{{else}}
+									<input class="sheet-infoValues editable" name="system.bio.derangement" type="text" value="{{actor.system.bio.derangement}}" data-dtype="String" autocomplete="off" />
+								{{/if}}
+							</label>
+						{{/if}}
+					</div>
+				</div>
+
+				{{!-- The splat's own identity fields, from the SHARED partial, with its arguments
+				      unchanged. This wrapper exists so the stylesheet has something to hold on to: it
+				      makes the partial's inline 320px a shrinkable flex basis, and it is what
+				      disappears when the partial produced no field at all. --}}
+				<div class="v3-biosplat">
+					{{> "systems/worldofdarkness/templates/actor/parts/bio_splatfields.hbs" locked=locked}}
+				</div>
+
+			</div>
+
+			{{!-- The splatfield prose. `bio_splatboxes.hbs`'s loop, reproduced so that each box can be
+			      wrapped individually — see the header for why that is the one duplication here, and
+			      why it is three lines of iteration rather than a row renderer.
+
+			      CLAMP_AT = 600. Measured on the STORED HTML string, tags included, so it is a
+			      deliberately generous heuristic rather than a character count of the prose: a mage's
+			      three fields are ~1,000 / ~3,500 / ~2,500 and clear it easily, while a one-paragraph
+			      answer does not and is never hidden. A field that sits just over the line loses one
+			      click and nothing else, which is why the threshold does not need to be exact. --}}
+			{{#each splatfields as |field key|}}
+				{{#if (eq field.type "textbox")}}
+					<div class="v3-section">
+						{{#if ../locked}}
+							{{#if (gt field.value.length 600)}}
+								<details class="v3-prose">
+									<summary class="v3-prosesummary">
+										{{!-- `fa-angles-right`, rotated by CSS when open. The same glyph the XP
+										      ledgers use for exactly this idea, so the sheet keeps one
+										      vocabulary for "there is more here"; `aria-hidden` because
+										      `<summary>` already carries the expanded state natively. --}}
+										<i class="fa-solid fa-angles-right v3-prosechevron" aria-hidden="true"></i>
+										<span class="v3-proselabel splatFont">{{localize field.label}}</span>
+									</summary>
+									<div class="v3-prosebody">
+										{{> "systems/worldofdarkness/templates/actor/parts/description.hbs" proseheadline=field.label locked=../locked headline=false prosename=(concat "system.bio.splatfields." key ".value") prosevalue=field.value proseenriched=field.enriched}}
+									</div>
+								</details>
+							{{else}}
+								{{> "systems/worldofdarkness/templates/actor/parts/description.hbs" proseheadline=field.label locked=../locked headline=false prosename=(concat "system.bio.splatfields." key ".value") prosevalue=field.value proseenriched=field.enriched}}
+							{{/if}}
+						{{else}}
+							{{!-- Unlocked: a prose-mirror editor, never wrapped. Collapsing an editor hides
+							      the thing the user opened the sheet to change. --}}
+							{{> "systems/worldofdarkness/templates/actor/parts/description.hbs" proseheadline=field.label locked=../locked headline=false prosename=(concat "system.bio.splatfields." key ".value") prosevalue=field.value proseenriched=field.enriched}}
+						{{/if}}
+					</div>
+				{{/if}}
+			{{/each}}
+
+			{{#if graphicsettings.useLinkPlatform}}
+				<div class="v3-section">
+					<h3 class="v3-sectiontitle splatFont">{{localize 'wod.bio.worldanvil'}}</h3>
+
+					{{#if locked}}
+						<p class="v3-linkline">
+							{{#if (ne actor.system.bio.worldanvil "")}}
+								<a href="{{actor.system.bio.worldanvil}}" target="_blank">{{localize 'wod.bio.worldanvillink'}}</a>
+							{{else}}
+								{{localize 'wod.bio.noworldanvillink'}}
+							{{/if}}
+						</p>
+					{{else}}
+						{{!-- v2 sized this with `style="width: 90%"`. A labelled field in the grid needs no
+						      width at all, and the `{{#if (eq locked false)}}editable{{/if}}` it carried was
+						      unconditional — this branch only exists when unlocked. --}}
+						<div class="v3-fields">
+							<label class="v3-field">
+								<span class="v3-fieldlabel">{{localize 'wod.bio.worldanvil'}}</span>
+								<input class="sheet-infoValues editable" name="system.bio.worldanvil" type="text" value="{{actor.system.bio.worldanvil}}" data-dtype="String" autocomplete="off" />
+							</label>
+						</div>
+					{{/if}}
+				</div>
+			{{/if}}
+
+			{{!-- The three generic prose boxes, open, exactly as v2 renders them. `headline=false` is
+			      v2's argument and is kept: `description.hbs` draws its own heading either way, and the
+			      flag only picks which of the two heading classes it uses. --}}
+			<div class="v3-section">
+				{{> "systems/worldofdarkness/templates/actor/parts/description.hbs" proseheadline="wod.bio.appearance" locked=locked headline=false prosename="system.bio.appearance" prosevalue=appearance proseenriched=enrichedAppearance}}
+			</div>
+
+			{{#if (ne (checkSystemsetting "viewBiotabPermission") "mini")}}
+				<div class="v3-section">
+					{{> "systems/worldofdarkness/templates/actor/parts/description.hbs" proseheadline="wod.bio.background" locked=locked headline=false prosename="system.bio.background" prosevalue=background proseenriched=enrichedBackground}}
+				</div>
+			{{/if}}
+
+			{{#if isGM}}
+				<div class="v3-section">
+					{{> "systems/worldofdarkness/templates/actor/parts/description.hbs" proseheadline="wod.bio.tips" locked=locked headline=false prosename="system.bio.roleplaytip" prosevalue=roleplaytip proseenriched=enrichedRoleplaytip}}
+				</div>
+			{{/if}}
+
+		</div>
+
+		<aside class="v3-macrorail">
+			{{> "systems/worldofdarkness/templates/actor/parts/macro_icons.hbs"}}
+		</aside>
+	</div>
+
+</section>

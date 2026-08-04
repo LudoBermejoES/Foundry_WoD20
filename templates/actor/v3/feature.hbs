@@ -1,0 +1,398 @@
+{{!-- v3 Features tab.
+
+      FIFTH PART MIGRATED, and the densest float debt v3 has taken on so far: 374 lines, 14 floats,
+      7 clearfixes and 7 inline styles on v2 — every single one of which is in the EXPERIENCE LEDGERS
+      at the bottom (measured: `pullLeft`/`pullRight` at feature.hbs:300-362, `clearareaBox` at
+      299-346, `style=` at 300-338, nothing above line 298). The item lists above them are already
+      flex, inside `feature_item.hbs`, and are not touched.
+
+      SHELL/ROW SPLIT (add-pc-sheet-v3 D5), AND THE TWO PLACES IT BENDS
+      ----------------------------------------------------------------
+      Nine item blocks and the Shadow area are `{{> …}}` includes of shared partials
+      (`feature_item.hbs`, `feature_shadow.hbs`), passed exactly the arguments v2 passes, in the same
+      order, including the `valuefirst` / `valuefallback` distinction whose whole point is that the
+      two views of the same item cannot disagree. Those partials are untouched, so a fix to a Feature
+      row still reaches both sheets from one file.
+
+      It bends twice, in the two places v2 authors a row INLINE and there is nothing to share:
+
+        1. THE CONNECTION ROSTER. `feature.hbs:235-262` builds the entry — portrait, body, description,
+           external link — with no partial behind it, so a v3 shell either duplicates it or invents one.
+           Duplicated, deliberately, with every class kept (`sheet-boxcontainer connection-entry`,
+           `shape-panel-image connection-portrait`, `connection-body`, `connection-description`,
+           `connection-link`): they are styled in `css/wod.css` under "START Connection roster" and that
+           styling is flex, not float, so there is nothing here for v3 to improve by re-authoring it.
+           `feature_item.hbs` is still the include inside the row.
+
+        2. THE EXPERIENCE LEDGERS, which are the actual work. See below.
+
+      NO `data-action` AND NO `data-*` IS ADDED OR LOST. `itemCreate` (with `data-origin="feature"`),
+      `itemEdit`, `itemDelete` and the `data-itemid`/`data-type`/`data-area`/`data-sheet` set are
+      exactly v2's, and `data-area` is carried even though NO JavaScript reads it (verified: the only
+      `dataset.area` in the tree is in `module/handlebars.js`, on markup this tab does not produce).
+
+      WHAT CHANGES, AND WHY EACH ONE
+      ------------------------------
+      1. THE UNCONDITIONAL "Feature" HEADER IS GONE. `feature.hbs:6-8` draws a `headlineRow` over
+         nothing whenever the actor holds no Feature at all — and on this tab that is common, because
+         the experience ledgers below are what a starting character actually has. The tab title in the
+         header replaces it, which is the same string the nav already shows (`wod.tab.features`,
+         pc-actor-sheet.js) and is now in the content area where the other four migrated tabs put it.
+
+      2. ONE EMPTY STATE FOR THE ITEM LISTS (D9), and its wording is checkable rather than decorative.
+         `CreateHelper.CreateButtonsNotev2` offers Background, Merit, Flaw and Other Traits to every
+         splat, plus the two experience entries; Blood Bond, Boon, Oath and the wraith kinds are gated
+         per line, so the string names only the universal four and the experience pair. The tab is
+         NEVER hidden: `data-origin="feature"` is the only in-sheet route to authoring any of them.
+
+         The gate is `and`+`not`, not `or`, for the reason combat.hbs records at line 29: Foundry's
+         `or` folds over `arguments`, which includes the options object, so `(or a b)` is
+         unconditionally true. `and` is unaffected, so the De Morgan form is the one that works.
+
+         It covers the ITEM LISTS only. The Shadow area gates itself (`hasshadowarea`) and the ledgers
+         always render, so a wraith with no Features still gets an honest "no features yet" above a
+         Shadow area that has content — which is true of both.
+
+      3. FOUR THINGS ARE DELIBERATELY NOT "FIXED", each because it is a decision someone already made:
+         - Backgrounds, Merits, Flaws and Other Traits render here AND on the Stats tab, from one
+           `prepareAdvantageLists` call. That is the tab reorganisation and it is sequenced separately.
+         - The wraith Shadow area draws its two group headings even when both lists are empty, and
+           `feature_shadow.hbs:14-16` says why. Untouched.
+         - Bloodbound / Boon / Oath render on `length > 0` for EVERY splat. The create buttons were
+           gated by splat; the render deliberately was not, because hiding an item that exists also
+           hides the delete button that is the only way to remove it.
+         - The ledgers' progressive disclosure already works. The MECHANISM is untouched — see below.
+
+      THE EXPERIENCE LEDGERS: A DOM CONTRACT THAT IS NOT A CSS SELECTOR
+      ----------------------------------------------------------------
+      This is the part of the file to read before editing it. The unfold machinery is INHERITED
+      JavaScript and it navigates by SHAPE, not by class:
+
+          `ItemHelper._onTableCollapse`  : `et.parent().parent().parent().siblings('.' + dataset.type)`
+          `_restoreUnfoldState`          : `ele.parentElement.parentElement.parentElement`, then that
+                                           element's siblings filtered by `classList.contains(type)`
+                                           — and ONLY for buttons whose `data-sheet` equals
+                                           `CONFIG.worldofdarkness.sheettype.mortal`
+                                           (pc-actor-sheet.js:545-581)
+
+      So three things must hold, and none of them is checkable by `binder-selector-check.py`, which
+      verifies that `.unfold.button` is PRODUCIBLE and cannot verify an ancestor count:
+
+          a. the toggle sits EXACTLY three elements deep inside the header block;
+          b. that header block and the ledger are SIBLINGS with a common parent;
+          c. the ledger carries the literal class named by `data-type` (`addexp` / `spentexp`) plus
+             `hide`, which is the collapsed default `_restoreUnfoldState`'s else-branch re-asserts.
+
+      The class NAMES of the three wrappers are free — v2's happen to be `.pullLeft` / `.clearareaBox`
+      / `.headlineRow`, i.e. the floats — so they are replaced with v3 names at the same depth and the
+      floats go with them. The shape is preserved to the element.
+
+      THE TOGGLE STAYS AN `<i>`, AND THAT IS A DEFECT LEFT IN PLACE ON PURPOSE. It cannot be reached
+      by any keyboard — the same defect v3 fixed on the Effects and Gear rows by making the control a
+      `<button>`. It is NOT fixed here, and the reason is specific rather than timid:
+      `_onTableCollapse` swaps `fa-angles-right`/`fa-angles-down` on `event.currentTarget`, i.e. on
+      the bound element itself, so the Font Awesome class cannot move to a child the way it does on
+      every other v3 button. And a `<button>` carrying that class renders NOTHING legible:
+      `css/wod.css:399` is `.wod20 button:not(.header-control) { font-family: var(--main-font) }`,
+      specificity (0,2,1), which out-ranks `.fa-solid`'s (0,1,0) — so `::before`'s `"\f101"` is
+      painted in a text font and comes out as a tofu box. Making it work needs `content: none` on the
+      button's own pseudo-element PLUS a child chevron PLUS a state-class rotation: three interacting
+      rules, with no automated gate that renders CSS, layered onto the one mechanism on this tab that
+      already works. The honest trade is to leave it and say so. Reverting this decision is swapping
+      `<i …>` for `<button type="button" …>` and writing those three rules — `type="button"` is not
+      optional there, a bare `<button>` in an ApplicationV2 `<form>` defaults to `type="submit"`. --}}
+<section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}" data-drop-area="true">
+
+	<div class="v3-tabhead">
+		<h2 class="v3-tabtitle splatFont">{{localize "wod.tab.features"}}</h2>
+
+		{{!-- Same two v2 defects as every other tab's create control: a 3x-scaled glyph floating in
+		      the corner, carrying `aria-hidden="true"` ON THE INTERACTIVE ELEMENT, which removes a
+		      working control from the accessibility tree entirely. --}}
+		<button type="button" class="v3-add" data-origin="feature" data-action="itemCreate">
+			<i class="fa-solid fa-square-plus" aria-hidden="true"></i>
+			<span>{{localize "wod.labels.add.item"}}</span>
+		</button>
+	</div>
+
+	<div class="v3-tabmain">
+
+		<div class="v3-section">
+
+			{{!-- A Background is DOT-RATED, so `valuefirst=item.system.value`: the rating is read
+			      BEFORE `system.level`, the opposite order from merits and flaws below. The full
+			      measured reasoning — all 96 compendium backgrounds ship `level: '0'`, the character
+			      exporter hard-codes it, and the system's own create button writes `level: 1` as a
+			      placeholder that never tracks the dots afterwards — is at `parts/feature.hbs:10-30`
+			      and is not repeated here, because it belongs with the partial that consumes it. --}}
+			{{#if (gt backgrounds.length 0)}}
+				<div class="feature-itemlistarea">
+					{{#each backgrounds as |item id|}}
+						{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked unnamedtitle="wod.notes.unnamedbackground" edittitle="wod.labels.edit.background" deletetitle="wod.labels.remove.background" showtype=true valuefirst=item.system.value}}
+					{{/each}}
+				</div>
+			{{/if}}
+
+			{{!-- Merits and flaws are POINT-COSTED, so `level` first and `valuefallback` second — the
+			      same order `stats_feature_row.hbs` uses for these two lists on the Attributes tab, so
+			      the two views of one item cannot print different numbers. --}}
+			{{#if (gt merits.length 0)}}
+				<div class="feature-itemlistarea">
+					{{#each merits as |item id|}}
+						{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.merit" deletetitle="wod.labels.remove.merit" showtype=true valuefallback=item.system.value}}
+					{{/each}}
+				</div>
+			{{/if}}
+
+			{{#if (gt flaws.length 0)}}
+				<div class="feature-itemlistarea">
+					{{#each flaws as |item id|}}
+						{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.flaw" deletetitle="wod.labels.remove.flaw" showtype=true valuefallback=item.system.value}}
+					{{/each}}
+				</div>
+			{{/if}}
+
+			{{!-- Blood Bond, Boon and Oath render for EVERY splat on `length > 0`, and that is
+			      deliberate: the CREATE buttons are gated per line, the render is not, because hiding
+			      an item that exists also hides the delete button that is the only way to remove it. --}}
+			{{#if (gt bloodbounds.length 0)}}
+				<div class="feature-itemlistarea">
+					{{#each bloodbounds as |item id|}}
+						{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.bloodbound" deletetitle="wod.labels.remove.bloodbound" showtype=true}}
+					{{/each}}
+				</div>
+			{{/if}}
+
+			{{#if (gt boons.length 0)}}
+				<div class="feature-itemlistarea">
+					{{#each boons as |item id|}}
+						{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.boon" deletetitle="wod.labels.remove.boon" showtype=true}}
+					{{/each}}
+				</div>
+			{{/if}}
+
+			{{#if (gt oaths.length 0)}}
+				<div class="feature-itemlistarea">
+					{{#each oaths as |item id|}}
+						{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.oath" deletetitle="wod.labels.remove.oath" showtype=true}}
+					{{/each}}
+				</div>
+			{{/if}}
+
+			{{!-- Passions and Fetters — the wraith's own rated Feature kinds. Dark Passions are NOT
+			      here: `add-wraith-shadow-budget §2.2` moved them into `feature_shadow.hbs` precisely
+			      so they cannot sit in the next row of the same list as the Passions and be read as
+			      one pool. Both pass `valuefirst`, like the Backgrounds block and for the same
+			      reason. --}}
+			{{#if (gt passions.length 0)}}
+				<div class="feature-itemlistarea">
+					{{#each passions as |item id|}}
+						{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.passion" deletetitle="wod.labels.remove.passion" showtype=true valuefirst=item.system.value}}
+					{{/each}}
+				</div>
+			{{/if}}
+
+			{{#if (gt fetters.length 0)}}
+				<div class="feature-itemlistarea">
+					{{#each fetters as |item id|}}
+						{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.fetter" deletetitle="wod.labels.remove.fetter" showtype=true valuefirst=item.system.value}}
+					{{/each}}
+				</div>
+			{{/if}}
+
+			{{!-- The relationship roster: ONE sub-kind (`wod.types.connection`) grouped by
+			      `system.relation`, with each group's name and dots taken from the actor's own
+			      Background item. The reasoning is at `parts/feature.hbs:184-223`; what matters here
+			      is that the ENTRY is authored inline in both files because no partial exists for it.
+
+			      The portrait is NOT a picker and carries no `data-edit`, so it gets no `pointer`
+			      class — clicking it does nothing, and the sheet must not offer a hand cursor that
+			      says otherwise. The description is triple-stashed because it is already-enriched
+			      HTML off the sheet context. --}}
+			{{#if hasConnections}}
+				{{#each connections as |group|}}
+					<div class="headlineGroup splatFont">
+						{{group.label}}
+						{{#if group.rating}}{{#numLoop group.rating}}&#9679;{{/numLoop}}{{/if}}
+						({{group.count}})
+					</div>
+
+					<div class="feature-itemlistarea">
+						{{#each group.entries as |item id|}}
+							<div class="sheet-boxcontainer connection-entry">
+
+								<div class="shape-panel-image connection-portrait">
+									<img class="profile-img shape-image{{#unless item.hasPortrait}} shape-image-empty{{/unless}}"
+									     src="{{item.portraitSrc}}" title="{{item.name}}" alt="{{item.name}}" />
+								</div>
+
+								<div class="connection-body">
+
+									{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs"
+										actor=../../actor item=item locked=../../locked
+										edittitle="wod.labels.edit.connection"
+										deletetitle="wod.labels.remove.connection"
+										showtype=false}}
+
+									{{#if item.hasDescription}}
+										<div class="connection-description">{{{item.enrichedDescription}}}</div>
+									{{/if}}
+
+									{{#if (ne item.system.link "")}}
+										<a class="connection-link" href="{{item.system.link}}" target="_blank">{{localize 'wod.connections.link'}}</a>
+									{{else}}
+										<span class="information-area connection-link">{{localize 'wod.connections.nolink'}}</span>
+									{{/if}}
+
+								</div>
+
+							</div>
+						{{/each}}
+					</div>
+				{{/each}}
+			{{/if}}
+
+			{{#if (gt othertraits.length 0)}}
+				<div class="feature-itemlistarea">
+					{{#each othertraits as |item id|}}
+						{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.othertraits" deletetitle="wod.labels.remove.othertraits" showtype=true}}
+					{{/each}}
+				</div>
+			{{/if}}
+
+			{{#if (and (not backgrounds.length) (not merits.length) (not flaws.length) (not bloodbounds.length) (not boons.length) (not oaths.length) (not passions.length) (not fetters.length) (not othertraits.length) (not hasConnections))}}
+				<p class="v3-empty">{{localize "wod.notes.empty"}}</p>
+			{{/if}}
+
+		</div>
+
+		{{!-- The Shadow's own area — Archetype, Angst, Dark Passions and Thorns, with the Shadow's
+		      10-point pool named and the Dark-Passion ceiling shown. It gates itself on
+		      `hasshadowarea`, so it renders for a wraith (including empty, which is the normal state
+		      of a freshly imported one) and for nobody else. Untouched. --}}
+		{{> "systems/worldofdarkness/templates/actor/parts/feature_shadow.hbs"}}
+
+		{{!-- ── THE EXPERIENCE LEDGERS ──────────────────────────────────────────────────────────
+		      Read the DOM-contract section in this file's header before changing the nesting below.
+		      The toggle must stay exactly three elements deep inside `.v3-xphead`, `.v3-xphead` must
+		      stay a SIBLING of the ledger, and the ledger must keep the literal `addexp`/`spentexp`
+		      class its toggle's `data-type` names, plus `hide`.
+
+		      v2 laid this out as `.clearareaBox > two .pullLeft[style="width:50%"]` with four more
+		      floats and three inline margins inside each. A two-column grid replaces all of it, and
+		      folds to one column when the sheet is narrow — which the two hard 50%s never did. --}}
+		<div class="v3-section v3-xpgrid">
+
+			<div class="v3-xpcol">
+				<div class="v3-xphead">
+					<div class="v3-xpheadrow">
+						<h3 class="v3-sectiontitle splatFont">{{localize "wod.labels.notes.expearned"}}</h3>
+						<span class="v3-xptotal">{{getTotalExperience actor "earned"}}</span>
+						<div class="v3-xptoggle">
+							<i class="icon unfold button pointer fa-solid fa-angles-right"
+								title="{{localize 'wod.labels.show.experience'}}"
+								data-sheet="{{config.sheettype.mortal}}" data-type="addexp"></i>
+						</div>
+					</div>
+				</div>
+
+				<div class="hide addexp v3-xpledger" data-area="addexp">
+					{{#if (getEarnedExperience actor)}}
+						<table class="v3-table v3-xptable">
+							<caption class="v3-sr-only">{{localize "wod.labels.notes.expearned"}}</caption>
+							<thead>
+								<tr>
+									<th scope="col">{{localize "wod.labels.description"}}</th>
+									<th scope="col" class="v3-num">{{localize "wod.experience.experience"}}</th>
+									<th scope="col" class="v3-actioncol"></th>
+								</tr>
+							</thead>
+							<tbody>
+								{{#each (getEarnedExperience actor) as |item id|}}
+									<tr>
+										<td>
+											{{#if (ne item.system.description "")}}
+												{{item.system.description}}
+											{{else}}
+												{{localize "wod.notes.descriptionmissing"}}
+											{{/if}}
+										</td>
+										<td class="v3-num">{{item.system.amount}}</td>
+										<td class="v3-rowactions">
+											{{#if (eq ../locked false)}}
+												<a class="item-edit" title="{{localize 'wod.labels.edit.experience'}}" data-type="Experience" data-itemid="{{item.id}}" data-action="itemEdit"><i class="icon fa-solid fa-pen-to-square"></i></a>
+												<a class="item-delete" title="{{localize 'wod.labels.remove.experience'}}" data-type="Experience" data-itemid="{{item.id}}" data-action="itemDelete"><i class="icon fa-solid fa-trash-can"></i></a>
+											{{/if}}
+										</td>
+									</tr>
+								{{/each}}
+							</tbody>
+						</table>
+					{{/if}}
+				</div>
+			</div>
+
+			<div class="v3-xpcol">
+				<div class="v3-xphead">
+					<div class="v3-xpheadrow">
+						<h3 class="v3-sectiontitle splatFont">{{localize "wod.labels.notes.expspend"}}</h3>
+						<span class="v3-xptotal">{{getTotalExperience actor "spent"}}</span>
+						<div class="v3-xptoggle">
+							<i class="icon unfold button pointer fa-solid fa-angles-right"
+								title="{{localize 'wod.labels.show.spentexp'}}"
+								data-sheet="{{config.sheettype.mortal}}" data-type="spentexp"></i>
+						</div>
+					</div>
+				</div>
+
+				<div class="hide spentexp v3-xpledger" data-area="spentexp">
+					{{#if (getSpendExperience actor)}}
+						<table class="v3-table v3-xptable">
+							<caption class="v3-sr-only">{{localize "wod.labels.notes.expspend"}}</caption>
+							<thead>
+								<tr>
+									<th scope="col">{{localize "wod.labels.description"}}</th>
+									<th scope="col" class="v3-num">{{localize "wod.experience.experience"}}</th>
+									<th scope="col" class="v3-actioncol"></th>
+								</tr>
+							</thead>
+							<tbody>
+								{{#each (getSpendExperience actor) as |item id|}}
+									<tr>
+										<td>
+											{{#if (ne item.system.description "")}}
+												{{item.system.description}}
+											{{else}}
+												{{localize "wod.notes.descriptionmissing"}}
+											{{/if}}
+										</td>
+										{{!-- An Experience row that is not yet marked spent prints the word
+										      rather than a number, exactly as v2 does — so this cell is NOT
+										      always numeric and the tabular-figure column is still correct
+										      for the ones that are. --}}
+										<td class="v3-num">
+											{{#if item.system.isspent}}
+												{{item.system.amount}}
+											{{else}}
+												{{localize "wod.notes.unspent"}}
+											{{/if}}
+										</td>
+										<td class="v3-rowactions">
+											{{#if (eq ../locked false)}}
+												<a class="item-edit" title="{{localize 'wod.labels.edit.experience'}}" data-type="Experience" data-itemid="{{item.id}}" data-action="itemEdit"><i class="icon fa-solid fa-pen-to-square"></i></a>
+												<a class="item-delete" title="{{localize 'wod.labels.remove.experience'}}" data-type="Experience" data-itemid="{{item.id}}" data-action="itemDelete"><i class="icon fa-solid fa-trash-can"></i></a>
+											{{/if}}
+										</td>
+									</tr>
+								{{/each}}
+							</tbody>
+						</table>
+					{{/if}}
+				</div>
+			</div>
+
+		</div>
+
+	</div>
+
+</section>

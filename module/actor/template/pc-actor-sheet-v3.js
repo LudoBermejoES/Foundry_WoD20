@@ -83,8 +83,9 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		tabs: {
 			template: "systems/worldofdarkness/templates/actor/parts/navigation.hbs"
 		},
+		// MIGRATED. Reverting is this one line back to `parts/bio.hbs`.
 		bio: {
-			template: "systems/worldofdarkness/templates/actor/parts/bio.hbs"
+			template: "systems/worldofdarkness/templates/actor/v3/bio.hbs"
 		},
 		stats: {
 			template: "systems/worldofdarkness/templates/actor/parts/stats.hbs"
@@ -100,8 +101,9 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		gear: {
 			template: "systems/worldofdarkness/templates/actor/v3/gear.hbs"
 		},
+		// MIGRATED. Reverting is this one line back to `parts/feature.hbs`.
 		feature: {
-			template: "systems/worldofdarkness/templates/actor/parts/feature.hbs"
+			template: "systems/worldofdarkness/templates/actor/v3/feature.hbs"
 		},
 		// MIGRATED — the first part to move. Reverting is this one line back to `parts/effects.hbs`.
 		effects: {

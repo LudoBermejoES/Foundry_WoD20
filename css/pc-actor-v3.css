@@ -41,7 +41,7 @@
    inline styles beat author rules. Nearly all live in the shells v3 rewrites, so they are removed
    rather than overridden. There is deliberately no `[style]` sledgehammer here.
 
-   MIGRATED SO FAR: `effects`, `gear`. Every other part still renders the v2 template, so a rule
+   MIGRATED SO FAR: `effects`, `gear`, `combat`, `bio`, `feature`. Every other part still renders the v2 template, so a rule
    below only ever reaches a tab that has been migrated — and reverting a part is one line in
    `PCActorSheetV3.PARTS`, with its rules here becoming dead rather than wrong.
    =========================================================================================== */
@@ -63,6 +63,23 @@
    that cannot be made a grid item.
 
    Empty in phase 1: nothing v3 renders yet differs from v2, so there is nothing to cancel.
+   ─────────────────────────────────────────────────────────────────────────────────────────── */
+
+/* ── A CONSTRAINT ON EVERY ICON BUTTON IN THIS SYSTEM ───────────────────────────────────────
+   `css/wod.css:399` is `.wod20 button:not(.header-control) { font-family: var(--main-font) }`.
+   Specificity (0,2,1) — it BEATS `.fa-solid` at (0,1,0). So a Font Awesome class placed directly
+   on a `<button>` paints its `::before` glyph in a text font and renders a tofu box.
+
+   Hence the rule every v3 template follows and must keep following: **the button carries the
+   behaviour, a child `<i>` carries the glyph.** Verified mechanically across all v3 templates —
+   zero buttons carry an `fa-*` class themselves.
+
+   The one place this bites is a control whose handler swaps the glyph class on
+   `event.currentTarget`, because then the class HAS to be on the bound element. The XP-ledger
+   toggle is exactly that (`_onTableCollapse` swaps `fa-angles-right`/`fa-angles-down`), which is
+   why it is still an `<i>` and still keyboard-unreachable. Converting it needs `content: none`, a
+   child chevron and a state-class rotation — three interacting rules on the one mechanism the
+   migration was told to leave alone. Recorded rather than half-done.
    ─────────────────────────────────────────────────────────────────────────────────────────── */
 
 /* ── Shared v3 primitives ───────────────────────────────────────────────────────────────────
@@ -273,7 +290,9 @@
    partials bring with them (`description.hbs`'s `.headlineText`, and the `.sheet-banner` pair in
    `stats_health.hbs` / `combat_conditions.hbs` / `combat_movement.hbs`). Restyling a shared
    partial's output from this file is the whole point of the scope class: the partial is untouched,
-   so v2 is unaffected, and v3 does not have to fork it just to change a heading.
+   so v2 is unaffected, and v3 does not have to fork it just to change a heading. `.headlineGroup` is
+   in the list for the same reason: it is what `feature_shadow.hbs` puts on the Shadow's two group
+   headings and what the connection roster puts on each relationship group.
 
    `background: none` removes the banner ARTWORK, which is a background image on `.sheet-banner`
    (wod.css:755) — the ~44px of decoration whose removal pays for the taller rows (design "Density
@@ -281,6 +300,7 @@
    alone (four classes to two), so no `!important` is spent. */
 .wod20.pc-actor-v3 .v3-sectiontitle,
 .wod20.pc-actor-v3 .v3-tabmain .headlineText,
+.wod20.pc-actor-v3 .v3-tabmain .headlineGroup,
 .wod20.pc-actor-v3 .v3-tabmain .sheet-banner,
 .wod20.pc-actor-v3 .v3-tabmain .sheet-banner-small {
 	width: auto;
@@ -384,6 +404,199 @@
 	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 	gap: 12px;
 	align-items: start;
+}
+
+/* ── FEATURES ───────────────────────────────────────────────────────────────────────────────
+   Every float on this tab is in the experience ledgers (measured on `parts/feature.hbs`: 14
+   `pullLeft`/`pullRight`, 7 `clearareaBox`, 7 inline styles, all between lines 298 and 373). The item
+   lists above are already flex, inside the shared `feature_item.hbs`, and nothing here touches them.
+
+   So there is no float NEUTRALISER on this tab: the floats are not neutralised, they are gone. v3
+   owns this shell, and D4's rule is that a float in a shell v3 rewrites is removed rather than
+   over-ruled — the blockification trick is for the shared partials that cannot be edited. */
+
+/* v2 gave each ledger `style="width: 50%"` on a floated block, which cannot fold. Two grid tracks
+   that collapse to one below ~260px each, which is what makes the ES/DE/IT width patches
+   unnecessary here. */
+.wod20.pc-actor-v3 .v3-xpgrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 12px 20px;
+	align-items: start;
+}
+
+/* `.v3-xpcol` AND `.v3-xphead` CARRY NO RULES AT ALL, AND THAT IS NOT AN OVERSIGHT. They exist for
+   the inherited unfold machinery: `_onTableCollapse` and `_restoreUnfoldState` walk `parentElement`
+   exactly three times up from the toggle (`.v3-xptoggle` -> `.v3-xpheadrow` -> `.v3-xphead`) and then
+   take THAT element's siblings, filtered by the class its `data-type` names. So `.v3-xphead` has to
+   be the third ancestor and `.v3-xpcol` has to be the common parent it shares with the ledger.
+   Deleting either one to flatten the markup silently kills the toggle — no error, no console
+   warning, no visual difference until you click it. This note is here rather than only in the
+   template because an unstyled wrapper is exactly what someone tidying a stylesheet removes. */
+.wod20.pc-actor-v3 .v3-xpheadrow {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+}
+
+/* The title carries `.v3-sectiontitle`, whose shared rule gives it the underline and the left
+   alignment; only the flex behaviour is set here, so the heading rule stays in one place. */
+.wod20.pc-actor-v3 .v3-xpheadrow .v3-sectiontitle {
+	flex: 1 1 auto;
+	min-width: 0;
+	margin-bottom: 0;
+	border-bottom: 0;
+}
+
+/* v2 spaced the total from its label with `margin-left: 70px` on `.experienceValue` (wod.css:1989) —
+   a fixed gap that collides with the longer German and Spanish labels. `auto` on the flex row
+   instead: the number sits beside the toggle whatever the label costs. */
+.wod20.pc-actor-v3 .v3-xptotal {
+	flex: 0 0 auto;
+	font-variant-numeric: tabular-nums;
+	font-weight: bold;
+}
+
+.wod20.pc-actor-v3 .v3-xptoggle {
+	flex: 0 0 auto;
+}
+
+/* The toggle keeps v2's `<i class="icon unfold button …">` — see the template header for why it is
+   NOT a `<button>` here, unlike every other icon control v3 has converted. Nothing is declared about
+   its font: the Font Awesome class has to live on this element because `_onTableCollapse` swaps
+   `fa-angles-right`/`fa-angles-down` on `event.currentTarget` itself, so any `font` declaration at
+   this specificity would out-rank `.fa-solid` and paint the glyph in a text font. `.wod20 .icon`
+   (wod.css:691) already supplies its size and spacing. */
+.wod20.pc-actor-v3 .v3-xptoggle:hover { border-radius: 3px; background: var(--main-dim-color); }
+
+/* The ledger itself. `.hide`/`.show` (wod.css:609-616) are `display: none/block !important` and the
+   inherited handler toggles them, so NOTHING here may declare `display` on this element — an
+   `!important` fight with the machinery that is working correctly is the one thing this tab must not
+   start. Spacing only. */
+.wod20.pc-actor-v3 .v3-xpledger {
+	margin-top: 4px;
+}
+
+/* v2 sized these rows with `.notes-experienceHeadline` (270px, and `height: 19px` — below the 20px
+   icon floor) and `.notes-valueBox` (70px). The table needs neither: the description column takes
+   what is left after the two that shrink to their content. */
+.wod20.pc-actor-v3 .v3-xptable .v3-actioncol {
+	width: 1%;
+	white-space: nowrap;
+}
+
+/* ── BIO ────────────────────────────────────────────────────────────────────────────────────
+   The identity row: portrait, the generic fields, and the splat's own fields. On v2 this is
+   `style="display: flex"` holding `style="flex: 1; margin-left: auto"`, `style="width: 320px"` and a
+   second `style="width: 320px"` inside `bio_splatfields.hbs` — three of the tab's four inline widths.
+
+   FLEX, NOT GRID, and that is a census decision rather than a taste one. Only FOUR of the thirteen
+   splats declare bio splatfields (vampire 6, werewolf 5, mage 7, wraith 7; `mortal` declares `{}` and
+   eight declare nothing), so a three-column grid would reserve a track that nine splats never fill.
+   A wrapping flex row simply has two children on those nine, and folds to one column when narrow. */
+.wod20.pc-actor-v3 .v3-bioidentity {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 12px 20px;
+}
+
+.wod20.pc-actor-v3 .v3-portrait {
+	flex: 0 0 auto;
+	/* `.profile-img` is 105px wide with its own margins (wod.css:524); nothing is restated here, so
+	   the `defaultimage` treatment and every darkmode rule that targets it still apply untouched. */
+}
+
+.wod20.pc-actor-v3 .v3-biocore {
+	flex: 1 1 240px;
+	min-width: 0;
+}
+
+/* The splatfield column, and the two things this rule does.
+
+   1. IT MAKES THE PARTIAL'S INLINE 320px SHRINKABLE. `bio_splatfields.hbs:2` is
+      `<div style="width: 320px; flex-direction: column;">` and it is a SHARED partial, so that width
+      cannot be removed (D5) and must not be over-ruled with an `[style]` sledgehammer (D4 — inline
+      styles beat author rules, so beating them back costs `!important`). Making this wrapper a flex
+      container converts the 320px into a flex BASIS: the default `flex-shrink: 1` then lets it fall
+      below 320 in a narrow sheet, which a fixed block width never would. Nothing is declared about
+      the partial's own element at all.
+
+   2. IT REMOVES THE COLUMN WHEN THE PARTIAL DREW NOTHING. For nine splats the loop inside produces
+      no field, and what is left is a 320px-wide, ~10px-tall empty box holding open a hole in the
+      identity row — the "looks broken when nearly empty" failure this tab is most prone to. `:has()`
+      asks the rendered subtree instead of duplicating the partial's own emptiness test in the shell,
+      which would be a second copy of a rule that lives in one place today. `.bioInformationArea` is
+      the class that partial puts on every field it draws, for both the `input` and the `select`
+      branch, so one test covers both. If that class is ever renamed the column comes back as an
+      empty gap — cosmetic, visible immediately, and not a break. */
+.wod20.pc-actor-v3 .v3-biosplat {
+	display: flex;
+	flex: 0 1 auto;
+	min-width: 0;
+}
+
+.wod20.pc-actor-v3 .v3-biosplat:not(:has(.bioInformationArea)) {
+	display: none;
+}
+
+/* Prose disclosure. Splatfield textboxes only, locked only, and only over the length threshold the
+   template documents — a mage carries ~7,000 characters across three of these and a wraith has four,
+   while no other splat declares one at all.
+
+   Nothing here is a colour or a size taken from the surrounding sheet: `<details>` brings its own
+   marker, which is replaced by the chevron in the markup so the tab speaks the same "there is more
+   here" language as the XP ledgers one tab over. */
+.wod20.pc-actor-v3 .v3-prose {
+	border-bottom: 1px solid var(--main-mid-color);
+	margin-bottom: 6px;
+}
+
+.wod20.pc-actor-v3 .v3-prosesummary {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 0 0 3px 0;
+	cursor: pointer;
+	list-style: none;                /* Firefox: suppress the native triangle, we draw our own */
+}
+
+/* WebKit/Blink keep the native marker on a pseudo-element rather than on `list-style`. Both are
+   needed; neither is a fallback for the other. */
+.wod20.pc-actor-v3 .v3-prosesummary::-webkit-details-marker {
+	display: none;
+}
+
+.wod20.pc-actor-v3 .v3-prosechevron {
+	flex: 0 0 auto;
+	font-size: 0.7rem;
+	transition: transform 0.15s ease;
+}
+
+.wod20.pc-actor-v3 .v3-prose[open] .v3-prosechevron {
+	transform: rotate(90deg);
+}
+
+.wod20.pc-actor-v3 .v3-proselabel {
+	font-size: calc(1rem * var(--splat-display-scale, 1));
+	line-height: 1.25;
+}
+
+/* `description.hbs` draws its own heading and cannot be told not to — it is shared with v2, where
+   that heading is the only label the box has. Inside a disclosure the `<summary>` already carries
+   exactly that text, so the duplicate is removed from the visual AND the accessibility tree
+   together: `display: none` is correct here precisely because nothing is lost, which is not true of
+   the `.v3-sr-only` cases above. */
+.wod20.pc-actor-v3 .v3-prosebody .headlineText {
+	display: none;
+}
+
+/* The World Anvil line when locked — an anchor or the "no link" string, with the same rhythm as an
+   empty state rather than as a field. */
+.wod20.pc-actor-v3 .v3-linkline {
+	margin: 4px 0 0 0;
+	font-size: 0.75rem;
+	line-height: 1.45;
 }
 
 /* ── Float neutralisers for the two combat partials that still float ────────────────────────

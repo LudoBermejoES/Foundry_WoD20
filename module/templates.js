@@ -61,6 +61,8 @@ export const preloadHandlebarsTemplates = async function () {
 		"systems/worldofdarkness/templates/actor/v3/effects.hbs",
 		"systems/worldofdarkness/templates/actor/v3/gear.hbs",
 		"systems/worldofdarkness/templates/actor/v3/combat.hbs",
+		"systems/worldofdarkness/templates/actor/v3/bio.hbs",
+		"systems/worldofdarkness/templates/actor/v3/feature.hbs",
 		"systems/worldofdarkness/templates/actor/parts/stats_health.hbs",
 
 		// PC Actor Sheet Partials - .html files

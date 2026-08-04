@@ -1428,7 +1428,8 @@
 			"descriptionmissing": "Description missing",
 			"unspent": "Unspent",
 			"unnamedpassion": "Unnamed passion",
-			"unnamedfetter": "Unnamed fetter"
+			"unnamedfetter": "Unnamed fetter",
+			"empty": "No features yet. Backgrounds, merits, flaws and other traits appear here; use Add item to create one. The same button records earned and spent experience, which is listed at the bottom of this tab."
 		},
 		"experience": {
 			"amount": "Amount",

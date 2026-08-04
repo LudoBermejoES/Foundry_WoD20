@@ -1413,8 +1413,8 @@
 			"empty": "Todavía no hay efectos. Aquí aparecen los bonificadores que conceden méritos, poderes y equipo; usa Añadir objeto para crear uno suelto."
 		},
 		"notes": {
-			"features": "Features",
-			"nofeatures": "No feature selected",
+			"features": "Rasgos",
+			"nofeatures": "Ningún rasgo seleccionado",
 			"unnamedbackground": "Trasfondo sin nombre",
 			"unnamedmerit": "Mérito sin nombre",
 			"unnamedflaw": "Defecto sin nombre",
@@ -1424,7 +1424,8 @@
 			"descriptionmissing": "Sin descripción",
 			"unspent": "Sin gastar",
 			"unnamedpassion": "Pasión sin nombre",
-			"unnamedfetter": "Atadura sin nombre"
+			"unnamedfetter": "Atadura sin nombre",
+			"empty": "Todavía no hay rasgos. Aquí aparecen los Trasfondos, Méritos, Defectos y otros rasgos; usa Añadir objeto para crear uno. El mismo botón registra la experiencia ganada y gastada, que se lista al final de esta pestaña."
 		},
 		"experience": {
 			"amount": "Cantidad",
@@ -1992,7 +1993,7 @@
 				"flaw": "Mostrar Defectos",
 				"bloodbound": "Mostrar Vínculos/Vinculi",
 				"boon": "Mostrar Favores",
-				"trait": "Show other traits",
+				"trait": "Mostrar otros rasgos",
 				"experience": "Mostrar Experiencia ganada",
 				"spentexp": "Mostrar Experiencia gastada",
 				"bonus": "Mostrar otros bonificadores",
