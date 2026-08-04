@@ -1411,7 +1411,8 @@
 		},
 		"effects": {
 			"origin": "Origin",
-			"area": "Area"
+			"area": "Area",
+			"empty": "No effects yet. Bonuses granted by merits, powers and gear appear here; use Add item to create a standalone one."
 		},
 		"notes": {
 			"features": "Features",

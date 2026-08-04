@@ -64,3 +64,163 @@
 
    Empty in phase 1: nothing v3 renders yet differs from v2, so there is nothing to cancel.
    ─────────────────────────────────────────────────────────────────────────────────────────── */
+
+/* ── Shared v3 primitives ───────────────────────────────────────────────────────────────────
+   Everything here is used by more than one tab. Per-tab rules go in their own block below.
+   No literal colour: every value is a custom property the per-line stylesheets already set, which
+   is what makes all thirteen splats and both themes work with no rule duplicated. --------- */
+
+/* A visually-hidden label that assistive technology still reads. There is no such utility in this
+   codebase, and the icon buttons below need one — a `title` is not reliably announced and cannot be
+   reached by keyboard. Clip-rect rather than `display:none`, which would remove it from the
+   accessibility tree and defeat the purpose. */
+.wod20.pc-actor-v3 .v3-sr-only {
+	position: absolute;
+	width: 1px; height: 1px;
+	margin: -1px; padding: 0; border: 0;
+	overflow: hidden; white-space: nowrap;
+	clip: rect(0 0 0 0); clip-path: inset(50%);
+}
+
+/* The tab header: name on the left, create control on the right. Replaces the 3x-scaled glyph that
+   floated in the bottom-right of every v2 tab, absolutely positioned and unrelated to any block. */
+.wod20.pc-actor-v3 .v3-tabhead {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 8px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid var(--splat-line, var(--main-full-color));
+}
+
+.wod20.pc-actor-v3 .v3-tabtitle {
+	margin: 0;
+	font-size: calc(1.25rem * var(--splat-display-scale, 1));
+	font-weight: normal;
+	line-height: 1.1;
+	/* Left-aligned: a centred title of variable width over a left-aligned table has no edge to
+	   agree with, and this system's display faces vary 2.8x in average advance. */
+	text-align: left;
+}
+
+/* `--splat-display-scale` normalises that 2.8x spread so a title renders at roughly the same
+   OPTICAL width on every line. Declared here with a neutral default so an unlisted splat is
+   readable rather than broken; per-line values belong in the per-line stylesheets. */
+.wod20.pc-actor-v3 { --splat-display-scale: 1; }
+.wod20.pc-actor-v3.wraith     { --splat-display-scale: 2.00; }
+.wod20.pc-actor-v3.mortal     { --splat-display-scale: 1.35; }
+.wod20.pc-actor-v3.werewolf   { --splat-display-scale: 1.30; }
+.wod20.pc-actor-v3.changeling { --splat-display-scale: 1.20; }
+.wod20.pc-actor-v3.hunter,
+.wod20.pc-actor-v3.demon,
+.wod20.pc-actor-v3.exalted    { --splat-display-scale: 1.15; }
+.wod20.pc-actor-v3.vampire    { --splat-display-scale: 1.05; }
+
+.wod20.pc-actor-v3 .v3-add {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	flex: 0 0 auto;
+	padding: 2px 10px;
+	border: 1px solid var(--splat-line, var(--main-full-color));
+	border-radius: 3px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-size: 0.75rem;
+	line-height: 20px;
+	cursor: pointer;
+}
+
+.wod20.pc-actor-v3 .v3-add:hover { background: var(--main-dim-color); }
+
+/* Icon buttons. These are `<button>` on v3 because on v2 they are href-less `<a>`, which is not
+   focusable and has no implicit role — 44 of them across the sheet. A button brings UA styling that
+   has to be neutralised, and `box-sizing: inherit` rather than a hard value is the trap
+   dialog-casting.css:163-185 documents: the same declaration renders 14px or 16px depending on the
+   ambient box model. */
+.wod20.pc-actor-v3 .v3-iconbtn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: inherit;
+	width: 20px; height: 20px;      /* 20px hit target inside a row that is 22px tall */
+	margin: 0; padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.wod20.pc-actor-v3 .v3-iconbtn:hover { background: var(--main-dim-color); border-radius: 3px; }
+
+/* State that is not a control: same glyph, no affordance. v2 rendered these with the interactive
+   classes stripped, which leaves something that looks clickable and is not. */
+.wod20.pc-actor-v3 .v3-static { opacity: 0.55; }
+
+/* Focus. `outline`, never `border` or `box-shadow`, because an outline is painted outside the box
+   and takes no part in layout — a focus ring that participates would reflow a row of dots as you
+   tab across it, which is the incident wod.css:3202 records. The v2 sheet has NO focus rule at all,
+   and two `outline: none !important` rules on the bio fields. */
+.wod20.pc-actor-v3 :focus-visible {
+	outline: 2px solid var(--splat-line, var(--main-full-color));
+	outline-offset: 2px;
+}
+
+/* Dark mode: the splat colour is unusable as a ring — mage measures 1.06:1 on the block surface,
+   and nine of eleven lines fail. One class heavier so it wins on specificity rather than on load
+   order, which is what darkmode.css relies on and which has caught this project before. */
+.wod20.wod-theme-dark.pc-actor-v3 :focus-visible {
+	outline-color: var(--darkmode-white, #fff);
+}
+
+/* Tables. v2 built these from `div.item-row` plus fixed-width classes, which gives no column
+   association to a screen reader and no way for a long Spanish label to reflow. */
+.wod20.pc-actor-v3 .v3-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.75rem;
+}
+
+.wod20.pc-actor-v3 .v3-table th,
+.wod20.pc-actor-v3 .v3-table td {
+	padding: 2px 6px;
+	text-align: left;
+	vertical-align: middle;
+	line-height: 22px;              /* the v3 row rhythm: 22px clears the 20px icon floor */
+}
+
+.wod20.pc-actor-v3 .v3-table thead th {
+	border-bottom: 1px solid var(--main-mid-color);
+	font-weight: bold;
+	white-space: nowrap;
+}
+
+.wod20.pc-actor-v3 .v3-table tbody tr:hover { background: var(--main-dim-color); }
+
+/* Numerals are compared down a column, so they get tabular figures and right alignment. */
+.wod20.pc-actor-v3 .v3-num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.wod20.pc-actor-v3 .v3-rowactions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	white-space: nowrap;
+}
+
+/* The empty state. Named content plus the create control, never a hidden tab — the `+` is the only
+   in-sheet route to creating the thing that would fill it. */
+.wod20.pc-actor-v3 .v3-empty {
+	margin: 12px 0;
+	font-size: 0.75rem;
+	line-height: 1.45;
+	opacity: 0.8;
+	max-width: 60ch;
+}

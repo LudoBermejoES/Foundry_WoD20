@@ -1407,7 +1407,8 @@
 		},
 		"effects": {
 			"origin": "Orígen",
-			"area": "Área"
+			"area": "Área",
+			"empty": "Todavía no hay efectos. Aquí aparecen los bonificadores que conceden méritos, poderes y equipo; usa Añadir objeto para crear uno suelto."
 		},
 		"notes": {
 			"features": "Features",

@@ -101,8 +101,9 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		feature: {
 			template: "systems/worldofdarkness/templates/actor/parts/feature.hbs"
 		},
+		// MIGRATED — the first part to move. Reverting is this one line back to `parts/effects.hbs`.
 		effects: {
-			template: "systems/worldofdarkness/templates/actor/parts/effects.hbs"
+			template: "systems/worldofdarkness/templates/actor/v3/effects.hbs"
 		},
 		// Stays on the v2 template. See the class docstring — this is a decision, not an omission.
 		settings: {

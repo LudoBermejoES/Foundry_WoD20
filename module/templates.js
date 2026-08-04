@@ -55,6 +55,9 @@ export const preloadHandlebarsTemplates = async function () {
 		"systems/worldofdarkness/templates/actor/parts/feature_item.hbs",
 		"systems/worldofdarkness/templates/actor/parts/feature_shadow.hbs",
 		"systems/worldofdarkness/templates/actor/parts/effects.hbs",		
+		// v3 part shells. The v2 template above stays registered and is what every actor that
+		// has not opted into PCActorSheetV3 still renders.
+		"systems/worldofdarkness/templates/actor/v3/effects.hbs",
 		"systems/worldofdarkness/templates/actor/parts/stats_health.hbs",
 
 		// PC Actor Sheet Partials - .html files
