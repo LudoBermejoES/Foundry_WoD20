@@ -2242,6 +2242,23 @@
 				"description": "Estas opciones pueden editarse en la configuración de ficha",
 				"lostbreeds": "Tribus Perdidas"
 			}
+		},
+		"sheet": {
+			"pc": "Personaje (v2)",
+			"pcv3": "Personaje (v3, beta)",
+			"mortal": "Mortal",
+			"vampire": "Vampiro",
+			"werewolf": "Hombre lobo",
+			"mage": "Mago",
+			"changeling": "Changeling",
+			"hunter": "Cazador",
+			"demon": "Demonio",
+			"wraith": "Wraith",
+			"mummy": "Momia",
+			"exalted": "Exaltado",
+			"breed": "Raza Cambiante",
+			"creature": "Criatura",
+			"chantry": "Capilla / Constructo"
 		}
 	}
 }

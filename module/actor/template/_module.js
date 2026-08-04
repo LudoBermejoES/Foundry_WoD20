@@ -1,4 +1,5 @@
 export { default as PCActorSheet } from "./pc-actor-sheet.js";
+export { default as PCActorSheetV3 } from "./pc-actor-sheet-v3.js";
 
 /* Legacy sheets */
 export { default as MortalActorSheet } from "./mortal-actor-sheet.js";

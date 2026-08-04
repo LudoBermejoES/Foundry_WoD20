@@ -210,8 +210,24 @@ Hooks.once("init", async function() {
 	foundry.documents.collections.Actors.unregisterSheet('core', foundry.appv1.sheets.ActorSheet)
 
 	foundry.documents.collections.Actors.registerSheet("WoD", actorSheets.PCActorSheet, {
+		label: game.i18n.localize("wod.sheet.pc"),
 		types: ["PC"],
 		makeDefault: true
+	});
+
+	// The redesigned sheet, OPT-IN. `makeDefault: false` is the whole safety story and it reverses
+	// this change's first plan: `makeDefault` decides the sheet for every actor that has not been
+	// given one explicitly, so setting it here would move everyone at once rather than give anyone
+	// a choice. Measured 2026-08-04: 0 of 88 PC actors carry `flags.core.sheetClass`, so nothing is
+	// pinned and `true` would have been a flag day.
+	//
+	// A GM opts one actor in from the sheet-config button; rolling that actor back is picking v2
+	// again — no deploy, no restart, nobody else affected. `makeDefault` moves here only at the end,
+	// and actors a GM explicitly pinned to v2 survive even that.
+	foundry.documents.collections.Actors.registerSheet("WoD", actorSheets.PCActorSheetV3, {
+		label: game.i18n.localize("wod.sheet.pcv3"),
+		types: ["PC"],
+		makeDefault: false
 	});
 
 	foundry.documents.collections.Actors.registerSheet("WoD", actorSheets.MortalActorSheet, {

@@ -1,0 +1,66 @@
+/* ===========================================================================================
+   pc-actor-v3.css — LAYOUT ONLY, for the opt-in redesigned PC sheet (PCActorSheetV3).
+
+   WHERE THIS FILE SITS IN `system.json`'s `styles`, AND WHY IT MATTERS
+   -------------------------------------------------------------------
+   After the per-line stylesheets and BEFORE `darkmode.css`. `system.json` takes no comments, so
+   the reason lives here: `darkmode.css` loads LAST. Anything this file hard-codes as a colour
+   would be overridden for the properties darkmode happens to cover and NOT for the ones it does
+   not — a half-dark sheet, which is the ugliest failure available and the hardest to diagnose.
+
+   So: **this file declares no literal colour, ever.** Every colour comes from a custom property
+   the per-line stylesheets already set on the splat class (`--main-full-color`, `--splat-line`,
+   `--splat-text`, `--main-dim-color`). That is also what makes per-line theming automatic for all
+   thirteen splats with no rule duplicated: `hooks.js` puts `.mage` / `.wod-theme-dark` / `.langES`
+   on the sheet root, verified from a live sheet dump.
+
+   `.github/scripts/v3-css-check.py` enforces the three rules mechanically: zero literal colours,
+   every selector scoped, and at most six `!important`.
+
+   HOW FLOATS ARE NEUTRALISED — the mechanism, so nobody reaches for `!important` instead
+   --------------------------------------------------------------------------------------
+   `css/wod.css:545` is `.wod20 .pullLeft { float: left !important }`, used 181 times, with 68
+   `.clearareaBox` clearfixes on top. The way to beat that is NOT specificity.
+
+   **`float` and `clear` have no effect on a flex item or a grid item** — a grid item's `float`
+   computes to `none`. That is a computed-value rule in the spec, so it beats `!important`, beats
+   specificity and beats source order, because it is not a cascade contest at all. Giving a
+   container `display: grid` neutralises every `.pullLeft` and `.clearareaBox` DIRECT CHILD for
+   free, with nothing declared about them.
+
+   It reaches direct children only. A float nested deeper still floats — but a grid item
+   establishes an independent formatting context, so that float is CONTAINED to its cell and cannot
+   leak into a sibling column, which is the damage worth avoiding.
+
+   `@layer` was considered and REJECTED. It inverts for `!important`, so `@layer v3 { … !important }`
+   would win — but for NORMAL declarations unlayered styles behave as the last layer and beat every
+   layered one, and `wod.css` is entirely unlayered. Putting v3 in a layer would make all of its
+   ordinary declarations lose. It looks like the solution and is a trap.
+
+   Inline widths (71 of them, `width: 33%`, `320px`, `225px`) are not reachable by any of this —
+   inline styles beat author rules. Nearly all live in the shells v3 rewrites, so they are removed
+   rather than overridden. There is deliberately no `[style]` sledgehammer here.
+
+   PHASE 1: every part still renders the v2 template, so this file is intentionally almost empty.
+   It exists now so that registration, load order and the scoping mechanism are proven on a real
+   sheet BEFORE any markup changes.
+   =========================================================================================== */
+
+/* The scope marker. Every rule below begins with this, which is what stops the file reaching the
+   v2 sheet — the two classes differ by exactly `pc-actor-v3`. */
+.wod20.pc-actor-v3 {
+	/* Phase 1 declares nothing. Named so the file is never empty, so a stylesheet that failed to
+	   load is distinguishable from one that loaded and did nothing. */
+	--wod-v3-loaded: 1;
+}
+
+/* ── NEUTRALISERS ───────────────────────────────────────────────────────────────────────────
+   HARD CAP: SIX RULES. Enforced by v3-css-check.py, and the cap is the point — one `!important`
+   to cancel one `!important` is not an arms race; an arms race is what starts at the seventh.
+
+   Every entry must cancel a specific declaration in `wod.css` and cite its line. Reach for
+   blockification (a grid or flex container) FIRST; add here only when the float is on something
+   that cannot be made a grid item.
+
+   Empty in phase 1: nothing v3 renders yet differs from v2, so there is nothing to cancel.
+   ─────────────────────────────────────────────────────────────────────────────────────────── */

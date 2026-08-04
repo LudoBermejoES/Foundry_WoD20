@@ -2258,6 +2258,23 @@
 				"description": "This setting can be changed under the sheet's settings",
 				"lostbreeds": "Lost breeds"
 			}
+		},
+		"sheet": {
+			"pc": "Character (v2)",
+			"pcv3": "Character (v3, beta)",
+			"mortal": "Mortal",
+			"vampire": "Vampire",
+			"werewolf": "Werewolf",
+			"mage": "Mage",
+			"changeling": "Changeling",
+			"hunter": "Hunter",
+			"demon": "Demon",
+			"wraith": "Wraith",
+			"mummy": "Mummy",
+			"exalted": "Exalted",
+			"breed": "Changing Breed",
+			"creature": "Creature",
+			"chantry": "Chantry / Construct"
 		}
 	}
 }
