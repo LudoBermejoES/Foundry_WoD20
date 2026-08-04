@@ -57,6 +57,34 @@ export default class settings extends foundry.abstract.DataModel {
             hasrealms: new fields.BooleanField({initial: false}),
             haslores: new fields.BooleanField({initial: false}),
             hasedges: new fields.BooleanField({initial: false}),
+            // add-pc-sheet-v3 D9b, task 4 — `hasnuminas` and `hascharms` are FLAT here and NESTED under
+            // `settings.powers` in template.json (`powers.hasnumina`, `powers.hascharms`). That looks like
+            // one concept spelled two ways, and it was reported as such. It is not: it is TWO ACTOR
+            // SCHEMAS, and they do not overlap.
+            //
+            //   * NESTED (`settings.powers.has*`) is declared ONLY by template.json, which governs ONLY
+            //     the legacy per-splat Actor document types (Mortal, Vampire, Mage, …). Its readers are
+            //     all on the v1 path and reached only from `mortal-actor-sheet.js`:
+            //     `CreateHelper.CreateButtonsPower` (create-helpers.js), and
+            //     `ItemHelper._sortItems` / `_sortPowers` via `sortActorItems`, whose sole caller is that
+            //     sheet. `templates/actor/parts/navigation.html` — a legacy `.html`, not the PC `.hbs`.
+            //   * FLAT (here) is declared ONLY by this DataModel, which governs ONLY `type: "PC"`. Its
+            //     readers are all on the v2 path the fork's sheet uses: `ItemHelper.BuildPowerSections`
+            //     and `prepareStatContext`. Note this schema's `powers` SchemaField declares exactly one
+            //     field, `defaultmaxvalue` — so on a PC actor `settings.powers.hascharms` is `undefined`,
+            //     and every v1 reader above is inertly false rather than throwing.
+            //
+            // So there is no reader that could see the "wrong" one, and nothing to fix at the call sites.
+            // RECONCILING THE TWO NEEDS A DATA MIGRATION and is deliberately not attempted here: either
+            // the nested keys join this schema and every stored PC gains them, or template.json flattens
+            // and every stored LEGACY actor has its values moved. Both rewrite actor documents in a live
+            // world. Renaming a field in one schema without moving the stored data silently resets it to
+            // the initial for every actor that has it — which for a capability flag means a block that
+            // rendered yesterday stops rendering today, with no error anywhere.
+            //
+            // The consequence worth knowing while it stands: `_createCharmStructure` and `_sortCharms`
+            // never run for a PC actor. Charms still render — `BuildPowerSections` reads the flat flag
+            // (item-helpers.js) and the section is `template: "simple"`, so it needs no sorted structure.
             hascharms: new fields.BooleanField({initial: false}),
             // add-wraith-pc-splat — Arcanoi, the wraith power axis. Two-level like Disciplines: a
             // container (`wod.types.arcanoi`) holding powers (`wod.types.arcanoipower`). Both i18n keys

@@ -3,8 +3,29 @@ export const datapowertab = {
         werewolf: {
             primary: ["gifts", "rites"],  
         },    
+        // add-pc-sheet-v3 D9b — "paths" is GONE from `primary` and from `defaultOrder` below.
+        //
+        // It named a section `BuildPowerSections` has never defined, so `addSection("paths")` has
+        // always returned null and it has rendered nothing, for any vampire, ever. Removing it is
+        // therefore a PROVABLE no-op at runtime — not "probably safe": the only thing that changes is
+        // that a function which returned null stops being called.
+        //
+        // Nothing can be orphaned by the removal, and that is checkable without the live world: there
+        // is no `context.paths` prepared in `preparePowersContext`, no `wod.types.path` item sub-kind
+        // anywhere in the system, and no create button that could mint one. No item of any type could
+        // ever have been routed here, so no vampire can be holding one that this hides.
+        //
+        // NOT DEFINED INSTEAD, which was the other option. The Paths this meant are the Thaumaturgy /
+        // Necromancy / Koldunic paths, and this system already carries them: as `wod.types.discipline`
+        // containers with their powers underneath (the hierarchical `disciplines` section), and as
+        // rituals tagged `system.category: "wod.power.thaumaturgy"` (migration.js:2104), which the
+        // `rituals` section draws. Defining `paths` would need a new item sub-kind, a context key, a
+        // create button and a migration to move existing documents onto it — a feature, not a fix, and
+        // it would split one axis across two sections. `wod.power.paths` and `wod.power.unsortedpaths`
+        // stay in the seven language files: they cost nothing and they are the record of the intent.
+        // The matching `unsortedpaths` block in `item-helpers.js:1132-1142` was already commented out.
         vampire: {
-            primary: ["disciplines", "paths", "combinations", "rituals"],
+            primary: ["disciplines", "combinations", "rituals"],
         },
         mage: {
             // "rotes" is deliberately absent: the Rote list lives on the Stats tab now, in the band
@@ -41,7 +62,8 @@ export const datapowertab = {
         },
         defaultOrder: [
             "disciplines",
-            "paths",
+            // "paths" removed — see the vampire block above. It had no definition in
+            // `BuildPowerSections`, so this entry selected nothing on any line.
             "combinations",
             "rituals",
             "gifts",

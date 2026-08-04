@@ -505,6 +505,78 @@ export class WoDActor extends Actor {
             actorData.system.settings.hasapocalypticforms = apocalypticforms.length > 0;
             actorData.system.settings.hasresonances = resonances.length > 0;
 
+            /*
+             * add-pc-sheet-v3 D9b — four capability flags that had no writer a `PC` actor could reach.
+             *
+             * THE DEFECT. `_preCreate` runs NONE of the `Set*Attributesv2` helpers for `data.type == "PC"`
+             * (see the `if (data.type == "PC")` branch: it writes `iscreated`, `version` and `era` and
+             * returns to the per-legacy-type branches, none of which match). So on a hand-built PC actor
+             * these four are whatever the schema initial says — false. Their only writers are
+             * `DropHelper.DropSplatToActor` (of 89 live actors not one has ever received a Splat drop —
+             * measured, `pc-actor-sheet.js:1209`), `migration.js` (legacy documents), the variant dialog
+             * (opened ONLY from `mortal-actor-sheet.js`, and gated on legacy `actor.type` values, so it is
+             * unreachable for a PC), and the wodchar exporter, which covers 7 of 13 lines. The result: a
+             * vampire built by hand in Foundry has Virtue items and no Virtues block, a werewolf has Renown
+             * items and no Renown block, a mage has a Quintessence pool and no wheel, and a creature can
+             * hold Charms that `BuildPowerSections` refuses to draw.
+             *
+             * WHY ITEMS AND NOT `getSplat`, WHICH IS THE add-wraith-pc-splat PRECEDENT. That precedent has
+             * two halves, and this is the OTHER one. `hascorpus` was deleted and replaced by a splat test
+             * because Corpus is what a wraith IS — the flag only ever restated the splat. `hasarcanoi`
+             * (just above) was DERIVED FROM ITEMS instead, because it carries a fact the splat does not:
+             * "this actor holds Arcanoi". These four are `hasarcanoi`'s kind, not `hascorpus`'s, and the
+             * system's own variant table proves it — a splat test would be WRONG, not merely coarse:
+             *
+             *   - `hasvirtue` is NOT "is a vampire". `SetVampireVariant` gives it to `general` and takes it
+             *     away from `kindredeast` (create-helpers.js:832-841); `SetMortalVariant` gives it to a
+             *     `ghoul` and denies it to every other mortal (`:861` vs `:925`). Splat-testing would put
+             *     Virtues on 25 plain mortals and take them off the Kindred of the East.
+             *   - `hasquintessence` is NOT "is a mage": `mortal/sorcerer` has it too (`:908`).
+             *   - `hascharms` is NOT "is a creature": only the `familiar` and `spirit` variants get it
+             *     (`:987`, `:1000`); `general`, `chimera`, `construct`, `warwolves` and `anurana` do not.
+             *
+             * Deriving from items reproduces exactly what the Splat drop already means by these flags
+             * (`drop-helpers.js:619-633` sets them from the advantage group it just imported, `:684` from
+             * the charm it just imported) — the drop is a one-shot version of this, and this is the same
+             * rule applied continuously. It is also what `RemoveSplatFromActor` expects: it deletes every
+             * item BEFORE resetting the flags (`:772-775`), so a stripped actor derives all-false.
+             *
+             * WHY `||` AND NOT A PLAIN ASSIGNMENT — this is the "never turn a flag off that was rightly on"
+             * guarantee, and it is structural rather than argued. The 15 flags above reset to false and
+             * recompute; these four do not reset. A stored `true` (the wodchar exporter writes these
+             * explicitly for the lines it covers) survives untouched no matter what the actor holds, so an
+             * exporter-built actor renders byte-identically to how it renders today. The only transition
+             * this code can cause is false -> true.
+             *
+             * IT IS ALSO A NO-OP IN EVERY CASE THAT ALREADY WORKED, for a second and independent reason:
+             * both readers already AND the flag with a non-empty list —
+             * `prepareStatContext` (`showVirtues = hasvirtue && virtues.length > 0`, and the same shape for
+             * renown and quintessence) and `BuildPowerSections` (`hascharms && context.charms?.length`).
+             * Whenever the old code rendered a block, the actor held the items, which means the derived
+             * value is true anyway. So no block that renders today can stop rendering.
+             *
+             * THE UNFILTERED ITEM SET IS DELIBERATE. `prepareStatContext` filters on
+             * `system.settings.isvisible`, `prepareSettingsContext` deliberately does not (it is the tab
+             * where a GM un-hides things). Deriving from the unfiltered set is the permissive choice: an
+             * actor whose Virtues are all hidden gets no Virtues block on Ficha, and DOES get them in
+             * Ajustes where they can be switched back on.
+             *
+             * NOT DERIVED HERE, and not by oversight: `haswillpower` and `hasessence`. Neither has any
+             * reader on the PC sheet at all — no `.hbs` reads them, `pc-actor-sheet.js` does not, and
+             * `BuildPowerSections` does not. Willpower reaches the PC sheet as an ordinary `group: ""`
+             * Advantage through `context.advantages`, ungated, which is why the gate was dropped; Essence
+             * has no PC-sheet renderer whatsoever, so its missing flag is not what is stopping it from
+             * drawing. Deriving either would be dead code that reads like a working gate — precisely the
+             * failure mode `haspathos`/`hasangst` were deleted for (see actor_settings.js).
+             */
+            const holdsAdvantageGroup = (group) => advantages.some(item => item.system?.group === group);
+            const holdsPowerType = (type) => allpowers.some(item => item.system?.type === type);
+
+            actorData.system.settings.hasvirtue = actorData.system.settings.hasvirtue || holdsAdvantageGroup("virtue");
+            actorData.system.settings.hasrenown = actorData.system.settings.hasrenown || holdsAdvantageGroup("renown");
+            actorData.system.settings.hasquintessence = actorData.system.settings.hasquintessence || holdsAdvantageGroup("quintessence");
+            actorData.system.settings.hascharms = actorData.system.settings.hascharms || holdsPowerType("wod.types.charm");
+
             if (itemList.length > 0) {
                 this.updateEmbeddedDocuments("Item", itemList);
             }

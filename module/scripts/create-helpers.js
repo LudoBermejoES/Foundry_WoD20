@@ -2840,54 +2840,6 @@ export default class CreateHelper {
 					return;
 				}
 			},
-			bloodbound: {
-				label: game.i18n.localize("wod.types.bloodbound"),
-				callback: async () => {
-					let itemData = {
-						name: game.i18n.localize("wod.labels.new.bloodbound"),
-						type: "Feature",
-						system: {
-							level: 1,
-							type: "wod.types.bloodbound"
-						}
-					};
-
-					await this.CreateItem(actor, itemData);
-					return;
-				}
-			},
-			boon: {
-				label: game.i18n.localize("wod.types.boon"),
-				callback: async () => {
-					let itemData = {
-						name: game.i18n.localize("wod.labels.new.boon"),
-						type: "Feature",
-						system: {
-							level: 1,
-							type: "wod.types.boon"
-						}
-					};
-
-					await this.CreateItem(actor, itemData);
-					return;
-				}
-			},
-			oath: {
-				label: game.i18n.localize("wod.types.oath"),
-				callback: async () => {
-					let itemData = {
-						name: game.i18n.localize("wod.labels.new.oath"),
-						type: "Feature",
-						system: {
-							level: 1,
-							type: "wod.types.oath"
-						}
-					};
-
-					await this.CreateItem(actor, itemData);
-					return;
-				}
-			},
 			other: {
 				label: game.i18n.localize("wod.types.othertraits"),
 				callback: async () => {
@@ -2938,6 +2890,71 @@ export default class CreateHelper {
 				}
 			}
 		};
+
+		/*
+		 * add-pc-sheet-v3 D9b — Blood Bond, Boon and Oath are AUTHORED per line, not offered to everyone.
+		 *
+		 * They stood unconditionally in this dialog next to Background / Merit / Flaw, so the `+` on the
+		 * Features tab offered a mummy a Boon and a mage an Oath. That is a lie about the game, and it is
+		 * the same class of defect D9b names for the empty state: a control that offers something the line
+		 * does not have. Same gate as the wraith block below — `getSplat(actor)`, the system's own resolver
+		 * — so the sheet and the authoring route cannot disagree about who is what.
+		 *
+		 * THE VARIANTSHEET CHAIN IS WHY THIS IS NOT TOO NARROW, and it is the reason `getSplat` is right
+		 * where a bare `settings.splat` test would be wrong. A Blood Bond is a thing a THRALL has, and a
+		 * thrall is usually not a vampire; an Oath is sworn by the enchanted as well as by the Kithain. The
+		 * system already models exactly that, in `SetMortalVariant`: `ghoul` sets
+		 * `variantsheet: "vampire"` (`:927`), `enchanted` and `autumnpeople` set
+		 * `variantsheet: "changeling"` (`:915`, `:920`). `getSplat` reads `variantsheet` FIRST, so a ghoul
+		 * gets the Blood Bond and Boon buttons and an enchanted mortal gets the Oath button, while a
+		 * `general` mortal — which the system's own variant model says is entangled with no line — does
+		 * not. If a GM wants a plain mortal bound, the in-system answer is to make them a ghoul.
+		 *
+		 * THE RENDERING IS DELIBERATELY *NOT* GATED, and this is a decision, not an omission. Every block
+		 * on `feature.hbs` is guarded on `length > 0` alone — including Passions and Fetters, which are
+		 * wraith-only and are still drawn for anyone holding one (see the comment there, §3.10). Adding a
+		 * splat test to those three blocks would change behaviour in exactly one case: an actor of another
+		 * line who ALREADY HOLDS a Blood Bond, Boon or Oath. In that case it does not "clean up the sheet",
+		 * it hides an item that exists — and the Features tab is where that item's delete button lives, so
+		 * hiding it makes it unreachable as well as invisible. In the harmless case (a mummy with no boons)
+		 * the block already renders nothing, so the gate would buy nothing. A render gate here can only
+		 * ever subtract, never correct: hide the button, show the data.
+		 */
+		if (getSplat(actor) === CONFIG.worldofdarkness.splat.vampire) {
+			for (const kind of ["bloodbound", "boon"]) {
+				buttons[kind] = {
+					label: game.i18n.localize(`wod.types.${kind}`),
+					callback: async () => {
+						await this.CreateItem(actor, {
+							name: game.i18n.localize(`wod.labels.new.${kind}`),
+							type: "Feature",
+							system: {
+								level: 1,
+								type: `wod.types.${kind}`
+							}
+						});
+						return;
+					}
+				};
+			}
+		}
+
+		if (getSplat(actor) === CONFIG.worldofdarkness.splat.changeling) {
+			buttons.oath = {
+				label: game.i18n.localize("wod.types.oath"),
+				callback: async () => {
+					await this.CreateItem(actor, {
+						name: game.i18n.localize("wod.labels.new.oath"),
+						type: "Feature",
+						system: {
+							level: 1,
+							type: "wod.types.oath"
+						}
+					});
+					return;
+				}
+			};
+		}
 
 		/*
 		 * add-wraith-pc-splat §3.9 (a MISS caught while doing add-contacts-allies-roster) — Passions, Dark
@@ -3383,6 +3400,16 @@ export default class CreateHelper {
 			};
 		}
 
+		/*
+		 * `settings.powers.hasnumina` (nested), NOT `settings.hasnuminas` (flat), and that is correct
+		 * here rather than a typo — the two belong to two different actor schemas. This function is the
+		 * v1 create path, reached only from `mortal-actor-sheet.js`, i.e. only for the legacy per-splat
+		 * Actor types, whose fields come from template.json where the key IS nested. The flat spelling is
+		 * declared by the PC DataModel and read by `ItemHelper.BuildPowerSections`. On a PC actor this
+		 * expression is `undefined` and inertly false, which is harmless because a PC never reaches this
+		 * function. Full reasoning, and why merging them would need a data migration:
+		 * `module/actor/datamodel/base/actor_settings.js`, at `hascharms`.
+		 */
 		if (actor.system.settings.powers.hasnumina) {
 			buttons.numina = {
 				label: game.i18n.localize("wod.types.numina"),

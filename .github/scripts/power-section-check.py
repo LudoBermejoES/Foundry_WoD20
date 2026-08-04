@@ -45,12 +45,11 @@ RENDERED_ELSEWHERE: dict[str, tuple[str, str]] = {
 #: ids that are declared but have no definition in BuildPowerSections. Each is inert — the
 #: runtime skips it. Listed so the check can pass while still naming them.
 #:
-#: `paths` sits in the SHARED `defaultOrder`, so it is nominally declared for all nine splats
-#: even though only vampire's `primary` names it. It is reported once, not nine times.
-KNOWN_UNDEFINED: dict[str, str] = {
-    "paths": "in vampire's `primary` and in the shared `defaultOrder`, but no definition exists "
-             "in BuildPowerSections, so it has never rendered for any line",
-}
+#: EMPTY as of add-pc-sheet-v3 D9b. Its only entry was `paths`, which has been removed from
+#: vampire's `primary` and from the shared `defaultOrder` instead of being allowed here — the
+#: warning had done its job. Keep this dict empty if you can: a declared-but-undefined section
+#: renders nothing and says nothing, which is the failure this check exists to surface.
+KNOWN_UNDEFINED: dict[str, str] = {}
 
 
 def strip_comments(js: str) -> str:
