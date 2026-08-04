@@ -27,6 +27,53 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const SKIPPED_SYSTEM_FIELDS = new Set(["description", "settings", "bonuslist", "details"]);
 
 /**
+ * The title to show for a viewed document: its LOCALIZED label when it has one, its `name`
+ * otherwise.
+ *
+ * Reported 2026-08-04: clicking the eye on the row reading "Armas de Fuego" opened a window
+ * titled `Firearms`. Both strings are correct and they come from different fields. A
+ * template-seeded primary ability carries the ENGLISH name (`Firearms`) plus
+ * `system.label = "wod.abilities.firearms"`, and every place that DISPLAYS the row localizes
+ * the label - `stats_abilities.hbs` does `{{localize ability.system.label}}`, and
+ * `buildAbilityColumn` sorts on the localized form. The viewer was the one surface reading
+ * `name` directly, so it was the one surface showing the untranslated string. Same shape as the
+ * note "an English name on a sheet is an unresolved id, not a missing translation" - except here
+ * the id resolves fine and nobody was asking it to.
+ *
+ * Three cases, and the third is why this is not a one-liner:
+ *   * `system.label` is an i18n KEY that resolves -> use the translation (`Armas de Fuego`);
+ *   * `system.label` is already display text -> `localize` returns it unchanged, so a secondary
+ *     ability titled `Arte` keeps saying `Arte`;
+ *   * `system.label` is a key that does NOT resolve -> `localize` returns the key itself, and a
+ *     window titled `wod.abilities.something` is strictly worse than the English name. So an
+ *     unresolved `wod.`-prefixed result falls back to `name`, the same guard
+ *     `AbilityHelper.GetSecondAbilityLabel` applies for the same reason.
+ *
+ * Documents with no `system.label` at all (Features, Powers, the keyed-trait compendium
+ * documents) are unaffected: they fall straight through to `name`, which is already their
+ * display name.
+ *
+ * Exported as a pure function of the document so it can be executed offline by
+ * `.github/scripts/test-item-viewer-title.mjs` without constructing an ApplicationV2.
+ */
+export function resolveViewerTitle(document) {
+	const name = document?.name ?? "";
+	const label = document?.system?.label;
+
+	if ((typeof label !== "string") || (label === "")) {
+		return name;
+	}
+
+	const localized = game.i18n.localize(label);
+
+	if ((typeof localized !== "string") || (localized === "") || localized.startsWith("wod.")) {
+		return name;
+	}
+
+	return localized;
+}
+
+/**
  * One instance per open viewer, but never more than one per document at a time - see
  * `ItemViewer.open`.
  */
@@ -101,7 +148,7 @@ export default class ItemViewer extends HandlebarsApplicationMixin(foundry.appli
 
 	/** @override */
 	get title() {
-		return this.viewedDocument?.name ?? "";
+		return resolveViewerTitle(this.viewedDocument);
 	}
 
 	/** @override */

@@ -254,6 +254,15 @@ jobs:
       - name: Prove the PC sheet's secondary-ability buttons create the right shape
         run: node .github/scripts/test-create-secondability-button.mjs
 
+      # The eye's window was titled from the document's `name`, which for a template-seeded
+      # primary is the ENGLISH string ("Firearms") while every surface that DISPLAYS the row
+      # localizes `system.label` ("Armas de Fuego"). Reported from the live sheet. The fallback
+      # is the part worth a gate: an i18n key that does not resolve must NOT become the title,
+      # because `wod.abilities.something` is worse than the English word. Reads the real
+      # lang/es.json from disk, so it cannot pass against a deleted translation.
+      - name: Prove the eye's window is titled in the reader's language
+        run: node .github/scripts/test-item-viewer-title.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server
