@@ -31,7 +31,15 @@ WHAT IT CHECKS, per template
     `table`, `tr`, `td`, `ul`, `li`, `select`, `span`, `a`), measured with comments and
     `{{!-- --}}` blocks stripped, because markup inside a comment is not markup;
  4. `{{>` partial includes resolve to a file that exists — the same reference class
-    `system-preflight.py` checks for `systems/...` strings, but scoped to includes.
+    `system-preflight.py` checks for `systems/...` strings, but scoped to includes;
+ 5. and, since 7.5.45, that each of those partials is also PRELOADED in
+    `module/templates.js`. Existing on disk is not what makes a partial resolve. 7.5.44
+    shipped `stats_rotes.hbs` on disk but unregistered; Foundry threw "The partial ...
+    could not be found" and took the entire Stats part down with it, so the sheet
+    rendered nothing. Check 4 passed that build — and so did a real Handlebars
+    precompile of all 202 templates, run by hand. Both look at files; neither can see a
+    registration that never happened, and "partial includes resolve" reads like it
+    covers both. It now does.
 
 Balance is asserted per file against ITSELF, not against a baseline: a template that was
 already unbalanced would fail here on its first run, which is the point. If one of the 60-odd
@@ -144,7 +152,26 @@ def check_tag_balance(text: str, rel: str, errors: list[str]) -> None:
             errors.append(f"{rel}: <{tag}> opens {opens - selfclosed} vs closes {closes}")
 
 
-def check_partials(text: str, rel: str, errors: list[str]) -> None:
+def preloaded_templates() -> set[str]:
+    """Every template path `module/templates.js` hands to loadTemplates().
+
+    Read as text, not imported: this is a browser ES module that touches Foundry globals.
+    A quoted `systems/worldofdarkness/...` string in that file IS a registration — the file
+    is one array of them — so a plain scan is exact enough to be worth trusting, and any
+    string it wrongly picks up can only make the guard MORE permissive, never fail a build
+    that would have worked.
+    """
+    src = ROOT / "module" / "templates.js"
+
+    if not src.is_file():                       # nothing to check against; stay silent
+        return set()
+
+    body = re.sub(r"^\s*//.*$", "", src.read_text(encoding="utf-8"), flags=re.M)
+
+    return set(re.findall(r'"(systems/worldofdarkness/templates/[^"]+)"', body))
+
+
+def check_partials(text: str, rel: str, errors: list[str], preloaded: set[str]) -> None:
     for m in re.finditer(r'\{\{>\s*"([^"]+)"', text):
         ref = m.group(1)
         line = text[:m.start()].count("\n") + 1
@@ -153,6 +180,14 @@ def check_partials(text: str, rel: str, errors: list[str]) -> None:
         target = ROOT / ref[len("systems/worldofdarkness/"):]
         if not target.is_file():
             errors.append(f"{rel}:{line}: partial include does not exist: {ref}")
+        # Existing on disk is NOT what makes a partial resolve — being in the preload list is.
+        # 7.5.44 shipped `stats_rotes.hbs` on disk but unregistered, and Foundry threw
+        # "The partial ... could not be found", which took the whole Stats part down with it.
+        # This guard passed that build, and so did a real Handlebars precompile of every
+        # template: both see files, neither sees a registration that never happened.
+        elif preloaded and ref not in preloaded:
+            errors.append(f"{rel}:{line}: partial is not preloaded in module/templates.js, so "
+                          f"Foundry cannot resolve it at render time: {ref}")
 
 
 def main() -> int:
@@ -168,6 +203,7 @@ def main() -> int:
         return 2
 
     errors: list[str] = []
+    preloaded = preloaded_templates()
     for path in files:
         rel = str(path.relative_to(ROOT))
         raw = path.read_text(encoding="utf-8")
@@ -175,7 +211,7 @@ def main() -> int:
             body = strip_comments(raw)
             check_blocks(body, rel, errors)
             check_tag_balance(body, rel, errors)
-            check_partials(body, rel, errors)
+            check_partials(body, rel, errors, preloaded)
 
     if errors:
         print(f"template structure check FAILED: {len(errors)} problem(s) "
@@ -185,7 +221,7 @@ def main() -> int:
         return 1
 
     print(f"template structure check OK: {len(files)} template(s) — comments terminated, "
-          f"blocks nested, tags balanced, partial includes resolve")
+          f"blocks nested, tags balanced, {len(preloaded)} preloaded, partial includes resolve AND are registered")
     return 0
 
 
