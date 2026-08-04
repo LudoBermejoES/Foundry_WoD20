@@ -1603,8 +1603,38 @@ const buildAbilityColumn = function (actor, abilitytype, onlyvisible) {
 			.sort((a, b) => game.i18n.localize(a.system.label || a.name || "").localeCompare(game.i18n.localize(b.system.label || b.name || "")));
 }
 
+/**
+ * The Sphere rows and their eye-icon uuid map, for whichever part renders them.
+ *
+ * Extracted because TWO parts now render `power_spheres.hbs`: the Powers tab, where it has always
+ * lived, and the Stats tab, where the spheres were moved to sit under the Abilities they are rolled
+ * alongside. Each ApplicationV2 part gets its OWN context (`_preparePartContext`), so the partial
+ * renders empty in any part that does not prepare these two keys — which is exactly what happens if
+ * you move the include and forget the context.
+ *
+ * add-sphere-descriptions: `sphereCompendiumUuid` decides which Sphere rows get an eye at all. Keyed
+ * on `system.id` - the same nine ids `CONFIG.worldofdarkness.allSpheres` enumerates, which a
+ * Technocratic mage's sheet also carries (`allSpheresTechnocracy` is keyed by those same ids and
+ * only swaps the LABEL, config.js:387 / dialog-edits.js:412). A Sphere Item is created by the
+ * system and carries no description and no provenance flags of its own, so the eye opens a
+ * read-only compendium document instead; nothing is written to the actor. Degrades to an empty
+ * map - and so to no eyes at all - while the `mage-spheres` pack is absent.
+ */
+const addSphereContext = async function (context, actor) {
+	context.spheres = actor.items.filter(item => item.type === "Sphere" && item.system.settings.isvisible);
+	context.spheres = context.spheres.sort((a, b) => Number(a.system.settings.order) - Number(b.system.settings.order));
+	context.sphereCompendiumUuid = await buildTraitCompendiumUuidMap("sphere", context.spheres.map(sphere => sphere.system?.id));
+
+	return context;
+}
+
 export const prepareStatContext = async function (context, actor) {
   	context.tab = context.tabs.stats;
+
+	// Spheres render on THIS tab, under Abilities - so this tab must prepare their context too.
+	// Harmless for every other splat: no Sphere items means an empty list and no rendered block,
+	// and `stats.hbs` gates the include on `settings.hasspheres` anyway.
+	await addSphereContext(context, actor);
 
 	// Owner-delegated addition to open-item-window-from-eye-icon: which attribute rows get an eye
 	// icon at all (see stats_attributes.hbs). Attributes are system fields, not Items - nothing is
@@ -1831,17 +1861,7 @@ export const preparePowersContext = async function (context, actor) {
 	});
 
 	// Spheres
-	context.spheres = actor.items.filter(item => item.type === "Sphere" && item.system.settings.isvisible);
-	context.spheres = context.spheres.sort((a, b) => Number(a.system.settings.order) - Number(b.system.settings.order));
-
-	// add-sphere-descriptions: which Sphere rows get an eye at all (see power_spheres.hbs). Keyed on
-	// `system.id` - the same nine ids `CONFIG.worldofdarkness.allSpheres` enumerates, which a
-	// Technocratic mage's sheet also carries (`allSpheresTechnocracy` is keyed by those same ids and
-	// only swaps the LABEL, config.js:387 / dialog-edits.js:412). A Sphere Item is created by the
-	// system and carries no description and no provenance flags of its own, so the eye opens a
-	// read-only compendium document instead; nothing is written to the actor. Degrades to an empty
-	// map - and so to no eyes at all - while the `mage-spheres` pack is absent.
-	context.sphereCompendiumUuid = await buildTraitCompendiumUuidMap("sphere", context.spheres.map(sphere => sphere.system?.id));
+	await addSphereContext(context, actor);
 
 	// Realms
 	context.realms = actor.items.filter(item => item.type === "Realm" && item.system.settings.isvisible);

@@ -17,6 +17,13 @@
             {{> "systems/worldofdarkness/templates/actor/parts/stats_abilities.hbs" showheadline=true useroll=true showvalues=true showvisibleicon=false}}
         </div>
 
+        <!-- Spheres — moved off the Powers tab to sit with the Abilities they are rolled alongside.
+             `spheres` / `sphereCompendiumUuid` come from `addSphereContext`, which prepareStatContext
+             calls: an ApplicationV2 part only has the context ITS OWN preparer built. -->
+        {{#if actor.system.settings.hasspheres}}
+            {{> "systems/worldofdarkness/templates/actor/parts/power_spheres.hbs" spheres=spheres actor=actor config=config}}
+        {{/if}}
+
         <!-- Adventages -->
         <div class="sheet-area flex-columns">
             {{> "systems/worldofdarkness/templates/actor/parts/stats_advantages.hbs"}}

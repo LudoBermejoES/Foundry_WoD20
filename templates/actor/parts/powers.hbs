@@ -14,9 +14,9 @@
             {{> "systems/worldofdarkness/templates/actor/parts/power_shapes.hbs" shapes=shapes actor=actor config=config locked=locked}}
         {{/if}}
 
-        {{#if actor.system.settings.hasspheres}}
-            {{> "systems/worldofdarkness/templates/actor/parts/power_spheres.hbs" spheres=spheres actor=actor config=config}}
-        {{/if}}
+        {{!-- Spheres are NOT here: they render on the Stats tab, under Abilities (stats.hbs).
+              preparePowersContext still prepares their context via addSphereContext, because the
+              Settings tab's sphere-ordering list reads the same items. --}}
 
         {{#if actor.system.settings.hasrealms}}
             {{> "systems/worldofdarkness/templates/actor/parts/power_realms.hbs" realms=realms actor=actor config=config}}
