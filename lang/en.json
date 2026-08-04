@@ -29,7 +29,7 @@
 	"TYPES.Item.Ability": "Ability",
 	"TYPES.Item.Sphere": "Sphere",
 	"TYPES.Item.Realm": "Realm",
-	"wod": {		
+	"wod": {
 		"system": {
 			"world": "World updated!",
 			"sheetlocked": "Can not edit as sheet is locked!",
@@ -204,7 +204,6 @@
 			"mortal": "Mortal",
 			"werewolf": "Werewolf",
 			"mage": "Mage",
-			
 			"background": "Background",
 			"bloodbound": "Blood Bond / Vinculum",
 			"boon": "Boon",
@@ -428,7 +427,7 @@
 				"squamus": "Squamus",
 				"bos": "Bos",
 				"scrofa": "Scrofa"
-			},			
+			},
 			"clan": "Clan",
 			"auspice": "Auspice",
 			"auspicename": {
@@ -460,7 +459,7 @@
 				"solar": "Solar",
 				"lunar": "Lunar"
 			},
-			"aspect": "Aspect",	
+			"aspect": "Aspect",
 			"aspectname": {
 				"tenere": "Tenere",
 				"hatar": "Hatar",
@@ -537,7 +536,7 @@
 				"unktehi": "Unktehi"
 			},
 			"jamak": "Jamak",
-			"yava": "Yava",	
+			"yava": "Yava",
 			"fera": "Fera",
 			"werewolf": {
 				"blackfuries": "Black Furies",
@@ -596,7 +595,7 @@
 				"destiny": "Destiny"
 			},
 			"mage": {
-				"affiliation": "Affiliation",			
+				"affiliation": "Affiliation",
 				"essence": "Essence",
 				"sect": "Sect",
 				"affinitysphere": "Affinity Sphere",
@@ -859,7 +858,7 @@
 				"dexterity": "Dexterity bonus",
 				"stamina": "Stamina bonus",
 				"manipulation": "Manipulation bonus",
-				"appearance": "Appearance bonus"				
+				"appearance": "Appearance bonus"
 			},
 			"diff": {
 				"perception": "Perception difficulty",
@@ -874,15 +873,14 @@
 			"talent": "Talent",
 			"skill": "Skill",
 			"knowledge": "Knowledge",
-			"abilities": "Abilities",			
+			"abilities": "Abilities",
 			"talents": "Talents",
 			"skills": "Skills",
 			"knowledges": "Knowledges",
 			"notalents": "No talents selected",
 			"noskills": "No skills selected",
 			"noknowledges": "No knowledges selected",
-
-			"alertness": "Alertness",			
+			"alertness": "Alertness",
 			"art": "Art",
 			"athletics": "Athletics",
 			"awareness": "Awareness",
@@ -892,17 +890,16 @@
 			"expression": "Expression",
 			"intimidation": "Intimidation",
 			"intuition": "Intuition",
-			"kenning": "Kenning",			
+			"kenning": "Kenning",
 			"leadership": "Leadership",
 			"legerdemain": "Legerdemain",
 			"persuasion": "Persuasion",
-			"primalurge": "Primal-Urge",			
+			"primalurge": "Primal-Urge",
 			"streetwise": "Streetwise",
 			"subterfuge": "Subterfuge",
 			"socialize": "Socialize",
 			"artist": "Artist",
 			"instruction": "Instruction",
-
 			"animalken": "Animal Ken",
 			"archery": "Archery",
 			"commerce": "Commerce",
@@ -914,7 +911,7 @@
 			"larceny": "Larceny",
 			"martialarts": "Martial Arts",
 			"meditation": "Meditation",
-			"melee": "Melee",	
+			"melee": "Melee",
 			"performance": "Performance",
 			"research": "Research",
 			"ride": "Ride",
@@ -924,11 +921,10 @@
 			"ranged": "Ranged",
 			"thievery": "Thievery",
 			"weaponry": "Weaponry",
-
 			"academics": "Academics",
 			"ancientmedicine": "Ancient Medicine",
 			"astrology": "Astrology",
-			"bureaucracy": "Bureaucracy",			
+			"bureaucracy": "Bureaucracy",
 			"computer": "Computer",
 			"cosmology": "Cosmology",
 			"culture": "Culture",
@@ -960,7 +956,7 @@
 			"legendlore": "Legend-Lore",
 			"lore": "Lore",
 			"metaphysics": "Metaphysics"
-		},		
+		},
 		"health": {
 			"health": "Health",
 			"uninjured": "Uninjured",
@@ -1025,7 +1021,7 @@
 				"vision": "Vision",
 				"zeal": "Zeal"
 			},
-			"bloodpool": "Blood Pool",	
+			"bloodpool": "Blood Pool",
 			"perturn": "Blood per turn",
 			"truefaith": "True faith",
 			"faithpool": "Faith Pool",
@@ -1129,7 +1125,7 @@
 			"vitality": "Vitality",
 			"spite": "Spite",
 			"balance": "Balance",
-			"sekhem": "Sekhem",			
+			"sekhem": "Sekhem",
 			"essencepool": "Essence pool",
 			"essenceperturn": "Essence per turn",
 			"limitbreak": "Limit break",
@@ -1321,26 +1317,24 @@
 		"spheres": {
 			"spheres": "Spheres",
 			"rotes": "Rotes",
-			"correspondence": "Correspondence",			
+			"correspondence": "Correspondence",
 			"entropy": "Entropy",
 			"forces": "Forces",
 			"life": "Life",
 			"matter": "Matter",
 			"mind": "Mind",
-			"prime": "Prime",			
-			"spirit": "Spirit",			
+			"prime": "Prime",
+			"spirit": "Spirit",
 			"time": "Time",
-
 			"data": "Data",
 			"entropicstate": "Entropic State Control",
 			"forcebased": "Force-Based Paraphysics",
 			"lifescience": "Life Sciences",
-			"material": "Material Sciences",	
+			"material": "Material Sciences",
 			"psychodynamics": "Psychodynamics",
 			"primal": "Primal Utility Theory",
 			"dimensional": "Dimensional Science",
 			"temporalscience": "Temporal Science",
-
 			"coincidental": "Coincidental",
 			"vulgar": "Vulgar",
 			"coincidentalspell": "Coincidental spell",
@@ -1452,7 +1446,7 @@
 			"woundlevel": "Wound level",
 			"selectability": "Select ability",
 			"selectattribute": "Select attribute",
-			"specialty": "Use speciality",			
+			"specialty": "Use speciality",
 			"select": "Select",
 			"noneselect": "Nothing selected",
 			"donotshow": "Don't show",
@@ -1498,7 +1492,7 @@
 				"tempgeneration": "Temporary generation"
 			},
 			"combat": {
-				"conditions": "Conditions",				
+				"conditions": "Conditions",
 				"natural": "Natural weapons",
 				"melee": "Melee weapons",
 				"ranged": "Ranged weapons",
@@ -1522,7 +1516,7 @@
 				"clearnumina": "Clear numina connection",
 				"disconnect": "Disconnect power",
 				"disconnectlabel": "Disconnecting power",
-				"charmtypes": "Charm types",				
+				"charmtypes": "Charm types",
 				"removebonus": {
 					"headline": "Remove connected powers",
 					"art": "Remove connected powers to art",
@@ -1762,7 +1756,7 @@
 				"spentexp": "Spent experience",
 				"treasure": "New treasure",
 				"relic": "New relic",
-				"bonus": "New bonus",				
+				"bonus": "New bonus",
 				"attributebonus": "New attribute bonus",
 				"apocalypticform": "New apocalyptic form",
 				"attributedicebonus": "New attribute dice bonus",
@@ -2025,7 +2019,8 @@
 			"yes": "yes",
 			"no": "no",
 			"numdices": "Number of dice",
-			"send": "Send to chat"
+			"send": "Send to chat",
+			"menu": "Menu"
 		},
 		"info": {
 			"spendexp": "If you have spent the experience or not",
@@ -2049,7 +2044,7 @@
 			"dropnopermission": "You don't have permission to create Items on"
 		},
 		"dice": {
-			"activate": "Roll to activate",			
+			"activate": "Roll to activate",
 			"rollattack": "Roll attack",
 			"rolldamage": "Roll damage",
 			"roll": "Roll",
@@ -2079,7 +2074,7 @@
 				"highchat": "High-Torment effect triggered!"
 			}
 		},
-		"dialog": {	
+		"dialog": {
 			"save": "Save",
 			"reset": "Reset",
 			"close": "Close",

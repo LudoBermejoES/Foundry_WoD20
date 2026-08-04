@@ -76,7 +76,7 @@
 			"darkages": "Edad Oscura",
 			"classical": "Época Clásica",
 			"livinggods": "Era de los Dioses Vivientes",
-			"savage": "Savage Age",
+			"savage": "Edad Salvaje",
 			"changeera": "¿Estás seguro de que quieres cambiar de época?",
 			"changeerahint": "La ficha ya está configurada para esta época, ¿estás seguro de que deseas resetearla?",
 			"mortaleratext": "Época por defecto para fichas de mortales",
@@ -178,11 +178,11 @@
 			"willpowerBonusDice": "Willpower Bonus Dice",
 			"willpowerBonusDicehint": "Instead of granting automatic one success on rolls, when using Willpower, instead you add three (3) bonus dice. Botch is still prevented.",
 			"usepenaltydamage": "Aplicar las penalizaciones por heridas a las tiradas de daño",
-			"existingshapes": "Existing shapes",
-			"orderhint": "Drag the items into the order you want them presented on the sheet.",
-			"splatitem": "Template Item",
-			"splatfields": "Existing template fields",
-			"notinstalled": "None installed",
+			"existingshapes": "Formas existentes",
+			"orderhint": "Arrastra los elementos al orden en que quieres que aparezcan en la ficha.",
+			"splatitem": "Objeto de plantilla",
+			"splatfields": "Campos de plantilla existentes",
+			"notinstalled": "Ninguno instalado",
 			"successesdamage": "Los éxitos se suman al daño",
 			"successesdamagehint": "Si está activado, el número excedente de éxitos de la tirada de ataque se añadirá como dados de bonificación a la tirada de daño.",
 			"virtueslimit": "Las virtudes siguen el límite máximo de rasgo de Generación",
@@ -201,7 +201,6 @@
 			"mortal": "Mortal",
 			"werewolf": "Hombre Lobo",
 			"mage": "Mago",
-			
 			"background": "Trasfondo",
 			"bloodbound": "Vínculo de Sangre/Vinculum",
 			"boon": "Favor",
@@ -345,7 +344,7 @@
 			"core": "Principal",
 			"combat": "Combate",
 			"gear": "Equipo",
-			"features": "Features",
+			"features": "Rasgos",
 			"notes": "Notas",
 			"gifts": "Dones y Ritos",
 			"charms": "Encantamientos",
@@ -877,7 +876,6 @@
 			"notalents": "No hay Talentos seleccionados",
 			"noskills": "No hay Técnicas seleccionadas",
 			"noknowledges": "No hay Conocimientos seleccionados",
-
 			"alertness": "Alerta",
 			"art": "Arte",
 			"athletics": "Atletismo",
@@ -898,7 +896,6 @@
 			"socialize": "Socialize",
 			"artist": "Artist",
 			"instruction": "Instruction",
-
 			"animalken": "Trato con Animales",
 			"archery": "Tiro con Arco",
 			"commerce": "Comerciar",
@@ -920,7 +917,6 @@
 			"ranged": "Ranged",
 			"thievery": "Thievery",
 			"weaponry": "Weaponry",
-
 			"academics": "Academicismo",
 			"ancientmedicine": "Medicina Antigua",
 			"astrology": "Astrología",
@@ -1010,7 +1006,7 @@
 			},
 			"virtue": {
 				"headline": "Virtudes",
-				"virtues": "Virtues",
+				"virtues": "Virtudes",
 				"selected": "Virtudes seleccionadas",
 				"conscience": "Conciencia",
 				"conviction": "Convicción",
@@ -1146,7 +1142,7 @@
 				"stunned": "Aturdido"
 			},
 			"movement": {
-				"headline": "Movement",
+				"headline": "Movimiento",
 				"walk": "Caminar",
 				"jog": "Trotar",
 				"run": "Correr",
@@ -1186,7 +1182,7 @@
 				"armorpiercing": "Penetración de armadura"
 			},
 			"armor": {
-				"equip": "Equip",
+				"equip": "Equipar",
 				"armor": "Armaduras",
 				"dexpen": "Pen. de Des.",
 				"soakbashing": "Absorción de Cont.",
@@ -1326,7 +1322,6 @@
 			"prime": "Cardinal",
 			"spirit": "Espíritu",
 			"time": "Tiempo",
-
 			"data": "Datos",
 			"entropicstate": "Control del Estado Entrópico",
 			"forcebased": "Parafísica Basada en Fuerzas",
@@ -1336,7 +1331,6 @@
 			"primal": "Teoría de la Utilidad Primordial",
 			"dimensional": "Parafísica de la Ciencia Dimensional",
 			"temporalscience": "Ciencia Temporal",
-
 			"coincidental": "coincidente",
 			"vulgar": "vulgar",
 			"coincidentalspell": "Hechizo coincidente",
@@ -1507,7 +1501,7 @@
 				"rollable": "Tirable",
 				"combat": "Usado en combate",
 				"system": "Sistema",
-				"clearpower": "Clear main power connection",
+				"clearpower": "Quitar la conexión con el poder principal",
 				"clearpath": "Quitar conexiones de Senda",
 				"clearart": "Quitar conexiones de Arte",
 				"clearedge": "Quitar conexiones de Facultad",
@@ -1558,7 +1552,7 @@
 				"dice": "Configuración de dados",
 				"dicehint": "Te permite redefinir el color de los dados de la ficha.",
 				"secondaryabilities": "Habilidades secundarias",
-				"attributesmaxrating": "Max rating on Attributes",
+				"attributesmaxrating": "Puntuación máxima en Atributos",
 				"abilitiesmaxrating": "Puntuación máxima en Habilidades",
 				"hasdisciplines": "Tiene Disciplinas y Rituales",
 				"hasgifts": "Tiene Dones y Ritos",
@@ -1570,7 +1564,7 @@
 				"setvictorian": "¡Ficha configurada para Edad Victoriana!",
 				"setwildwest": "¡Ficha configurada para el Salvaje Oeste!",
 				"setmodern": "¡Ficha configurada para la época actual!",
-				"maxattribute": "This setting sets the maximum value an attribute can have",
+				"maxattribute": "Esta opción establece el valor máximo que puede tener un Atributo",
 				"maxability": "Esta opción establece el valor máximo que una Habilidad puede tener",
 				"customizepath": "Personalizar Senda",
 				"soakinfoone": "Valor total de absorción (Atributo, armaduras y bonus)",
@@ -1580,7 +1574,7 @@
 				"initiativeinfotwo": "Bonus — bonificadores a la Iniciativa",
 				"initiativeinfothree": "Total — el valor total que se usa en combate, con todos los bonus activos",
 				"graphics": "Gráficos",
-				"game": "Game",
+				"game": "Juego",
 				"era": {
 					"headline": "Época (ambientación histórica)",
 					"modern": "Actual (20 aniv.)",
@@ -1927,7 +1921,7 @@
 				"headline": "Eliminar",
 				"item": "Quitar Objeto",
 				"removing": "Quitando",
-				"splatitem": "Remove Template Item",
+				"splatitem": "Eliminar objeto de plantilla",
 				"splatwarning": "Remove Template Item?",
 				"splatwarningtext": "Removing this template item will delete all template-related abilities, advantages, features, and powers. This action cannot be undone. Are you sure you want to continue?",
 				"splatremoved": "Template '{1}' has been removed from '{2}'.",
@@ -1938,7 +1932,7 @@
 				"gift": "Quitar Don",
 				"rite": "Quitar Rito",
 				"discipline": "Remove discipline",
-				"disciplinepower": "Remove discipline power",
+				"disciplinepower": "Eliminar poder de Disciplina",
 				"disciplinepath": "Quitar Senda de Disciplina",
 				"disciplinepathpower": "Quitar Poder de Senda de Disciplina",
 				"ritual": "Quitar Ritual",
@@ -2011,7 +2005,8 @@
 			"yes": "Sí",
 			"no": "No",
 			"numdices": "Número de Dados",
-			"send": "Enviar al chat"
+			"send": "Enviar al chat",
+			"menu": "Menú"
 		},
 		"info": {
 			"spendexp": "Si gastaste Experiencia o no",
