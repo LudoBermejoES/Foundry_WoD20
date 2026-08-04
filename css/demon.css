@@ -41,6 +41,17 @@
   --main-dim-color: var(--main-demon-dim-color);
   --color-shadow-primary: var(--main-demon-color);
 
+  /* Channels for the two `rgba(var(--main-full-color-rgb), ...)` drop-highlight rules in
+     wod.css, which fell back to maroon on every line because this was never defined. */
+  --main-full-color-rgb: 229, 111, 8;
+
+  /* Splat colour in its carrying roles - see the block in wod.css :root for what these are
+     for and why they are measured against this line's OWN --sheet-background-color rather
+     than against a nominal white.
+     Base is 2.26:1 on D20Page (0.697) - under BOTH bars. Line darkened to 3.03:1, text to 4.57:1. */
+  --splat-line: rgb(195, 94, 7);
+  --splat-text: rgb(151, 73, 5);
+
   /* Splat-specific font-size defaults (aligned with exalted) */
   --wod-font-xxs: 0.4375rem;   /* 7px */
   --wod-font-xs: 0.625rem;     /* 10px */

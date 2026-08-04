@@ -53,8 +53,14 @@
   color: rgb(5, 99, 5);
 }
 
+/* Was rgb(183,121,5). Measured against the light page image each line actually ships (these are
+   textures, not #f5f5f5): 2.91:1 on 20Page, 2.60:1 on D20Page/H20Page, 2.19:1 on the mummy
+   parchment - under even the 3:1 bar for a graphical object, and this class is not purely graphical
+   (chantry-sheet.html:103 puts it on a text label). `--wod-warn` is 5.41 / 4.83 / 4.08 on the same
+   three. The dark value is unchanged and already passed; it is now expressed through the same token
+   in darkmode.css so the pair cannot drift. */
 .wod20 .item-warning {
-  color: rgb(183, 121, 5)
+  color: var(--wod-warn);
 }
 
 .wod20 .item-delete,

@@ -15,6 +15,19 @@
   --main-dim-color: var(--main-hunter-dim-color);
   --color-shadow-primary: var(--main-hunter-color);
 
+  /* Channels for the two `rgba(var(--main-full-color-rgb), ...)` drop-highlight rules in
+     wod.css, which fell back to maroon on every line because this was never defined. */
+  --main-full-color-rgb: 191, 67, 18;
+
+  /* Splat colour in its carrying roles - see the block in wod.css :root for what these are
+     for and why they are measured against this line's OWN --sheet-background-color rather
+     than against a nominal white.
+     Base is 3.71:1 on H20Page (0.697), the darkest page image shipped - over the 3:1 line bar,
+     under the 4.5:1 ink bar. Text darkened to 4.53:1. (Against a nominal #f5f5f5 the base reads
+     4.78:1 and looks fine, which is why this line needs measuring against its own background.) */
+  --splat-line: var(--main-full-color);
+  --splat-text: rgb(168, 59, 16);
+
   /* Splat-specific font-size defaults (aligned with exalted) */
   --wod-font-xxs: 0.4375rem;   /* 7px */
   --wod-font-xs: 0.625rem;     /* 10px */

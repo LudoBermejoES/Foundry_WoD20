@@ -4,10 +4,11 @@
   src: url("../assets/fonts/EscalidoGothico.ttf") format("truetype");
 }
 
-@font-face {
-  font-family: "changelingES";
-  src: url("../assets/fonts/C20_Kells_2.ttf") format("truetype");
-}
+/* `changelingES` was declared here and referenced by NO selector in css/, module/ or templates/ -
+   a font the browser was told about and never asked to use. It is also unusable for the deployed
+   Spanish UI it was presumably named for: C20_Kells_2.ttf carries 100 glyphs and not one Spanish
+   diacritic (no a-acute/e-acute/i-acute/o-acute/u-acute, no n-tilde, no inverted ? or !), so any
+   Spanish string set in it would have rendered .notdef boxes mid-word. Removed rather than wired up. */
 
 @font-face {
   font-family: "changeling";
@@ -71,9 +72,12 @@
   src: url("../assets/fonts/Wr20_MatrixTall.ttf") format("truetype");
 }
 
+/* The file on disk is Fudge.OTF, and always has been - the .ttf path never resolved, so this face
+   silently fell back to var(--main-font) for every Orpheus mortal. Verified: `ls assets/fonts/orpheus/`
+   contains exactly one file, Fudge.otf. `format()` has to change with the extension. */
 @font-face {
   font-family: "orpheus";
-  src: url("../assets/fonts/orpheus/Fudge.ttf") format("truetype");
+  src: url("../assets/fonts/orpheus/Fudge.otf") format("opentype");
 }
 
 @font-face {
@@ -209,7 +213,43 @@
 
   --main-full-color: var(--main-mortal-color);
   --main-mid-color: var(--main-mortal-mid-color);
-  --main-dim-color: var(--main-mortal-dim-color);  
+  --main-dim-color: var(--main-mortal-dim-color);
+
+  /* The splat colour's channels, for the two rules that need it inside rgba(). Both of them -
+     `[data-droparea].drag-active` and `.ability-statArea.drag-over` further down this file - were
+     already written as `rgba(var(--main-full-color-rgb, 128, 0, 0), .05)`, and the variable had
+     never been defined anywhere, so BOTH drop highlights painted the maroon fallback on all eleven
+     lines. Each per-line stylesheet now sets its own; this is the mortal default. */
+  --main-full-color-rgb: 24, 78, 119;
+
+  /* The splat colour in the two roles it cannot fill at full strength.
+
+     `--main-full-color` stays exactly what it is - the identity colour, and every existing rule
+     keeps using it. These two are for the jobs where it has to CARRY something and therefore has
+     to clear a contrast bar: a 3:1 bar for borders/rules/rings (a graphical object) and a 4.5:1
+     bar for anything used as ink. Measured, per line, against that line's OWN background rather
+     than against a nominal white: nine of the eleven `--sheet-background-color` values are a
+     texture IMAGE, so `#f5f5f5` was the wrong reference for all of them.
+
+     Additive on purpose - nothing consumes them yet. They exist so the components that need them
+     do not each re-derive a lightened purple locally, which is what dialog-casting.css had to do
+     (see its dark-mode block: "Mage purple on near-black is unreadable"). Defaults below are
+     mortal's base colour, which clears both bars on `#f5f5f5` unaided (8.04:1). */
+  --splat-line: var(--main-full-color);
+  --splat-text: var(--main-full-color);
+
+  /* Semantic colours, light theme. Values chosen against the DARKEST light background any line
+     ships (D20Page/H20Page, measured mean luminance 0.697) rather than against `#f5f5f5`.
+     --wod-warn replaces `.item-warning`'s rgb(183,121,5), which measured 2.60:1 there - below even
+     the 3:1 graphical bar, and `item-warning` is not purely graphical (chantry-sheet.html:103 puts
+     it on a text label). rgb(126,82,3) = 4.83:1 there, 5.41:1 on 20Page, 6.22:1 on #f5f5f5.
+     --wod-bad matches `.item-delete`'s existing rgb(167,2,2) so the two cannot drift. */
+  --wod-warn: rgb(126, 82, 3);
+  --wod-bad: rgb(167, 2, 2);
+  /* Secondary/meta text. Replaces `.information-area`'s #7e7e7e, which measured 2.89:1 on the
+     darkest light page and 3.16:1 on the dark sheet - the wound-penalty readout was below the bar
+     in BOTH themes. 4.70:1 on the mummy parchment, 5.56:1 on D20Page, 6.23:1 on 20Page. */
+  --wod-ink-faint: rgb(82, 82, 82);
 
   --sheet-background-color: #f5f5f5;
 
@@ -924,7 +964,10 @@ input.sheet-infoWidth {
 
 .wod20 .information-area {
   font-size: var(--wod-font-xs);
-  color: #7e7e7e;
+  /* Was #7e7e7e: 2.89:1 on the darkest light page image, 3.16:1 on the dark sheet area. This class
+     carries the wound-penalty readout (stats_health.hbs) among other secondary values, so it has to
+     be legible in both themes; the dark value is in darkmode.css. */
+  color: var(--wod-ink-faint);
   width: 100%;
   padding-top: 2px;
   padding-bottom: 2px;
@@ -1974,6 +2017,18 @@ input.sheet-infoWidth {
   margin-right: 5px;
 }
 
+/* A group separator after the LAST group is not a separator, it is a stray trailing gap - a 10-dot
+   supernatural row has been ending 10px wider than it draws ever since the rule above was written.
+   Written as its own `:last-child` rule rather than as `:not(:last-child)` on the two rules above on
+   purpose: adding the `:not()` would raise their specificity to (0,4,1), which is exactly what
+   `werewolf.css` scores for its deliberate `margin-right: 0` override of the first one, leaving that
+   override to be decided by stylesheet order. This way the base rules keep their specificity, this
+   one outranks them on both specificity and order, and werewolf's opt-out still lands. */
+.wod20 span.supernaturalAttribute:nth-of-type(5n):last-child,
+.wod20 .rankAttribute:nth-of-type(5n):last-child {
+  margin-right: 0;
+}
+
 .wod20 div.bloodpool {
   width: 185px;
   margin: 0 auto;
@@ -2545,12 +2600,55 @@ input.sheet-infoWidth {
   display: inline-block;
   border-radius: 50%;
   cursor: pointer;
-  background: #ffffff;  
+  background: #ffffff;
+  /* Containing block for the hit-target pseudo below. Nothing is absolutely positioned inside a dot
+     today, so this is inert apart from that. */
+  position: relative;
+}
+
+/* A 14px circle is a 14px pointer target, and this is the single most-clicked element on the sheet
+   (~300 per PC). Grown to 20x20 with an absolutely-positioned pseudo, which participates in NO
+   layout at all - measured pitch stays 19px (14 + margin-right: 5px) and the painted diameter stays
+   14px. That is not fussiness: growing this widget has broken these rows twice, and both incidents
+   are written down (power_spheres.hbs, "the fifth dot wrapped onto its own line under every column";
+   mage.css, three Technocratic labels wrapping inside a 26px row). A pseudo-element is not an event
+   target, so the click still lands on the span and `data-action="editDot"` / `data-index` are
+   untouched.
+
+   Three consequences, all deliberate. (1) 20px of hit over a 19px pitch means adjacent targets
+   overlap by 1px; the later sibling paints on top, so a click in that band resolves to the
+   right-hand (higher) dot, deterministically - never to a random dot and never to another row. A 1px
+   dead band was the alternative and it is worse: a click that does nothing reads as a broken sheet.
+   (2) The casting dialog packs its dots with `gap: 3px` instead of a 5px margin, so the overlap there
+   is 3px on a 17px pitch rather than 1px on 19px. Same deterministic resolution, wider band; if that
+   proves too coarse the fix is one rule in dialog-casting.css narrowing the inset for that row, not a
+   change here. (3) `.clearareaBox` is `overflow: hidden`, so a dot sitting flush against its row's
+   edge loses the outermost 3px on that one side; the other three sides still expand. */
+.wod20 .difficulty-value .resource-value-step::after,
+.wod20 .resource-value .resource-value-step::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
 }
 
 .wod20 .resource-counter.tempSquareRow .resource-value-step,
 .wod20 .resource-value.permValueRow .resource-value-step {
   margin-right: 5px;
+}
+
+/* Group a long dot row into fives so it can be read rather than counted. Only the >5 rows are ever
+   affected in practice: `stat_value_dots.hbs` renders a text input instead of dots above max 8, so
+   attribute/ability/sphere rows are 5, and the ten-dot rows are the ones `getGetStatArea_v2` builds
+   (Arete, Willpower permanent, Willpower temporary).
+
+   NOT generalised to every `.resource-value-step`, and the reason is `:nth-of-type`: it counts among
+   sibling SPANS, not among dots. Werewolf, changingbreed and demon attribute rows emit a
+   `<span class="attribute-total">` BEFORE the dots (stats_attributes.hbs), so a blanket rule would
+   put the break after dot four on three of the eleven lines. Scoping to the two containers that hold
+   only dots avoids that entirely. */
+.wod20 .resource-value.permValueRow .resource-value-step:nth-of-type(5n):not(:last-child),
+.wod20 .resource-counter.tempSquareRow .resource-value-step:nth-of-type(5n):not(:last-child) {
+  margin-right: 11px;
 }
 
 .wod20 span.supernaturalAttribute.resource-value-step {
@@ -3313,9 +3411,42 @@ input.sheet-infoWidth {
    DISPLAY, NEVER ENFORCE (design D4): this marks the excess, it does not refuse it. `wod20-char`'s
    `validate()` evaluates no cross-pool constraint, so a sheet that blocked the overage could make a
    generator-built character un-openable. The colour is paired with `font-weight: bold` on purpose —
-   colour alone is not a signal for a colour-blind GM. */
+   colour alone is not a signal for a colour-blind GM.
+
+   The pairing was right; the colour was not. #a52019 measured 1.72:1 against the dark sheet area,
+   and dark is the theme the live world runs - so the one warning in this file that documents "colour
+   alone is not a signal" was itself invisible to everyone. `--wod-bad` is 6.31:1 on 20Page and
+   4.76:1 on the mummy parchment; darkmode.css lifts it to 4.70:1 for the dark theme. */
 .wod20 .information-area.wod-overbudget {
-  color: #a52019;
+  color: var(--wod-bad);
   font-weight: bold;
 }
 /* END - Shadow area */
+
+/* START - Reduced motion */
+
+/* There are twelve `transition` declarations across css/ and there was no guard on any of them.
+   None of the twelve is load-bearing - every one is a hover tint, a drag-indicator border, a
+   disclosure triangle or the description accordion - so the honest default for a user who has asked
+   the OS for less motion is to arrive at the end state immediately.
+
+   0.01ms rather than 0: a duration of exactly zero suppresses `transitionend`, and Foundry's
+   collapsible handlers are the kind of code that can wait on it. Placed last in this file so it
+   reaches the rules above it; darkmode.css and the per-line files add no transitions of their own,
+   and dialog-casting.css's two are matched by the universal selector here regardless of file order,
+   because `!important` beats any non-important declaration whatever the cascade says. */
+@media (prefers-reduced-motion: reduce) {
+  .wod20,
+  .wod20 *,
+  .wod20 *::before,
+  .wod20 *::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* END - Reduced motion */
