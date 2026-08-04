@@ -168,6 +168,14 @@ jobs:
       - name: Structure-check every committed template
         run: python3 .github/scripts/template-structure-check.py
 
+      # `primary` in powertab.js sets a section's ORDER, not its membership — BuildPowerSections
+      # also walks `defaultOrder` and adds whatever it has not already added. 7.5.44 dropped
+      # "rotes" from mage's `primary` alone and shipped the Rote list rendering on TWO tabs; the
+      # mistake is invisible in a diff because each file is correct on its own. This reads both
+      # lists together, which is the only way to see it.
+      - name: Check no power section renders on two tabs
+        run: python3 .github/scripts/power-section-check.py
+
       # The deploy job below drives Foundry's lifecycle through this script. A
       # syntax error in it would be discovered halfway through a deploy, i.e.
       # with Foundry stopped.
