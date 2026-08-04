@@ -58,7 +58,15 @@
 						      as a `title`: the tail of a clipped name stays one hover away, exactly as
 						      7.5.27 did for long Feature names. The affinity row keeps the title it has
 						      always had — its name ("Fuerzas", "Vida", …) is never the clipped one. --}}
+						{{!-- cast-from-sphere-name: the label already carried `vrollable` but no
+						      action, so clicking it did nothing. It now opens the spell-casting
+						      dialog with THIS sphere pre-selected at the character's rank — see the
+						      `castsphere` branch in action-helpers.js. --}}
 						<div class="headlineNormalSpheres splatFont vrollable wod-namecell-label"
+							data-action="rollDice"
+							data-castsphere="true"
+							data-key="{{sphere.system.id}}"
+							data-value="{{sphere.system.value}}"
 							{{#if (eq sphere.system.id ../actor.system.bio.splatfields.affinity.value)}}
 								title="{{localize 'wod.bio.mage.affinitysphere'}}"
 							{{else}}

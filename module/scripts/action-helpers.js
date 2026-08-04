@@ -425,6 +425,30 @@ export default class ActionHelper {
 
 			return;
 		}
+		// cast-from-sphere-name: clicking a Sphere's NAME on the sheet opens the spell-casting
+		// dialog with that Sphere already selected, instead of doing nothing (the label carried
+		// `vrollable` but no action). This is the same dialog the "cast a spell" macro icon opens
+		// (`dataset.rollaretecatsing` below) — the only difference is the pre-selection.
+		//
+		// `selectedSpheres[id] = rank` is the exact shape the dialog's own dot handler writes
+		// (`dialog-aretecasting.js:417`), and `_calculateDifficulty(false)` is what it calls right
+		// after, so the dialog opens on the same state a click inside it would produce. `false`
+		// suppresses the "pick a sphere"/"pick a spell type" warnings, which would be noise here.
+		// A Sphere at 0 opens the dialog with nothing selected: the dialog hides 0-rank rows.
+		else if (dataset.castsphere == "true") {
+			const rote = new Rote(undefined);
+			const rank = parseInt(dataset.value);
+
+			if (dataset.key && rank > 0) {
+				rote.selectedSpheres[dataset.key] = rank;
+			}
+
+			let areteCasting = new DialogAreteCasting(actor, rote);
+			areteCasting.object.canCast = areteCasting._calculateDifficulty(false);
+			areteCasting.render(true);
+
+			return;
+		}
 		else if (dataset.attribute == "true") {
 			const roll = new GeneralRoll(dataset.key, "attribute", actor);
 			let generalRollUse = new DialogGeneralRoll(actor, roll);
