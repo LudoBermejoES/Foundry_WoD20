@@ -54,6 +54,14 @@
 					{{> "systems/worldofdarkness/templates/actor/parts/abilities.html"}}
 				</div>
 
+				<!-- Spheres — moved off the Magic tab so they sit with the Abilities they are
+				     rolled alongside. The partial is unchanged and reads the same root context
+				     (data.system.spheres / data.system.affinity / locked); do NOT wrap it in an
+				     extra #each or #with, its internal ../.. paths count nesting depth. -->
+				<div class="sheet-area flex-columns">
+					{{> "systems/worldofdarkness/templates/actor/parts/mage/spheres.html"}}
+				</div>
+
 				<!-- Core Stats -->
 				<div class="sheet-area flex-columns">
 					<div class="clearareaBox" style="display: flex;">
