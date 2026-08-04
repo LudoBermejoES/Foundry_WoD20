@@ -1,0 +1,29 @@
+{{!-- The Rote list, on the Stats tab, in the band under Arete and Health.
+
+      It used to render on the Powers tab through `powerSections` (`assets/data/sheet/powertab.js`,
+      the mage `primary` list) with the two-column "column" layout. It moved here for the same
+      reason the Spheres did: a mage casts from Spheres and Rotes, both are now one click from the
+      sheet's first page, and clicking either opens the same casting screen.
+
+      `rotes` comes from `addRoteContext`, which `prepareStatContext` calls — an ApplicationV2 part
+      only carries the context its OWN preparer built, so moving the include without moving the
+      context renders an empty block and nothing says so.
+
+      `power_listpower.hbs` is reused verbatim rather than reimplemented: it is what the Powers tab
+      rendered, so a Rote row looks and behaves exactly as it did, click-to-cast included. --}}
+<div class="sheet-area flex-columns">
+
+	<div class="sheet-headline sheet-banner splatFont" data-area="rotes">
+		<span class="sheet-banner-text">{{localize "wod.spheres.rotes"}}</span>
+	</div>
+
+	<div class="item-column">
+		{{#each rotes as |item id|}}
+			<div>
+				{{> "systems/worldofdarkness/templates/actor/parts/power_listpower.hbs"
+					item=item config=../config actor=../actor locked=../locked showclear=false}}
+			</div>
+		{{/each}}
+	</div>
+
+</div>

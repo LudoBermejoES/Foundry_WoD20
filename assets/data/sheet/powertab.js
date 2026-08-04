@@ -7,7 +7,12 @@ export const datapowertab = {
             primary: ["disciplines", "paths", "combinations", "rituals"],
         },
         mage: {
-            primary: ["rotes", "resonances"],
+            // "rotes" is deliberately absent: the Rote list MOVED to the Stats tab, into the band
+            // under Arete and Health (`stats_rotes.hbs`), next to the Spheres that also moved there.
+            // Dropping it here is what makes that a move rather than a duplicate — the section is
+            // only built if the id appears in this list. `context.rotes` is still prepared on both
+            // tabs, so nothing else that reads it changes.
+            primary: ["resonances"],
         },
         changeling: {
             primary: ["arts"],

@@ -1628,6 +1628,19 @@ const addSphereContext = async function (context, actor) {
 	return context;
 }
 
+/**
+ * `rotes` for whichever part renders them. Same reason as `addSphereContext` above, same trap: an
+ * ApplicationV2 part only sees the context ITS OWN preparer built, so the Rote list moving from the
+ * Powers tab to the Stats tab means the Stats preparer has to produce it. Kept as a named helper
+ * rather than a second `ItemHelper.GetItemType` call so the two tabs can never diverge on what
+ * counts as a Rote.
+ */
+const addRoteContext = function (context, actor) {
+	context.rotes = ItemHelper.GetItemType(actor, "Rote");
+
+	return context;
+}
+
 export const prepareStatContext = async function (context, actor) {
   	context.tab = context.tabs.stats;
 
@@ -1635,6 +1648,10 @@ export const prepareStatContext = async function (context, actor) {
 	// Harmless for every other splat: no Sphere items means an empty list and no rendered block,
 	// and `stats.hbs` gates the include on `settings.hasspheres` anyway.
 	await addSphereContext(context, actor);
+
+	// Rotes render on THIS tab too now, in the band under Arete and Health. Same harmlessness for
+	// other splats: no Rote items means an empty list and `stats_advantages.hbs` renders no block.
+	addRoteContext(context, actor);
 
 	// Owner-delegated addition to open-item-window-from-eye-icon: which attribute rows get an eye
 	// icon at all (see stats_attributes.hbs). Attributes are system fields, not Items - nothing is
@@ -1797,7 +1814,10 @@ export const preparePowersContext = async function (context, actor) {
 	context.rituals = ItemHelper.GetPowersByType(actor, "wod.types.ritual", true);
 	context.rites = ItemHelper.GetPowersByType(actor, "wod.types.rite", true);
 	
-	context.rotes = ItemHelper.GetItemType(actor, "Rote");	
+	// Still prepared here even though the Rote LIST moved to the Stats tab: the Settings tab's
+	// power-ordering machinery and BuildPowerSections both read `context.rotes`, and the section it
+	// builds is simply no longer rendered (see powertab.js).
+	addRoteContext(context, actor);
 	context.resonances = actor.items.filter(item => item.type === "Trait" && item.system.type === "wod.types.resonance");
 	context.numinas = ItemHelper.GetPowersByType(actor, "wod.types.numina", true);
 

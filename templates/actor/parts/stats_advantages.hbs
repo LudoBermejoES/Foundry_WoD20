@@ -16,7 +16,16 @@
 		&nbsp;
 	</div>
 
-	<div class="pullLeft sheet-boxcontainer item-row" style="width: 33%;">
+	{{!-- Arete/Willpower and Health used to be two independent 33% columns. They are now wrapped in
+	      one 67% column so the Rote band underneath can span BOTH of them: with three siblings there
+	      was no element whose width was "the last two thirds" to hang it on. The Quintessence wheel
+	      keeps its own full-height 33% on the left, which is what leaves the empty space this band
+	      fills. Inner widths are 50% OF THE WRAPPER, i.e. the same third of the sheet each had. --}}
+	<div class="pullLeft" style="width: 67%;">
+
+	<div class="clearareaBox">
+
+	<div class="pullLeft sheet-boxcontainer item-row" style="width: 50%;">
 
 		{{#each advantages as |advantage id|}}
 			{{{getGetStatArea_v2 ../actor advantage}}}
@@ -37,14 +46,28 @@
 		
 	</div>
 	
-	<div class="healthBox" style="width: 33%; height: 100%; display: flex; flex-direction: column;">
+	<div class="healthBox" style="width: 50%; height: 100%; display: flex; flex-direction: column;">
 
-		{{> "systems/worldofdarkness/templates/actor/parts/stats_health.hbs"}}		
+		{{> "systems/worldofdarkness/templates/actor/parts/stats_health.hbs"}}
 
 		<div class="clearareaBox sheet-headline headlineGroup splatFont" style="width: 100%; margin-top: 5px; padding-left: 35px;">
 			<div>{{localize 'wod.experience.experience'}}</div>
 			<div class="total experienceValue">{{getTotalExperience actor "total"}}</div>
 		</div>
+
+	</div>
+
+	</div>
+
+	{{!-- Rotes, spanning Arete + Health. Gated on the same setting the Powers tab gated its section
+	      on (`hasrotes`), plus a non-empty list, so a mage with no Rotes gets no empty banner and
+	      every other splat gets nothing at all. --}}
+	{{#if actor.system.settings.hasrotes}}
+		{{#if rotes.length}}
+			{{> "systems/worldofdarkness/templates/actor/parts/stats_rotes.hbs"
+				rotes=rotes actor=actor config=config locked=locked}}
+		{{/if}}
+	{{/if}}
 
 	</div>
 </div>
