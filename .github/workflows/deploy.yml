@@ -185,6 +185,21 @@ jobs:
       - name: Check the v3 stylesheet stays scoped and themeable
         run: python3 .github/scripts/v3-css-check.py
 
+      # The light theme, reported broken on 2026-08-05. `css/darkmode.css` opened with a `:root`
+      # block defining eighteen `--main-<line>-mid/dim-color` tokens that `css/wod.css:108` ALSO
+      # defines at `:root` with the LIGHT values. Same specificity, and system.json loads
+      # darkmode.css LAST, so the dark values won in BOTH themes — nine of them actually differ
+      # (0.2 vs the authored 0.12), so every light theme in this system had been drawing them dark
+      # for as long as both files existed. Invisible to everything else here: not a literal colour,
+      # not a scoping error within one file, not visible in a diff of either file alone. The bug
+      # lives in the RELATIONSHIP between two files plus the load order in a third, which is
+      # exactly what this reads. Tokens defined ONLY in darkmode.css are not flagged — they have no
+      # light value to kill, and they must stay at :root because css/chat.css reaches them from
+      # Foundry's own `.theme-dark` sidebar, outside every WoD application root.
+      # Runnable locally: python3 .github/scripts/theme-token-scope-check.py
+      - name: Check darkmode.css cannot override the light theme
+        run: python3 .github/scripts/theme-token-scope-check.py
+
       # I11 above checks that a key EXISTS. Nothing checked what it CONTAINS, and on 2026-08-05 a
       # script adding the ten `wod.power.empty.*` sentences wrote one of them over
       # `wod.bio.wraith.death` — the "Death" caption on a wraith's Biography tab — in en.json AND

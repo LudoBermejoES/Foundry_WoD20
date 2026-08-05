@@ -5,6 +5,47 @@
 
 import { maybeEnrichAbilityOnRename } from "./scripts/ability-enrichment.js";
 
+/**
+ * Is the user in the dark theme?
+ *
+ * add-pc-sheet-v3 task 10.1. This replaces SEVEN byte-identical copies of
+ * `game.settings.get('core','uiConfig').colorScheme.applications === "dark"`, one per hook, which
+ * were wrong in a way no amount of copying could fix.
+ *
+ * `colorScheme.applications` has THREE values, not two: `"dark"`, `"light"`, and `""` — the default,
+ * meaning "follow the operating system". `"" === "dark"` is `false`, so every user who had never
+ * touched the setting was declared light-themed, and an OS-dark user got Foundry's own chrome dark
+ * with a light WoD sheet inside it.
+ *
+ * FOUNDRY ALREADY RESOLVES THIS, so the fix is to stop re-deriving it. Foundry applies a
+ * `theme-dark` / `theme-light` class once it has reconciled the setting with the OS —
+ * `css/chat.css:156-166` has depended on that class all along, while the JS beside it re-computed
+ * the answer from the raw setting and got a different one. Reading the resolved class means the
+ * sheet cannot disagree with the application frame around it.
+ *
+ * The setting is kept only as a fallback for the case where the class is not on the document yet
+ * (an early hook during boot), and there `""` is resolved against the OS rather than assumed light.
+ *
+ * NOTE ON `colorScheme.interface`: deliberately NOT consulted. Foundry separates `applications`
+ * (windows and sheets — what an actor sheet IS) from `interface` (the sidebar and HUD chrome), so
+ * `applications` is the correct input for this system's sheets and dialogs. An earlier draft of the
+ * spec called ignoring `interface` a bug; it is not, and the spec has been corrected.
+ */
+export function isDarkTheme() {
+	for (const el of [document.documentElement, document.body]) {
+		if (el?.classList?.contains("theme-dark")) return true;
+		if (el?.classList?.contains("theme-light")) return false;
+	}
+
+	const scheme = game.settings.get("core", "uiConfig")?.colorScheme?.applications ?? "";
+
+	if (scheme === "dark") return true;
+	if (scheme === "light") return false;
+
+	// "" — follow the OS, which is what the seven copies got wrong.
+	return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false;
+}
+
 // Resolve classList for AppV1 (element[0]) and AppV2 (sheet.classList / element) sheets
 function getSheetClassList(sheet) {
 	if (sheet.classList) return sheet.classList;
@@ -97,7 +138,7 @@ export function registerHooks(constants, isTablet) {
 	 * font settings, and dark mode theme class.
 	 */
 	Hooks.on("renderActorSheetV2", (sheet) => { 
-		CONFIG.worldofdarkness.darkmode = game.settings.get('core', 'uiConfig').colorScheme.applications === "dark";
+		CONFIG.worldofdarkness.darkmode = isDarkTheme();
 
 		clearHTML(sheet);
 
@@ -202,7 +243,7 @@ export function registerHooks(constants, isTablet) {
 	 * Also handles tablet viewport detection.
 	 */
 	Hooks.on("renderActorSheet", (sheet) => { 
-		CONFIG.worldofdarkness.darkmode = game.settings.get('core', 'uiConfig').colorScheme.applications === "dark";
+		CONFIG.worldofdarkness.darkmode = isDarkTheme();
 
 		clearHTML(sheet);
 
@@ -341,7 +382,7 @@ export function registerHooks(constants, isTablet) {
 	 * and dark mode theme class.
 	 */
 	Hooks.on("renderItemSheet", (sheet) => { 
-		CONFIG.worldofdarkness.darkmode = game.settings.get('core', 'uiConfig').colorScheme.applications === "dark";
+		CONFIG.worldofdarkness.darkmode = isDarkTheme();
 
 		clearHTML(sheet);
 
@@ -386,7 +427,7 @@ export function registerHooks(constants, isTablet) {
 	 * Applies language classes, font settings, and dark mode theme class.
 	 */
 	Hooks.on("renderItemSheetV2", (sheet) => {
-		CONFIG.worldofdarkness.darkmode = game.settings.get('core', 'uiConfig').colorScheme.applications === "dark";
+		CONFIG.worldofdarkness.darkmode = isDarkTheme();
 
 		// Check if this is a WoD item sheet; apply classes to the DOM element (sheet.element)
 		const el = sheet.element;
@@ -436,7 +477,7 @@ export function registerHooks(constants, isTablet) {
 		                    sheet.element?.[0]?.classList?.contains("wod20rule-dialog");
 		
 		if (isWoDDialog) {
-			CONFIG.worldofdarkness.darkmode = game.settings.get('core', 'uiConfig').colorScheme.applications === "dark";
+			CONFIG.worldofdarkness.darkmode = isDarkTheme();
 
 			clearHTML(sheet);	
 
@@ -480,7 +521,7 @@ export function registerHooks(constants, isTablet) {
 	 * Identifies WoD applications by CSS classes and applies dark mode theme class.
 	 */
 	Hooks.on("renderApplicationV2", (app, html, data) => {
-		CONFIG.worldofdarkness.darkmode = game.settings.get('core', 'uiConfig').colorScheme.applications === "dark";
+		CONFIG.worldofdarkness.darkmode = isDarkTheme();
 		
 		// Check if this is a WoD ApplicationV2 dialog/sheet
 		// Check by class names that WoD uses
@@ -505,7 +546,7 @@ export function registerHooks(constants, isTablet) {
 	 */
 	Hooks.on("renderDialog", (_dialog, html, _data) => {
 		const container = html[0];
-		CONFIG.worldofdarkness.darkmode = game.settings.get('core', 'uiConfig').colorScheme.applications === "dark";
+		CONFIG.worldofdarkness.darkmode = isDarkTheme();
 
 		if (container.classList.contains("dialog")) {
 			const select = container.querySelector("select[name=type]");

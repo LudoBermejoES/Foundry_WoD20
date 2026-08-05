@@ -1,4 +1,27 @@
-:root {
+/* add-pc-sheet-v3 task 10.2 — THESE EIGHTEEN WERE AT `:root`, AND THAT MADE THEM APPLY IN THE
+   LIGHT THEME TOO.
+
+   `css/wod.css:108` is also a `:root` block and it defines the same eighteen tokens with the LIGHT
+   values. `:root` and `:root` are the same specificity (0,1,0), so the winner is decided by load
+   order — and `system.json` lists `css/darkmode.css` LAST, after every per-line sheet. This block
+   therefore won in BOTH themes, and nine of the eighteen actually differ: every
+   `--main-<line>-dim-color` is authored `0.12` alpha in wod.css and was being replaced by `0.2`
+   here. Every light theme in this system has been drawing those nine with the dark value since
+   both files existed, which is half of what "the light theme is like the dark theme" meant when it
+   was reported on 2026-08-05. (The nine `mid` values are byte-identical between the two files, so
+   they were merely dead rather than wrong — they move for the same reason.)
+
+   SCOPED TO `.wod-theme-dark`, NOT TO A DARK `:root`. There is no dark class on `<html>`: `hooks.js`
+   puts `.wod-theme-dark` on each application root as it renders, alongside the line class. So
+   `.mage` and `.wod-theme-dark` land on the SAME element, and `css/mage.css`'s
+   `--main-dim-color: var(--main-mage-dim-color)` resolves against a value defined on that element.
+
+   WHY ONLY THESE EIGHTEEN MOVED, and why the `--darkmode-*` tokens below MUST stay at `:root`:
+   `css/chat.css` has five rules keyed on Foundry's OWN `.theme-dark` class — the chat sidebar is
+   not inside a WoD sheet root and never carries `.wod-theme-dark` — and they consume
+   `--darkmode-background-dark`, `--darkmode-textcolor-dark` and `--darkmode-area10-background`.
+   Moving the whole block would have left those five with no value and broken chat in dark mode. */
+.wod-theme-dark {
     --main-mortal-mid-color: rgba(24, 78, 119, 0.4);
     --main-mortal-dim-color: rgba(24, 78, 119, 0.2);
 
@@ -25,7 +48,13 @@
 
     --main-creature-mid-color: rgba(72, 71, 71, 0.4);
     --main-creature-dim-color: rgba(72, 71, 71, 0.2);
+}
 
+/* Dark-only tokens with no light counterpart. These stay at `:root` deliberately — see the note
+   above: `css/chat.css` reaches them from Foundry's `.theme-dark` sidebar, which is outside every
+   WoD application root. They cannot fight the light theme because nothing outside a dark-scoped
+   rule consumes them (verified: 5 consumers, all under `.theme-dark` or `.wod-theme-dark`). */
+:root {
     --darkmode-black: rgb(30, 30, 30);
     --darkmode-white: rgb(255,255,255);
 
