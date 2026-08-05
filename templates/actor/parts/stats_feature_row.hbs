@@ -34,8 +34,38 @@
 	write a rating; ApplicationV2 dispatches to the nearest [data-action] ancestor and this system
 	overrides no dispatch. stats_abilities.hbs has the identical shape. Do not nest one inside the
 	other.
+
+	add-pc-sheet-v3 §8.5 — PORTED FROM `feature_item.hbs`. Backgrounds/Merits/Flaws/Other Traits
+	used to render on BOTH the Stats tab (here) and the Features tab, from one
+	`prepareAdvantageLists` call — a rendering duplicate. This partial is the copy that survived,
+	because it is the ONLY place either sheet lets a player EDIT one of these four kinds' rating
+	(the dot row two blocks below, or the point number); `feature_item.hbs` has only ever printed a
+	read-only number for them. So what THAT partial had and this one lacked — drag-reorder, the
+	`isactive` toggle, and send-to-chat — is added below, verbatim in markup and action wiring
+	(`.draggable`/`itemActive`/`sendChat` are read by the SAME global binders/action map either
+	partial's markup triggers; nothing new was registered). `edittitle`/`deletetitle` are new
+	required params, one pair per caller in `stats_features.hbs`, same strings `feature_item.hbs`
+	already used for these items on the Features tab.
+
+	This partial has exactly ONE caller (`stats_features.hbs`), unlike `feature_item.hbs`'s twelve —
+	which is why the port landed here rather than the other way around: retrofitting an editable dot
+	column into a partial twelve other blocks share, to make IT the survivor instead, would have put
+	Merits/Bloodbounds/Boons/Connections/... at risk for a decision that only concerns four of them.
 --}}
-<div class="clearareaBox">
+<div class="clearareaBox" data-itemid="{{item._id}}">
+
+	{{!-- Drag-reorder handle + the isactive toggle, ported from `feature_item.hbs`'s row (its
+	      `.width-iconbox draggable` grip and `.item-active` checkbox) — same classes, same
+	      `data-action`, so the same generic binders (`_setupDragAndDrop`'s `.draggable` sweep,
+	      `itemActive` in `DEFAULT_OPTIONS.actions`) pick them up with nothing new registered. Both
+	      sit to the LEFT of the description eye, matching that partial's own left-to-right order. --}}
+	<div class="pullLeft width-iconbox draggable"><i class="icon fa-solid fa-grip-vertical"></i></div>
+
+	{{#if (isChecked item.system.isactive)}}
+		<i class="pullLeft item-active pointer icon fa-regular fa-square-check" title="{{localize 'wod.power.active'}}" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive"></i>
+	{{else}}
+		<i class="pullLeft item-active pointer icon fa-regular fa-square" title="{{localize 'wod.power.active'}}" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive"></i>
+	{{/if}}
 
 	{{!-- The description eye, to the LEFT of the name. This block had no icon column at all, so
 	      the right-hand side is already spoken for by the dot row / point box.
@@ -87,6 +117,15 @@
 		<div class="pullLeft ability-headlineWidth headlineNormal"
 			title="{{item.name}}">{{shorten item.name 20}}</div>
 	{{/if}}
+
+	{{!-- Send-to-chat / edit / delete, ported from `feature_item.hbs`'s `.iconBox` (which includes
+	      this exact partial, `list_icons.hbs`). Placed BEFORE the value/dots block below so the
+	      float order comes out value-then-icons left to right (the first `pullRight` in source ends
+	      up rightmost). `showtooltip=false`: this row already has its own description eye above,
+	      and rendering `list_icons.hbs`'s eye too would be a second, redundant one. --}}
+	<div class="pullRight">
+		{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=false item=item locked=locked edittitle=edittitle deletetitle=deletetitle}}
+	</div>
 
 	{{#if usedots}}
 

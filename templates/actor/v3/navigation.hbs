@@ -1,0 +1,66 @@
+{{!-- v3 nav rail (add-pc-sheet-v3 §8.3/§8.4/§8.6) — forked from `parts/navigation.hbs`.
+
+      WHY A FORK, AND WHY IT IS STILL A SHELL (D5)
+      ----------------------------------------------
+      The v2 rail (`parts/navigation.hbs`, unchanged and still what every non-opted-in actor
+      renders) is one `{{#each tabs}}` loop. This file is the same loop, run twice against the
+      SAME `tabs` collection: once for the five content tabs, once for the two administrative ones
+      (Ajustes/Settings and the folded-in Effects icon), so the second group can sit in its own
+      visually-demoted cluster (§8.4) at the end of the rail. Nothing here is a row renderer —
+      each `<div data-action="tab" …>` is authored identically to v2's, same attributes, same
+      classes off `tab.cssClass`, same wiki link — it is layout ONLY, split into two containers
+      instead of one.
+
+      WHY Ajustes AND Effects did NOT become one clickable target (§8.3's "sub-tab")
+      -----------------------------------------------------------------------------
+      That would need either forking `settings.hbs` (609 lines, task 4.8's decision: stays on v2's
+      template PERMANENTLY) to add a real internal switcher, or duplicating its rows into a v3-only
+      shell, which D5 forbids for a row renderer this size. Grouping and demoting the RAIL
+      presentation is what is reachable without either: both keep their own full `data-action="tab"`
+      target, same as every other icon here, and read as one administrative area because they sit
+      together, smaller, at the end. See `css/pc-actor-v3.css` "NAV RAIL" for the rest of the
+      reasoning.
+
+      THE BADGE (§8.6)
+      -----------------
+      `tab.count`, when present, is a plain item count computed in
+      `PCActorSheetV3#_prepareContext` — the ROOT context, not a part preparer. This part (`tabs`)
+      has no `case` in `_preparePartContext` at all, so it is the one part on either sheet that
+      never runs a preparer of its own; a count set anywhere else would never reach here. Rendered
+      as `aria-hidden`, because a bare number floating beside an icon announces nothing useful to
+      assistive technology on its own — the tab's own `title` already names what is inside it. --}}
+<div class="tabs-container">
+    <nav class="sheet-tabs tabs v3-tabs" data-group="primary">
+        {{> "systems/worldofdarkness/templates/actor/parts/navigation_lock.hbs"}}
+
+        {{#each tabs as |tab|}}
+            {{#unless (or (eq tab.id "settings") (eq tab.id "effects"))}}
+                <div class="{{tab.cssClass}}" data-action="tab" data-group="{{tab.group}}" data-tab="{{tab.id}}" title="{{localize tab.title}}">
+                    <div class="navicon">
+                        {{{tab.icon}}}
+                    </div>
+                    {{#if tab.count}}
+                        <span class="v3-navbadge" aria-hidden="true">{{tab.count}}</span>
+                    {{/if}}
+                </div>
+            {{/unless}}
+        {{/each}}
+
+        <div class="v3-navadmin">
+            {{#each tabs as |tab|}}
+                {{#if (or (eq tab.id "settings") (eq tab.id "effects"))}}
+                    <div class="{{tab.cssClass}} v3-navadmin-item" data-action="tab" data-group="{{tab.group}}" data-tab="{{tab.id}}" title="{{localize tab.title}}">
+                        <div class="navicon">
+                            {{{tab.icon}}}
+                        </div>
+                        {{#if tab.count}}
+                            <span class="v3-navbadge" aria-hidden="true">{{tab.count}}</span>
+                        {{/if}}
+                    </div>
+                {{/if}}
+            {{/each}}
+        </div>
+
+        <a href="https://github.com/JohanFalt/Foundry_WoD20/wiki" target="_blank" class="item" title="Wiki">{{> (dtSvgDie 'dice' actor.type actor.system.settings.variantsheet)}}</a>
+    </nav>
+</div>

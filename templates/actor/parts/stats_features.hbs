@@ -41,7 +41,7 @@
 			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.backgrounds"}}</div>
 
 			{{#each backgrounds as |item id|}}
-				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=true useroll=true}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=true useroll=true edittitle="wod.labels.edit.background" deletetitle="wod.labels.remove.background"}}
 			{{/each}}
 		{{/if}}
 
@@ -55,7 +55,7 @@
 			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.othertraits"}}</div>
 
 			{{#each othertraits as |item id|}}
-				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=true useroll=true}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=true useroll=true edittitle="wod.labels.edit.othertraits" deletetitle="wod.labels.remove.othertraits"}}
 			{{/each}}
 		{{/if}}
 
@@ -69,7 +69,7 @@
 			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.merits"}}</div>
 
 			{{#each merits as |item id|}}
-				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=false}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=false edittitle="wod.labels.edit.merit" deletetitle="wod.labels.remove.merit"}}
 			{{/each}}
 		{{/if}}
 
@@ -77,7 +77,7 @@
 			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.flaws"}}</div>
 
 			{{#each flaws as |item id|}}
-				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=false}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=false edittitle="wod.labels.edit.flaw" deletetitle="wod.labels.remove.flaw"}}
 			{{/each}}
 		{{/if}}
 

@@ -1543,10 +1543,19 @@ const PART_IDS = Object.keys(PCActorSheet.PARTS);
  * partId -> every distinct template any sheet in the family declares for it.
  *
  * The CONTEXT is what a preparer builds, and `_preparePartContext` switches on the partId STRING
- * and is inherited unchanged — so a v2 instance and a v3 instance produce identical context for a
- * given part. Only the template differs. That is why one sheet instance can drive both: this
- * harness's question is "does the template read a key the context does not have", and the context
- * is the same object either way.
+ * and is inherited unchanged. That USED to mean one instance could drive every sheet in the family,
+ * and this comment said so.
+ *
+ * IT IS NO LONGER TRUE, and the way it stopped being true is the point. `PCActorSheetV3` gained a
+ * `_prepareContext` OVERRIDE (task 8.6, the nav count badges), so the ROOT context now differs per
+ * sheet even though the per-part context does not. While this harness built root context from a
+ * base-class instance only, that override was never executed here — and it shipped with a crash in
+ * it (`prepareEffectContext` reads `context.tabs.effects` and was handed `{}`), found only because
+ * someone hand-built a throwaway copy of this file that instantiated the subclass.
+ *
+ * A gate that cannot see the class it is meant to cover is decoration. Root context is therefore
+ * built PER SHEET now, and each part is rendered from the base context of the sheet that declares
+ * its template.
  */
 const PART_TEMPLATES = new Map();
 
@@ -1581,12 +1590,21 @@ for (const structure of structures) {
 	// the config declares whose actor or sheet cannot even be BUILT is a hard failure naming the
 	// structure, not an exception that ends the run with the other 172 unreported.
 	let actor, sheet, base;
+	const sheetByName = new Map(), baseByName = new Map();
 	try {
 		actor = await buildActor(structure);
 		structureItems.set(structure.id, actor.items);
-		sheet = new PCActorSheet({ document: actor });
 		console.log = () => {};
-		try { base = await sheet._prepareContext({}); }
+		try {
+			// One instance and one root context PER SHEET CLASS — see the note above PART_TEMPLATES.
+			for (const { name, cls } of SHEETS) {
+				const inst = new cls({ document: actor });
+				sheetByName.set(name, inst);
+				baseByName.set(name, await inst._prepareContext({}));
+			}
+			sheet = sheetByName.get(SHEETS[0].name);
+			base = baseByName.get(SHEETS[0].name);
+		}
 		finally { console.log = realLog; }
 	}
 	catch (err) {
@@ -1609,9 +1627,15 @@ for (const structure of structures) {
 			continue;
 		}
 
+		// The sheet that DECLARES this template drives it, so a subclass's root-context override is
+		// exercised rather than assumed equivalent to the base class's.
+		const owner = sheets[0];
+		const ownerSheet = sheetByName.get(owner) ?? sheet;
+		const ownerBase = baseByName.get(owner) ?? base;
+
 		let context;
 		console.log = () => {};
-		try { context = await sheet._preparePartContext(partId, { ...base }, {}); }
+		try { context = await ownerSheet._preparePartContext(partId, { ...ownerBase }, {}); }
 		catch (err) { console.log = realLog; fail(`${structure.id} / ${partId} — preparer`, `${err.message}`); continue; }
 		finally { console.log = realLog; }
 
@@ -1705,7 +1729,7 @@ console.log("\nE. every partial the shell included produced at least one node");
 	const real = new Map();
 	for (const e of empties) {
 		if (Object.hasOwn(EMPTY_PARTIAL_OK, e.partial)) { allowed.push(e); continue; }
-		const k = `${e.part} ${e.partial} ${e.from}:${e.line}`;
+		const k = `${e.part}\0${e.partial}\0${e.from}:${e.line}`;
 		if (!real.has(k)) real.set(k, { ...e, structures: [] });
 		real.get(k).structures.push(e.structure);
 	}

@@ -1,5 +1,6 @@
-import PCActorSheet from "./pc-actor-sheet.js";
+import PCActorSheet, { getPowertype, countFeatureTabItems, prepareEffectContext } from "./pc-actor-sheet.js";
 import { ApplyPcSheetAccessibility } from "../../scripts/sheet-accessibility.js";
+import { getSplat } from "../../scripts/splat-helpers.js";
 
 /**
  * The redesigned PC sheet. Presentation only — every rule is inherited.
@@ -50,6 +51,19 @@ import { ApplyPcSheetAccessibility } from "../../scripts/sheet-accessibility.js"
  * `settings.hbs` — 609 lines, 85 floats, GM administration rather than a play surface. It stays on
  * the v2 template permanently. Excluding it removes 23% of the rewrite, and nothing about the
  * Settings tab is what makes the sheet hard to read at the table.
+ *
+ * ## Section 8 — eight tabs become five (add-pc-sheet-v3 design.md D9)
+ *
+ * `bio` is RETIRED as its own tab (§8.1/§8.2): `PCActorSheet.prepareBioContext`'s body was
+ * extracted into `addBioContext`, which `prepareFeatureContext` now also calls, and this class's
+ * own `tabs` field (below) no longer declares a `bio` entry — the merged content lives entirely in
+ * `v3/feature.hbs` ("Personaje"). Confirmed on the census only 4 of 13 splats declare bio
+ * splatfields at all, so a standalone Bio tab was a portrait and two prose boxes for the other
+ * nine; merging it into Features gives every one of them a tab with something in it.
+ *
+ * `effects` is NOT retired as a tab — see the `tabs` field comment for why folding it into Ajustes
+ * stopped at the RAIL rather than reaching the template, and `v3/navigation.hbs` for how it is
+ * grouped and demoted there instead (§8.3/§8.4).
  */
 export default class PCActorSheetV3 extends PCActorSheet {
 
@@ -62,32 +76,100 @@ export default class PCActorSheetV3 extends PCActorSheet {
 	}
 
 	/*
-	 * PHASE 1: every part still points at the v2 template. This file changes NOTHING that renders
-	 * today — that is the point of landing it on its own. What it proves, cheaply and on a real
-	 * sheet, is the set of things the plan could not verify by reading:
-	 *
-	 *   - the sheet registers and the picker shows two named entries;
-	 *   - `DEFAULT_OPTIONS` really did carry the 22 actions (click a dot; it persists or it does not);
-	 *   - the `renderActorSheetV2` hook reaches a GRANDCHILD class, so `.mage`, `.langES` and
-	 *     `.wod-theme-dark` still land on the root and every per-line custom property resolves;
-	 *   - the new stylesheet loads.
-	 *
-	 * A `static` class field SHADOWS the parent's, it does not merge with it, so this must list all
-	 * nine parts. Invariant I5 (`.github/scripts/sheet-invariants.py`) asserts these keys match the
-	 * preparer cases and the tab ids, which is what stops a part being added here and coming up
-	 * blank — the failure this sheet has produced three times.
+	 * add-pc-sheet-v3 §8.2 — five content tabs plus Ajustes, not eight. An INSTANCE field (not
+	 * static) SHADOWS the parent's the same way `PARTS` does below: this class declares its own
+	 * `tabs`, so the parent's copy (with `bio` in it) never runs for a v3 instance. `bio` is gone;
+	 * `feature`'s title becomes `wod.tab.character` ("Personaje" in Spanish), since it now carries
+	 * the merged bio+feature content. `effects` and `settings` are UNCHANGED from the parent — they
+	 * stay real, independently-clickable tabs; only the RAIL groups and demotes them visually
+	 * (`v3/navigation.hbs`, `css/pc-actor-v3.css` "NAV RAIL"). `sheet-invariants.py`'s I5 checks
+	 * `PARTS` keys against these tab ids, so removing `bio` from one without the other is a gate
+	 * failure, not a silent gap.
+	 */
+	tabs = {
+		stats: {
+			id: 'stats',
+			group: 'primary',
+			title: game.i18n.localize('wod.tab.core'),
+			icon: game.worldofdarkness.icons[getSplat(this.actor)].stats
+		},
+		powers: {
+			id: 'powers',
+			group: 'primary',
+			title: game.i18n.localize('wod.tab.power'),
+			icon: game.worldofdarkness.icons[getSplat(this.actor)][getPowertype(this.actor)]
+		},
+		combat: {
+			id: 'combat',
+			group: 'primary',
+			title: game.i18n.localize('wod.tab.combat'),
+			icon: game.worldofdarkness.icons[getSplat(this.actor)].combat
+		},
+		gear: {
+			id: 'gear',
+			group: 'primary',
+			title: game.i18n.localize('wod.tab.gear'),
+			icon: game.worldofdarkness.icons[getSplat(this.actor)].gear
+		},
+		// Was "Features"/`wod.tab.features`; now "Personaje"/`wod.tab.character`, since §8.2 folded
+		// the identity content that used to be the standalone Bio tab in here.
+		feature: {
+			id: 'feature',
+			group: 'primary',
+			title: game.i18n.localize('wod.tab.character'),
+			icon: game.worldofdarkness.icons[getSplat(this.actor)].note
+		},
+		effects: {
+			id: 'effects',
+			group: 'primary',
+			title: game.i18n.localize('wod.tab.effect'),
+			icon: game.worldofdarkness.icons[getSplat(this.actor)].effect
+		},
+		settings: {
+			id: 'settings',
+			group: 'primary',
+			title: game.i18n.localize('wod.tab.settings'),
+			icon: game.worldofdarkness.icons[getSplat(this.actor)].settings
+		}
+	}
+
+	/**
+	 * add-pc-sheet-v3 §8.2 — the limited/observer fallback (`PCActorSheet#getTabs`) redirected from
+	 * `bio`, which no longer exists as a tab of its own on this sheet, to `feature`, which now
+	 * carries the identity content bio used to own. Without this override a limited-permission
+	 * viewer would get an EMPTY nav (`tabs.bio` is `undefined` on v3) and `tabGroups.primary` set to
+	 * a tab id with no part behind it — the exact "renders nothing, no error" failure this whole
+	 * change is written against, just reached through a permission path instead of a template one.
+	 * @returns {string}
+	 */
+	get limitedTabId () {
+		return 'feature';
+	}
+
+	/*
+	 * A `static` class field SHADOWS the parent's, it does not merge with it, so this must list
+	 * every part v3 renders — EIGHT now, not the original nine: `bio` retired into `feature`
+	 * (§8.1/§8.2). Invariant I5 (`.github/scripts/sheet-invariants.py`) asserts these keys match the
+	 * preparer cases AND this class's own `tabs` field above, which is what stops a part being
+	 * declared here with no matching tab (or a tab with no matching part) and coming up blank — the
+	 * failure this sheet has produced three times.
 	 *
 	 * Parts migrate one per release, easiest first, and each is revertible by pointing its one line
 	 * back at the v2 template.
 	 */
 	static PARTS = {
+		// add-pc-sheet-v3 §8.3/§8.4/§8.6 — forked from `parts/navigation.hbs` so the rail can group
+		// and demote Ajustes+Effects and print a count badge (`tabs.feature.count`,
+		// `tabs.effects.count`, both set in `_prepareContext` below) without touching v2's rail.
 		tabs: {
-			template: "systems/worldofdarkness/templates/actor/parts/navigation.hbs"
+			template: "systems/worldofdarkness/templates/actor/v3/navigation.hbs"
 		},
-		// MIGRATED. Reverting is this one line back to `parts/bio.hbs`.
-		bio: {
-			template: "systems/worldofdarkness/templates/actor/v3/bio.hbs"
-		},
+		// RETIRED, add-pc-sheet-v3 §8.1/§8.2 — merged into `feature` ("Personaje") below. `bio`'s
+		// content and its create-nothing header are reproduced verbatim inside `v3/feature.hbs`;
+		// this class's own `tabs` field (above) declares no `bio` entry either, which is what keeps
+		// I5 (`PARTS` keys == tab ids) green. `templates/actor/v3/bio.hbs` stays on disk as the
+		// reference for what was merged, but nothing renders it any more.
+		//
 		// MIGRATED — the part this change exists for. Reverting is this one line back to
 		// `parts/stats.hbs`; every rule under "STATS" in `css/pc-actor-v3.css` becomes dead rather
 		// than wrong, because all of them are scoped to wrappers only this shell emits.
@@ -108,7 +190,11 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		gear: {
 			template: "systems/worldofdarkness/templates/actor/v3/gear.hbs"
 		},
-		// MIGRATED. Reverting is this one line back to `parts/feature.hbs`.
+		// MIGRATED, then RE-PURPOSED (§8.1/§8.2): this is now "Personaje", bio's identity content
+		// merged in above the item lists. Reverting is NOT simply this one line back to
+		// `parts/feature.hbs` any more — that template does not carry the bio content, and this
+		// class's `tabs` field titles it `wod.tab.character` — so a full revert also needs `bio`
+		// restored to both `PARTS` and `tabs`. See `v3/feature.hbs`'s own header.
 		feature: {
 			template: "systems/worldofdarkness/templates/actor/v3/feature.hbs"
 		},
@@ -120,6 +206,47 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		settings: {
 			template: "systems/worldofdarkness/templates/actor/parts/settings.hbs"
 		}
+	}
+
+	/**
+	 * add-pc-sheet-v3 §8.6 — count badges on the rail, summed HERE, in the ROOT context.
+	 *
+	 * This is the whole point of the task existing as its own line item: the `tabs` part (the nav
+	 * rail, `v3/navigation.hbs`) has NO `case` in `_preparePartContext` — it is the one part on
+	 * either sheet that never gets a preparer of its own — so a count computed inside
+	 * `prepareFeatureContext` or `prepareEffectContext` would be built and then thrown away, never
+	 * reaching the part that would display it. Only `_prepareContext` (this method) runs before
+	 * EVERY part, `tabs` included, which is the only place a rail-wide number can live.
+	 *
+	 * Two badges, both plain item counts, both computed WITHOUT re-running the heavier async work
+	 * their tabs already do at render time (see `countFeatureTabItems`'s own header for why that
+	 * matters for connections specifically):
+	 *   - `tabs.feature.count` — how many rows the Personaje item lists would print.
+	 *   - `tabs.effects.count` — how many Bonus effects currently apply, surfaced here because
+	 *     `effects` is visually demoted into the Ajustes cluster (§8.3/§8.4): a badge is what lets a
+	 *     GM tell "nothing in there" from "something in there" without opening a smaller icon.
+	 * @override
+	 */
+	async _prepareContext (options) {
+		const data = await super._prepareContext(options);
+		const actor = this.actor;
+
+		if (data.tabs.feature) {
+			data.tabs.feature.count = countFeatureTabItems(actor);
+		}
+		if (data.tabs.effects) {
+			// `prepareEffectContext` reads `context.tabs.effects` on its very first line
+			// (`context.tab = context.tabs.effects`), so it cannot be called with a bare `{}` — an
+			// empty object has no `.tabs` at all, which throws `Cannot read properties of undefined
+			// (reading 'effects')` on every render. `data.tabs` is exactly the collection that key
+			// resolves against, so passing it through is what makes this a safe, side-effect-free
+			// second call rather than a duplicate of the real one `_preparePartContext('effects', …)`
+			// still makes for the part itself.
+			const effectsContext = await prepareEffectContext({ tabs: data.tabs }, actor);
+			data.tabs.effects.count = effectsContext.effects.length;
+		}
+
+		return data;
 	}
 
 	/*

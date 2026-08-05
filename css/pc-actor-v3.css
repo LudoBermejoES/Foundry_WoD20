@@ -41,11 +41,14 @@
    inline styles beat author rules. Nearly all live in the shells v3 rewrites, so they are removed
    rather than overridden. There is deliberately no `[style]` sledgehammer here.
 
-   MIGRATED: ALL SEVEN — `effects`, `gear`, `combat`, `bio`, `feature`, `stats`, `powers`. Only
-   `settings` still renders the v2 template, permanently and by decision (609 lines of GM
-   administration, not a play surface). Reverting a part is one line in `PCActorSheetV3.PARTS`, and
-   its rules here become dead rather than wrong, because every one of them is scoped to a wrapper
-   class only that shell emits.
+   MIGRATED: SEVEN PARTS FORKED — `effects`, `gear`, `combat`, `feature`, `stats`, `powers`, and the
+   nav rail (`tabs`, forked in §8.3/§8.4/§8.6 for the count badges and the demoted Ajustes cluster —
+   see `css/pc-actor-v3.css` "NAV RAIL" below and `v3/navigation.hbs`). `bio` RETIRED as its own part
+   (§8.1/§8.2): its content now renders inside `feature` ("Personaje"), so there is no `.v3-*` rule
+   left that targets a standalone Bio tab. Only `settings` still renders the v2 template,
+   permanently and by decision (609 lines of GM administration, not a play surface). Reverting a
+   part is one line in `PCActorSheetV3.PARTS`, and its rules here become dead rather than wrong,
+   because every one of them is scoped to a wrapper class only that shell emits.
 
    A FIFTH MECHANISM, ADDED WITH THE STATS TAB: `flex-basis` BEATS AN INLINE `width`
    ---------------------------------------------------------------------------------
@@ -170,6 +173,71 @@
 }
 
 .wod20.pc-actor-v3 .v3-add:hover { background: var(--main-dim-color); }
+
+/* ── NAV RAIL: the administrative cluster + count badges (add-pc-sheet-v3 §8.3/§8.4/§8.6) ────
+   Forked from `parts/navigation.hbs` into `v3/navigation.hbs` for exactly this: v2's rail is
+   untouched, and every rule below is inert on it.
+
+   §8.3/§8.4 — Ajustes (Settings) and the folded-in Effects icon are NOT merged into one clickable
+   target: `settings.hbs` stays on the v2 template PERMANENTLY (task 4.8), so there is no v3 shell
+   to add a real internal sub-tab to without either forking that 609-line template (D5 forbids
+   forking a row renderer this size) or breaking a decision already recorded as permanent. What
+   moves instead is the RAIL presentation only — both icons sit together in their own smaller
+   cluster at the end of the nav, visually demoted and visually grouped, so Ajustes reads as one
+   administrative area with Effects folded into it, while remaining two ordinary, independently
+   clickable `data-action="tab"` targets exactly like every other icon in the rail.
+
+   §8.6 — the badge is a plain item count, and it can ONLY be a number the ROOT context computed
+   (`PCActorSheetV3#_prepareContext`): the `tabs` part that renders this file has no `case` in
+   `_preparePartContext` at all — it is the one part with no preparer of its own — so a count set
+   in `prepareFeatureContext` or `prepareEffectContext` would never reach here. Same trap this
+   whole file's header quotes as having produced three silent empty-render bugs, one number over. */
+.wod20.pc-actor-v3 .v3-tabs [data-action="tab"] {
+	position: relative;
+}
+
+.wod20.pc-actor-v3 .v3-navbadge {
+	position: absolute;
+	top: -2px;
+	right: 2px;
+	min-width: 14px;
+	height: 14px;
+	padding: 0 3px;
+	border-radius: 7px;
+	background: var(--splat-line, var(--main-full-color));
+	color: var(--splat-text, #fff);
+	font-size: 0.6rem;
+	line-height: 14px;
+	text-align: center;
+	pointer-events: none;
+}
+
+.wod20.pc-actor-v3 .v3-navadmin {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	margin-top: auto;
+	padding-top: 6px;
+	border-top: 1px solid var(--splat-line, var(--main-full-color));
+}
+
+/* Demoted: smaller and dimmer than the five content-tab icons above them, until active or
+   hovered. Zero geometry change to the icon markup itself (task 1.6's 20px hit-target lesson —
+   scale visually, never shrink the interactive target's own box). */
+.wod20.pc-actor-v3 .v3-navadmin-item {
+	opacity: 0.7;
+}
+
+.wod20.pc-actor-v3 .v3-navadmin-item .navicon {
+	transform: scale(0.8);
+}
+
+.wod20.pc-actor-v3 .v3-navadmin-item.active,
+.wod20.pc-actor-v3 .v3-navadmin-item:hover,
+.wod20.pc-actor-v3 .v3-navadmin-item:focus-visible {
+	opacity: 1;
+}
 
 /* Icon buttons. These are `<button>` on v3 because on v2 they are href-less `<a>`, which is not
    focusable and has no implicit role — 44 of them across the sheet. A button brings UA styling that

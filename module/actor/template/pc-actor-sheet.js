@@ -215,6 +215,18 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 		}
 	}
 
+	/**
+	 * The one tab a limited/observer viewer is shown (`getTabs` below). A `get` rather than a
+	 * hard-coded string so `PCActorSheetV3` can redirect it once `bio` stops being a tab of its
+	 * own (add-pc-sheet-v3 §8.2): reading `this.limitedTabId` here instead of the literal `'bio'`
+	 * is a one-line, DRY way to keep this fallback correct for both sheets, rather than forking the
+	 * whole method to change one string.
+	 * @returns {string}
+	 */
+	get limitedTabId () {
+		return 'bio';
+	}
+
 	/* Read the tabs with data */
 	getTabs () {
 		const tabs = this.tabs
@@ -238,15 +250,17 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 			for (const [key, tab] of Object.entries(tabs)) {
 				filteredTabs[key] = tab;
 			}
-		} 
+		}
 		else {
-			// User has limited access, only show bio tab
-			if (tabs.bio) {
-				filteredTabs.bio = tabs.bio;
+			// User has limited access, only show the limited-view tab (v2: bio; v3 redirects
+			// this to feature, which now carries the identity content bio used to own).
+			const limitedId = this.limitedTabId;
+			if (tabs[limitedId]) {
+				filteredTabs[limitedId] = tabs[limitedId];
 			}
-			// Set bio as default active tab when user has limited access
-			if (!this.tabGroups.primary || this.tabGroups.primary !== 'bio') {
-				this.tabGroups.primary = 'bio';
+			// Set it as the default active tab when user has limited access
+			if (!this.tabGroups.primary || this.tabGroups.primary !== limitedId) {
+				this.tabGroups.primary = limitedId;
 			}
 		}
 
@@ -1306,9 +1320,25 @@ export const backfillDeclaredSplatfields = function (actor, stored, splatfields,
 	return { ...fields, ...added };
 }
 
-export const prepareBioContext = async function (context, actor) {
-  	context.tab = context.tabs.bio;
-
+/**
+ * add-pc-sheet-v3 §8.1 — the body of `prepareBioContext`, extracted so `prepareFeatureContext` can
+ * call it too once bio merges into the Features/Personaje part (§8.2). Deliberately does NOT set
+ * `context.tab`: that line picks which nav tab a `{{{getGetStatArea_v2}}}`-style banner would
+ * highlight, and it means something different depending on who calls this — `prepareBioContext`
+ * still sets it to `tabs.bio` (kept registered until the merged tab is verified, per §8.1's own
+ * instruction), `prepareFeatureContext` already sets it to `tabs.feature` before calling this.
+ *
+ * THE ORDER BELOW IS LOAD-BEARING, unchanged from before this extraction:
+ * `applyDeclaredSplatfieldTypes` (promotes a STORED field's type) must run before
+ * `backfillDeclaredSplatfields` (adds a field the actor never stored), because the backfill refuses
+ * to add a declared `select` whose option list does not resolve, and it can only ask that question
+ * once `listData` already exists — see align-splatfields-declaration-seam §D3.
+ *
+ * @param {object} context The part context to populate.
+ * @param {Actor} actor The PC actor.
+ * @returns {Promise<object>} The same context, with the bio fields set.
+ */
+export const addBioContext = async function (context, actor) {
 	context.appearance = actor.system.bio.appearance;
 	context.background = actor.system.bio.background;
 	context.roleplaytip = actor.system.bio.roleplaytip;
@@ -1354,7 +1384,13 @@ export const prepareBioContext = async function (context, actor) {
 		}
 	}
 
-  	return context;
+	return context;
+}
+
+export const prepareBioContext = async function (context, actor) {
+  	context.tab = context.tabs.bio;
+
+	return addBioContext(context, actor);
 }
 
 /** The content module whose provenance flags the sheet reads. Same constant, same reason, as in
@@ -1496,6 +1532,41 @@ export const prepareAdvantageLists = function (context, actor) {
 	});
 
 	return context;
+}
+
+/**
+ * add-pc-sheet-v3 §8.6 — the Personaje/Features tab's rail badge, a plain item count.
+ *
+ * SYNCHRONOUS ON PURPOSE. `prepareFeatureContext` also counts `connections` (via
+ * `buildConnectionGroups`, which enriches each entry's description) and the Shadow area's own
+ * pools, but a nav badge needs none of that: it only needs how many rows would print. Calling the
+ * full async preparer a second time from the root `_prepareContext` — once for the part, once for
+ * the badge — would run every connection's HTML enrichment twice on every render. Counting
+ * `wod.types.connection` items directly avoids the duplicate work; the number is identical either
+ * way because `buildConnectionGroups` neither drops nor merges entries, it only groups them.
+ *
+ * Reuses `prepareAdvantageLists` for the four kinds every line shares (Backgrounds/Merits/
+ * Flaws/Other Traits — the SAME predicates the tab renders, so the badge cannot disagree with the
+ * list under it) and `ItemHelper.GetItemType` directly for the line-specific kinds
+ * `prepareFeatureContext` also lists, so a splat's Boon or a wraith's Fetter is counted the same
+ * way it is rendered.
+ *
+ * @param {Actor} actor The PC actor.
+ * @returns {number} How many rows the Personaje/Features item lists would render.
+ */
+export const countFeatureTabItems = function (actor) {
+	const lists = prepareAdvantageLists({}, actor);
+	let total = lists.backgrounds.length + lists.merits.length + lists.flaws.length + lists.othertraits.length;
+
+	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.bloodbound").length;
+	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.boon").length;
+	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.oath").length;
+	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.passion").length;
+	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.darkpassion").length;
+	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.fetter").length;
+	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.connection").length;
+
+	return total;
 }
 
 /**
@@ -2087,7 +2158,15 @@ async function buildConnectionGroups(actor) {
 }
 
 export const prepareFeatureContext = async function (context, actor) {
-  	context.tab = context.tabs.feature;	
+  	context.tab = context.tabs.feature;
+
+	// add-pc-sheet-v3 §8.1/§8.2 — the bio fields, so the v3 Features/"Personaje" template can
+	// render the identity section that used to be the standalone Bio tab's. `prepareFeatureContext`
+	// is shared between v2 (whose `parts/feature.hbs` never reads these keys) and v3 (whose
+	// `v3/feature.hbs` does), so this is additive for v2: harmless extra keys nothing there
+	// consumes. `addBioContext` deliberately does not set `context.tab` — this function already
+	// set it to `tabs.feature` above, and that is the tab the merged Personaje view highlights.
+	await addBioContext(context, actor);
 
 	// backgrounds / merits / flaws / othertraits - shared with the Attributes tab's Advantages
 	// block, so the two views can never disagree. See prepareAdvantageLists.
