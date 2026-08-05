@@ -139,6 +139,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # version-bump-check.py compares system.json against HEAD~1, so the default
+          # shallow single-commit checkout is not enough.
+          fetch-depth: 2
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -184,6 +188,19 @@ jobs:
       # exactly that class), and a hard cap of six `!important` on the float neutralisers.
       - name: Check the v3 stylesheet stays scoped and themeable
         run: python3 .github/scripts/v3-css-check.py
+
+      # A deploy must not reuse the previous commit's version. On 2026-08-05 two different trees
+      # went to the live server as 7.5.63: one commit bumped 7.5.62 -> 7.5.63, and the next bumped
+      # with `sed 's/7.5.62/7.5.63/'` against a tree that had already moved, so it matched nothing
+      # and changed nothing — silently, because sed exits 0 when it replaces zero occurrences. Every
+      # gate passed and the deploy truthfully reported "loaded worldofdarkness 7.5.63" both times.
+      # The manifest check above validates the version's SHAPE and never that it CHANGED, and
+      # CLAUDE.md has long said the bump is "still manual and still required" — which without a check
+      # means "required until someone is tired". The version is what a GM reads to know whether a fix
+      # reached them.
+      # Runnable locally: python3 .github/scripts/version-bump-check.py
+      - name: Check the system version was actually bumped
+        run: python3 .github/scripts/version-bump-check.py
 
       # Creature Charms. Until 7.5.62 all six live creature PCs sat in a closed loop that nothing in
       # this file could see: the Charms section renders only for an actor that already HOLDS a charm,
