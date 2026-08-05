@@ -1331,3 +1331,41 @@
 	width: auto;
 	min-width: 0;
 }
+
+/* ============================================================ SPECIALITY MARKER: EQUAL WIDTH
+
+   Reported 2026-08-05: "when a trait has a speciality there is a little misalignment — the dots go
+   to the left."
+
+   `stats_abilities.hbs` emits one of two boxes beside the dots, and `css/wod.css:2085-2096` sizes
+   them from DIFFERENT arbitrary constants:
+
+       speciality present   margin-left 5 + the <i> glyph + margin-right 10
+       no speciality        an &nbsp; + margin-right 25
+
+   Nothing makes those equal. They happen to land within a pixel of each other with the font this
+   system loads today — measured 29.00 vs 29.92 — and the difference is a GLYPH ADVANCE WIDTH, so it
+   moves with the Font Awesome version, the fallback font when FA has not loaded, the browser and
+   the zoom level. Every row that reaches 4 dots therefore sits a fraction off from every row that
+   has not, in a column whose whole purpose since 7.5.59 is that it can be scanned.
+
+   Fixed by giving both boxes ONE width and no margins, so the marker cannot displace anything: a
+   speciality changes what the box CONTAINS, never how much room it takes. The same pair exists for
+   attributes and for the magic (sphere) rows with the same two constants, so all three are covered
+   — one of them would otherwise be the odd column out.
+
+   Not fixed in `css/wod.css` because that reaches the v2 sheet, which is out of scope here; v2 keeps
+   the coincidence. Not fixed in the template because `stats_abilities.hbs` is a shared row renderer
+   (D5). 30px is the width the current pairing already occupies, so nothing else on the row moves. */
+.wod20.pc-actor-v3 div.speciality-ability-icon,
+.wod20.pc-actor-v3 div.speciality-ability-empty-icon,
+.wod20.pc-actor-v3 div.speciality-attribute-icon,
+.wod20.pc-actor-v3 div.speciality-attribute-empty-icon,
+.wod20.pc-actor-v3 div.speciality-magic-icon,
+.wod20.pc-actor-v3 div.speciality-magic-empty-icon {
+	box-sizing: border-box;
+	width: 30px;
+	margin-left: 0;
+	margin-right: 0;
+	text-align: center;
+}
