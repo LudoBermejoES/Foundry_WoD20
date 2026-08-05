@@ -209,25 +209,36 @@ Hooks.once("init", async function() {
 	// Register sheet application classes
 	foundry.documents.collections.Actors.unregisterSheet('core', foundry.appv1.sheets.ActorSheet)
 
+	// v2 stays REGISTERED and is not going away — it is the rollback, and it is still what
+	// `settings.hbs` renders (task 4.8). It simply stops being the default.
 	foundry.documents.collections.Actors.registerSheet("WoD", actorSheets.PCActorSheet, {
 		label: game.i18n.localize("wod.sheet.pc"),
 		types: ["PC"],
-		makeDefault: true
+		makeDefault: false
 	});
 
-	// The redesigned sheet, OPT-IN. `makeDefault: false` is the whole safety story and it reverses
-	// this change's first plan: `makeDefault` decides the sheet for every actor that has not been
-	// given one explicitly, so setting it here would move everyone at once rather than give anyone
-	// a choice. Measured 2026-08-04: 0 of 88 PC actors carry `flags.core.sheetClass`, so nothing is
-	// pinned and `true` would have been a flag day.
+	// add-pc-sheet-v3 task 7.4 — v3 IS THE DEFAULT as of 7.5.67 (2026-08-05).
 	//
-	// A GM opts one actor in from the sheet-config button; rolling that actor back is picking v2
-	// again — no deploy, no restart, nobody else affected. `makeDefault` moves here only at the end,
-	// and actors a GM explicitly pinned to v2 survive even that.
+	// `makeDefault` decides the sheet for every actor that has NOT been given one explicitly, so
+	// this is a flag day by construction: re-measured immediately before the flip,
+	// `worldofdarkness-find-actors --flagPath core.sheetClass --exists` returned **0 of 88**, so
+	// every PC in the world moves at once and none is held back. That is what was asked for.
+	//
+	// It is also why the two labels above and below matter: rollback is per-actor and needs no
+	// deploy. A GM opens the sheet-config button and picks the v2 entry by name, which writes
+	// `flags.core.sheetClass` for that one actor and pins it against any future change of this line.
+	// A whole-world rollback is flipping these two booleans back and pushing.
+	//
+	// WHAT WAS NOT DONE FIRST, recorded so nobody reads this as "the plan completed": tasks 7.1-7.3
+	// — a week on one GM character, a week with a volunteer player, and the purposive matrix walk
+	// across splat x language x theme — are still open. The flip was made deliberately ahead of
+	// them at the owner's direction. Float leaks and translation overflows surface in ONE language
+	// on ONE splat, and no harness in this repo can see them; the matrix walk is still the only
+	// thing that would, and it is still worth doing now that everyone is on v3.
 	foundry.documents.collections.Actors.registerSheet("WoD", actorSheets.PCActorSheetV3, {
 		label: game.i18n.localize("wod.sheet.pcv3"),
 		types: ["PC"],
-		makeDefault: false
+		makeDefault: true
 	});
 
 	foundry.documents.collections.Actors.registerSheet("WoD", actorSheets.MortalActorSheet, {

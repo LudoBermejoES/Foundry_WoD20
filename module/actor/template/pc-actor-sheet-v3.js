@@ -14,7 +14,19 @@ import { getSplat } from "../../scripts/splat-helpers.js";
  *
  * The same shape made `DialogCasting` safe: the rules live once, the markup forks.
  *
- * ## Why this is OPT-IN, which reverses the first plan
+ * ## THIS SHEET IS NOW THE DEFAULT (7.5.67, 2026-08-05)
+ *
+ * The section below describes why v3 shipped OPT-IN, and it is kept because the reasoning is still
+ * the reason rollback works — not because it still describes the registration. `wod.js` now sets
+ * `makeDefault: true` here and `false` on `PCActorSheet`. Re-measured immediately before the flip:
+ * **0 of 88 PC actors carried `flags.core.sheetClass`**, so all 88 moved at once.
+ *
+ * Rollback is unchanged and still needs no deploy: a GM picks the v2 entry by name in the
+ * sheet-config button, which pins that one actor. Tasks 7.1-7.3 (the supervised weeks and the
+ * splat x language x theme matrix walk) were NOT completed first; the flip was made ahead of them
+ * at the owner's direction.
+ *
+ * ## Why this shipped OPT-IN first, which reversed the original plan
  *
  * The first plan registered v3 with `makeDefault: true`, on the reasoning that Foundry lets a GM
  * pick a sheet per actor so a rollback would be per-character. That is backwards. `makeDefault`
@@ -25,9 +37,12 @@ import { getSplat } from "../../scripts/splat-helpers.js";
  * `flags.core.sheetClass`**. Nothing is pinned, so `makeDefault: true` would have moved all 88 in a
  * single push, on a system with no test suite that deploys to a live server.
  *
- * v3 is therefore registered with `makeDefault: false` (`wod.js`). A GM opts one actor in through
- * the sheet-config button, which writes `flags.core.sheetClass = "WoD.PCActorSheetV3"`; rolling that
- * actor back is picking v2 again — no deploy, no restart, no effect on anyone else.
+ * v3 was therefore registered with `makeDefault: false` for its first thirteen releases — PAST
+ * TENSE as of 7.5.67; see the note at the top of this docstring. What has not changed is the
+ * escape hatch that reasoning bought: the sheet-config button writes
+ * `flags.core.sheetClass = "WoD.PCActorSheetV3"` (or the v2 class) for ONE actor, so either sheet
+ * can be pinned per character with no deploy, no restart and no effect on anyone else. That is now
+ * the rollback rather than the opt-in, and it works in both directions.
  *
  * **The flag stores this class's name as a literal string.** Renaming `PCActorSheetV3` after anyone
  * has opted in silently drops them back to the default. Name it once.
