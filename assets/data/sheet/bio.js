@@ -26,6 +26,7 @@ export const databio = {
     "path": {
         "humanity": "wod.advantages.path.humanity",
         "blood": "wod.advantages.path.blood",
+        "bones": "wod.advantages.path.bones",
         "caine": "wod.advantages.path.caine",
         "cathari": "wod.advantages.path.cathari",
         "feralheart": "wod.advantages.path.feralheart",

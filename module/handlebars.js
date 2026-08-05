@@ -801,7 +801,7 @@ export const registerHandlebarsHelpers = function () {
 					let difficultyText = itempowers[p].system.difficulty;
 
 					if (itempowers[p].system.dice1 == "path") {
-						dice1name = actor.system.advantages.path.label;
+						dice1name = actor.system.advantages.path?.label;
 					}
 					if (itempowers[p].system.dice1 == "custom") {
 						if (itempowers[p].system.secondaryabilityid != "") {

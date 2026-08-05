@@ -1958,7 +1958,7 @@
 			},
 			"drop": {
 				"nopcactor": "Item type {1} are not supported on this type of Actor {2} requires Actor type PC.",
-				"advantageexists": "Esta Vantagem {1}} já existe na ficha e não pode ser adicionada.",
+				"advantageexists": "Esta Vantagem {1} já existe na ficha e não pode ser adicionada.",
 				"dropsphere": "Ainda não há função para adicionar Esferas manualmente.",
 				"droprealm": "No function to add Realms manually yet.",
 				"warning": "Aviso!",

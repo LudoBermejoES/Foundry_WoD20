@@ -1006,7 +1006,7 @@
 				"night": "Senda de la Noche",
 				"paradox": "Senda de la Paradoja",
 				"innervoice": "Senda del Poder y la Voz Interior",
-				"typhon": "Senda del Tifón"
+				"typhon": "Senda de Tifón"
 			},
 			"virtue": {
 				"headline": "Virtudes",
@@ -2018,7 +2018,7 @@
 			},
 			"drop": {
 				"nopcactor": "Item type {1} are not supported on this type of Actor {2} requires Actor type PC.",
-				"advantageexists": "This Advantage {1}} already exist on the sheet and can't be added.",
+				"advantageexists": "Esta Ventaja {1} ya existe en la hoja y no se puede añadir.",
 				"dropsphere": "No function to add Spheres manually yet.",
 				"droprealm": "No function to add Realms manually yet.",
 				"warning": "Warning!",

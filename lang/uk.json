@@ -1958,7 +1958,7 @@
 			},
 			"drop": {
 				"nopcactor": "Item type {1} are not supported on this type of Actor {2} requires Actor type PC.",
-				"advantageexists": "This Advantage {1}} already exist on the sheet and can't be added.",
+				"advantageexists": "Ця Перевага {1} вже є на аркуші персонажа і не може бути додана.",
 				"dropsphere": "No function to add Spheres manually yet.",
 				"droprealm": "No function to add Realms manually yet.",
 				"warning": "Warning!",
