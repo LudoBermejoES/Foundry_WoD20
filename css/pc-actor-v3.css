@@ -213,6 +213,23 @@
 	outline-color: var(--darkmode-white, #fff);
 }
 
+/* The rating-widget roles `module/scripts/sheet-accessibility.js` adds (`role="grid"`,
+   `role="slider"`, the health track's `role="button"`) sit inside rows the STATS grids pack with
+   ZERO row gap (`.v3-attributes > .area-box > .clearareaBox { gap: 0 14px }`, so the generic
+   2px-offset ring above would reach 4px past a row that has no vertical margin to give it —
+   measured in a headless Chromium: the first row of a 3-row column pokes its top edge ~2.6px
+   past the `.clearareaBox` ancestor `overflow: hidden !important` clips at, and the last row
+   pokes its bottom edge ~2.1px past the same way. A NEGATIVE offset draws the ring just inside
+   the row's own box instead of outside it, which a 22px row (`min-height: 22px` on ~19px of
+   content, this file's own STAT ROW rule above) has room for without touching the dots or the
+   name cell's text — and, being negative, it cannot poke past an ancestor that already contains
+   the row itself. */
+.wod20.pc-actor-v3 [role="grid"]:focus-visible,
+.wod20.pc-actor-v3 [role="slider"]:focus-visible,
+.wod20.pc-actor-v3 [role="button"].resource-value-step:focus-visible {
+	outline-offset: -2px;
+}
+
 /* Tables. v2 built these from `div.item-row` plus fixed-width classes, which gives no column
    association to a screen reader and no way for a long Spanish label to reflow. */
 .wod20.pc-actor-v3 .v3-table {
@@ -502,6 +519,24 @@
 .wod20.pc-actor-v3 .v3-xptable .v3-actioncol {
 	width: 1%;
 	white-space: nowrap;
+}
+
+/* ── FOCUS, THE ONE PLACE THE GENERIC `:focus-visible` RULE ABOVE DOES NOT REACH ─────────────
+   `bio_splatfields.hbs` — a shared partial `bio.hbs` still includes untouched (D5) — wraps its
+   inputs in `.floating-label-group`, and `css/wod.css:1025/1029` is
+   `.wod20 .floating-label-group input:focus { outline: none !important }`. `!important` beats
+   specificity outright, so the generic `:focus-visible` rule above (4 splats' worth of bio
+   fields: vampire, werewolf, mage, wraith) never gets a chance to apply no matter how it is
+   written — only another `!important` declaration can contest an `!important` one. This is the
+   one place in this file that earns it: `v3-css-check.py` caps `!important` at 6 and this is the
+   first and, today, only entry. */
+.wod20.pc-actor-v3 .floating-label-group input:focus-visible {
+	outline: 2px solid var(--splat-line, var(--main-full-color)) !important;
+	outline-offset: 2px;
+}
+
+.wod20.wod-theme-dark.pc-actor-v3 .floating-label-group input:focus-visible {
+	outline-color: var(--darkmode-white, #fff) !important;
 }
 
 /* ── BIO ────────────────────────────────────────────────────────────────────────────────────

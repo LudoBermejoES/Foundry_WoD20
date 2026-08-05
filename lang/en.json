@@ -342,6 +342,9 @@
 				"soil": "Soil charms"
 			}
 		},
+		"a11y": {
+			"temporary": "temporary"
+		},
 		"tab": {
 			"bio": "Bio",
 			"stats": "Stats",

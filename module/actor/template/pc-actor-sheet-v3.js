@@ -1,4 +1,5 @@
 import PCActorSheet from "./pc-actor-sheet.js";
+import { ApplyPcSheetAccessibility } from "../../scripts/sheet-accessibility.js";
 
 /**
  * The redesigned PC sheet. Presentation only — every rule is inherited.
@@ -119,5 +120,22 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		settings: {
 			template: "systems/worldofdarkness/templates/actor/parts/settings.hbs"
 		}
+	}
+
+	/*
+	 * SECTION 5 — accessibility, layered on AFTER every inherited binder has run.
+	 *
+	 * The rating widget (attributes/abilities/spheres/backgrounds/advantages), the health track
+	 * and the Quintessence wheel are all shared partials or `getGetStatArea_v2` output that D5/D6
+	 * forbid forking, so there is no template this change can edit to give them ARIA roles or
+	 * keyboard behaviour. `ApplyPcSheetAccessibility` (`module/scripts/sheet-accessibility.js`)
+	 * does it from the rendered DOM instead — v3 only, since it runs from THIS override and v2's
+	 * `_onRender` never calls it. Same signature as the parent (`pc-actor-sheet.js:440`): no
+	 * params, because the parent's own binders never read `context`/`options` either.
+	 */
+	async _onRender () {
+		await super._onRender();
+
+		ApplyPcSheetAccessibility(this.element, this);
 	}
 }

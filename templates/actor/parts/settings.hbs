@@ -10,7 +10,6 @@
 		<a class="secondHeadlineTabs thin-border-left" data-action="settingsTab" data-tab="power">{{localize "wod.tab.power"}}</a>
 		<a class="secondHeadlineTabs thin-border-left" data-action="settingsTab" data-tab="combat">{{localize "wod.tab.combat"}}</a>
 		<!-- <a class="secondHeadlineTabs thin-border-left" data-action="settingsTab" data-tab="features">{{localize "wod.tab.features"}}</a> -->
-		<!-- <a class="secondHeadlineTabs thin-border-left thin-border-right" data-action="settingsTab" data-tab="sheet">LANG: Sheet</a> -->
 	</nav>
 
 	<section class="sheet-setting-body">
@@ -38,7 +37,7 @@
 							      anchor rendered live, took the pointer cursor and did nothing. It
 							      was reachable in two clicks (Ajustes > Bio). Deleting a splatfield
 							      is a real operation and if it is wanted it needs a handler, not a
-							      re-added anchor — `removeSplat`, three blocks down, shows the
+							      re-added anchor — `removeSplat`, just below this list, shows the
 							      shape. Caught by sheet-invariants.py's I1. --}}
 						{{/if}}
 					</div>
@@ -48,6 +47,26 @@
 			{{#if (not hassplatfields)}}
 				<div>{{localize "wod.settings.notinstalled"}}</div>
 			{{/if}}
+
+			{{!-- add-pc-sheet-v3 task 9.6 — REHOMED, not new. This control lived in the `sheet`
+			      settings sub-tab, which was deleted in the same change as unreachable: its nav link
+			      had been commented out at the top of this file, so `_applySettingsTabState` could
+			      never show it. Everything else in that sub-tab was dead in a second way too — the
+			      game / variantsheet / era buttons carry no `data-action` at all, so they render,
+			      take the pointer cursor and do nothing.
+
+			      This one anchor was the exception: `removeSplat` has a real registered handler
+			      (`OnRemoveSplat`, pc-actor-sheet.js:104) and it is the ONLY control anywhere that
+			      invokes it. Deleting the sub-tab around it would have made a working operation
+			      permanently unreachable, so it moves here — to the sub-tab that renders the
+			      splatfields this same Splat item installs, which is where someone looking to
+			      remove it would look. --}}
+			<div class="space headlineGroup splatFont">{{localize 'wod.settings.splatitem'}}</div>
+			<div class="flex-row advantage-item">
+				<div>
+					<a class="pointer splat-remove" title="{{localize 'wod.labels.remove.splatitem'}}" data-action="removeSplat"><i class="icon fa-solid fa-trash-can"></i> {{localize 'wod.labels.remove.splatitem'}}</a>
+				</div>
+			</div>
 		</div>
 
 		{{!-- Stats & Advantages --}}
@@ -564,52 +583,6 @@
 			{{!-- intentionally empty (not implemented yet) --}}
 		</div>
 
-		{{!-- Sheet --}}
-		<div class="tab settings-sheet" data-group="settings" data-tab="sheet">
-			<div class="sheet-area flex-columns">
-				<div class="space headlineGroup splatFont">{{localize 'wod.settings.splatitem'}}</div>
-				<div class="flex-row advantage-item">
-					<div class="headlineNormal" style="width:150px;">LANG: Döda knappen!!!!</div>
-					<div>
-						<a class="pointer splat-remove" title="{{localize 'wod.labels.remove.splatitem'}}" data-action="removeSplat"><i class="icon fa-solid fa-trash-can"></i> {{localize 'wod.labels.remove.splatitem'}}</a>
-					</div>
-				</div>
-
-
-				<div class="headlineGroup splatFont">{{localize "wod.labels.settings.game"}}</div>
-
-				<button class="dialog-three-button fullSplatColor button sheet_vampire {{#if (eq actor.system.settings.game "vampire")}}active{{/if}}">{{localize "wod.games.vampire"}}</button>
-				<button class="dialog-three-button fullSplatColor button sheet_werewolf {{#if (eq actor.system.settings.game "werewolf")}}active{{/if}}">{{localize "wod.games.werewolf"}}</button>
-				<button class="dialog-three-button fullSplatColor button sheet_mage {{#if (eq actor.system.settings.game "mage")}}active{{/if}}">{{localize "wod.games.mage"}}</button>
-
-				<div class="headlineGroup splatFont">LANG: Display sheet type</div>
-
-				<button class="dialog-three-button fullSplatColor button sheet_vampire {{#if (eq actor.system.settings.variantsheet "mortal")}}active{{/if}}">{{localize "wod.sheets.mortal"}}</button>
-				<button class="dialog-three-button fullSplatColor button sheet_vampire {{#if (eq actor.system.settings.variantsheet "vampire")}}active{{/if}}">{{localize "wod.sheets.vampire"}}</button>
-				<button class="dialog-three-button fullSplatColor button sheet_werewolf {{#if (eq actor.system.settings.variantsheet "werewolf")}}active{{/if}}">{{localize "wod.sheets.werewolf"}}</button>
-				<button class="dialog-three-button fullSplatColor button sheet_mage {{#if (eq actor.system.settings.variantsheet "mage")}}active{{/if}}">{{localize "wod.sheets.mage"}}</button>
-
-				<div class="headlineGroup splatFont">{{localize "wod.labels.settings.era.headline"}}</div>
-
-				{{#if (eq actor.system.settings.game "vampire")}}
-					<button class="dialog-three-button fullSplatColor button sheet_modern {{#if (eq actor.system.settings.era "modern")}}active{{/if}}">{{localize "wod.era.modern"}}</button>
-					<button class="dialog-three-button fullSplatColor button sheet_victorian {{#if (eq actor.system.settings.era "victorian")}}active{{/if}}">{{localize "wod.era.victorian"}}</button>
-					<button class="dialog-three-button fullSplatColor button sheet_darkages {{#if (eq actor.system.settings.era "darkages")}}active{{/if}}">{{localize "wod.era.darkages"}}</button>
-					<button class="dialog-three-button fullSplatColor button sheet_classical {{#if (eq actor.system.settings.era "classical")}}active{{/if}}">{{localize "wod.era.classical"}}</button>
-					<button class="dialog-three-button fullSplatColor button sheet_livinggods {{#if (eq actor.system.settings.era "livinggods")}}active{{/if}}">{{localize "wod.era.livinggods"}}</button>
-				{{/if}}
-				{{#if (eq actor.system.settings.game "werewolf")}}
-					<button class="dialog-three-button fullSplatColor button sheet_modern {{#if (eq actor.system.settings.era "modern")}}active{{/if}}">{{localize "wod.era.modern"}}</button>
-					<button class="dialog-three-button fullSplatColor button sheet_victorian {{#if (eq actor.system.settings.era "victorian")}}active{{/if}}">{{localize "wod.era.wildwest"}}</button>
-					<button class="dialog-three-button fullSplatColor button sheet_darkages {{#if (eq actor.system.settings.era "darkages")}}active{{/if}}">{{localize "wod.era.darkages"}}</button>
-					<button class="dialog-three-button fullSplatColor button sheet_savage {{#if (eq actor.system.settings.era "savage")}}active{{/if}}">{{localize "wod.era.savage"}}</button>
-				{{/if}}
-				{{#if (eq actor.system.settings.game "mage")}}
-					<button class="dialog-three-button fullSplatColor button sheet_modern {{#if (eq actor.system.settings.era "modern")}}active{{/if}}" data-type="{{config.sheettype.mage}}">{{localize "wod.era.modern"}}</button>
-					<button class="dialog-three-button fullSplatColor button sheet_victorian {{#if (eq actor.system.settings.era "victorian")}}active{{/if}}" data-type="{{config.sheettype.mage}}">{{localize "wod.era.victorian"}}</button>
-				{{/if}}
-			</div>
-		</div>
 	</section>
 
 </section>

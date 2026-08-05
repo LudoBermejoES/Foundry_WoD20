@@ -37,10 +37,22 @@
 
       ONE CASE THE DERIVATION CANNOT SEPARATE, recorded rather than papered over: `creature` (6
       actors) has no branch in `getPowertype`, so it takes the generic `power` string — yet it does
-      have a `charms` section, declared in `powertab.js` and defined in `BuildPowerSections`, that
-      it can neither fill nor render (D9c: `hascharms` is drop-only and there is no create button).
+      have a `charms` section, declared in `powertab.js` and defined in `BuildPowerSections`.
       Distinguishing it needs a `creature` branch in `getPowertype`, which is a behaviour change to
       a function that also picks the tab icon — not something to slip into a template migration.
+
+      CORRECTED 2026-08-05. This paragraph used to end "(D9c: `hascharms` is drop-only and there is
+      no create button)". Both halves were verified against the source and the live world, and the
+      first is no longer true:
+        * `hascharms` is NOT drop-only. Task 9.1 derives it (`wod-actor-base.js:578`) from the items
+          the actor holds. It derives from POSSESSION, though, so it cannot bootstrap: it renders
+          charms an actor already has and can never turn itself on.
+        * "no create button" is CONFIRMED, and is the whole remaining gap. `CreateButtonsPowerv2`
+          (`create-helpers.js:1990`), the PC power-create dialog, has no charm branch at all. There
+          IS a `buttons.charm` at `:3436`, but in the LEGACY `CreateButtonsPower`, gated on NESTED
+          `settings.powers.hascharms` — a different schema that is `undefined` on a PC actor by
+          design (`actor_settings.js:60-86`). Do not "fix" that by merging the two schemas; it is a
+          live-world data migration. Add a charm branch to `CreateButtonsPowerv2` instead (task 9.2).
 
       THE TAB IS NEVER HIDDEN. `data-origin="power"` is the only in-sheet route to authoring a
       Discipline, a Gift or an Art, so a tab that vanished when empty would be a tab you could not

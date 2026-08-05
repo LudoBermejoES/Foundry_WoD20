@@ -125,16 +125,20 @@ ALLOWLIST_UNREGISTERED_ACTIONS: dict[tuple[str, str], tuple[int, str]] = {
 
 #: template path -> (expected occurrences, reason). `LANG:` is this fork's marker for a
 #: string that was never given an i18n key; it renders to the reader verbatim.
-ALLOWLIST_LANG_MARKERS: dict[str, tuple[int, str]] = {
-    "templates/actor/parts/settings.hbs": (
-        3,
-        "UNREACHABLE, not merely hidden: all three are in the `sheet` sub-tab, whose nav "
-        "link is commented out at settings.hbs:13. `_applySettingsTabState` "
-        "(pc-actor-sheet.js:708) sets display:none on every settings tab except "
-        "`this._settingsTab`, which starts at 'statsadv' and can only be changed by "
-        "clicking a nav link that does not exist. No user can see these strings",
-    ),
-}
+#: Empty on purpose, and this is the second allowlist in this file to empty itself rather than be
+#: maintained. Its only entry was settings.hbs, which carried three `LANG:` markers — all inside the
+#: `sheet` settings sub-tab, unreachable because that sub-tab's nav link had been commented out. The
+#: entry described them as invisible to users and left them there.
+#:
+#: add-pc-sheet-v3 task 9.6 DELETED that sub-tab (2026-08-05), which is the better answer to
+#: "nobody can see this": the era and variantsheet pickers in it carried no `data-action` at all, so
+#: they had never done anything, and the one control that DID work (`removeSplat`) was rehomed to
+#: the reachable Bio sub-tab first. The three markers went with it.
+#:
+#: This gate reported its own entry as STALE on the very next run, which is the behaviour to
+#: preserve if anything is ever added here: an allowlist that cannot notice it is obsolete becomes
+#: a permanent excuse.
+ALLOWLIST_LANG_MARKERS: dict[str, tuple[int, str]] = {}
 
 #: (template path, i18n key) -> (expected occurrences, reason). Measured 2026-08-04 by
 #: flattening lang/en.json (2,019 keys) and lang/es.json (2,004) and resolving all 2,428

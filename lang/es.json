@@ -338,6 +338,9 @@
 				"soil": "Encantamientos de la Tierra Fúnebre"
 			}
 		},
+		"a11y": {
+			"temporary": "temporal"
+		},
 		"tab": {
 			"bio": "Biografía",
 			"stats": "Stats",
