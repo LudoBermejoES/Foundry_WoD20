@@ -185,6 +185,20 @@ jobs:
       - name: Check the v3 stylesheet stays scoped and themeable
         run: python3 .github/scripts/v3-css-check.py
 
+      # Creature Charms. Until 7.5.62 all six live creature PCs sat in a closed loop that nothing in
+      # this file could see: the Charms section renders only for an actor that already HOLDS a charm,
+      # the flag gating it is derived from the items held, and `CreateButtonsPowerv2` — the PC
+      # power-create dialog — had no charm branch at all. No charm, no flag, no section, no way to
+      # make the first one. Worse, a `buttons.charm` DID exist in the legacy `CreateButtonsPower`,
+      # gated on a nested key that is `undefined` on a PC actor, so the repo contained something that
+      # looked like the feature while being unreachable. Deleting the fix would be silent again —
+      # it is not a data-action, a template, a string or a colour. This extracts the gate CONDITION
+      # from source and executes it against fixture actors with the real `getSplat`, so a gate
+      # swapped back to the flag alone fails behaviourally, not just on a regex.
+      # Runnable locally: node .github/scripts/test-charm-button.mjs
+      - name: Prove a creature can create its first Charm
+        run: node .github/scripts/test-charm-button.mjs
+
       # The light theme, reported broken on 2026-08-05. `css/darkmode.css` opened with a `:root`
       # block defining eighteen `--main-<line>-mid/dim-color` tokens that `css/wod.css:108` ALSO
       # defines at `:root` with the LIGHT values. Same specificity, and system.json loads

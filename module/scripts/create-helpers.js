@@ -2374,6 +2374,53 @@ export default class CreateHelper {
 			};
 		}
 
+		/*
+		 * add-pc-sheet-v3 task 9.2 — Charms. Until now a PC could not create one AT ALL.
+		 *
+		 * There has always been a `buttons.charm`, but in the LEGACY `CreateButtonsPower`, gated on
+		 * NESTED `settings.powers.hascharms`. That key belongs to template.json's per-splat Actor
+		 * documents and is `undefined` on a `type: "PC"` actor by design (`actor_settings.js:60-86`),
+		 * so the legacy button could never appear here and this function — the PC path — had no
+		 * charm branch of any kind. The result was a closed loop on all six live creature PCs: the
+		 * Charms section renders only for an actor that already holds a Charm, and nothing on the
+		 * sheet could create the first one. Charms arrived by Splat drop or by importer, or not at all.
+		 *
+		 * THE GATE IS THE SPLAT, for the same reason the Arcanoi block below says so: `getSplat`
+		 * resolves variantsheet -> splat -> game -> actor.type, so it recognises a wodchar-built
+		 * creature (`variantsheet: "creature"`), a splat-item creature and a legacy document alike.
+		 * It deliberately does NOT gate on `hascharms`: task 9.1 derives that flag from the items the
+		 * actor HOLDS, so gating on it would rebuild the very loop this fixes — no charm, no flag, no
+		 * button, no charm. `hascharms` is still honoured as an OR so an actor of another line that
+		 * legitimately carries the flag keeps the button.
+		 *
+		 * `game: "werewolf"` matches `CreateItemPower("charm")` and the legacy button, because a Charm
+		 * IS a Werewolf-line spirit power even when a Gods & Monsters companion is the one with it.
+		 * A creature's own `settings.game` is "mage" (G&M is a Mage-line book), so before its first
+		 * Charm this button sits in a collapsed `werewolf` category; `getActorGames` reads the game
+		 * off the actor's Power items, so it expands by itself once one exists.
+		 */
+		if ((getSplat(actor) === CONFIG.worldofdarkness.splat.creature) || actor.system.settings.hascharms) {
+			allButtons.charm = {
+				game: "werewolf",
+				button: {
+					label: game.i18n.localize("wod.types.charm"),
+					callback: async () => {
+						let itemData = {
+							name: game.i18n.localize("wod.labels.new.charm"),
+							type: "Power",
+							system: {
+								game: "werewolf",
+								type: "wod.types.charm"
+							}
+						};
+
+						await this.CreateItem(actor, itemData);
+						return;
+					}
+				}
+			};
+		}
+
 		// Om PC actor inte har realms så skall arts/artspower inte vara tillgängliga eftersom de kräver realms
 		if (!actor.system.settings.hasrealms) {
 			delete allButtons.art;
