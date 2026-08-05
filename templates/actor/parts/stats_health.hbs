@@ -6,118 +6,46 @@
 </div>
     
 <div class="sheet-boxcontainer">
+    {{!-- TWO DEFECTS THIS LOOP EXPOSED, both in the code it replaced.
 
-    {{#if (gt actor.system.health.bruised.total 0)}}
+          1. `wounded` HAD NO `data-type` AT ALL — a blank line where the other six had it. That
+             attribute is the SWITCH in `OnSquareCounterChange` (action-helpers.js): `mortal` writes
+             `health.damage`, `changeling` writes `health.damage.chimerical`, `wraith` writes
+             `health.damage.corpus`. With it undefined NO branch matched, so clicking the Wounded
+             box recorded nothing — on both sheets, for every character. The loop cannot reproduce a
+             per-level omission, so it is fixed here; that is a behaviour change and a deliberate one.
+
+          2. The two tracks pass DIFFERENT sheettypes — `mortal` here, `changeling` below — and a
+             first draft of this loop hardcoded `mortal` for both. That would have made a click on a
+             chimerical box write to the character's REAL health. Caught by diffing the rendered
+             markup against the pre-refactor file, not by reading. --}}
+    {{!-- redesign-health-track 3.1 — ONE loop over `config.woundLevels`, not seven copies.
+          `config` is `CONFIG.worldofdarkness` (pc-actor-sheet.js:320), so the level list comes from
+          the same place `totals.js` iterates when it computes `.total` — add a level there and it
+          appears here, instead of needing an eighth copy of this block in two tracks.
+          `@root` is used for `config` and the damage-state array rather than counting `../`: the
+          body sits inside `#each` > `#with` > `#numLoop`, and `numLoop` is a CUSTOM block helper
+          whose depth behaviour is not something to re-derive at every edit. `lvl` is a block
+          parameter, which stays in lexical scope through all three. --}}
+    {{#each config.woundLevels as |lbl lvl|}}
+        {{#with (lookup @root.actor.system.health lvl)}}
+            {{#if (gt total 0)}}
 
         <div class="health">
-            <div class="resource-counter healthbox" data-name="data.system.health.bruised">
-                {{#numLoop actor.system.health.bruised.total}}            
-                    <span class="resource-value-step healthBox bruised" 
-                        data-type="{{../config.sheettype.mortal}}"
+            <div class="resource-counter healthbox" data-name="data.system.health.{{lvl}}">
+                {{#numLoop total}}
+                    <span class="resource-value-step healthBox {{lvl}}" 
+                        data-type="{{@root.config.sheettype.mortal}}"
                         data-action="editHealth"
                         data-index="{{this}}" 
-                        data-state="{{damageState ../actor.system.health.bruised.label ../health this}}"></span>            
+                        data-state="{{damageState ../label @root.health this}}"></span>            
                 {{/numLoop}}
             </div>
         </div>
 
-    {{/if}}  
-    
-    {{#if (gt actor.system.health.hurt.total 0)}}
-
-        <div class="health">
-            <div class="resource-counter healthbox"  data-name="data.system.health.hurt">
-                {{#numLoop actor.system.health.hurt.total}}            
-                    <span class="resource-value-step healthBox hurt" 
-                        data-type="{{../config.sheettype.mortal}}"
-                        data-action="editHealth"
-                        data-index="{{this}}" 
-                        data-state="{{damageState ../actor.system.health.hurt.label ../health this}}"></span>            
-                {{/numLoop}}
-            </div>
-        </div>
-
-    {{/if}}
-
-    {{#if (gt actor.system.health.injured.total 0)}}
-
-        <div class="health">
-            <div class="resource-counter healthbox" data-name="data.system.health.injured">
-                {{#numLoop actor.system.health.injured.total}}            
-                    <span class="resource-value-step healthBox injured" 
-                        data-type="{{../config.sheettype.mortal}}"
-                        data-action="editHealth"
-                        data-index="{{this}}" 
-                        data-state="{{damageState ../actor.system.health.injured.label ../health this}}"></span>            
-                {{/numLoop}}
-            </div>
-        </div>
-
-    {{/if}}
-
-    {{#if (gt actor.system.health.wounded.total 0)}}
-
-        <div class="health">
-            <div class="resource-counter healthbox" data-name="data.system.health.wounded">
-                {{#numLoop actor.system.health.wounded.total}}            
-                    <span class="resource-value-step healthBox wounded" 
-
-                        data-action="editHealth"
-                        data-index="{{this}}" 
-                        data-state="{{damageState ../actor.system.health.wounded.label ../health this}}"></span>            
-                {{/numLoop}}
-            </div>
-        </div>
-
-    {{/if}}
-
-    {{#if (gt actor.system.health.mauled.total 0)}}
-
-        <div class="health">
-            <div class="resource-counter healthbox" data-name="data.system.health.mauled">
-                {{#numLoop actor.system.health.mauled.total}}            
-                    <span class="resource-value-step healthBox mauled" 
-                        data-type="{{../config.sheettype.mortal}}"
-                        data-action="editHealth"
-                        data-index="{{this}}" 
-                        data-state="{{damageState ../actor.system.health.mauled.label ../health this}}"></span>            
-                {{/numLoop}}
-            </div>
-        </div>
-
-    {{/if}}
-
-    {{#if (gt actor.system.health.crippled.total 0)}}
-
-        <div class="health">
-            <div class="resource-counter healthbox" data-name="data.system.health.crippled">
-                {{#numLoop actor.system.health.crippled.total}}            
-                    <span class="resource-value-step healthBox crippled" 
-                        data-type="{{../config.sheettype.mortal}}"
-                        data-action="editHealth"
-                        data-index="{{this}}" 
-                        data-state="{{damageState ../actor.system.health.crippled.label ../health this}}"></span>            
-                {{/numLoop}}
-            </div>
-        </div>
-
-    {{/if}}
-
-    {{#if (gt actor.system.health.incapacitated.total 0)}}
-
-        <div class="health">
-            <div class="resource-counter healthbox" data-name="data.system.health.incapacitated">
-                {{#numLoop actor.system.health.incapacitated.total}}            
-                    <span class="resource-value-step healthBox incapacitated" 
-                        data-type="{{../config.sheettype.mortal}}"
-                        data-action="editHealth"
-                        data-index="{{this}}" 
-                        data-state="{{damageState ../actor.system.health.incapacitated.label ../health this}}"></span>            
-                {{/numLoop}}
-            </div>
-        </div>
-
-    {{/if}}
+            {{/if}}
+        {{/with}}
+    {{/each}}
 </div>
 
 {{#if actor.system.settings.usechimerical}}
@@ -129,118 +57,33 @@
     </div>
 
     <div class="sheet-boxcontainer">
+    {{!-- redesign-health-track 3.1 — ONE loop over `config.woundLevels`, not seven copies.
+          `config` is `CONFIG.worldofdarkness` (pc-actor-sheet.js:320), so the level list comes from
+          the same place `totals.js` iterates when it computes `.total` — add a level there and it
+          appears here, instead of needing an eighth copy of this block in two tracks.
+          `@root` is used for `config` and the damage-state array rather than counting `../`: the
+          body sits inside `#each` > `#with` > `#numLoop`, and `numLoop` is a CUSTOM block helper
+          whose depth behaviour is not something to re-derive at every edit. `lvl` is a block
+          parameter, which stays in lexical scope through all three. --}}
+    {{#each config.woundLevels as |lbl lvl|}}
+        {{#with (lookup @root.actor.system.health lvl)}}
+            {{#if (gt total 0)}}
 
-        {{#if (gt actor.system.health.bruised.total 0)}}
-
-            <div class="health">
-                <div class="resource-counter healthbox" data-name="data.system.health.bruised">
-                    {{#numLoop actor.system.health.bruised.total}}            
-                        <span class="resource-value-step healthBox bruised" 
-                            data-type="{{../config.sheettype.changeling}}"
-                            data-action="editHealth"
-                            data-index="{{this}}" 
-                            data-state="{{damageState ../actor.system.health.bruised.label ../chimericalhealth this}}"></span>            
-                    {{/numLoop}}
-                </div>
+        <div class="health">
+            <div class="resource-counter healthbox" data-name="data.system.health.{{lvl}}">
+                {{#numLoop total}}
+                    <span class="resource-value-step healthBox {{lvl}}" 
+                        data-type="{{@root.config.sheettype.changeling}}"
+                        data-action="editHealth"
+                        data-index="{{this}}" 
+                        data-state="{{damageState ../label @root.chimericalhealth this}}"></span>            
+                {{/numLoop}}
             </div>
+        </div>
 
-        {{/if}}  
-        
-        {{#if (gt actor.system.health.hurt.total 0)}}
-
-            <div class="health">
-                <div class="resource-counter healthbox" data-name="data.system.health.hurt">
-                    {{#numLoop actor.system.health.hurt.total}}            
-                        <span class="resource-value-step healthBox hurt" 
-                            data-type="{{../config.sheettype.changeling}}"
-                            data-action="editHealth"
-                            data-index="{{this}}" 
-                            data-state="{{damageState ../actor.system.health.hurt.label ../chimericalhealth this}}"></span>            
-                    {{/numLoop}}
-                </div>
-            </div>
-
-        {{/if}}
-
-        {{#if (gt actor.system.health.injured.total 0)}}
-
-            <div class="health">
-                <div class="resource-counter healthbox" data-name="data.system.health.injured">
-                    {{#numLoop actor.system.health.injured.total}}            
-                        <span class="resource-value-step healthBox injured" 
-                            data-type="{{../config.sheettype.changeling}}"
-                            data-action="editHealth"
-                            data-index="{{this}}" 
-                            data-state="{{damageState ../actor.system.health.injured.label ../chimericalhealth this}}"></span>            
-                    {{/numLoop}}
-                </div>
-            </div>
-
-        {{/if}}
-
-        {{#if (gt actor.system.health.wounded.total 0)}}
-
-            <div class="health">
-                <div class="resource-counter healthbox" data-name="data.system.health.wounded">
-                    {{#numLoop actor.system.health.wounded.total}}            
-                        <span class="resource-value-step healthBox wounded" 
-                            data-type="{{../config.sheettype.changeling}}"
-                            data-action="editHealth"
-                            data-index="{{this}}" 
-                            data-state="{{damageState ../actor.system.health.wounded.label ../chimericalhealth this}}"></span>            
-                    {{/numLoop}}
-                </div>
-            </div>
-
-        {{/if}}
-
-        {{#if (gt actor.system.health.mauled.total 0)}}
-
-            <div class="health">
-                <div class="resource-counter healthbox" data-name="data.system.health.mauled">
-                    {{#numLoop actor.system.health.mauled.total}}            
-                        <span class="resource-value-step healthBox mauled" 
-                            data-type="{{../config.sheettype.changeling}}"
-                            data-action="editHealth"
-                            data-index="{{this}}" 
-                            data-state="{{damageState ../actor.system.health.mauled.label ../chimericalhealth this}}"></span>            
-                    {{/numLoop}}
-                </div>
-            </div>
-
-        {{/if}}
-
-        {{#if (gt actor.system.health.crippled.total 0)}}
-
-            <div class="health">
-                <div class="resource-counter healthbox" data-name="data.system.health.crippled">
-                    {{#numLoop actor.system.health.crippled.total}}            
-                        <span class="resource-value-step healthBox crippled" 
-                            data-type="{{../config.sheettype.changeling}}"
-                            data-action="editHealth"
-                            data-index="{{this}}" 
-                            data-state="{{damageState ../actor.system.health.crippled.label ../chimericalhealth this}}"></span>            
-                    {{/numLoop}}
-                </div>
-            </div>
-
-        {{/if}}
-
-        {{#if (gt actor.system.health.incapacitated.total 0)}}
-
-            <div class="health">
-                <div class="resource-counter healthbox" data-name="data.system.health.incapacitated">
-                    {{#numLoop actor.system.health.incapacitated.total}}            
-                        <span class="resource-value-step healthBox incapacitated" 
-                            data-type="{{../config.sheettype.changeling}}"
-                            data-action="editHealth"
-                            data-index="{{this}}" 
-                            data-state="{{damageState ../actor.system.health.incapacitated.label ../chimericalhealth this}}"></span>            
-                    {{/numLoop}}
-                </div>
-            </div>
-
-        {{/if}}
+            {{/if}}
+        {{/with}}
+    {{/each}}
     </div>
 
 {{/if}}
