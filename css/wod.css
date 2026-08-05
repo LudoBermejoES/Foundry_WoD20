@@ -1950,7 +1950,23 @@ input.sheet-infoWidth {
 /* A secondary ability (a *secondability Trait) shares the talent/skill/knowledge column with the
    primary Abilities - italics are what keeps the two readable apart at a glance. Pairs with the
    hover title carrying the localized "Secondary Talent/Skill/Knowledge Ability" name. */
-.wod-sheet .secondaryAbility.ability-headlineWidth {
+/* Matched on `secondaryAbility` ALONE, deliberately. It used to require
+   `.secondaryAbility.ability-headlineWidth` on ONE element, and that stopped matching anything on
+   2026-08-04: the ability description eye moved the label into a `wod-namecell` flex cell, so
+   `ability-headlineWidth` went onto the wrapping `<div>` (it carries the row's width) while
+   `secondaryAbility` stayed on the `<label>` (it styles the text). Both classes still exist, on
+   two different elements, and a compound selector needs them on one — so the italics silently
+   disappeared while the markup looked correct. Reported from the live sheet 2026-08-05.
+
+   No gate could see it: `stats_abilities.hbs` still emits the class, the template structure check
+   balances tags rather than resolving selectors, and the three module harnesses execute `module/`,
+   not CSS. Only eyes on a sheet catch a rule that matches nothing.
+
+   The width class is not needed to disambiguate: `secondaryAbility` is set from
+   `buildAbilityColumn`'s `issecondary` and appears nowhere else in the tree, so the single class is
+   already specific. Keeping the pair would make the rule depend on two elements staying merged,
+   which is exactly the coupling that broke it. */
+.wod-sheet .secondaryAbility {
   font-style: italic;
 }
 

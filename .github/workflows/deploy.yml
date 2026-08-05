@@ -172,6 +172,17 @@ jobs:
       - name: Structure-check every committed template
         run: python3 .github/scripts/template-structure-check.py
 
+      # A CSS rule that matches NOTHING is indistinguishable from one that works — and on 2026-08-04
+      # that cost the sheet a real distinction. `.secondaryAbility.ability-headlineWidth` made
+      # secondary abilities italic, which is the only thing telling them apart from primaries in the
+      # shared column. Adding the description eye moved the label into a flex cell, so the width class
+      # went onto the wrapping <div> and the text class stayed on the <label>: both still present, on
+      # two elements, and a compound selector needs them on one. The template still emitted the class,
+      # the structure check still balanced, the module harnesses still passed. Only a human looking at
+      # a sheet noticed, a day later. This compares the two sides instead.
+      - name: Prove every compound CSS selector can match something
+        run: python3 .github/scripts/css-selector-reachability.py
+
       # `primary` in powertab.js sets a section's ORDER, not its membership — BuildPowerSections
       # also walks `defaultOrder` and adds whatever it has not already added. 7.5.44 dropped
       # "rotes" from mage's `primary` alone and shipped the Rote list rendering on TWO tabs; the
