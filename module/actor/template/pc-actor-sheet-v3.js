@@ -76,9 +76,17 @@ import { getSplat } from "../../scripts/splat-helpers.js";
  * splatfields at all, so a standalone Bio tab was a portrait and two prose boxes for the other
  * nine; merging it into Features gives every one of them a tab with something in it.
  *
- * `effects` is NOT retired as a tab — see the `tabs` field comment for why folding it into Ajustes
- * stopped at the RAIL rather than reaching the template, and `v3/navigation.hbs` for how it is
- * grouped and demoted there instead (§8.3/§8.4).
+ * `effects` IS now retired as a tab of its own too (§8.3): it folds into Ajustes/Settings as a
+ * SUB-TAB, using the sub-tab machinery `settings.hbs` already had for Bio/Stats/Power/Combat
+ * (`<nav class="sheet-setting-tabs">` + sibling `.tab[data-group="settings"]` bodies, switched by
+ * the generic `_applySettingsTabState`). That machinery is inherited unchanged; only ONE nav link
+ * and ONE body div are added to the shared template, both gated on `effectsInSettings` (see the
+ * getter override below), which is `false` on v2 — so v2 renders that file exactly as it always
+ * has. `templates/actor/v3/effects_body.hbs` carries the actual content (the create button and
+ * table/empty-state), included from BOTH the gated sub-tab body in `settings.hbs` and from
+ * `templates/actor/v3/effects.hbs`, which stays on disk — unregistered from `PARTS`, so nothing
+ * renders it — as the reference for what a standalone Effects tab used to look like, the same way
+ * `v3/bio.hbs` stays after §8.1/§8.2 retired it into Features.
  */
 export default class PCActorSheetV3 extends PCActorSheet {
 
@@ -91,15 +99,16 @@ export default class PCActorSheetV3 extends PCActorSheet {
 	}
 
 	/*
-	 * add-pc-sheet-v3 §8.2 — five content tabs plus Ajustes, not eight. An INSTANCE field (not
-	 * static) SHADOWS the parent's the same way `PARTS` does below: this class declares its own
-	 * `tabs`, so the parent's copy (with `bio` in it) never runs for a v3 instance. `bio` is gone;
-	 * `feature`'s title becomes `wod.tab.character` ("Personaje" in Spanish), since it now carries
-	 * the merged bio+feature content. `effects` and `settings` are UNCHANGED from the parent — they
-	 * stay real, independently-clickable tabs; only the RAIL groups and demotes them visually
-	 * (`v3/navigation.hbs`, `css/pc-actor-v3.css` "NAV RAIL"). `sheet-invariants.py`'s I5 checks
-	 * `PARTS` keys against these tab ids, so removing `bio` from one without the other is a gate
-	 * failure, not a silent gap.
+	 * add-pc-sheet-v3 §8.2/§8.3 — five content tabs plus Ajustes, not eight and not six. An
+	 * INSTANCE field (not static) SHADOWS the parent's the same way `PARTS` does below: this class
+	 * declares its own `tabs`, so the parent's copy (with `bio` AND `effects` in it) never runs for
+	 * a v3 instance. `bio` is gone (§8.1/§8.2, merged into `feature`, "Personaje" in Spanish);
+	 * `effects` is gone too (§8.3, folded into Ajustes/Settings as a SUB-TAB — see
+	 * `PCActorSheet#effectsInSettings` and `settings.hbs`'s `effectsinsettings` gate). `settings` is
+	 * UNCHANGED from the parent — still a real, independently-clickable tab; only the RAIL demotes
+	 * it visually (`v3/navigation.hbs`, `css/pc-actor-v3.css` "NAV RAIL"). `sheet-invariants.py`'s I5
+	 * checks `PARTS` keys against these tab ids, so removing a tab from one without the other is a
+	 * gate failure, not a silent gap.
 	 */
 	tabs = {
 		stats: {
@@ -134,12 +143,9 @@ export default class PCActorSheetV3 extends PCActorSheet {
 			title: game.i18n.localize('wod.tab.character'),
 			icon: game.worldofdarkness.icons[getSplat(this.actor)].note
 		},
-		effects: {
-			id: 'effects',
-			group: 'primary',
-			title: game.i18n.localize('wod.tab.effect'),
-			icon: game.worldofdarkness.icons[getSplat(this.actor)].effect
-		},
+		// RETIRED as its own tab, add-pc-sheet-v3 §8.3: `effects` no longer has an entry here or in
+		// `PARTS` below, or a rail icon of its own in `v3/navigation.hbs`. Its content now renders
+		// as a sub-tab inside `settings` (Ajustes), via `templates/actor/v3/effects_body.hbs`.
 		settings: {
 			id: 'settings',
 			group: 'primary',
@@ -161,21 +167,34 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		return 'feature';
 	}
 
+	/**
+	 * add-pc-sheet-v3 §8.3 — the override that actually folds Effects into Ajustes. `false` on the
+	 * parent (v2 unchanged); `true` here, read by the SHARED `settings` case in
+	 * `_preparePartContext` (`pc-actor-sheet.js`) and by `settings.hbs`'s `effectsinsettings` gate.
+	 * @override
+	 * @returns {boolean}
+	 */
+	get effectsInSettings () {
+		return true;
+	}
+
 	/*
 	 * A `static` class field SHADOWS the parent's, it does not merge with it, so this must list
-	 * every part v3 renders — EIGHT now, not the original nine: `bio` retired into `feature`
-	 * (§8.1/§8.2). Invariant I5 (`.github/scripts/sheet-invariants.py`) asserts these keys match the
-	 * preparer cases AND this class's own `tabs` field above, which is what stops a part being
-	 * declared here with no matching tab (or a tab with no matching part) and coming up blank — the
-	 * failure this sheet has produced three times.
+	 * every part v3 renders — SEVEN now, not the original nine: `bio` retired into `feature`
+	 * (§8.1/§8.2), `effects` retired into a Settings sub-tab (§8.3). Invariant I5
+	 * (`.github/scripts/sheet-invariants.py`) asserts these keys match the preparer cases AND this
+	 * class's own `tabs` field above, which is what stops a part being declared here with no
+	 * matching tab (or a tab with no matching part) and coming up blank — the failure this sheet has
+	 * produced three times.
 	 *
 	 * Parts migrate one per release, easiest first, and each is revertible by pointing its one line
 	 * back at the v2 template.
 	 */
 	static PARTS = {
-		// add-pc-sheet-v3 §8.3/§8.4/§8.6 — forked from `parts/navigation.hbs` so the rail can group
-		// and demote Ajustes+Effects and print a count badge (`tabs.feature.count`,
-		// `tabs.effects.count`, both set in `_prepareContext` below) without touching v2's rail.
+		// add-pc-sheet-v3 §8.3/§8.4/§8.6 — forked from `parts/navigation.hbs` so the rail can demote
+		// Ajustes and print a count badge (`tabs.feature.count`, `tabs.settings.count` — the latter
+		// now carries the effects count too, §8.3 — both set in `_prepareContext` below) without
+		// touching v2's rail.
 		tabs: {
 			template: "systems/worldofdarkness/templates/actor/v3/navigation.hbs"
 		},
@@ -213,10 +232,12 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		feature: {
 			template: "systems/worldofdarkness/templates/actor/v3/feature.hbs"
 		},
-		// MIGRATED — the first part to move. Reverting is this one line back to `parts/effects.hbs`.
-		effects: {
-			template: "systems/worldofdarkness/templates/actor/v3/effects.hbs"
-		},
+		// RETIRED, add-pc-sheet-v3 §8.3 — folded into `settings` below as a SUB-TAB, not a part of
+		// its own any more. `templates/actor/v3/effects.hbs` (the part this used to point at) stays
+		// on disk, unregistered from PARTS, as the reference for the standalone tab this once was;
+		// its content lives in `templates/actor/v3/effects_body.hbs`, included from both that file
+		// and from `settings.hbs`'s gated sub-tab body — one copy of the markup, two callers.
+		//
 		// Stays on the v2 template. See the class docstring — this is a decision, not an omission.
 		settings: {
 			template: "systems/worldofdarkness/templates/actor/parts/settings.hbs"
@@ -237,9 +258,10 @@ export default class PCActorSheetV3 extends PCActorSheet {
 	 * their tabs already do at render time (see `countFeatureTabItems`'s own header for why that
 	 * matters for connections specifically):
 	 *   - `tabs.feature.count` — how many rows the Personaje item lists would print.
-	 *   - `tabs.effects.count` — how many Bonus effects currently apply, surfaced here because
-	 *     `effects` is visually demoted into the Ajustes cluster (§8.3/§8.4): a badge is what lets a
-	 *     GM tell "nothing in there" from "something in there" without opening a smaller icon.
+	 *   - `tabs.settings.count` — how many Bonus effects currently apply. §8.3 retired `effects` as
+	 *     a tab of its own, so there is no `tabs.effects` any more for this number to sit beside;
+	 *     it moves to the one icon that still exists, Ajustes, which is what lets a GM tell "nothing
+	 *     in there" from "something in there" without opening the sub-tab.
 	 * @override
 	 */
 	async _prepareContext (options) {
@@ -249,16 +271,18 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		if (data.tabs.feature) {
 			data.tabs.feature.count = countFeatureTabItems(actor);
 		}
-		if (data.tabs.effects) {
+		if (data.tabs.settings) {
 			// `prepareEffectContext` reads `context.tabs.effects` on its very first line
 			// (`context.tab = context.tabs.effects`), so it cannot be called with a bare `{}` — an
 			// empty object has no `.tabs` at all, which throws `Cannot read properties of undefined
 			// (reading 'effects')` on every render. `data.tabs` is exactly the collection that key
-			// resolves against, so passing it through is what makes this a safe, side-effect-free
-			// second call rather than a duplicate of the real one `_preparePartContext('effects', …)`
-			// still makes for the part itself.
+			// resolves against, so passing it through keeps this safe even though `data.tabs` no
+			// longer HAS an `effects` key at all (§8.3) — `context.tabs.effects` then simply reads
+			// `undefined`, which only feeds the throwaway object's own unused `.tab`, never the
+			// `.effects` list this reads. Side-effect-free and separate from the real call
+			// `_preparePartContext('settings', …)` still makes for the part itself.
 			const effectsContext = await prepareEffectContext({ tabs: data.tabs }, actor);
-			data.tabs.effects.count = effectsContext.effects.length;
+			data.tabs.settings.count = effectsContext.effects.length;
 		}
 
 		return data;

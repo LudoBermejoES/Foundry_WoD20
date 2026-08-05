@@ -1,115 +1,15 @@
-{{!-- v3 Effects tab.
+{{!-- v3 Effects tab — SUPERSEDED, add-pc-sheet-v3 §8.3.
 
-      FIRST PART MIGRATED, and chosen first because it has nothing at stake: 38 lines, zero floats,
-      four actions, and it is empty on most characters. What it establishes is the pattern the other
-      six follow — a real heading, a real table, a labelled create control, an honest empty state,
-      and layout by grid rather than by fixed-width classes.
+      This was the FIRST part migrated (see this file's own git history for the original header:
+      chosen first because it had nothing at stake — 38 lines, zero floats, four actions, empty on
+      most characters). It is no longer registered in `PCActorSheetV3.PARTS`, and no entry in
+      `tabs` points at it: Effects now renders as a SUB-TAB inside Ajustes/Settings instead,
+      through `templates/actor/parts/settings.hbs`'s `effectsinsettings`-gated body.
 
-      SHELL/ROW SPLIT (add-pc-sheet-v3 D5). A v3 template may hold layout and `{{> …}}` includes; it
-      may not hold a row renderer, and it may not emit a `data-action` its v2 counterpart lacks. This
-      tab has no partials — it is all shell — so the rule costs nothing here, but every action below
-      is one v2 already emitted and every `data-*` is carried through untouched. `sheet-invariants.py`
-      checks the first half of that on every push, per sheet. --}}
+      Kept on disk and still registered in `module/templates.js`, wrapping the SAME content via
+      the include below (not a frozen copy that can drift from it) — the reference for what a
+      standalone Effects tab used to look like, the same way `v3/bio.hbs` stays after §8.1/§8.2
+      retired it into Features. Nothing renders this file today. --}}
 <section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}" data-drop-area="true">
-
-	<div class="v3-tabhead">
-		{{!-- Every tab gets its name in the content area. On v2 only three of the nine had one, and
-		      this was not among them: the Effects tab opened straight onto a column-header row, so
-		      nothing on screen said where you were. --}}
-		<h2 class="v3-tabtitle splatFont">{{localize "wod.tab.effect"}}</h2>
-
-		{{!-- The create control, as a labelled button instead of a 3x-scaled glyph floating in the
-		      bottom-right corner. Two defects fixed at once: on v2 it carries `aria-hidden="true"`
-		      ON THE INTERACTIVE ELEMENT ITSELF, which removes a working control from the
-		      accessibility tree entirely, and it is the single most prominent thing on a tab whose
-		      job is performed a handful of times per character. `data-origin="effect"` is the ONLY
-		      in-sheet route to authoring a standalone Bonus, so it travels with the tab wherever the
-		      tab goes. --}}
-		<button type="button" class="v3-add" data-origin="effect" data-action="itemCreate">
-			<i class="fa-solid fa-square-plus" aria-hidden="true"></i>
-			<span>{{localize "wod.labels.add.item"}}</span>
-		</button>
-	</div>
-
-	{{#if effects.length}}
-		{{!-- A real table, because this is one: five columns of homogeneous data with a header row.
-		      v2 built it from `div.item-row` plus fixed-width classes, which gives a screen reader
-		      no column association at all and gives the layout no way to react to a long Spanish
-		      label. `<table>` supplies both for free. --}}
-		<table class="v3-table">
-			<caption class="v3-sr-only">{{localize "wod.tab.effect"}}</caption>
-			<thead>
-				<tr>
-					<th scope="col">{{localize "wod.effects.origin"}}</th>
-					<th scope="col">{{localize "wod.labels.type"}}</th>
-					<th scope="col">{{localize "wod.effects.area"}}</th>
-					<th scope="col" class="v3-num">{{localize "wod.labels.modifier"}}</th>
-					<th scope="col">{{localize "wod.power.active"}}</th>
-				</tr>
-			</thead>
-			<tbody>
-				{{#each effects as |bonus key|}}
-					<tr>
-						<td>{{#if (ne bonus.origin "")}}{{bonus.origin}}{{else}}{{bonus.name}}{{/if}}</td>
-						<td>{{getBonusName bonus.system.type}}</td>
-						{{!-- v2 truncated this to 15 characters with `shorten`. A cell in a table can
-						      wrap, so the name is given whole — `{{shorten}}` exists because a fixed
-						      pixel column could not grow, and this column can. --}}
-						<td>{{localize (getAbility (localize (getAttributes bonus.system.settingtype)) ../actor)}}</td>
-						<td class="v3-num">{{signed bonus.system.value}}</td>
-						<td class="v3-rowactions">
-							{{!-- The toggle keeps `fa-toggle-on/off`, which is already the one glyph in
-							      this system that unambiguously means "on/off" — 36 uses, and the a11y
-							      audit's fix for the DOUBLE MEANING of `fa-eye` is to move visibility
-							      onto this pair. It is a button here so it can be reached by keyboard;
-							      on v2 it is an `<i>`, which cannot. --}}
-							{{#if (or (ne bonus.origin '') bonus.system.isremovable)}}
-								<button type="button" class="v3-iconbtn item-active"
-									data-itemid="{{bonus._id}}" data-type="isactive" data-action="itemActive"
-									aria-pressed="{{#if bonus.system.isactive}}true{{else}}false{{/if}}"
-									title="{{localize 'wod.power.active'}}">
-									<i class="fa-solid {{#if bonus.system.isactive}}fa-toggle-on{{else}}fa-toggle-off{{/if}}" aria-hidden="true"></i>
-									<span class="v3-sr-only">{{localize "wod.power.active"}}</span>
-								</button>
-							{{else}}
-								{{!-- Not togglable: this bonus is inherited from a parent item, so v2
-								      rendered the same glyph without the `item-active pointer` classes.
-								      Rendered as static state rather than as a dead-looking control. --}}
-								<i class="fa-solid {{#if bonus.system.isactive}}fa-toggle-on{{else}}fa-toggle-off{{/if}} v3-static"
-									role="img" aria-label="{{localize 'wod.power.active'}}"></i>
-							{{/if}}
-
-							{{#if (eq ../locked false)}}
-								<button type="button" class="v3-iconbtn item-edit"
-									data-type="{{item.type}}"
-									data-itemid="{{#if (eq bonus._id 'parent')}}{{bonus.system.parentid}}{{else}}{{bonus._id}}{{/if}}"
-									data-action="itemEdit" title="{{localize 'wod.labels.edit.headline'}}">
-									<i class="icon fa-solid fa-pen-to-square" aria-hidden="true"></i>
-									<span class="v3-sr-only">{{localize "wod.labels.edit.headline"}}</span>
-								</button>
-								{{#if bonus.system.isremovable}}
-									<button type="button" class="v3-iconbtn item-delete"
-										data-itemid="{{#if (eq bonus._id 'parent')}}{{bonus.system.parentid}}{{else}}{{bonus._id}}{{/if}}"
-										data-action="itemDelete" title="{{localize 'wod.labels.remove.headline'}}">
-										<i class="icon fa-solid fa-trash-can" aria-hidden="true"></i>
-										<span class="v3-sr-only">{{localize "wod.labels.remove.headline"}}</span>
-									</button>
-								{{/if}}
-							{{/if}}
-						</td>
-					</tr>
-				{{/each}}
-			</tbody>
-		</table>
-	{{else}}
-		{{!-- The empty state (add-pc-sheet-v3 D9). This tab is empty on most characters — no
-		      preparer, create path or splat gate populates it; `prepareEffectContext` is sixteen
-		      generic BonusHelper sweeps with no line awareness at all. v2 rendered a header row over
-		      nothing, which reads as "broken" rather than as "nothing here yet". The tab is NEVER
-		      hidden: its `+` above is the only in-sheet route to creating the thing that would fill
-		      it, so a tab that vanished when empty would be a tab you could not use to make it
-		      non-empty. --}}
-		<p class="v3-empty">{{localize "wod.effects.empty"}}</p>
-	{{/if}}
-
+	{{> "systems/worldofdarkness/templates/actor/v3/effects_body.hbs"}}
 </section>

@@ -41,14 +41,17 @@
    inline styles beat author rules. Nearly all live in the shells v3 rewrites, so they are removed
    rather than overridden. There is deliberately no `[style]` sledgehammer here.
 
-   MIGRATED: SEVEN PARTS FORKED — `effects`, `gear`, `combat`, `feature`, `stats`, `powers`, and the
-   nav rail (`tabs`, forked in §8.3/§8.4/§8.6 for the count badges and the demoted Ajustes cluster —
-   see `css/pc-actor-v3.css` "NAV RAIL" below and `v3/navigation.hbs`). `bio` RETIRED as its own part
-   (§8.1/§8.2): its content now renders inside `feature` ("Personaje"), so there is no `.v3-*` rule
-   left that targets a standalone Bio tab. Only `settings` still renders the v2 template,
-   permanently and by decision (609 lines of GM administration, not a play surface). Reverting a
-   part is one line in `PCActorSheetV3.PARTS`, and its rules here become dead rather than wrong,
-   because every one of them is scoped to a wrapper class only that shell emits.
+   MIGRATED: SIX PARTS FORKED — `gear`, `combat`, `feature`, `stats`, `powers`, and the nav rail
+   (`tabs`, forked in §8.3/§8.4/§8.6 for the count badge and the demoted Ajustes icon — see
+   "NAV RAIL" below and `v3/navigation.hbs`). `bio` RETIRED as its own part (§8.1/§8.2): its content
+   now renders inside `feature` ("Personaje"), so there is no `.v3-*` rule left that targets a
+   standalone Bio tab. `effects` RETIRED too (§8.3), the opposite way round from `bio` — its
+   `.v3-*` rules (the tab head, the table, the empty state — all still defined below) are now
+   consumed from INSIDE the shared `settings` part, which is the one part that still renders the v2
+   template and always will (609 lines of GM administration, permanently, task 4.8). See "AJUSTES/
+   SETTINGS SUB-TABS" below for the one rule that addition needed. Reverting a forked part is one
+   line in `PCActorSheetV3.PARTS`, and its rules here become dead rather than wrong, because every
+   one of them is scoped to a wrapper class only that shell emits.
 
    A FIFTH MECHANISM, ADDED WITH THE STATS TAB: `flex-basis` BEATS AN INLINE `width`
    ---------------------------------------------------------------------------------
@@ -237,6 +240,23 @@
 .wod20.pc-actor-v3 .v3-navadmin-item:hover,
 .wod20.pc-actor-v3 .v3-navadmin-item:focus-visible {
 	opacity: 1;
+}
+
+/* ── AJUSTES/SETTINGS SUB-TABS: folding Effects in without forking the template (§8.3) ───────
+   `settings.hbs` stays the SHARED template (task 4.8, D5) — nothing here forks it. The one thing
+   this file needs to fix is the fifth sub-tab link v3 adds: `.wod20 .actorv2 .secondHeadlineTabs`
+   is `width: 25% !important` (wod.css:1866), sized for the four links v2 always renders. v3 shows
+   five once `effectsinsettings` is set.
+
+   A flex item's main size comes from `flex-basis`, and `width` is only consulted when `flex-basis`
+   is `auto` — the same trick the Stats tab uses on an inline `width` (this file's own header, "A
+   FIFTH MECHANISM"). `.sheet-setting-tabs` is already `display: flex` (Foundry core's `nav.tabs`;
+   `wod.css:1754` sets its `gap`, which only applies to a flex/grid container), so giving each link
+   a definite flex-basis makes the `!important` width IRRELEVANT rather than something to out-rank.
+   No `!important` spent, and v2's four links are untouched: `flex: 1 1 0` splits any number of
+   equal-width children, four or five, without a per-count rule. */
+.wod20.pc-actor-v3 .sheet-setting-tabs .secondHeadlineTabs {
+	flex: 1 1 0;
 }
 
 /* Icon buttons. These are `<button>` on v3 because on v2 they are href-less `<a>`, which is not

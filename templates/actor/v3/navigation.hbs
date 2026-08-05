@@ -4,22 +4,21 @@
       ----------------------------------------------
       The v2 rail (`parts/navigation.hbs`, unchanged and still what every non-opted-in actor
       renders) is one `{{#each tabs}}` loop. This file is the same loop, run twice against the
-      SAME `tabs` collection: once for the five content tabs, once for the two administrative ones
-      (Ajustes/Settings and the folded-in Effects icon), so the second group can sit in its own
-      visually-demoted cluster (§8.4) at the end of the rail. Nothing here is a row renderer —
-      each `<div data-action="tab" …>` is authored identically to v2's, same attributes, same
-      classes off `tab.cssClass`, same wiki link — it is layout ONLY, split into two containers
-      instead of one.
+      SAME `tabs` collection: once for the five content tabs, once for the administrative one
+      (Ajustes/Settings), so the second group can sit in its own visually-demoted cluster (§8.4) at
+      the end of the rail. Nothing here is a row renderer — each `<div data-action="tab" …>` is
+      authored identically to v2's, same attributes, same classes off `tab.cssClass`, same wiki
+      link — it is layout ONLY, split into two containers instead of one.
 
-      WHY Ajustes AND Effects did NOT become one clickable target (§8.3's "sub-tab")
-      -----------------------------------------------------------------------------
-      That would need either forking `settings.hbs` (609 lines, task 4.8's decision: stays on v2's
-      template PERMANENTLY) to add a real internal switcher, or duplicating its rows into a v3-only
-      shell, which D5 forbids for a row renderer this size. Grouping and demoting the RAIL
-      presentation is what is reachable without either: both keep their own full `data-action="tab"`
-      target, same as every other icon here, and read as one administrative area because they sit
-      together, smaller, at the end. See `css/pc-actor-v3.css` "NAV RAIL" for the rest of the
-      reasoning.
+      WHERE EFFECTS WENT (§8.3)
+      --------------------------
+      Effects has NO icon of its own here any more — `tab.id === "effects"` cannot occur in the
+      `{{#each tabs}}` below at all, because `PCActorSheetV3`'s own `tabs` field (the one this
+      partial iterates) declares no `effects` entry. Its content now renders as a SUB-TAB inside
+      Ajustes: `templates/actor/parts/settings.hbs`'s existing `<nav class="sheet-setting-tabs">` +
+      sibling `.tab[data-group="settings"]` machinery, gated on `effectsinsettings`, one nav link
+      and one body div (`templates/actor/v3/effects_body.hbs`) added to that SHARED template — no
+      fork of it, no duplicated rows (D5). See `settings.hbs` and `PCActorSheet#effectsInSettings`.
 
       THE BADGE (§8.6)
       -----------------
@@ -28,13 +27,15 @@
       has no `case` in `_preparePartContext` at all, so it is the one part on either sheet that
       never runs a preparer of its own; a count set anywhere else would never reach here. Rendered
       as `aria-hidden`, because a bare number floating beside an icon announces nothing useful to
-      assistive technology on its own — the tab's own `title` already names what is inside it. --}}
+      assistive technology on its own — the tab's own `title` already names what is inside it.
+      `tabs.settings.count` is now the Effects count too (§8.3: there is no `tabs.effects` any more
+      for it to sit beside), so the Ajustes icon below is where a GM sees "something in there". --}}
 <div class="tabs-container">
     <nav class="sheet-tabs tabs v3-tabs" data-group="primary">
         {{> "systems/worldofdarkness/templates/actor/parts/navigation_lock.hbs"}}
 
         {{#each tabs as |tab|}}
-            {{#unless (or (eq tab.id "settings") (eq tab.id "effects"))}}
+            {{#unless (eq tab.id "settings")}}
                 <div class="{{tab.cssClass}}" data-action="tab" data-group="{{tab.group}}" data-tab="{{tab.id}}" title="{{localize tab.title}}">
                     <div class="navicon">
                         {{{tab.icon}}}
@@ -48,7 +49,7 @@
 
         <div class="v3-navadmin">
             {{#each tabs as |tab|}}
-                {{#if (or (eq tab.id "settings") (eq tab.id "effects"))}}
+                {{#if (eq tab.id "settings")}}
                     <div class="{{tab.cssClass}} v3-navadmin-item" data-action="tab" data-group="{{tab.group}}" data-tab="{{tab.id}}" title="{{localize tab.title}}">
                         <div class="navicon">
                             {{{tab.icon}}}

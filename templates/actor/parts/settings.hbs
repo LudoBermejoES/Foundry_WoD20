@@ -9,6 +9,16 @@
 		<a class="secondHeadlineTabs thin-border-left active" data-action="settingsTab" data-tab="statsadv">{{localize "wod.tab.stats"}}</a>
 		<a class="secondHeadlineTabs thin-border-left" data-action="settingsTab" data-tab="power">{{localize "wod.tab.power"}}</a>
 		<a class="secondHeadlineTabs thin-border-left" data-action="settingsTab" data-tab="combat">{{localize "wod.tab.combat"}}</a>
+		{{!-- add-pc-sheet-v3 §8.3 — Effects folded into Ajustes as a sub-tab, using the SAME
+		      switcher every other sub-tab link here already uses (`data-action="settingsTab"`,
+		      handled generically by `_applySettingsTabState`, which the PC sheet's `_onRender`
+		      already binds for every actor). Gated on `effectsinsettings` (`false` on v2 and on
+		      the legacy v3 `effects` tab, `true` only on `PCActorSheetV3` — see
+		      `PCActorSheet#effectsInSettings`), so v2 renders this nav exactly as it always has:
+		      no fifth link, no width change, nothing. --}}
+		{{#if effectsinsettings}}
+			<a class="secondHeadlineTabs thin-border-left" data-action="settingsTab" data-tab="effects">{{localize "wod.tab.effect"}}</a>
+		{{/if}}
 		<!-- <a class="secondHeadlineTabs thin-border-left" data-action="settingsTab" data-tab="features">{{localize "wod.tab.features"}}</a> -->
 	</nav>
 
@@ -578,6 +588,18 @@
 			</div>
 		</div>
 
+		{{!-- Effects, folded in — add-pc-sheet-v3 §8.3. Same gate as the nav link above; v2 never
+		      renders this div at all, because `effectsinsettings` is never truthy for it.
+		      `data-tab="effects"`/`data-group="settings"` are what `_applySettingsTabState` (the
+		      SAME generic switcher, unchanged) toggles on click — no new binder, no new action.
+		      The content is one include, not a copy: `templates/actor/v3/effects_body.hbs`, the
+		      same partial `templates/actor/v3/effects.hbs` wraps for its own (now unused)
+		      standalone-tab reference. --}}
+		{{#if effectsinsettings}}
+			<div class="tab settings-effects" data-group="settings" data-tab="effects" style="display:none;">
+				{{> "systems/worldofdarkness/templates/actor/v3/effects_body.hbs"}}
+			</div>
+		{{/if}}
 		{{!-- Features (not implemented yet) --}}
 		<div class="tab settings-features" data-group="settings" data-tab="features" style="display:none;">
 			{{!-- intentionally empty (not implemented yet) --}}

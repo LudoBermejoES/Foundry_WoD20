@@ -59,6 +59,12 @@ export const preloadHandlebarsTemplates = async function () {
 		// has not opted into PCActorSheetV3 still renders. Each v3 shell includes the SAME shared
 		// partials as its v2 counterpart (add-pc-sheet-v3 D5), which are already listed above.
 		"systems/worldofdarkness/templates/actor/v3/effects.hbs",
+			// add-pc-sheet-v3 §8.3 — the extracted content, included from `v3/effects.hbs` above
+			// (unused reference) AND from `parts/settings.hbs`'s `effectsinsettings`-gated
+			// sub-tab body. Existing on disk is not enough for a partial to resolve at render
+			// time — it must be listed here, which is exactly what `template-structure-check.py`'s
+			// preload check exists to catch.
+			"systems/worldofdarkness/templates/actor/v3/effects_body.hbs",
 		"systems/worldofdarkness/templates/actor/v3/gear.hbs",
 		"systems/worldofdarkness/templates/actor/v3/combat.hbs",
 		"systems/worldofdarkness/templates/actor/v3/bio.hbs",

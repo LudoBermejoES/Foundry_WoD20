@@ -227,6 +227,20 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 		return 'bio';
 	}
 
+	/**
+	 * add-pc-sheet-v3 §8.3 — whether the Effects tab is folded into Ajustes/Settings as a SUB-TAB
+	 * rather than staying a tab of its own. `false` here (v2 unchanged); `PCActorSheetV3` overrides
+	 * it `true`. Read in two places, both in the SHARED `settings` machinery so v2 never has to
+	 * know this exists: the `settings` case in `_preparePartContext` below (whether to also gather
+	 * effect data for that part's context) and `templates/actor/parts/settings.hbs` (as
+	 * `effectsinsettings`, whether to render the extra nav link and sub-tab body at all). When this
+	 * is `false` the template renders byte-for-byte what it always has — no new link, no new div.
+	 * @returns {boolean}
+	 */
+	get effectsInSettings () {
+		return false;
+	}
+
 	/* Read the tabs with data */
 	getTabs () {
 		const tabs = this.tabs
@@ -347,8 +361,36 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 				return prepareFeatureContext(context, actor);
 			case 'effects':
 				return prepareEffectContext(context, actor);
-			case 'settings':
-				return prepareSettingsContext(context, actor);
+			case 'settings': {
+				context = await prepareSettingsContext(context, actor);
+
+				// add-pc-sheet-v3 §8.3 — fold `effects` into Ajustes as a sub-tab. Gated on
+				// `effectsInSettings` (false on v2, true on `PCActorSheetV3`), so v2's copy of
+				// this SHARED template is completely unaffected: `effectsinsettings` stays
+				// falsy and `settings.hbs`'s extra nav link + sub-tab body never render.
+				context.effectsinsettings = this.effectsInSettings;
+				if (this.effectsInSettings) {
+					// THE TRAP: `prepareEffectContext` reads `context.tabs.effects` on its very
+					// first line and throws on a bare `{}` (no `.tabs` at all). `context.tabs`
+					// is what it resolves that against, and it stays safe here even though
+					// `effects` may no longer be a key on it at all (v3 retires `effects` as a
+					// tab of its own in the same task) — `context.tabs.effects` then simply
+					// reads `undefined`, which only feeds the throwaway object's own unused
+					// `.tab`, never the `.effects` list read below.
+					//
+					// A FRESH object, never `context` itself: `prepareEffectContext`'s first
+					// line is `context.tab = context.tabs.effects`, and `prepareSettingsContext`
+					// two lines above already set `context.tab` to the SETTINGS tab object this
+					// part's own `<section data-tab="{{tab.id}}">` reads. Passing `context`
+					// through directly would silently overwrite that with `effects`' tab object
+					// (or `undefined`) — same shape as the badge computation in
+					// `PCActorSheetV3#_prepareContext`.
+					const effectsContext = await prepareEffectContext({ tabs: context.tabs }, actor);
+					context.effects = effectsContext.effects;
+				}
+
+				return context;
+			}
 		}
 
 		return context
