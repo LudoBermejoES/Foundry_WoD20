@@ -128,6 +128,36 @@ eq(resolveViewerTitle({}), "", "an empty object gives an empty title");
 eq(resolveViewerTitle({ name: "X", system: { label: 42 } }), "X",
 	"a non-string label falls through rather than being localized");
 
+// --- F. THE WIRING, which is what this harness missed the first time -------------------------
+// Reported 2026-08-05: the window bar already read "Alerta" while the `<h1>` inside the body read
+// "ALERTNESS". Sections A-E all passed, because they exercise `resolveViewerTitle` in ISOLATION
+// and the defect was that `_prepareContext` never called it. A harness that proves a function is
+// correct proves nothing about whether the surface a reader looks at goes through it. So this
+// section asserts the CHAIN, by reading the shipped source rather than trusting either end:
+//   doc -> resolveViewerTitle -> get title()      (the window bar)
+//   doc -> resolveViewerTitle -> context.name -> {{name}} in the .hbs   (the body heading)
+console.log("\nF. every surface a reader sees routes through the ONE resolver");
+const src = readFileSync(join(ROOT, "module", "applications", "item-viewer.js"), "utf8");
+const hbs = readFileSync(join(ROOT, "templates", "dialogs", "item-viewer.hbs"), "utf8");
+
+const titleBody = src.slice(src.indexOf("get title()"), src.indexOf("get title()") + 160);
+ok(/return\s+resolveViewerTitle\(/.test(titleBody),
+	"the window bar (`get title()`) returns resolveViewerTitle(...)");
+
+const nameAssign = src.match(/context\.name\s*=\s*([^\n;]+)/);
+ok(!!nameAssign, "`context.name` is assigned exactly once and findable");
+ok(/resolveViewerTitle\(/.test(nameAssign?.[1] ?? ""),
+	`the body heading's context.name comes from resolveViewerTitle (got \`${(nameAssign?.[1] ?? "").trim()}\`)`);
+ok(!/^\s*doc\??\.name/.test(nameAssign?.[1] ?? ""),
+	"and NOT from doc.name directly — the exact regression reported on 2026-08-05");
+
+// The template is the last link: if the heading stopped rendering `{{name}}`, pinning
+// `context.name` would guard a field nobody reads.
+ok(/<h1[^>]*>\s*\{\{\s*name\s*\}\}\s*<\/h1>/.test(hbs),
+	"the .hbs body heading renders {{name}}, so the pinned context field is the one on screen");
+ok(!/\{\{\s*(doc|item|viewedDocument)\.name\s*\}\}/.test(hbs),
+	"and the template never reaches around the context for a raw document name");
+
 rmSync(tmp, { recursive: true, force: true });
 
 console.log("");

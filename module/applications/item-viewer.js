@@ -156,7 +156,16 @@ export default class ItemViewer extends HandlebarsApplicationMixin(foundry.appli
 		const context = await super._prepareContext(options);
 		const doc = this.viewedDocument;
 
-		context.name = doc?.name ?? "";
+		// The SAME resolver the window bar uses (`get title()`), not `doc.name`, and that identity
+		// is the point rather than a tidiness preference. Reported 2026-08-05: the bar already read
+		// "Alerta" while the `<h1>` two lines below it read "ALERTNESS" — because the bar had been
+		// fixed to localize `system.label` and this line had not. A template-seeded ability carries
+		// the English name plus `system.label = "wod.abilities.alertness"`, so ANY surface that
+		// reads `name` directly shows English; the fix is not to translate two places but to leave
+		// exactly one place deciding. `resolveViewerTitle` owns the three cases (a key that
+		// resolves, display text that passes through, an unresolved `wod.` key that falls back to
+		// the name) and both surfaces now inherit all three.
+		context.name = resolveViewerTitle(doc);
 
 		// read-descriptions-from-compendium: resolve LIVE from `wod20-compendium-es` when `doc`
 		// carries entity provenance and has no local override (see compendium-description.js).
