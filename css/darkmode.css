@@ -524,3 +524,17 @@
 }
 
 /* END - Dots, dark theme */
+
+/* redesign-health-track — the health boxes get the SAME dark treatment the rating dots got in
+   task 1.1, and for the same measured reason. `wod.css` rings every counter step in `#121212`,
+   which is 1.12:1 against the rgb(30,30,30) sheet — invisible. For most levels the bright FILL
+   still gave the box away, but `crippled` (1.52:1) and `incapacitated` (1.26:1) are dark on dark
+   and vanished completely: 8 of 56 measurements, and the only real failures in the whole track.
+   Ringing them in light instead makes the BOX findable regardless of how dark its level is, exactly
+   as the dots already are. The band keeps carrying the level, and its 2px->8px thickness keeps the
+   level identifiable without relying on a dark hue reading against a dark sheet. */
+.wod20.wod-theme-dark .resource-counter .resource-value-step.healthBox {
+    --health-cell: transparent;
+    --health-edge: rgba(255, 255, 255, 0.55);
+    --health-mark: rgb(232, 232, 232);
+}

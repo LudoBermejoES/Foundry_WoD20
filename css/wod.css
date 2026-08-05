@@ -262,6 +262,14 @@
   --healthlevel-mauled-color: #FF0000;
   --healthlevel-crippled-color: #800000;
   --healthlevel-incapacitated-color: #000000;
+
+  /* redesign-health-track. The CELL's job is to be findable; the LEVEL's job is carried by the band.
+     Light: a white cell inside the #121212 ring `wod.css` already draws — 17.18:1, which is why the
+     light theme was never actually broken (an early measurement of mine looked at the fill only and
+     reported 24 failures instead of 8). Dark values live in darkmode.css under `.wod-theme-dark`. */
+  --health-cell: #ffffff;
+  --health-edge: #121212;
+  --health-mark: #121212;
 }
 
 /* hbs */
@@ -1958,32 +1966,125 @@ input.sheet-infoWidth {
   margin: 1px;
 }
 
+/* ================================================== HEALTH TRACK (redesign-health-track, 7.5.69)
+
+   THE CELL IS A THEMED SURFACE; THE LEVEL IS A BAND ACROSS THE BOTTOM OF IT.
+
+   Before this the level colour WAS the cell background, and measured against the surface actually
+   painted behind it that failed 24 of 56 ways (7 levels x 4 damage states x 2 themes). Only
+   `mauled` cleared 3:1 in BOTH themes. `bruised` at 1.09 and `hurt` at 1.02 vanished in LIGHT —
+   the boxes every undamaged character shows, all the time — and `crippled` 1.52 and
+   `incapacitated` 1.26 vanished in DARK. No palette of seven cell colours can clear the bar
+   against both a near-white and a near-black surface, so the cell stops carrying the colour.
+
+   THE BASE RULE IS ON `.healthBox`, NOT `.healthBox.<level>`, AND THAT IS THE POINT. The wraith
+   Corpus track (`stats_health.hbs:274`) emits `<span class="resource-value-step healthBox">` with
+   NO LEVEL CLASS — a level-less run of N identical boxes. Keyed on the level classes this fix would
+   have given it nothing, and nobody would have noticed: one wraith in the world, and no fixture
+   renders that track. Here it gets the cell and simply no band, which is correct for it.
+
+   THE BAND IS A BACKGROUND LAYER, NOT A BORDER, so it costs no layout. Two separate row-overflow
+   incidents in this repo came from growing a dot widget by a pixel.
+
+   THICKNESS RISES WITH SEVERITY (2px -> 8px), so the level is not signalled by hue alone (D8).
+   `wounded` #FF8C00 against `mauled` #FF0000 is the pair that needs it.
+
+   A LEVEL MAY HAVE SEVERAL BOXES. `health[level].total` is base + any `health_buff` Bonus — a Merit
+   or Background can carry one (totals.js:255-259) — and the template draws that many. Every box in
+   a level shows the same band, so three Bruised boxes read as ONE level three wide rather than as
+   three severity steps. */
+/* SPECIFICITY, and this defeated the whole redesign once. The generic
+   `.wod20 .resource-counter .resource-value-step` (0,3,0) sets `background: #ffffff` and
+   `border: 1px solid #121212`. A base rule of `.wod20 span.healthBox` is (0,2,1) — three classes
+   beat two — so every declaration here lost and the track rendered exactly as before while the
+   stylesheet looked correct. Matching the same three classes plus `.healthBox` makes this (0,4,0). */
+.wod20 .resource-counter .resource-value-step.healthBox {
+  background-color: var(--health-cell);
+  border-color: var(--health-edge);
+  color: var(--health-mark);
+  /* A solid bar --health-band-h tall, transparent above it. Named so the mark rules can restack it
+     underneath their own layers without restating it. */
+  --health-band-layer: linear-gradient(to top,
+    var(--health-band, transparent) 0 var(--health-band-h, 0px),
+    transparent var(--health-band-h, 0px));
+  background-image: var(--health-band-layer);
+}
+
 .wod20 span.bruised.healthBox {
-  background: var(--healthlevel-bruised-color);
+  --health-band: var(--healthlevel-bruised-color);
+  --health-band-h: 2px;
 }
 
 .wod20 span.hurt.healthBox {
-  background: var(--healthlevel-hurt-color);
+  --health-band: var(--healthlevel-hurt-color);
+  --health-band-h: 3px;
 }
 
 .wod20 span.injured.healthBox {
-  background: var(--healthlevel-injured-color);
+  --health-band: var(--healthlevel-injured-color);
+  --health-band-h: 4px;
 }
 
 .wod20 span.wounded.healthBox {
-  background: var(--healthlevel-wounded-color);
+  --health-band: var(--healthlevel-wounded-color);
+  --health-band-h: 5px;
 }
 
 .wod20 span.mauled.healthBox {
-  background: var(--healthlevel-mauled-color);
+  --health-band: var(--healthlevel-mauled-color);
+  --health-band-h: 6px;
 }
 
 .wod20 span.crippled.healthBox {
-  background: var(--healthlevel-crippled-color);
+  --health-band: var(--healthlevel-crippled-color);
+  --health-band-h: 7px;
 }
 
 .wod20 span.incapacitated.healthBox {
-  background: var(--healthlevel-incapacitated-color);
+  --health-band: var(--healthlevel-incapacitated-color);
+  --health-band-h: 8px;
+}
+
+/* The damage marks, in `currentColor`. Each (level x state) pair used to restate the whole gradient
+   with a hard-coded black or white: 21 rules, 252 lines, and the mark colour re-decided per level.
+   `color` is set once on the cell above, so a level added tomorrow cannot ship with an invisible
+   mark. Scoped with `.healthBox` (0,5,0) so the three GENERIC `[data-state]` rules — which hunter
+   virtues also match — keep behaving exactly as they do today. */
+
+/* bashing */
+.wod20 .resource-counter .resource-value-step[data-state="/"].healthBox {
+  /* The generic `[data-state]` rules use the `background:` SHORTHAND, which reapplies a
+     level-coloured background-color to every counter step. Restate the cell here or a marked
+     box silently reverts to the old fill — which put a light mark on a light fill in dark mode. */
+  background-color: var(--health-cell);
+  background-image:
+    linear-gradient(135deg, transparent 0 43%, currentColor 45% 55%, transparent 57% 100%),
+    var(--health-band-layer);
+}
+
+/* lethal */
+.wod20 .resource-counter .resource-value-step[data-state="x"].healthBox {
+  /* The generic `[data-state]` rules use the `background:` SHORTHAND, which reapplies a
+     level-coloured background-color to every counter step. Restate the cell here or a marked
+     box silently reverts to the old fill — which put a light mark on a light fill in dark mode. */
+  background-color: var(--health-cell);
+  background-image:
+    linear-gradient(135deg, transparent 0 43%, currentColor 45% 55%, transparent 57% 100%),
+    linear-gradient(45deg, transparent 0 43%, currentColor 45% 55%, transparent 57% 100%),
+    var(--health-band-layer);
+}
+
+/* aggravated */
+.wod20 .resource-counter .resource-value-step[data-state="*"].healthBox {
+  /* The generic `[data-state]` rules use the `background:` SHORTHAND, which reapplies a
+     level-coloured background-color to every counter step. Restate the cell here or a marked
+     box silently reverts to the old fill — which put a light mark on a light fill in dark mode. */
+  background-color: var(--health-cell);
+  background-image:
+    linear-gradient(135deg, transparent 0 43%, currentColor 45% 55%, transparent 57% 100%),
+    linear-gradient(45deg, transparent 0 43%, currentColor 45% 55%, transparent 57% 100%),
+    linear-gradient(to right, transparent 0 43%, currentColor 45% 55%, transparent 57% 100%),
+    var(--health-band-layer);
 }
 
 .wod20 .experienceValue {
@@ -2689,33 +2790,6 @@ input.sheet-infoWidth {
   border-radius: 50%;
 }
 
-.wod20 span.bruised.healthBox {
-  background-color: var(--healthlevel-bruised-color);
-}
-
-.wod20 span.hurt.healthBox {
-  background: var(--healthlevel-hurt-color);
-}
-
-.wod20 span.injured.healthBox {
-  background: var(--healthlevel-injured-color);
-}
-
-.wod20 span.wounded.healthBox {
-  background: var(--healthlevel-wounded-color);
-}
-
-.wod20 span.mauled.healthBox {
-  background: var(--healthlevel-mauled-color);
-}
-
-.wod20 span.crippled.healthBox {
-  background: var(--healthlevel-crippled-color);
-}
-
-.wod20 span.incapacitated.healthBox {
-  background: var(--healthlevel-incapacitated-color);
-}
 
 .wod20 .resource-counter .resource-value-step {
   height: 14px;
@@ -2740,96 +2814,12 @@ input.sheet-infoWidth {
     ),  var(--healthlevel-bruised-color);
 }
 
-.wod20 .resource-counter .resource-value-step[data-state="/"].bruised {
-  background:
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),  var(--healthlevel-bruised-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="/"].hurt {
-  background:
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),  var(--healthlevel-hurt-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="/"].injured {
-  background:
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),  var(--healthlevel-injured-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="/"].wounded {
-  background:
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),  var(--healthlevel-wounded-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="/"].mauled {
-  background:
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),  var(--healthlevel-mauled-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="/"].crippled {
-  background:
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      white 45%,
-      white 55%,
-      transparent 57%,
-      transparent 100%
-    ),  var(--healthlevel-crippled-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="/"].incapacitated {
-  background:
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      white 45%,
-      white 55%,
-      transparent 57%,
-      transparent 100%
-    ),  var(--healthlevel-incapacitated-color);
-}
 
 /* lethal */
 .wod20 .resource-counter .resource-value-step[data-state="x"] {
@@ -2854,159 +2844,12 @@ input.sheet-infoWidth {
     ), #ffffff;
 }
 
-.wod20 .resource-counter .resource-value-step[data-state="x"].bruised {
-  background:
-    linear-gradient(
-      45deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ), var(--healthlevel-bruised-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="x"].hurt {
-  background:
-  linear-gradient(
-    45deg,
-    transparent 0%,
-    transparent 43%,
-    black 45%,
-    black 55%,
-    transparent 57%,
-    transparent 100%
-  ),
-  linear-gradient(
-    135deg,
-    transparent 0%,
-    transparent 43%,
-    black 45%,
-    black 55%,
-    transparent 57%,
-    transparent 100%
-    ), var(--healthlevel-hurt-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="x"].injured {
-  background:
-  linear-gradient(
-    45deg,
-    transparent 0%,
-    transparent 43%,
-    black 45%,
-    black 55%,
-    transparent 57%,
-    transparent 100%
-  ),
-  linear-gradient(
-    135deg,
-    transparent 0%,
-    transparent 43%,
-    black 45%,
-    black 55%,
-    transparent 57%,
-    transparent 100%
-    ), var(--healthlevel-injured-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="x"].wounded {
-  background:
-  linear-gradient(
-    45deg,
-    transparent 0%,
-    transparent 43%,
-    black 45%,
-    black 55%,
-    transparent 57%,
-    transparent 100%
-  ),
-  linear-gradient(
-    135deg,
-    transparent 0%,
-    transparent 43%,
-    black 45%,
-    black 55%,
-    transparent 57%,
-    transparent 100%
-    ), var(--healthlevel-wounded-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="x"].mauled {
-  background:
-  linear-gradient(
-    45deg,
-    transparent 0%,
-    transparent 43%,
-    black 45%,
-    black 55%,
-    transparent 57%,
-    transparent 100%
-  ),
-  linear-gradient(
-    135deg,
-    transparent 0%,
-    transparent 43%,
-    black 45%,
-    black 55%,
-    transparent 57%,
-    transparent 100%
-    ), var(--healthlevel-mauled-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="x"].crippled {
-  background:
-  linear-gradient(
-    45deg,
-    transparent 0%,
-    transparent 43%,
-    white 45%,
-    white 55%,
-    transparent 57%,
-    transparent 100%
-  ),
-  linear-gradient(
-    135deg,
-    transparent 0%,
-    transparent 43%,
-    white 45%,
-    white 55%,
-    transparent 57%,
-    transparent 100%
-    ), var(--healthlevel-crippled-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="x"].incapacitated {
-  background:
-  linear-gradient(
-    45deg,
-    transparent 0%,
-    transparent 43%,
-    white 45%,
-    white 55%,
-    transparent 57%,
-    transparent 100%
-  ),
-  linear-gradient(
-    135deg,
-    transparent 0%,
-    transparent 43%,
-    white 45%,
-    white 55%,
-    transparent 57%,
-    transparent 100%
-    ), var(--healthlevel-incapacitated-color);
-}
 
 /* aggravated */
 .wod20 .resource-counter .resource-value-step[data-state="*"] {
@@ -3040,222 +2883,12 @@ input.sheet-infoWidth {
     ), #ffffff;
 }
 
-.wod20 .resource-counter .resource-value-step[data-state="*"].bruised {
-  background:
-    linear-gradient(
-      45deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ), var(--healthlevel-bruised-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="*"].hurt {
-  background:
-  linear-gradient(
-      45deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ), var(--healthlevel-hurt-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="*"].injured {
-  background:
-  linear-gradient(
-      45deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ), var(--healthlevel-injured-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="*"].wounded {
-  background:
-  linear-gradient(
-      45deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),var(--healthlevel-wounded-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="*"].mauled {
-  background:
-  linear-gradient(
-      45deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      black 45%,
-      black 55%,
-      transparent 57%,
-      transparent 100%
-    ), var(--healthlevel-mauled-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="*"].crippled {
-  background:
-  linear-gradient(
-      45deg,
-      transparent 0%,
-      transparent 43%,
-      white 45%,
-      white 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      transparent 43%,
-      white 45%,
-      white 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      white 45%,
-      white 55%,
-      transparent 57%,
-      transparent 100%
-    ), var(--healthlevel-crippled-color);
-}
 
-.wod20 .resource-counter .resource-value-step[data-state="*"].incapacitated {
-  background:
-  linear-gradient(
-      45deg,
-      transparent 0%,
-      transparent 43%,
-      white 45%,
-      white 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      transparent 43%,
-      white 45%,
-      white 55%,
-      transparent 57%,
-      transparent 100%
-    ),
-    linear-gradient(
-      135deg,
-      transparent 0%,
-      transparent 43%,
-      white 45%,
-      white 55%,
-      transparent 57%,
-      transparent 100%
-    ), var(--healthlevel-incapacitated-color);
-}
 
 /* Migration Wizard - Fixed button layout */
 .wod20.migration-wizard-dialog .migration-wizard-content {
