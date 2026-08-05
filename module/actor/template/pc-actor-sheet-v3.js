@@ -87,11 +87,17 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		bio: {
 			template: "systems/worldofdarkness/templates/actor/v3/bio.hbs"
 		},
+		// MIGRATED — the part this change exists for. Reverting is this one line back to
+		// `parts/stats.hbs`; every rule under "STATS" in `css/pc-actor-v3.css` becomes dead rather
+		// than wrong, because all of them are scoped to wrappers only this shell emits.
 		stats: {
-			template: "systems/worldofdarkness/templates/actor/parts/stats.hbs"
+			template: "systems/worldofdarkness/templates/actor/v3/stats.hbs"
 		},
+		// MIGRATED — the last of the seven. Reverting is this one line back to `parts/powers.hbs`.
+		// `preparePowersContext` keeps setting `powertype` and `haspowercontent` either way; the v2
+		// template simply ignores them.
 		powers: {
-			template: "systems/worldofdarkness/templates/actor/parts/powers.hbs"
+			template: "systems/worldofdarkness/templates/actor/v3/powers.hbs"
 		},
 		// MIGRATED. Reverting is this one line back to `parts/combat.hbs`.
 		combat: {

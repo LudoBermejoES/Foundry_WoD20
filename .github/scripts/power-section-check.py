@@ -25,9 +25,24 @@ WHAT IT CHECKS
     listed for vampire, is exactly this: no definition exists. It is recorded as a known
     gap rather than failing the build, because deleting it is a behaviour change that
     wants a human.)
+
+ 3. Every power axis `getPowertype` can return has a `wod.power.empty.<axis>` string.
+    Added with the v3 Powers tab, whose empty state is DERIVED — `{{localize (concat
+    "wod.power.empty." powertype)}}` — precisely so that a new game line does not need a
+    new branch in the template. The cost of deriving is that the key is not a literal, so
+    `sheet-invariants.py`'s I11 (which checks literal keys against `lang/en.json`) cannot
+    see it, and `game.i18n.localize` returns the RAW KEY on a miss. A missing entry would
+    therefore print `wod.power.empty.scarab` on a player's sheet, silently — the exact
+    class of bug this repo already carries live on `wod.labels.notes` (see gear.hbs).
+
+    The axis list is parsed out of `getPowertype` ITSELF rather than written down here, so
+    adding a line to that function fails this gate instead of shipping a raw key. EN is an
+    error (Foundry falls back to English, so a gap there reaches every language); ES is a
+    warning, matching how the other five language files already lag EN by 79 keys.
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -35,6 +50,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 POWERTAB = ROOT / "assets" / "data" / "sheet" / "powertab.js"
 ITEM_HELPERS = ROOT / "module" / "scripts" / "item-helpers.js"
+PC_SHEET = ROOT / "module" / "actor" / "template" / "pc-actor-sheet.js"
+LANG = ROOT / "lang"
+
+#: The i18n node the v3 Powers tab's empty state reads, one child per power axis.
+EMPTY_PREFIX = ("wod", "power", "empty")
 
 #: section id -> (splat it must not appear for, where it lives instead). A section listed
 #: here renders on another tab; reaching it through powertab.js means it renders twice.
@@ -85,8 +105,55 @@ def parse_definitions(js: str) -> set[str]:
     return set(re.findall(r'\bid:\s*"([^"]+)"', tail))
 
 
+def parse_powertypes(js: str) -> set[str]:
+    """Every string `getPowertype` can return, read out of the function body.
+
+    Deliberately parsed rather than listed: the point of the derived empty state is that a
+    new game line needs no template edit, and the only thing that keeps that honest is a
+    check that discovers the new axis by itself. Both shapes the function uses are matched —
+    the `return "power"` guard at the top and the `powertype = "…"` assignments.
+    """
+    body = strip_comments(js)
+    start = body.find("export const getPowertype")
+
+    if start == -1:
+        return set()
+
+    # The function ends at the first line that is exactly `}` at column 0 after it starts.
+    end = body.find("\n}\n", start)
+    tail = body[start:end if end != -1 else start + 4000]
+
+    found = set(re.findall(r'\bpowertype\s*=\s*"([^"]+)"', tail))
+    found |= set(re.findall(r'\breturn\s+"([^"]+)"', tail))
+
+    return found
+
+
+def read_lang(name: str) -> dict | None:
+    path = LANG / f"{name}.json"
+
+    if not path.is_file():
+        return None
+
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+
+
+def lang_node(doc: dict | None, path: tuple[str, ...]) -> dict:
+    node = doc
+
+    for part in path:
+        if not isinstance(node, dict):
+            return {}
+        node = node.get(part)
+
+    return node if isinstance(node, dict) else {}
+
+
 def main() -> int:
-    if not POWERTAB.is_file() or not ITEM_HELPERS.is_file():
+    if not POWERTAB.is_file() or not ITEM_HELPERS.is_file() or not PC_SHEET.is_file():
         print("power-section-check: expected files missing — refusing to pass", file=sys.stderr)
         return 2
 
@@ -124,6 +191,29 @@ def main() -> int:
                         f"{splat}: section {sid!r} has no definition in BuildPowerSections, so it "
                         f"is skipped silently at runtime and renders nothing.")
 
+    # ---- 3. the derived empty-state key exists for every power axis ------------------------
+    powertypes = parse_powertypes(PC_SHEET.read_text(encoding="utf-8"))
+
+    if len(powertypes) < 2:
+        print(f"power-section-check: parsed {len(powertypes)} power axis/axes out of "
+              f"getPowertype — the function shape changed and this gate can no longer see what "
+              f"it checks", file=sys.stderr)
+        return 2
+
+    en_empty = lang_node(read_lang("en"), EMPTY_PREFIX)
+    es_empty = lang_node(read_lang("es"), EMPTY_PREFIX)
+    dotted = ".".join(EMPTY_PREFIX)
+
+    for axis in sorted(powertypes):
+        if not isinstance(en_empty.get(axis), str):
+            errors.append(
+                f"getPowertype can return {axis!r}, but lang/en.json has no `{dotted}.{axis}`. "
+                f"The v3 Powers tab builds that key with `concat`, so a miss is not a blank — "
+                f"`game.i18n.localize` returns the raw string and the player reads "
+                f"'{dotted}.{axis}' on the sheet. No literal-key check can see this one.")
+        elif not isinstance(es_empty.get(axis), str):
+            notes.append(f"lang/es.json has no {dotted}.{axis!r} — falls back to English")
+
     for n in sorted(set(notes)):
         print(f"::warning::power-section-check: {n}")
 
@@ -134,7 +224,8 @@ def main() -> int:
         return 1
 
     print(f"power-section check OK: {len(primary)} splat(s), {len(default_order)} ordered "
-          f"section(s), {len(defined)} definition(s) — nothing renders on two tabs")
+          f"section(s), {len(defined)} definition(s) — nothing renders on two tabs; "
+          f"{len(powertypes)} power axis/axes all have a {dotted}.* string")
     return 0
 
 

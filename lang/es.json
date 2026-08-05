@@ -1262,6 +1262,18 @@
 			"faemien": "Fae mien"
 		},
 		"power": {
+			"empty": {
+				"magic": "Aún no hay Resonancia registrada. Las Esferas y las Fórmulas de un mago están en la pestaña Principal, junto a las Habilidades con las que se lanzan; esta pestaña guarda la Resonancia.",
+				"discipline": "Aún no hay Disciplinas, Disciplinas Combinadas ni Rituales registrados. Usa Añadir objeto arriba para crear uno.",
+				"gift": "Aún no hay Dones ni Ritos registrados. Usa Añadir objeto arriba para crear uno.",
+				"dreaming": "Aún no hay Artes registradas. Usa Añadir objeto arriba para crear una.",
+				"death": "Aún no hay Arcanoi registrados. Usa Añadir objeto arriba para crear uno.",
+				"edge": "Aún no hay Facultades registradas. Usa Añadir objeto arriba para crear una.",
+				"lore": "Aún no hay Saberes ni Rituales registrados. Usa Añadir objeto arriba para crear uno.",
+				"scarab": "Aquí no hay nada registrado, y todavía no puede haberlo: esta hoja no tiene sección de Hekau — ni lista que los muestre ni botón para crearlos — así que los poderes de una momia no tienen dónde vivir en esta pestaña.",
+				"exaltedcharm": "Aquí no hay nada registrado, y todavía no puede haberlo: esta hoja no tiene sección de Encantamientos para los Exaltados — ni lista que los muestre ni botón para crearlos.",
+				"power": "No hay poderes registrados en esta hoja. Qué tipos pueden añadirse aquí depende del juego al que pertenece este personaje; un personaje puramente mortal no tiene ninguno."
+			},
 			"nopowers": "No power selected",
 			"rank0": "Eres de Rango 0, no se permiten Dones",
 			"rank1": "Rango 1",

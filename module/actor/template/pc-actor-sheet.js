@@ -1892,6 +1892,28 @@ export const preparePowersContext = async function (context, actor) {
 	context.powerSections = ItemHelper.BuildPowerSections(actor, context, splat, CONFIG.worldofdarkness.sheetv2.power || {});
 	context.splat = splat;
 
+	// add-pc-sheet-v3 — two keys the v3 Powers shell needs and the v2 template ignores.
+	//
+	// `powertype` is the axis name `getPowertype` already derives to pick this tab's ICON
+	// (`getTabs`, :260). Exposing it lets the empty state look up `wod.power.empty.<powertype>`
+	// instead of branching on the splat in the template — one key per axis, in the language files,
+	// where a per-line table belongs. Ten values are possible; `power-section-check.py` parses them
+	// out of `getPowertype` itself and asserts each has a key, because a derived key that is missing
+	// renders as the raw string and no literal-key gate can see it.
+	//
+	// `haspowercontent` is the EXACT disjunction of the five gates the template renders on, and it
+	// is computed here rather than in the template for one reason: "does any section have a true
+	// condition" cannot be expressed in Handlebars. Writing the flags out by hand in the shell would
+	// drift from the ladder silently the first time a section is added — the empty state would print
+	// UNDER a section that rendered. Reading it off `powerSections` cannot.
+	context.powertype = getPowertype(actor);
+	context.haspowercontent =
+		!!actor.system.settings.hasshapes ||
+		!!actor.system.settings.hasrealms ||
+		context.powerSections.some(section => !!section?.condition) ||
+		!!actor.system.settings.hasapocalypticforms ||
+		(context.powertraits.length > 0);
+
   	return context;
 }
 

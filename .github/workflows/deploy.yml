@@ -185,6 +185,21 @@ jobs:
       - name: Check the v3 stylesheet stays scoped and themeable
         run: python3 .github/scripts/v3-css-check.py
 
+      # I11 above checks that a key EXISTS. Nothing checked what it CONTAINS, and on 2026-08-05 a
+      # script adding the ten `wod.power.empty.*` sentences wrote one of them over
+      # `wod.bio.wraith.death` — the "Death" caption on a wraith's Biography tab — in en.json AND
+      # es.json. Every gate in this file passed: the key existed before and after, the markup did
+      # not change, and `test-part-render.mjs` asserts structure, not prose. This is the only gate
+      # here that reads a STRING'S VALUE. It caps every key rendered in a field-label slot (a
+      # `label:` in assets/data/sheet/*.js, or a `{{localize}}` inside a `floating-label`) at 45
+      # characters in every language — the longest real label is 25, so it is a tripwire for a
+      # PARAGRAPH arriving where a caption belongs, not a style rule. Its first clean run found a
+      # pre-existing one: pt-BR had replaced `aretecasting.spendingtime` with a 76-character rules
+      # explanation, which rendered on the Rote sheet and in both casting dialogs.
+      # Runnable locally: python3 .github/scripts/label-length-check.py
+      - name: Check no field label holds a sentence
+        run: python3 .github/scripts/label-length-check.py
+
       # The first gate that reads a template AGAINST THE JAVASCRIPT THAT RENDERS IT.
       # `template-structure-check.py` above checks a template against itself — comments,
       # nesting, tag balance, partial registration — and every one of these four passes that

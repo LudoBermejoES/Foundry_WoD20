@@ -1266,6 +1266,18 @@
 			"faemien": "Fae mien"
 		},
 		"power": {
+			"empty": {
+				"magic": "No Resonance is recorded yet. A mage's Spheres and Rotes live on the Core tab, beside the Abilities they are cast alongside; this tab holds Resonance.",
+				"discipline": "No Disciplines, Combination disciplines or Rituals are recorded yet. Use Add item above to create one.",
+				"gift": "No Gifts or Rites are recorded yet. Use Add item above to create one.",
+				"dreaming": "No Arts are recorded yet. Use Add item above to create one.",
+				"death": "No Arcanoi are recorded yet. Use Add item above to create one.",
+				"edge": "No Edges are recorded yet. Use Add item above to create one.",
+				"lore": "No Lores or Rituals are recorded yet. Use Add item above to create one.",
+				"scarab": "Nothing is recorded here, and nothing can be yet: this sheet has no Hekau section — no list to show them and no button to create one — so a mummy's powers have nowhere to live on this tab.",
+				"exaltedcharm": "Nothing is recorded here, and nothing can be yet: this sheet has no Charms section for the Exalted — no list to show them and no button to create one.",
+				"power": "No powers are recorded on this sheet. Which kinds can be added here depends on the game this character belongs to; a purely mortal character has none."
+			},
 			"nopowers": "No power selected",
 			"rank0": "You have rank 0 so no Gifts are allowed",
 			"rank1": "Rank 1",

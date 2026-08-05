@@ -41,9 +41,28 @@
    inline styles beat author rules. Nearly all live in the shells v3 rewrites, so they are removed
    rather than overridden. There is deliberately no `[style]` sledgehammer here.
 
-   MIGRATED SO FAR: `effects`, `gear`, `combat`, `bio`, `feature`. Every other part still renders the v2 template, so a rule
-   below only ever reaches a tab that has been migrated — and reverting a part is one line in
-   `PCActorSheetV3.PARTS`, with its rules here becoming dead rather than wrong.
+   MIGRATED: ALL SEVEN — `effects`, `gear`, `combat`, `bio`, `feature`, `stats`, `powers`. Only
+   `settings` still renders the v2 template, permanently and by decision (609 lines of GM
+   administration, not a play surface). Reverting a part is one line in `PCActorSheetV3.PARTS`, and
+   its rules here become dead rather than wrong, because every one of them is scoped to a wrapper
+   class only that shell emits.
+
+   A FIFTH MECHANISM, ADDED WITH THE STATS TAB: `flex-basis` BEATS AN INLINE `width`
+   ---------------------------------------------------------------------------------
+   The header above says inline widths "are not reachable by any of this — inline styles beat author
+   rules". That is true of the CASCADE and it is not the whole story, which matters because the
+   Stats tab's partials carry eight of them (`33%`, `67%`, `50%`, `100%`, `225px`) and not one of
+   those files may be edited.
+
+   A flex item's main size comes from `flex-basis`, and `width` is only consulted when `flex-basis`
+   is `auto`. So `flex: 1 1 0` from a stylesheet makes an inline `width: 33%` IRRELEVANT — not
+   overridden, simply not asked. It is the same class of move as blockification: change which
+   property decides, rather than win a fight over one. `flex: 1 1 auto` is the softer version, which
+   KEEPS the inline width as the basis and merely lets it shrink; that is what the Bio tab already
+   does to `bio_splatfields.hbs`'s 320px, and both are used below where each is right.
+
+   Still out of reach: an inline `height`, an inline `margin`, and `--count`-style custom properties
+   used in `calc()`. Those are simply left alone; there is deliberately no `[style]` sledgehammer.
    =========================================================================================== */
 
 /* The scope marker. Every rule below begins with this, which is what stops the file reaching the
@@ -603,13 +622,24 @@
    NOT in the `!important` budget below, because none of these IS an `!important`: every rule here
    makes a container a grid or flex container, and a grid/flex item's `float` computes to `none`.
    That is a computed-value rule, so it outranks `.wod20 .pullLeft { float: left !important }`
-   (wod.css:585) without competing with it. Scoped to `.v3-tabmain` so it reaches only the tabs v3
-   has migrated, and to the two partials that actually need it.
+   (wod.css:585) without competing with it.
+
+   SCOPED TO THE TWO COMBAT BLOCKS THAT NEED IT, AND THAT NARROWING IS LOAD-BEARING. This rule was
+   `.v3-tabmain .clearareaBox` until the Stats tab was migrated, and on the Stats tab it is
+   CATASTROPHIC: `clearareaBox` is not one shape, it is two. On combat it wraps a row of cells that
+   should sit side by side; on `stats_attributes.hbs` and `stats_abilities.hbs` it wraps a VERTICAL
+   STACK — the banner, the column-heading row and the three column groups — so making it a flex row
+   laid the whole Attributes block out horizontally and took the sheet to 1,100px with three ability
+   columns starting at x=311. Measured in a headless Chromium, which is the only reason it was
+   caught: no gate in this repo renders CSS. `combat_armor.hbs` (1 use) and `combat_movement.hbs`
+   (6 uses) are the ONLY `clearareaBox`es under `.v3-tabmain` outside the Stats tab — verified per
+   partial — so listing them costs nothing and the Stats tab gets to define its own rows.
 
    `combat_armor.hbs:2-6` — the chimerical soak header, three `.pullLeft` cells in a
    `.clearareaBox`. Changeling only, which is 2 of the 88 live actors, and therefore exactly the
    sort of block that would have gone unlooked-at. */
-.wod20.pc-actor-v3 .v3-tabmain .clearareaBox {
+.wod20.pc-actor-v3 .v3-weapons .clearareaBox,
+.wod20.pc-actor-v3 .v3-movement .clearareaBox {
 	display: flex;
 	align-items: baseline;
 }
@@ -635,4 +665,566 @@
 
 .wod20.pc-actor-v3 .v3-movement .clearareaBox {
 	gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   STATS — the tab this change exists for, and the one whose redesign is almost entirely HERE.
+
+   WHY THE STYLESHEET CARRIES IT
+   -----------------------------
+   Every row on the Stats tab lives in a SHARED partial: `stats_attributes.hbs` (103 lines),
+   `stats_abilities.hbs` (354), `power_spheres.hbs` (123), `stats_advantages.hbs` (89),
+   `stats_features.hbs` (88), `stats_health.hbs` (288). D5 forbids forking any of them — five
+   commits landed in those files in a single day — so `templates/actor/v3/stats.hbs` is 6 includes
+   and 5 wrapper divs, and everything below reaches those partials' OUTPUT without editing them.
+   That is what the scope class is for.
+
+   The wrappers (`.v3-attributes`, `.v3-abilities`, `.v3-spheres`, `.v3-advantages`,
+   `.v3-statfeatures`, all inside `.v3-stats`) exist ONLY so a rule can reach one partial's output
+   and not another's. They carry no content and no behaviour. Do not "flatten" them.
+
+   EVERYTHING BELOW WAS MEASURED IN A HEADLESS CHROMIUM against the real stylesheet chain in
+   `system.json` order, on a rendered mage with 9 attributes, 33 abilities (14 rated / 19 at zero),
+   9 spheres, Arete, Willpower, the Quintessence wheel, a health track and the four feature lists.
+   No gate in this repo renders CSS, so a claim here that was not measured is a claim that is
+   probably wrong — the `clearareaBox` collision recorded in the COMBAT block above is exactly
+   that, and so is the clipped experience total recorded further down. ═══ */
+
+/* ── The binder contract, restated where someone editing this block will see it ──────────────
+   `_onRender` hard-codes ~20 selectors, and five of them run through the markup below:
+
+       `.willpower > .resource-value > .resource-value-step`   (pc-actor-sheet.js:1001)
+       `.quintessence-wheel .wheel-step`                       (:981)
+       `.resource-value-input`                                 (:956)
+       `.collapsible.button[data-itemid]` / `[data-traituuid]`  (:491, :516)
+
+   The first is a DIRECT-CHILD CHAIN and `binder-selector-check.py` explicitly cannot verify it
+   (`willpower` is interpolated from actor data). NOTHING here may interpose an element in it — and
+   nothing does: every rule below changes `display`, sizing or a pseudo-element, and a pseudo-element
+   is not a child for the purposes of `>`. Verified in the browser: the chain still selects 10 nodes
+   with these rules applied. `SetupDotCounters_v2` likewise walks `.resource-value` -> its
+   `.resource-value-step` descendants; unchanged.
+   ─────────────────────────────────────────────────────────────────────────────────────────── */
+
+/* Two v2 rules that reserve space this tab does not have. `.sheet-area.flex-columns` is
+   `min-height: 100px` (wod.css:735) — a floor under the Spheres and Rote blocks that draws an empty
+   hole when either is short — and `.sheet-area` is `max-width: 880px` (wod.css:731), which caps
+   those two blocks narrower than the four beside them once the sheet is wider than that. Both are
+   v2 layout decisions for a floated page; the grid below decides the width. */
+.wod20.pc-actor-v3 .v3-stats .sheet-area {
+	max-width: none;
+}
+
+.wod20.pc-actor-v3 .v3-stats .sheet-area.flex-columns {
+	min-height: 0;
+}
+
+/* ── THE NUMERAL. The single highest-value change on this sheet. ─────────────────────────────
+   The Stats tab had ALMOST NO NUMBERS on it. There was no numeric readout for permanent Willpower,
+   for temporary Willpower, for Arete, or for ANY of the ~33 abilities — 332 identical 14px circles
+   on the fixture actor, and reading a rating meant counting them. Attributes and Abilities are the
+   two blocks a player reads most and the two with the least to read.
+
+   It costs no markup at all, because the value is ALREADY IN THE DOM on every dot row's container:
+
+       `.resource-value[data-value]`               attributes, abilities, spheres, virtues,
+                                                   backgrounds/other traits, and the PERMANENT
+                                                   advantage row (`permValueRow`)
+       `.resource-counter.tempSquareRow[data-value]`  the TEMPORARY advantage row
+
+   MEASURED PARITY, because the two are NOT one class and a rule written for `.resource-value`
+   alone would silently miss the row that needed it most: of the 65 elements on the rendered tab
+   that directly contain dots, 58 carry `data-value` and 7 do not. The seven are the health levels
+   (`.resource-counter.healthbox`), which carry only `data-name` — and they are the one row here
+   that must NOT get a numeral: a health track is a state per box, not a rating, and
+   `getInjuredLevel` already prints the wound level above it in words.
+
+   `::before` rather than `::after`, so the numeral sits at the START of the value cell — a fixed
+   distance from the row's right-hand edge, which makes a column of them scannable. `::after` would
+   put it beyond the speciality icon, whose presence varies per row.
+
+   THE PSEUDO-ELEMENT IS NOT A CHILD. `.willpower > .resource-value > .resource-value-step` still
+   matches, `SetupDotCounters_v2` still fills the same spans, and no `data-*` moved. That is the
+   whole reason this route was taken over adding a `<span>`. */
+.wod20.pc-actor-v3 .v3-stats .resource-value[data-value]::before,
+.wod20.pc-actor-v3 .v3-stats .resource-counter.tempSquareRow[data-value]::before {
+	content: attr(data-value);
+	display: inline-block;
+	min-width: 1.15em;
+	margin-right: 7px;
+	text-align: right;
+	font-family: var(--main-font);
+	font-size: 0.8rem;
+	font-weight: bold;
+	font-variant-numeric: tabular-nums;
+	line-height: 14px;
+	vertical-align: middle;
+}
+
+/* TWO ROWS ALREADY CARRY A NUMBER, AND NEITHER MAY GET A SECOND ONE.
+
+   `stat_value_dots.hbs` swaps the dots for a text `<input>` above max 8 (supernatural attributes,
+   werewolf Rage and Gnosis), and `stats_attributes.hbs:68` prints `<span class="attribute-total">`
+   INSIDE the value cell for werewolf, changingbreed and demon — the total after shapeshift and
+   bonus modifiers, which is the number those three lines actually roll. A `::before` would sit
+   beside either one as an unlabelled second figure, and the reader would have no way to tell base
+   from total apart from position. Measured on a werewolf fixture: with these two rules the Rage row
+   shows one input and the Strength row shows one total, exactly as they do on v2. */
+.wod20.pc-actor-v3 .v3-stats .resource-value:has(.resource-value-input)::before,
+.wod20.pc-actor-v3 .v3-stats .resource-value:has(> .attribute-total)::before {
+	content: none;
+}
+
+/* The temporary row is set apart from the permanent one above it. THIS IS NOT THE FULL FIX and the
+   template says so: the two rows differ by SHAPE (circles above, squares below) and now by value,
+   but the temporary one still has no LABEL — the word cannot come from here (a literal string in
+   `content:` is untranslatable, and this system ships seven language files) nor from the shell
+   (`getGetStatArea_v2` builds the row, and its output is byte-frozen by
+   `test-statarea-identity.mjs`). Regular weight and reduced contrast is what is available without
+   forking that renderer, which add-pc-sheet-v3 D6 defers to its own phase. */
+.wod20.pc-actor-v3 .v3-stats .resource-counter.tempSquareRow[data-value]::before {
+	font-weight: normal;
+	opacity: 0.75;
+}
+
+/* THE TEMPORARY ROW'S 200px CAP, WHICH IS ALREADY TOO NARROW ON v2 AND WOULD BE WORSE WITH A
+   NUMERAL. `.mage div.tempSquareRow` is `max-width: 200px` (mage.css:163; the generic rule at
+   wod.css:2007 is 240px). A ten-square row measures 10 x (14 + 2 border + 5 margin) - 5, plus the
+   11px group separator after the fifth = 211px. So on EVERY mage the tenth temporary Willpower
+   square already wraps onto a line of its own — visible in a v2 render of this same actor, and not
+   introduced here — and the numeral would take it to two.
+
+   `max-width: none` rather than a bigger number: the row is `margin: 0 auto` inside a
+   `text-align: center` box, exactly like `permValueRow` above it, which has no cap at all. Removing
+   the cap makes the two rows the same width and their two numerals line up vertically, which is the
+   only thing that made the pair readable as one pool. It also stops a wraith's Corpus track — the
+   other user of this row, whose length is the character's permanent Corpus — from being capped at
+   an arbitrary nine squares.
+
+   The v2 sheet still has the 200px. Fixing it there is a one-line change to `mage.css` that reaches
+   both sheets and every mage; it is not made here because this change is not supposed to move the
+   v2 sheet at all. */
+.wod20.pc-actor-v3 .v3-stats .resource-counter.tempSquareRow {
+	max-width: none;
+}
+
+/* A rating of zero reads as zero without being shouted. Applies to the numeral everywhere on the
+   tab; the LABEL treatment below is abilities-only. */
+.wod20.pc-actor-v3 .v3-stats .resource-value[data-value="0"]::before {
+	font-weight: normal;
+	opacity: 0.5;
+}
+
+/* ── THE STAT ROW. One shape, four partials that each draw it differently. ───────────────────
+   Every one of these is `name on the left, rating on the right`, and v2 builds all four out of a
+   `pullLeft` name at a percentage width and a `pullRight` value — which is why adding anything to
+   the value side has twice broken these rows by pushing the label onto a second line and dropping
+   the fifth dot (recorded in `power_spheres.hbs` and in `wod.css`'s name-cell block). A numeral is
+   exactly the kind of addition that would have done it a third time.
+
+   Flex removes the failure mode instead of budgeting around it: the name cell takes what is left
+   after the value, rather than a fixed 50% that the value then has to fit beside. `float` computes
+   to `none` on a flex item, so `.pullLeft`/`.pullRight` stop applying without being fought (D4), and
+   `ability-headlineWidth`'s 50% / 40% is replaced rather than out-specified.
+
+   `.sphere-itemlist` is NOT in this list — it is already a flex row with its own fixed 26px height
+   and a measured, ellipsis-clipped label (mage.css:127) — but it needs the same TREATMENT for its
+   two children, and the reason is the incident that block has already had once. See below. */
+.wod20.pc-actor-v3 .v3-attributes .attribute-rowheight,
+.wod20.pc-actor-v3 .v3-abilities .ability-statArea > .clearareaBox,
+.wod20.pc-actor-v3 .v3-advantages .virtue-row,
+.wod20.pc-actor-v3 .v3-statfeatures .clearareaBox:has(> .resource-value),
+.wod20.pc-actor-v3 .v3-statfeatures .clearareaBox:has(> .notes-valueBox) {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	/* v2 pins these rows to 19px (`attribute-rowheight`, `virtue-row`'s 23px line-height). 19px is
+	   BELOW the 20px icon floor the name-cell block documents, which is why that cell needs a
+	   `height: 100%` guard at all. 22px is the v3 row rhythm the tables already use. */
+	height: auto;
+	min-height: 22px;
+}
+
+/* The name cell grows; the rating shrinks to its content. `width: auto` un-sets the percentage
+   without an `!important`: `.wod-sheet .ability-headlineWidth` is (0,2,0) and this is (0,4,0). */
+.wod20.pc-actor-v3 .v3-stats .attribute-rowheight > .wod-namecell,
+.wod20.pc-actor-v3 .v3-stats .ability-statArea > .clearareaBox > .wod-namecell,
+.wod20.pc-actor-v3 .v3-statfeatures .clearareaBox > .ability-headlineWidth,
+.wod20.pc-actor-v3 .v3-advantages .virtue-row > .ability-headlineWidth {
+	flex: 1 1 auto;
+	width: auto;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+/* The ellipsis has to be on the element that HOLDS THE TEXT, not on the cell around it: clipping
+   happens where the overflow is, and `.wod-namecell` is a flex container whose child is what
+   overflows. Measured at a 760px sheet: without this the Attributes column reads "Fue", "Destre",
+   "Resiste" with no indication that anything was cut; with it, "Fue…". `power_spheres.hbs`'s labels
+   already do exactly this (mage.css:127) and were the only ones that degraded honestly.
+
+   This is what replaces `responsive.css:135-155`, which patches `ability-headlineWidth` per
+   LANGUAGE (`.langDE`, `.langES`, `.langPT`, and a separate pair for werewolf and demon) because a
+   fixed 50% could not react to a longer word. A cell that takes what is left and clips with an
+   ellipsis needs no per-language table; the full name is still one hover away in the `title` the
+   partials already set. */
+.wod20.pc-actor-v3 .v3-stats .wod-namecell > .wod-namecell-label,
+.wod20.pc-actor-v3 .v3-statfeatures .clearareaBox > .ability-headlineWidth {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.wod20.pc-actor-v3 .v3-stats .attribute-rowheight > .resource-value,
+.wod20.pc-actor-v3 .v3-stats .ability-statArea > .clearareaBox > .resource-value,
+.wod20.pc-actor-v3 .v3-advantages .virtue-row > .resource-value,
+.wod20.pc-actor-v3 .v3-statfeatures .clearareaBox > .resource-value,
+.wod20.pc-actor-v3 .v3-statfeatures .clearareaBox > .notes-valueBox {
+	flex: 0 0 auto;
+	white-space: nowrap;
+}
+
+/* ── THE ZERO-RATED ABILITY. Weight first, colour second. ────────────────────────────────────
+   19 of 33 abilities are at zero on a typical mage and cost exactly as much vertical space as the
+   14 that matter. NOTHING IS HIDDEN, COLLAPSED OR REORDERED: a rating you cannot see is a rating
+   you cannot raise, and every one of these rows is also a roll target and an edit target.
+
+   The test is `:has()` on the RENDERED state — "this row contains no lit dot" — rather than on
+   `data-value`, because a lit dot is what the reader is actually comparing against; if the two ever
+   disagreed, the emphasis would follow the pixels rather than the attribute. `.active` is put there
+   by `SetupDotCounters_v2` at render. The second `:not()` excludes the text-input rows, which have
+   no `.resource-value-step` at all and would otherwise all read as zero.
+
+   Every ability label is bold TODAY — `.headlineNormal` is `font-weight: var(--headline-normal-weight)`
+   and that variable is `700` (wod.css:111). So this does not add bold to fourteen rows, it removes
+   it from nineteen, which is the same pre-attentive figure/ground and costs nothing anywhere else.
+   Colour does no work on its own here (D8): the weight difference carries it, and the opacity is
+   secondary reinforcement. */
+.wod20.pc-actor-v3 .v3-abilities .ability-statArea > .clearareaBox:not(:has(.resource-value-step.active)):not(:has(.resource-value-input)) .wod-namecell-label {
+	font-weight: normal;
+	opacity: 0.68;
+}
+
+/* THE SPHERES ARE EXEMPT, and that is a decision rather than an omission. Nine of them, a bounded
+   3x3 grid, a mage raises them constantly, and every sphere NAME is click-to-cast
+   (`data-castsphere`, action-helpers.js) — so dimming an unused sphere dims an action rather than a
+   row of noise. There is no rule here; this comment is the record that there was meant to be none. */
+
+/* ── ATTRIBUTES: three real columns instead of three 33% floats ──────────────────────────────
+   `stats_attributes.hbs` draws the block as a banner and TWO `.clearareaBox`es — one holding the
+   three column HEADINGS, one holding the three column GROUPS — each with three `.pullLeft` children
+   at `width: 33%`. Both become grids with identical tracks and gap, which is what makes the heading
+   line up with its column: 33% of a floated row and 1fr of a grid do not agree, and on v2 they
+   already do not (measured: headings at x=123/173/226 over columns at x=12/295/578).
+
+   Exactly three tracks, never `auto-fit`: Physical/Social/Mental and Talents/Skills/Knowledges are
+   fixed triples, and a fold that moved one grid to two columns and not the other would misalign
+   the headings from their columns, which is worse than a narrow column. */
+.wod20.pc-actor-v3 .v3-attributes > .area-box > .clearareaBox,
+.wod20.pc-actor-v3 .v3-abilities > .area-box,
+.wod20.pc-actor-v3 .v3-abilities > .area-box > .clearareaBox {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0 14px;
+	align-items: start;
+}
+
+/* The abilities block has no wrapper around its three columns — they are direct children of the
+   `.area-box` alongside the banner and the heading row — so the banner and the heading row have to
+   span the whole grid explicitly. */
+.wod20.pc-actor-v3 .v3-abilities > .area-box > .sheet-headline,
+.wod20.pc-actor-v3 .v3-abilities > .area-box > .clearareaBox {
+	grid-column: 1 / -1;
+}
+
+/* The columns themselves. `width: 33%` on a grid item resolves against its TRACK, not the row, so
+   leaving it would give each column a third of a third. */
+.wod20.pc-actor-v3 .v3-attributes .attribute-statArea,
+.wod20.pc-actor-v3 .v3-abilities .ability-statArea {
+	width: auto;
+	min-width: 0;
+}
+
+/* ── SPHERES: the same 3-column treatment, on a block that opens its wrapper mid-loop ────────
+   `power_spheres.hbs` emits `<div class="magic-statArea pullLeft">` every third sphere, inside one
+   unclassed `<div>`. `:has(> .magic-statArea)` is how the stylesheet names that wrapper without the
+   template growing a class it does not need — and if the partial ever stops using `magic-statArea`
+   the block falls back to v2's floats, which is a cosmetic regression rather than a break. */
+.wod20.pc-actor-v3 .v3-spheres .sheet-area > div:has(> .magic-statArea) {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0 14px;
+	align-items: start;
+}
+
+.wod20.pc-actor-v3 .v3-spheres .magic-statArea {
+	width: auto;
+	min-width: 0;
+}
+
+/* THE SPHERE ROW'S TWO CHILDREN, and this rule is not optional once the numeral exists.
+   `.sphere-itemlist` is a 26px flex row whose name cell is `spheres-headlineWidth`, i.e. 55% on a
+   PC sheet (mage.css:104), with the dots taking whatever is left. Adding ~22px of numeral to the
+   value side with the name still pinned at 55% is EXACTLY the failure this block has had before,
+   and it reproduced immediately in the browser: the fifth dot wrapped onto a second line inside a
+   26px row and painted over the row below (`power_spheres.hbs` records the 7.5.5 version of the
+   same thing, and mage.css:113-127 the Technocratic-label version).
+
+   The fix is the same as every other stat row on this tab — the name cell takes what is left after
+   the value, instead of the value having to fit beside a fixed percentage. `white-space: nowrap`
+   on the value is the belt: a dot row must never be allowed to wrap, whatever is added to it. The
+   label's own ellipsis clipping (mage.css:127) still applies and is what absorbs a long
+   Technocratic name. */
+.wod20.pc-actor-v3 .v3-spheres .sphere-itemlist > .wod-namecell {
+	flex: 1 1 auto;
+	width: auto;
+	min-width: 0;
+}
+
+.wod20.pc-actor-v3 .v3-spheres .sphere-itemlist > .resource-value {
+	flex: 0 0 auto;
+	white-space: nowrap;
+}
+
+/* ── ADVANTAGES: 33% / 67% floats with inline widths, made shrinkable rather than overridden ──
+   `stats_advantages.hbs` is the densest debt on the tab and cannot be edited: it holds
+   `{{{getGetStatArea_v2}}}`, i.e. a row renderer (D5). Four nested `clearareaBox` clearfixes and
+   five inline widths (33%, 67%, two 50%, 100%).
+
+   `flex: 0 1 auto` is the soft form of the flex-basis move described in this file's header: the
+   inline `width` is KEPT as the basis — the 33/67 split is a deliberate layout, not debt — and the
+   default `flex-shrink: 1` lets both fall below it in a narrow sheet, which two floated blocks
+   never would. Nothing is declared about the partial's own elements' widths at all. */
+/* `gap: 0`, deliberately. The two columns are 33% and 67% of the row, which is exactly 100%, so
+   ANY gap makes them overflow and `flex-wrap: wrap` then stacks them — measured: with `gap: 12px`
+   the Quintessence wheel took the full width and Arete/Willpower/health/XP dropped underneath it
+   into a third of the sheet, leaving two thirds of the block empty. Spacing between the columns has
+   to come from inside them (the partial's own padding) or not at all; it cannot come from here
+   while the widths are inline and add to exactly 100. `wrap` is kept so that a genuinely narrow
+   sheet stacks them rather than crushing the wheel. */
+.wod20.pc-actor-v3 .v3-advantages .clearareaBox {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 0;
+}
+
+.wod20.pc-actor-v3 .v3-advantages .clearareaBox > .pullLeft,
+.wod20.pc-actor-v3 .v3-advantages .clearareaBox > .healthBox {
+	flex: 0 1 auto;
+}
+
+/* `min-width: 0` on the OUTER pair only. The wheel column and the Arete/Willpower+health column are
+   33% and 67% and must always be able to shrink; the INNER pair (the pools and the health track,
+   50% each) must NOT, because a dot row that shrinks does not get smaller — it WRAPS, and a wrapped
+   10-dot row reads as eleven dots in an L-shape. Measured at a 760px sheet: the Arete row broke
+   9 + 1 before this. */
+.wod20.pc-actor-v3 .v3-advantages > .clearareaBox > .pullLeft {
+	min-width: 0;
+}
+
+/* One advantage pool: banner, ten permanent dots, ten temporary squares. 10 x 19px of dot + the
+   11px group separator after the fifth + ~22px of numeral = 233px, so the flex line that holds two
+   of these breaks to one column below ~470px instead of breaking the row itself. `.wod-pool` was
+   added to all four `getGetStatArea_v2` call sites for exactly this kind of per-pool decision
+   (add-pc-sheet-v3 D6) and carried no rules until now. */
+.wod20.pc-actor-v3 .v3-advantages .wod-pool {
+	min-width: 236px;
+}
+
+/* And the same floor on the two INNER columns, because `min-width` on the pool alone does not
+   reach them. A flex item with a SPECIFIED size takes `min(specified, content)` as its automatic
+   minimum — both of these carry an inline `width: 50%`, so their content minimum is capped by that
+   50% and they shrink past the pool instead of wrapping, leaving the pool overhanging the health
+   track. An explicit `min-width` is the only thing that overrides the specified-size suggestion.
+
+   AND THE BASIS HAS TO MOVE WITH IT, which is the part that is easy to get wrong: flex LINE
+   BREAKING uses the flex BASE size, not the clamped minimum. With `flex-basis: auto` the base is
+   the inline 50% (218px at a 760px sheet), two of those fit on one line, and only THEN does
+   `min-width` clamp each back up to 236 — so they overflow the row instead of wrapping out of it.
+   Measured, in exactly that order. `flex: 1 1 236px` makes the base 236, so the line breaks; the
+   `1` grow factor is what keeps them filling the row 50/50 at full width (299px each at 1000px).
+
+   NOTE ON WHEN THIS CAN EVEN BE SEEN: `.wod-sheet.pc-actor:not(.minimized)` pins the PC sheet to
+   `width: 1000px; min-width: 1000px` (wod.css:343), and at 1000px none of this is reached — the
+   inner columns are 299px each and nothing wraps. These rules are for the case where that pin is
+   relaxed (responsive.css already lowers the generic `.wod-sheet` floor to 900 and 850 on small
+   viewports), and they were verified by forcing the sheet to 760px, which is the only way to
+   observe it today. */
+.wod20.pc-actor-v3 .v3-advantages .clearareaBox .clearareaBox > .pullLeft,
+.wod20.pc-actor-v3 .v3-advantages .clearareaBox .clearareaBox > .healthBox {
+	flex: 1 1 236px;
+	min-width: 236px;
+}
+
+/* v2 spaces the experience total from its label with `margin-left: 70px` on `.experienceValue`
+   (wod.css:1989) plus `padding-left: 35px` inline on the row — a fixed gap that collides with the
+   longer German and Spanish labels. `auto` on the flex row instead, exactly as the Features tab's
+   XP ledgers already do it.
+
+   AND THE ROW MUST BE `border-box` FOR THAT TO BE SAFE, which is the part a diff would not show and
+   only a render caught. The row is `style="width: 100%; margin-top: 5px; padding-left: 35px"`
+   (`stats_advantages.hbs:69`), and under the default `content-box` that 35px ADDS to the 100%: the
+   row is 35px wider than the column it sits in, and the 50/50 wrapper's `overflow: hidden`
+   (`.clearareaBox`, wod.css:650) eats exactly that overhang. It was harmless while the total sat
+   70px from its label — that is inside the visible part — and it deleted the number outright the
+   moment `margin-left: auto` moved it to the right edge. Measured, then fixed, then measured again;
+   the check is `M1` in the render harness. `box-sizing` folds the inline padding back inside the
+   inline width without touching either. */
+.wod20.pc-actor-v3 .v3-advantages .clearareaBox.sheet-headline {
+	box-sizing: border-box;
+}
+
+.wod20.pc-actor-v3 .v3-advantages .experienceValue {
+	margin-left: auto;
+}
+
+/* THE QUINTESSENCE WHEEL IS LEFT AT 150x150, AND THE ROW IS AS TALL AS IT. That is a refusal with
+   arithmetic behind it, not an oversight, and the cost is stated rather than hidden.
+
+   Measured on the fixture at the sheet's own 1000px width: the wheel's column is 237px tall and the
+   Arete/Willpower/health/XP column beside it is 125px, so there are ~112px of air under the right
+   half of this row and the wheel is the tallest thing on the tab. (Note that this only became true
+   once the temporary rows stopped wrapping, two rules up — before that the right column was 262px
+   and the wheel was NOT the driver. A claim about a layout is only as current as the last
+   measurement of it.)
+
+   Why it is still not shrunk. `mage.css:251` is
+   `--radius: calc(28px + (var(--count) - 3) * 2.5px)`, so at the common `max: 20` the radius is
+   70.5px and twenty 14px dots sit on a 22.1px arc pitch — an 8px gap. Bringing the box to 120px
+   forces the radius to ~51px, the pitch to 16px and the gap to 2px. And unlike a linear dot row,
+   a `.wheel-step` gets NO hit expansion: the `::after { inset: -3px }` that grows every other dot
+   on this sheet to a 20px target is scoped to `.resource-value .resource-value-step`, which a wheel
+   step is not. So shrinking the wheel trades 112px of empty space for twenty 14px targets 2px
+   apart, on the one widget a mage clicks every session. That is the crowding class this project has
+   already recorded twice (`power_spheres.hbs`, "the fifth dot wrapped onto its own line";
+   mage.css:113, three Technocratic labels wrapping in a 26px row).
+
+   THE REAL FIX IS NOT A SIZE, IT IS THE 33/67 SPLIT — the wheel wants a column of its own height,
+   not a third of a row whose other two thirds are short. That means changing `stats_advantages.hbs`,
+   which holds `{{{getGetStatArea_v2}}}` and is therefore off-limits to this change (D5). Recorded
+   for whoever takes D6's advantage renderer. What IS done here is letting the partial's inline
+   `225px` wrapper shrink, above. */
+
+/* ── FEATURES BLOCK (Backgrounds | Other Traits | Merits+Flaws) ───────────────────────────────
+   Three `.pullLeft` columns whose 33% is an INLINE style, so the cascade cannot reach it — and
+   here, unlike the advantages block, the 33% is not wanted: the three lists are unrelated in
+   length and one long Background name should not be clipped so that an empty Flaws column can keep
+   a third of the row.
+
+   `flex: 1 1 0` is the HARD form of the flex-basis move: with an explicit basis of `0` the inline
+   `width: 33%` is never consulted at all, because `width` only feeds a flex item's main size when
+   `flex-basis` is `auto`. No `!important`, no `[style]` selector, no edit to the partial.
+
+   THE BLOCK'S OWN CREATE CONTROL IS INVISIBLE, ON BOTH SHEETS, AND HAS ALWAYS BEEN.
+   `stats_features.hbs:33` authors `<i class="pointer icon item-create fa-solid fa-square-plus"
+   data-origin="feature">` — a create route that offers Background / Merit / Flaw / Other Trait,
+   i.e. a DIFFERENT button set from this tab's own `data-origin="core"` (abilities only). It renders
+   nowhere: `css/wod.css:699` is
+   `.wod20.wod-sheet .icon.fa-square-plus { display: none }`, and that control carries both `.icon`
+   and `.fa-square-plus`. Confirmed in the browser through the matched-rules API, on the v2 sheet as
+   well as this one, so it is a pre-existing defect and not something this migration introduced. The
+   partial's own comment explains why it does not carry `createicon` (that class is
+   `position: absolute` and would land on top of the tab's icon) — and dropping `createicon` is
+   exactly what left it matching the hidden pair.
+
+   It is NOT un-hidden here, deliberately. Un-hiding it in v3 only would give the two sheets
+   different create affordances, from a rule that is global to every splat; and a bare glyph would
+   be the one create control on this sheet that is not a labelled button, while authoring a labelled
+   duplicate would add a second `itemCreate` site and break the data-action parity this migration is
+   held to. Nothing is unreachable in the meantime: the same four buttons are one click away on the
+   Features tab, whose `data-origin="feature"` control does render. Reported rather than patched.
+
+   The rule below stays because it costs nothing (the row measures 0px tall while the control is
+   hidden) and because it is what puts the control on its own line the day the wod.css rule is
+   fixed. */
+.wod20.pc-actor-v3 .v3-statfeatures > .area-box {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 0 14px;
+}
+
+.wod20.pc-actor-v3 .v3-statfeatures > .area-box > .clearareaBox {
+	flex: 0 0 100%;
+}
+
+.wod20.pc-actor-v3 .v3-statfeatures > .area-box > .pullLeft {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+/* ── THE LOCKED CURSOR, WHICH TELLS THE TRUTH FOR THE FIRST TIME ─────────────────────────────
+   `css/wod.css:577` is `.wod20 .locked .resource-value-step { cursor: default }`, specificity
+   (0,3,0). It is intended to say "this dot is inert while the sheet is locked". MEASURED IN THE
+   BROWSER, IT DOES ALMOST THE OPPOSITE, and both halves are wrong:
+
+     * It is DEAD for every dot in a `.resource-value` or a `.resource-counter`, because
+       `.wod20 .resource-value .resource-value-step` (wod.css:2596) and
+       `.wod20 .resource-counter .resource-value-step` (:2720) are ALSO (0,3,0) and come LATER, so
+       source order decides and `cursor: pointer` wins. All 332 dots on a locked Stats tab —
+       attributes, abilities, spheres, virtues, backgrounds, the permanent Willpower and Arete rows,
+       every one of which `OnDotCounterChange` refuses with "sheet locked" — advertise themselves as
+       clickable.
+
+     * It is ALIVE for exactly one control, and it is one that genuinely works: the Quintessence
+       wheel. `.quintessence-wheel .wheel-step` (mage.css:260) is only (0,2,0), so it loses, and the
+       one widget a mage spends every session shows `cursor: default` on a locked sheet.
+
+   What is actually live while locked is decided by three handlers, read rather than guessed:
+   `OnDotCounterChange` (action-helpers.js:988-1003) allows a click ONLY on an Advantage item's
+   `system.temporary` row and warns otherwise; `OnSquareCounterChange` (:784, health) and
+   `OnQuintessenceWheelClick` (:1479) have no lock check at all. So: temporary rows, health boxes
+   and the wheel are live; everything else is not.
+
+   The two `pointer` rules restate what the wod.css source order happens to give today. That is
+   deliberate: it is the difference between "correct" and "correct by accident", and this cluster
+   exists precisely because relying on the order of two equally-specific rules is what produced the
+   defect above. */
+.wod20.pc-actor-v3 .locked .v3-stats .resource-value .resource-value-step {
+	cursor: default;
+}
+
+.wod20.pc-actor-v3 .locked .v3-stats .quintessence-wheel .wheel-step,
+.wod20.pc-actor-v3 .locked .v3-stats .resource-counter .resource-value-step {
+	cursor: pointer;
+}
+
+/* ── POWERS ──────────────────────────────────────────────────────────────────────────────────
+   The lightest of the seven. Its debt was two reserved-space rules and one inline style, all of
+   which are removed in the shell or above (`.sheet-area`'s `min-height`/`max-width` are shared with
+   Stats and declared once, under `.v3-stats` — the Powers tab needs the same, hence the second
+   scope here rather than a widened selector, which would reach tabs that want neither).
+
+   The section rows themselves stay on their shared partials (`power_listpower.hbs`,
+   `power_listmainpower.hbs`, `power_listpowerdots.hbs`), which keep `.item-row-area` plus the
+   `width-*box` pixel columns. Same honest trade the Combat tab makes: the block scrolls sideways
+   rather than clipping or forcing the whole sheet wider, and the declaration disappears the day
+   those partials become tables. */
+.wod20.pc-actor-v3 .v3-powers .sheet-area {
+	max-width: none;
+}
+
+.wod20.pc-actor-v3 .v3-powers .sheet-area.flex-columns {
+	min-height: 0;
+}
+
+.wod20.pc-actor-v3 .v3-powers .item-row-area {
+	overflow-x: auto;
+}
+
+/* The unsorted-power row is the one row the Powers shell authors itself (no partial exists for it).
+   Its two cells are `.pullLeft`; a flex row contains them without the clearfix v2 relies on. */
+.wod20.pc-actor-v3 .v3-powers .unsorted-area .row {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	min-height: 22px;
+}
+
+.wod20.pc-actor-v3 .v3-powers .unsorted-area .row > .width-namebox {
+	flex: 1 1 auto;
+	width: auto;
+	min-width: 0;
 }

@@ -1,0 +1,276 @@
+{{!-- v3 Powers tab.
+
+      SEVENTH AND LAST PART MIGRATED. 168 lines on v2, ten includes, one inline style, and — for a
+      quarter of this world — nothing at all.
+
+      WHAT THE CENSUS SAYS THIS TAB IS (add-pc-sheet-v3 D9c, measured over the 88 live PC actors)
+      -------------------------------------------------------------------------------------------
+      `mortal` is 25 actors, second only to mage, and `powertab.js:60` gives mortal `primary: []`.
+      Its Powers tab is empty BY CONSTRUCTION — not because the character has bought nothing, but
+      because the system declares no axis for the line. `mage` is 29 and its Spheres and Rotes both
+      moved to the Stats tab, so a mage sees only Resonance here. So the EMPTY STATE is not a corner
+      case on this tab; it is the common case, and getting its wording right matters more than any
+      layout below it.
+
+      THE EMPTY STATE IS DERIVED, NOT TABULATED
+      -----------------------------------------
+      `getPowertype(actor)` (pc-actor-sheet.js:1038) already answers "which power axis is this
+      character's", chaining `variantsheet -> splat -> game -> actor.type` and returning one of ten
+      names: magic, discipline, gift, dreaming, death, edge, lore, scarab, exaltedcharm, power. It
+      is what picks the tab's ICON today. `preparePowersContext` now also puts it on the context as
+      `powertype`, so the wording is one key lookup — `wod.power.empty.<powertype>` — instead of a
+      ten-branch `{{#if (eq splat …)}}` ladder that would have to be edited every time a line is
+      added. `.github/scripts/power-section-check.py` parses the ten names out of `getPowertype`
+      itself and asserts every one of them has a key, because a MISSING key here renders as the raw
+      string "wod.power.empty.scarab" on a player's sheet and no gate that only checks LITERAL keys
+      could ever see it (this system already has one such bug live — see gear.hbs on
+      `wod.labels.notes`).
+
+      THE WORDING IS HONEST PER AXIS, WHICH IS THE WHOLE REASON IT IS PER AXIS (D9b). Mummy Hekau
+      and exalted Charms have an icon and a `getPowertype` name and NO section definition, no
+      powertab entry and no create button — they render nowhere at all. Telling a mummy player "no
+      powers yet, use +" beside a `+` that offers Disciplines and Gifts and no Hekau is a lie, and
+      D9b says in as many words not to ship it. Those two strings say the sheet cannot hold them
+      yet. The generic `power` string promises nothing about what `+` offers, because for a mortal
+      the answer depends on `settings.game` (`CreateHelper.getActorGames`) and can legitimately be
+      "nothing".
+
+      ONE CASE THE DERIVATION CANNOT SEPARATE, recorded rather than papered over: `creature` (6
+      actors) has no branch in `getPowertype`, so it takes the generic `power` string — yet it does
+      have a `charms` section, declared in `powertab.js` and defined in `BuildPowerSections`, that
+      it can neither fill nor render (D9c: `hascharms` is drop-only and there is no create button).
+      Distinguishing it needs a `creature` branch in `getPowertype`, which is a behaviour change to
+      a function that also picks the tab icon — not something to slip into a template migration.
+
+      THE TAB IS NEVER HIDDEN. `data-origin="power"` is the only in-sheet route to authoring a
+      Discipline, a Gift or an Art, so a tab that vanished when empty would be a tab you could not
+      use to make it non-empty. Same rule the other six follow.
+
+      SHELL/ROW SPLIT (D5), AND THE ONE PLACE IT BENDS
+      ------------------------------------------------
+      Nine of the ten includes are shared partials, passed exactly the arguments v2 passes, in the
+      same order: `power_shapes`, `power_realms`, `power_listpower` (x3, for gifts / simple / the
+      two-column layout), `power_listmainpower`, `power_listpowerdots`,
+      `power_apocalypticforms`, `feature_item`. Untouched, so a fix to a power row still reaches
+      both sheets from one file.
+
+      It bends once, in the `unsorted` branch: `powers.hbs:112-138` authors that row INLINE — a
+      `.width-namebox` name cell carrying `data-action="powerSort"` and a delete icon — with no
+      partial behind it. Duplicated here deliberately, with every `data-*` carried across
+      unchanged (`data-type`, `data-object`, `data-rollitem`, `data-itemid`), because inventing
+      `power_unsortedrow.hbs` would produce a partial that could not actually be shared: v2 needs
+      `.pullLeft.width-namebox` and v3 wants a cell that reflows.
+
+      NO `data-action` AND NO `data-*` IS ADDED OR LOST. This shell authors two `data-action`s v2
+      authors — `itemCreate` (with `data-origin="power"`) and the `unsorted` branch's `powerSort`
+      and `itemDelete` — and everything else arrives through the includes.
+
+      WHAT CHANGES BESIDES THE EMPTY STATE
+      ------------------------------------
+      1. A TAB TITLE, in the content area, matching the other six. On v2 this tab opened straight
+         onto a section banner and nothing on screen said where you were.
+      2. THE CREATE CONTROL IS A LABELLED BUTTON. On v2 it is a 3x-scaled glyph floating in the
+         corner carrying `aria-hidden="true"` ON THE INTERACTIVE ELEMENT ITSELF, which removes a
+         working control from the accessibility tree entirely. The glyph moves to a child `<i>`:
+         `css/wod.css:399` sets `font-family` on `.wod20 button` at specificity (0,2,1), beating
+         `.fa-solid`'s (0,1,0), so an `fa-*` class on the button paints a tofu box.
+      3. `style="min-height: 150px"` ON THE GIFTS BLOCK IS GONE — the tab's only inline style, and
+         a floor that reserved 150px of empty space for a werewolf holding one Gift. D4: an inline
+         width in a shell v3 rewrites is removed, not overridden.
+      4. THE `.sheet-area.flex-columns` WRAPPERS BECOME `.v3-section`. `.sheet-area.flex-columns` is
+         `min-height: 100px` (wod.css:735) on top of a `max-width: 880px`, which is the same
+         reserved-hole problem one level up. --}}
+<section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}" data-drop-area="true">
+
+	<div class="v3-tabhead">
+		<h2 class="v3-tabtitle splatFont">{{localize "wod.tab.power"}}</h2>
+
+		<button type="button" class="v3-add" data-origin="power" data-action="itemCreate">
+			<i class="fa-solid fa-square-plus" aria-hidden="true"></i>
+			<span>{{localize "wod.labels.add.item"}}</span>
+		</button>
+	</div>
+
+	<div class="v3-tabbody">
+		<div class="v3-tabmain v3-powers">
+
+			{{#if actor.system.settings.hasshapes}}
+				{{!-- Shapes first, and separately, because they are Trait items rather than Powers. --}}
+				<div class="v3-section">
+					{{> "systems/worldofdarkness/templates/actor/parts/power_shapes.hbs" shapes=shapes actor=actor config=config locked=locked}}
+				</div>
+			{{/if}}
+
+			{{!-- Spheres are NOT here: they render on the Stats tab, under Abilities (v3/stats.hbs).
+			      `preparePowersContext` still prepares their context via `addSphereContext`, because
+			      the Settings tab's sphere-ordering list reads the same items. --}}
+
+			{{#if actor.system.settings.hasrealms}}
+				<div class="v3-section">
+					{{> "systems/worldofdarkness/templates/actor/parts/power_realms.hbs" realms=realms actor=actor config=config}}
+				</div>
+			{{/if}}
+
+			{{!-- The section ladder. `BuildPowerSections` walks this splat's `primary` and then
+			      `defaultOrder`, so EVERY section exists for every splat and `section.condition` is
+			      what decides whether it draws. The six branches and their `../` depths are carried
+			      across exactly: a `<div>` is not a Handlebars context frame, so wrapping a branch
+			      changes no path, but turning an `{{else if}}` into a nested `{{#if}}` would. --}}
+			{{#each powerSections as |section|}}
+				{{#if section.condition}}
+
+					{{#if (eq section.id "gifts")}}
+						{{!-- GIFTS — grouped by rank, which is why this one is not `simple`. --}}
+						<div class="v3-section">
+							<div class="sheet-headline sheet-banner splatFont" data-area="gifts">
+								<span class="sheet-banner-text">{{localize "wod.power.gifts"}}</span>
+							</div>
+							{{#each section.data.giftsByRank as |rankGroup|}}
+								<div>
+									<div class="headlineRow splatFont" data-area="giftrank{{rankGroup.rank}}">
+										{{localize "wod.advantages.rank"}} {{rankGroup.rank}}
+									</div>
+									{{#each rankGroup.gifts as |item id|}}
+										{{> "systems/worldofdarkness/templates/actor/parts/power_listpower.hbs"
+											item=item config=../../../config actor=../../../actor locked=../../../locked showclear=false}}
+									{{/each}}
+								</div>
+							{{/each}}
+						</div>
+
+					{{else if (eq section.template "hierarchical")}}
+						{{!-- HIERARCHICAL (Disciplines, Arts, Lores, Edges, Numinas, Arcanoi) — a
+						      container row with its powers underneath. `.area-box` is kept: it is what
+						      `power_listmainpower.hbs`'s own rules hang off. --}}
+						<div class="v3-section">
+							<div class="area-box">
+								<div class="sheet-headline sheet-banner splatFont" data-area="{{section.id}}">
+									<span class="sheet-banner-text">{{localize section.localizeKey}}</span>
+								</div>
+								{{#each section.data.items as |item id|}}
+									{{> "systems/worldofdarkness/templates/actor/parts/power_listmainpower.hbs"
+										mainpower=item config=../../config actor=../../actor locked=../../locked}}
+								{{/each}}
+							</div>
+						</div>
+
+					{{else if (eq section.template "simple")}}
+						{{!-- SIMPLE (Rites, Rituals, Combination Disciplines) --}}
+						<div class="v3-section">
+							<div class="sheet-headline sheet-banner splatFont" data-area="{{section.id}}">
+								<span class="sheet-banner-text">{{localize section.localizeKey}}</span>
+							</div>
+							{{#each section.data.items as |item id|}}
+								{{> "systems/worldofdarkness/templates/actor/parts/power_listpower.hbs"
+									item=item config=../../config actor=../../actor locked=../../locked showclear=false}}
+							{{/each}}
+						</div>
+
+					{{else if (eq section.template "simpledots")}}
+						{{!-- SIMPLE WITH DOTS (Resonances) — the mage line's only Powers-tab section. --}}
+						<div class="v3-section">
+							<div class="sheet-headline sheet-banner splatFont" data-area="{{section.id}}">
+								<span class="sheet-banner-text">{{localize section.localizeKey}}</span>
+							</div>
+							{{#each section.data.items as |item id|}}
+								{{> "systems/worldofdarkness/templates/actor/parts/power_listpowerdots.hbs"
+									item=item config=../../config actor=../../actor locked=../../locked showclear=false}}
+							{{/each}}
+						</div>
+
+					{{else if (eq section.template "column")}}
+						{{!-- TWO-COLUMN. `.item-column` is the shared class its CSS hangs off; only the
+						      outer wrapper changes. --}}
+						<div class="v3-section">
+							<div class="sheet-headline sheet-banner splatFont" data-area="{{section.id}}">
+								<span class="sheet-banner-text">{{localize section.localizeKey}}</span>
+							</div>
+
+							<div class="item-column">
+								{{#each section.data.items as |item id|}}
+									<div>
+										{{> "systems/worldofdarkness/templates/actor/parts/power_listpower.hbs"
+											item=item config=../../config actor=../../actor locked=../../locked showclear=false}}
+									</div>
+								{{/each}}
+							</div>
+						</div>
+
+					{{else if (eq section.template "unsorted")}}
+						{{!-- UNSORTED — a power whose `parentid` names a container the actor does not
+						      hold. THE ONE ROW THIS FILE AUTHORS ITSELF; see the header for why there is
+						      no partial to include. Every `data-*` is v2's, unchanged: `powerSort` opens
+						      the dialog that re-parents it, and the delete icon is the only way to
+						      remove one. `.headlineNormal` and `.width-namebox` are kept so the name
+						      still reads and still measures as it did. --}}
+						<div class="v3-section unsorted-area">
+							<div class="headlineNormal info-box">{{localize section.localizeKey}}</div>
+							<div class="area-box">
+								{{#each section.data.items as |item id|}}
+									<div class="row">
+										<div class="pullLeft headlineNormal width-namebox vrollable"
+											data-action="powerSort"
+											data-type="{{../../config.sheettype.mortal}}"
+											data-object="{{section.sortAction}}"
+											data-rollitem="true"
+											data-itemid="{{item._id}}">{{item.name}}</div>
+										{{#if (eq ../../locked false)}}
+											<div class="pullLeft power-iconbox">
+												<a class="pointer item-delete"
+													title="{{localize 'wod.labels.remove.disciplinepower'}}"
+													data-itemid="{{item._id}}"
+													data-action="itemDelete">
+													<i class="icon fa-solid fa-trash-can"></i>
+												</a>
+											</div>
+										{{/if}}
+									</div>
+								{{/each}}
+							</div>
+						</div>
+
+					{{/if}}
+
+				{{/if}}
+			{{/each}}
+
+			{{#if actor.system.settings.hasapocalypticforms}}
+				<div class="v3-section">
+					{{> "systems/worldofdarkness/templates/actor/parts/power_apocalypticforms.hbs" apocalypticforms=apocalypticforms actor=actor config=config}}
+				</div>
+			{{/if}}
+
+			{{!-- Trait items placed on the POWER tab (`system.placement === "power"`), as opposed to
+			      the ones the Features tab shows. Same `feature_item.hbs` row renderer, same
+			      arguments. --}}
+			{{#if (gt powertraits.length 0)}}
+				<div class="v3-section">
+					<div class="headlineRow headlineList splatFont feature-itemlist">
+						<div class="largeBox">{{localize "TYPES.Item.Feature"}}</div>
+					</div>
+
+					{{#each powertraits as |item id|}}
+						{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.othertraits" deletetitle="wod.labels.remove.othertraits" showtype=false}}
+					{{/each}}
+				</div>
+			{{/if}}
+
+			{{!-- The empty state (D9). `haspowercontent` is the exact disjunction of the five gates
+			      above, computed in `preparePowersContext` — it has to be, because "does ANY section
+			      have a true condition" is not expressible in Handlebars and a hand-written `or` over
+			      the flags would silently drift from the ladder the moment a section is added.
+
+			      `not` rather than `unless` for consistency with the other six shells, and to keep the
+			      gate readable as one expression alongside them. --}}
+			{{#if (not haspowercontent)}}
+				<p class="v3-empty">{{localize (concat "wod.power.empty." powertype)}}</p>
+			{{/if}}
+
+		</div>
+
+		<aside class="v3-macrorail">
+			{{> "systems/worldofdarkness/templates/actor/parts/macro_icons.hbs"}}
+		</aside>
+	</div>
+
+</section>

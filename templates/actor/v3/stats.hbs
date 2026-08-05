@@ -1,0 +1,171 @@
+{{!-- v3 Stats tab — the one this whole change exists for.
+
+      SIXTH PART MIGRATED, and the SHORTEST SHELL of the seven: 38 lines on v2, six includes, and
+      every single row on it lives in a partial that is shared with something else. That is not a
+      coincidence, it is the constraint (add-pc-sheet-v3 D5), and it is why this file is small and
+      `css/pc-actor-v3.css` is where the redesign actually landed. The split is stated up front
+      because a reader arriving here looking for "the Stats redesign" will otherwise conclude it was
+      not done.
+
+      WHAT MAY NOT BE TOUCHED, AND WHAT IT COSTS
+      ------------------------------------------
+      D5: a v3 template may hold layout and `{{> …}}` includes; it may not hold a row renderer, and
+      it may not emit a `data-action` its v2 counterpart lacks. Every row on this tab is a row
+      renderer in a shared file:
+
+          stats_attributes.hbs   103 lines   the 9 attribute rows
+          stats_abilities.hbs    354 lines   the 3 ability columns, ~33 rows
+          power_spheres.hbs      123 lines   the 3x3 sphere grid          (also the v2 Powers tab's)
+          stats_advantages.hbs    89 lines   Arete/Willpower/Quintessence/Renown/Virtues + health + XP
+          stats_features.hbs      88 lines   Backgrounds / Other Traits / Merits / Flaws
+          stats_health.hbs       288 lines   the health track             (also included by v3 combat)
+
+      Five commits landed in these files in one day. Forking any of them is what D5 exists to
+      prevent, so this shell includes all six with the arguments v2 passes, unchanged, and the work
+      is done from the stylesheet — which reaches a shared partial's output without editing it, and
+      is the whole reason the scope class exists.
+
+      NO `data-action` AND NO `data-*` IS ADDED OR LOST. This shell authors exactly one of each that
+      v2 authors: `itemCreate` with `data-origin="core"`. `stats_features.hbs` brings a SECOND create
+      control of its own (`data-origin="feature"`, offering Background/Merit/Flaw/Other Trait — a
+      different button set), and it is left exactly where it is, inside the partial.
+
+      WHAT THE STYLESHEET DOES THAT THIS FILE CANNOT — read `css/pc-actor-v3.css` "STATS"
+      ----------------------------------------------------------------------------------
+      Two mechanisms carry almost all of it, and both were verified in a headless Chromium against
+      the real stylesheet chain rather than reasoned about:
+
+        1. `content: attr(data-value)` PUTS A NUMERAL BESIDE EVERY DOT ROW, with no markup change.
+           The sheet had almost none: no numeric readout existed for permanent Willpower, temporary
+           Willpower, Arete, or ANY of the ~33 abilities — ~310 identical 14px circles, and reading
+           a rating meant counting them. Every dot row's container already carries the value:
+           `.resource-value[data-value]` for attributes, abilities, spheres, virtues, backgrounds
+           and the permanent advantage row, and `.resource-counter.tempSquareRow[data-value]` for
+           the temporary one. THREE READOUTS ARE STILL MISSING and cannot be reached this way — see
+           the list at the end of this comment.
+
+        2. `:has()` DE-EMPHASISES A ZERO-RATED ABILITY ROW. 19 of 33 abilities are at zero on a
+           typical mage and cost exactly as much vertical space as the 14 that matter. Nothing is
+           hidden, collapsed or reordered — a rating you cannot see is a rating you cannot raise —
+           the fourteen that are rated are set in BOLD and the nineteen that are not keep their
+           regular weight and lose a little contrast. Weight first, colour second: fourteen bold
+           labels among nineteen regular ones is a pre-attentive scan; nineteen slightly-grey ones
+           is not.
+
+           The Spheres are deliberately EXEMPT. Bounded 3x3 grid, a mage raises them constantly, and
+           every sphere name is click-to-cast — dimming an unused one dims an action.
+
+      THE SECTION WRAPPERS BELOW EXIST FOR THE STYLESHEET AND FOR NOTHING ELSE. `.v3-attributes`,
+      `.v3-abilities`, `.v3-spheres`, `.v3-advantages` and `.v3-statfeatures` carry no content and
+      no behaviour; they are the handles that let a rule reach ONE shared partial's output without
+      reaching the other five. Deleting one to "flatten the markup" silently moves that block back
+      onto its v2 float layout.
+
+      WHAT I COULD NOT DO FROM HERE, STATED RATHER THAN WORKED AROUND
+      ---------------------------------------------------------------
+      Three numerals the sheet still does not show, all for the same reason — the value is not in
+      the DOM, so no stylesheet can print it:
+
+        * THE WILLPOWER DICE POOL. `wod-item-base.js:341` computes `system.roll` for every advantage
+          that rolls (for Willpower: `min(permanent, temporary)`, or their sum when
+          `usebothrolls`). It is never rendered anywhere, on either sheet. Showing it needs the v3
+          advantage RENDERER that D6 defers to its own phase — `getGetStatArea_v2`'s output is
+          byte-frozen by `test-statarea-identity.mjs`, deliberately, and this is not the change to
+          break that freeze for.
+
+        * QUINTESSENCE AND PARADOX. `stats_quintessence.hbs:15` is
+          `<div class="quintessence quintessence-wheel" data-name="…">` — it carries `data-name` and
+          an inline `--count`, and NO `data-value`. Every other rated widget on this tab carries
+          one. Adding `data-value="{{actor.system.advantages.quintessence.system.temporary}}"` (and
+          the same for paradox) is ONE INERT ATTRIBUTE on a shared partial: nothing reads
+          `data-value` off that element, `SetupDotCounters_v2` only walks `.resource-value`, and it
+          would give both sheets the numeral for free. It is not done here because it edits a file
+          the v2 sheet renders, which wants its own commit and its own eyes — not because it is
+          hard. The Quintessence wheel is also 150x150 and the tallest thing in its row; the
+          stylesheet brings it down, which is layout and therefore in scope.
+
+      And one label that is missing rather than misplaced: THE TEMPORARY ROW IS UNNAMED. Willpower
+      draws ten permanent circles and, beneath them, ten temporary squares with no heading of their
+      own — the two are distinguished by shape alone. The numeral now distinguishes them by value as
+      well, and the stylesheet sets the temporary one apart, but the WORD cannot be added from CSS
+      (a literal string in `content:` is untranslatable, and this system ships seven languages) nor
+      from here (the row is built by `getGetStatArea_v2`). It belongs to the same deferred renderer
+      as the dice pool. --}}
+<section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}" data-drop-area="true">
+
+	<div class="v3-tabhead">
+		{{!-- `wod.tab.core` is the string the nav already shows for this tab, so the two agree. Every
+		      other migrated tab puts its name in the content area; on v2 this one had no heading at
+		      all — it opened straight onto the Attributes banner. --}}
+		<h2 class="v3-tabtitle splatFont">{{localize "wod.tab.core"}}</h2>
+
+		{{!-- The same two v2 defects as every other tab's create control: a 3x-scaled glyph floating
+		      in the corner, carrying `aria-hidden="true"` ON THE INTERACTIVE ELEMENT, which removes a
+		      working control from the accessibility tree entirely. `data-origin="core"` selects the
+		      abilities-only create dialog and travels with the tab.
+
+		      The glyph is on a CHILD `<i>`, never on the `<button>`: `css/wod.css:399` sets
+		      `font-family` on `.wod20 button` at specificity (0,2,1), which beats `.fa-solid`'s
+		      (0,1,0), so a Font Awesome class on the button itself paints a tofu box. --}}
+		<button type="button" class="v3-add" data-origin="core" data-action="itemCreate">
+			<i class="fa-solid fa-square-plus" aria-hidden="true"></i>
+			<span>{{localize "wod.labels.add.item"}}</span>
+		</button>
+	</div>
+
+	{{!-- Content column plus the macro rail. On v2 the dice strip is `<div class="pullRight">`, i.e.
+	      `float: right !important`, and all five blocks below flow AROUND it — so the width of the
+	      Attributes grid depends on how many dice the splat happens to show. As a grid item the rail
+	      cannot float (D4: `float` computes to `none` on a grid item, which beats `!important`
+	      because it is not a cascade contest) and each column gets its own formatting context, so
+	      the ~40 floats inside these six partials are contained to the content column. --}}
+	<div class="v3-tabbody">
+		<div class="v3-tabmain v3-stats">
+
+			<div class="v3-section v3-attributes">
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_attributes.hbs"}}
+			</div>
+
+			<div class="v3-section v3-abilities">
+				{{!-- All four arguments exactly as v2 passes them. `showvisibleicon=false` is what keeps
+				      the per-row visibility toggle on the Settings tab, where rows are switched on,
+				      rather than on the tab a player reads. --}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_abilities.hbs" showheadline=true useroll=true showvalues=true showvisibleicon=false}}
+			</div>
+
+			{{!-- Spheres sit with the Abilities they are rolled alongside, not on the Powers tab.
+			      `spheres` / `sphereCompendiumUuid` come from `addSphereContext`, which
+			      `prepareStatContext` calls: an ApplicationV2 part only ever has the context ITS OWN
+			      preparer built, so moving the include without moving the context renders an empty
+			      block and nothing says so. --}}
+			{{#if actor.system.settings.hasspheres}}
+				<div class="v3-section v3-spheres">
+					{{> "systems/worldofdarkness/templates/actor/parts/power_spheres.hbs" spheres=spheres actor=actor config=config}}
+				</div>
+			{{/if}}
+
+			{{!-- Arete / Willpower / Quintessence / Renown / Virtues, the health track and the
+			      experience total, plus the Rote band. This partial is the densest float debt on the
+			      tab — a 33% and a 67% inline-width column, four nested `clearareaBox` clearfixes and
+			      three more inline styles — and NOT ONE CHARACTER of it is edited: it holds
+			      `{{{getGetStatArea_v2}}}`, i.e. a row renderer, so D5 forbids forking it and D4
+			      forbids out-specifying it. Its container is blockified in the stylesheet instead. --}}
+			<div class="v3-section v3-advantages">
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_advantages.hbs"}}
+			</div>
+
+			{{!-- Backgrounds | Other Traits | Merits+Flaws — the classic printed-sheet block. It
+			      carries its OWN create control (`data-origin="feature"`), which offers a different
+			      button set from the tab's, and that control stays inside the partial. --}}
+			<div class="v3-section v3-statfeatures">
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_features.hbs"}}
+			</div>
+
+		</div>
+
+		<aside class="v3-macrorail">
+			{{> "systems/worldofdarkness/templates/actor/parts/macro_icons.hbs"}}
+		</aside>
+	</div>
+
+</section>
