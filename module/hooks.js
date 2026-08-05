@@ -17,32 +17,59 @@ import { maybeEnrichAbilityOnRename } from "./scripts/ability-enrichment.js";
  * touched the setting was declared light-themed, and an OS-dark user got Foundry's own chrome dark
  * with a light WoD sheet inside it.
  *
- * FOUNDRY ALREADY RESOLVES THIS, so the fix is to stop re-deriving it. Foundry applies a
- * `theme-dark` / `theme-light` class once it has reconciled the setting with the OS —
+ * FOUNDRY ALREADY RESOLVES THIS, so the fix is to stop re-deriving it. Foundry reconciles the
+ * setting with the OS and publishes the answer as a `theme-dark` / `theme-light` class —
  * `css/chat.css:156-166` has depended on that class all along, while the JS beside it re-computed
- * the answer from the raw setting and got a different one. Reading the resolved class means the
- * sheet cannot disagree with the application frame around it.
+ * the answer from the raw setting and got a different one.
  *
- * The setting is kept only as a fallback for the case where the class is not on the document yet
- * (an early hook during boot), and there `""` is resolved against the OS rather than assumed light.
+ * WHICH ELEMENT'S CLASS, THOUGH — that is the correction in 7.5.65 and it is the whole point.
+ * Foundry has TWO independent colour schemes, `applications` (windows and sheets) and `interface`
+ * (sidebar and HUD), and stamps each onto the elements of ITS OWN region. The first version of this
+ * function read `document.documentElement` and `document.body`, so it could pick up the INTERFACE
+ * theme and impose it on a sheet — a user who set applications=light while interface stayed dark
+ * would get a dark sheet and nothing they changed would appear to do anything. That is the symptom
+ * that was reported, and it is why this now asks the SHEET'S OWN element (`closest()`), which is
+ * unambiguous and honours a per-window override for free.
  *
- * NOTE ON `colorScheme.interface`: deliberately NOT consulted. Foundry separates `applications`
- * (windows and sheets — what an actor sheet IS) from `interface` (the sidebar and HUD chrome), so
- * `applications` is the correct input for this system's sheets and dialogs. An earlier draft of the
- * spec called ignoring `interface` a bug; it is not, and the spec has been corrected.
+ * The raw setting is only a fallback for when no resolved class is present yet (an early hook, a
+ * detached element), and there `""` is resolved against the OS rather than assumed light.
+ *
+ * NOTE ON `colorScheme.interface`: still deliberately NOT read as a setting. A sheet IS an
+ * application, so `applications` is the right input; the fix above is about reading the right
+ * ELEMENT, not about switching settings. An earlier draft of the spec called ignoring `interface` a
+ * bug; that is retracted and stays retracted.
  */
-export function isDarkTheme() {
-	for (const el of [document.documentElement, document.body]) {
-		if (el?.classList?.contains("theme-dark")) return true;
-		if (el?.classList?.contains("theme-light")) return false;
-	}
+export function isDarkTheme(subject) {
+	/*
+	 * ASK THE WINDOW, NOT THE DOCUMENT. Foundry has TWO independent colour schemes — `applications`
+	 * (windows and sheets) and `interface` (sidebar, HUD) — and it resolves each into a
+	 * `theme-light`/`theme-dark` class on the elements of that region. `css/chat.css:156-166` keys
+	 * off `.theme-dark #chat`, i.e. the INTERFACE one, on an ancestor that is not a sheet.
+	 *
+	 * The first version of this function read `document.documentElement` and `document.body`, which
+	 * is precisely the ambiguity: whichever scheme Foundry happens to stamp on the document wins,
+	 * and a user who sets applications=light while interface stays dark gets a dark SHEET with no
+	 * way to connect it to anything they changed. Reading the class off the sheet's OWN element
+	 * cannot make that mistake, and it also honours any per-window override for free.
+	 */
+	const el = subject?.element?.[0] ?? subject?.element ?? subject;
+	const node = el?.nodeType === 1 ? el : null;
+	const scoped = node?.closest?.(".theme-dark, .theme-light");
 
-	const scheme = game.settings.get("core", "uiConfig")?.colorScheme?.applications ?? "";
+	if (scoped) return scoped.classList.contains("theme-dark");
+
+	/*
+	 * No resolved class yet (an early hook, or a detached element). Fall back to the raw setting —
+	 * but note `applications` has THREE values, not two: "dark", "light", and "" meaning FOLLOW THE
+	 * OS. The seven copies this function replaced all compared `=== "dark"`, so `""` — the default
+	 * nobody has touched — was silently treated as light, and an OS-dark user got Foundry's chrome
+	 * dark around a light sheet.
+	 */
+	const scheme = game.settings?.get?.("core", "uiConfig")?.colorScheme?.applications ?? "";
 
 	if (scheme === "dark") return true;
 	if (scheme === "light") return false;
 
-	// "" — follow the OS, which is what the seven copies got wrong.
 	return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false;
 }
 
@@ -138,7 +165,7 @@ export function registerHooks(constants, isTablet) {
 	 * font settings, and dark mode theme class.
 	 */
 	Hooks.on("renderActorSheetV2", (sheet) => { 
-		CONFIG.worldofdarkness.darkmode = isDarkTheme();
+		CONFIG.worldofdarkness.darkmode = isDarkTheme(sheet);
 
 		clearHTML(sheet);
 
@@ -243,7 +270,7 @@ export function registerHooks(constants, isTablet) {
 	 * Also handles tablet viewport detection.
 	 */
 	Hooks.on("renderActorSheet", (sheet) => { 
-		CONFIG.worldofdarkness.darkmode = isDarkTheme();
+		CONFIG.worldofdarkness.darkmode = isDarkTheme(sheet);
 
 		clearHTML(sheet);
 
@@ -382,7 +409,7 @@ export function registerHooks(constants, isTablet) {
 	 * and dark mode theme class.
 	 */
 	Hooks.on("renderItemSheet", (sheet) => { 
-		CONFIG.worldofdarkness.darkmode = isDarkTheme();
+		CONFIG.worldofdarkness.darkmode = isDarkTheme(sheet);
 
 		clearHTML(sheet);
 
@@ -427,7 +454,7 @@ export function registerHooks(constants, isTablet) {
 	 * Applies language classes, font settings, and dark mode theme class.
 	 */
 	Hooks.on("renderItemSheetV2", (sheet) => {
-		CONFIG.worldofdarkness.darkmode = isDarkTheme();
+		CONFIG.worldofdarkness.darkmode = isDarkTheme(sheet);
 
 		// Check if this is a WoD item sheet; apply classes to the DOM element (sheet.element)
 		const el = sheet.element;
@@ -477,7 +504,7 @@ export function registerHooks(constants, isTablet) {
 		                    sheet.element?.[0]?.classList?.contains("wod20rule-dialog");
 		
 		if (isWoDDialog) {
-			CONFIG.worldofdarkness.darkmode = isDarkTheme();
+			CONFIG.worldofdarkness.darkmode = isDarkTheme(sheet);
 
 			clearHTML(sheet);	
 
@@ -521,7 +548,7 @@ export function registerHooks(constants, isTablet) {
 	 * Identifies WoD applications by CSS classes and applies dark mode theme class.
 	 */
 	Hooks.on("renderApplicationV2", (app, html, data) => {
-		CONFIG.worldofdarkness.darkmode = isDarkTheme();
+		CONFIG.worldofdarkness.darkmode = isDarkTheme(app);
 		
 		// Check if this is a WoD ApplicationV2 dialog/sheet
 		// Check by class names that WoD uses
@@ -546,7 +573,7 @@ export function registerHooks(constants, isTablet) {
 	 */
 	Hooks.on("renderDialog", (_dialog, html, _data) => {
 		const container = html[0];
-		CONFIG.worldofdarkness.darkmode = isDarkTheme();
+		CONFIG.worldofdarkness.darkmode = isDarkTheme(_dialog);
 
 		if (container.classList.contains("dialog")) {
 			const select = container.querySelector("select[name=type]");
