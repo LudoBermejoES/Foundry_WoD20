@@ -2040,6 +2040,9 @@
 			"usewoundpenalty": "Usar penalidade de ferida",
 			"dicepool": "Parada de Dados",
 			"nonelisted": "Nenhuma listada",
+			"casting": {
+				"meritmodifiers": "Qualidades e Defeitos"
+			},
 			"aretecasting": {
 				"castspell": "Conjurar magia",
 				"castingspell": "Conjurando magia",

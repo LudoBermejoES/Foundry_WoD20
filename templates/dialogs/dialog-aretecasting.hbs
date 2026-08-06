@@ -152,6 +152,10 @@
         <button id="closeButton" class="button fullSplatColor pointer closebutton dialog-two-button">{{localize "wod.dialog.close"}}</button>
     </div>
 
+    {{!-- No merit/flaw modifier group here, deliberately: this is the LEGACY dialog (the rote flow
+          and the V1 sheet's wand macro icon, per dialog-casting.js's own doc comment) and this
+          change pilots DialogCasting._meritModifiers/getData on the redesigned screen only — see
+          add-merit-casting-modifiers/design.md §3. --}}
     <div class="headlineGroup splatFont">{{localize "wod.dialog.aretecasting.difficultymod"}}</div>
 
     <div class="dialog-area">        

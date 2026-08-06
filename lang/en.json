@@ -2123,7 +2123,8 @@
 				"spherehint": "Set each Sphere to the rank this effect uses. The highest one sets the base difficulty.",
 				"basedifficulty": "Base",
 				"activemods": "active modifiers",
-				"ignorespherehint": "Lets you set the difficulty by hand. The difficulty buttons only do anything while this is on."
+				"ignorespherehint": "Lets you set the difficulty by hand. The difficulty buttons only do anything while this is on.",
+				"meritmodifiers": "Merits & Flaws"
 			},
 			"aretecasting": {
 				"castspell": "Cast spell",

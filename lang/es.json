@@ -2110,7 +2110,8 @@
 				"spherehint": "Ajusta cada Esfera al nivel que usa este efecto. La más alta fija la dificultad base.",
 				"basedifficulty": "Base",
 				"activemods": "modificadores activos",
-				"ignorespherehint": "Te permite fijar la dificultad a mano. Los botones de dificultad solo hacen algo mientras esto está marcado."
+				"ignorespherehint": "Te permite fijar la dificultad a mano. Los botones de dificultad solo hacen algo mientras esto está marcado.",
+				"meritmodifiers": "Méritos y Defectos"
 			},
 			"aretecasting": {
 				"castspell": "Lanzar hechizo",

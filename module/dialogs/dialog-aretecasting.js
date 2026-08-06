@@ -328,6 +328,23 @@ export class DialogAreteCasting extends FormApplication {
 
                     if (parseInt(document.querySelector(elementName+':checked').value) != 0) {
                         let name = value.toLowerCase().replace("object.check_", "");
+
+                        // A dynamically-rendered merit/flaw checkbox (`check_meritmod_<itemId>`, built
+                        // by DialogCasting._meritModifiers) has no `wod.dialog.aretecasting.*` i18n key —
+                        // there is no key to author, the label is the entity's own `label_es`. Foundry's
+                        // localize() returns the key string itself when unresolved, so without this
+                        // guard the breakdown would show a raw, unlocalized "meritmod_<itemId>". Every
+                        // OTHER field is unaffected: the fallback below is byte-identical to before.
+                        if (name.startsWith("meritmod_")) {
+                            const itemId = value.replace("object.check_meritmod_", "");
+                            const label = this.object.meritModifierLabels?.[itemId];
+
+                            if (label !== undefined) {
+                                this.object.selectedMods.push(label);
+                                continue;
+                            }
+                        }
+
                         this.object.selectedMods.push(game.i18n.localize("wod.dialog.aretecasting." + name));
                     }
                 }

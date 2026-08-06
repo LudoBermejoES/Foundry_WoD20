@@ -2040,6 +2040,9 @@
 			"usewoundpenalty": "Wundabzug verwenden",
 			"dicepool": "Würfelpool",
 			"nonelisted": "Keine aufgeführt",
+			"casting": {
+				"meritmodifiers": "Vorzüge und Schwächen"
+			},
 			"aretecasting": {
 				"castspell": "Zaubern",
 				"castingspell": "Zauberspruch",

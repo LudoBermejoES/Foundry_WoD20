@@ -398,6 +398,33 @@
 			</div>
 		</details>
 
+		{{!-- The one genuinely DATA-DRIVEN group: its rows come from the actor's own Feature items
+		      (merits/flaws carrying `system.castingModifiers`), not from a hand-written table, so
+		      unlike the four groups above they cannot be listed in the markup — see
+		      DialogCasting._meritModifiers. Absent entirely (not merely empty) unless the casting
+		      actor holds a matching merit/flaw for a currently-selected Sphere. --}}
+		{{#if casting.meritModifiers.length}}
+			<details class="casting-modifier-group" data-group-id="meritmods" {{#if casting.groups.meritmods.open}}open{{/if}}>
+				<summary>
+					<span class="casting-group-name splatFont">{{localize "wod.dialog.casting.meritmodifiers"}}</span>
+					{{#if casting.groups.meritmods.count}}
+						<span class="casting-group-badge" role="img" aria-label="{{casting.groups.meritmods.count}} {{localize 'wod.dialog.casting.activemods'}}">{{casting.groups.meritmods.count}}</span>
+						<span class="casting-group-sum {{#if (eq casting.groups.meritmods.sum 0)}}is-neutral{{else if (gt casting.groups.meritmods.sum 0)}}is-worse{{else}}is-better{{/if}}" role="img" aria-label="{{localize 'wod.labels.difficulty'}} {{signed casting.groups.meritmods.sum}}">{{signed casting.groups.meritmods.sum}}</span>
+					{{/if}}
+				</summary>
+
+				<div class="casting-modifier-rows">
+					{{#each casting.meritModifiers}}
+						<label class="casting-modifier-row">
+							<span class="casting-modifier-label">{{this.label}}</span>
+							<span class="casting-modifier-weight {{#if (gt this.weight 0)}}is-worse{{else}}is-better{{/if}}">{{signed this.weight}}</span>
+							<input name="object.check_meritmod_{{this.id}}" type="checkbox" value="{{this.weight}}" {{isChecked (lookup ../object (concat "check_meritmod_" this.id))}} />
+						</label>
+					{{/each}}
+				</div>
+			</details>
+		{{/if}}
+
 		{{#if casting.canPickDifficulty}}
 			{{!-- Only shown when it does something: `_setDifficulty` returns early unless
 			      `ignoreSphereBaseDifficulty` is on, so on the old screen these nine buttons were

@@ -2040,6 +2040,9 @@
 			"usewoundpenalty": "Utiliser pénalité de blessure",
 			"dicepool": "Réserve de dés",
 			"nonelisted": "Rien de listé",
+			"casting": {
+				"meritmodifiers": "Atouts et Handicaps"
+			},
 			"aretecasting": {
 				"castspell": "Lancer un Sort",
 				"castingspell": "Sort Lancé",

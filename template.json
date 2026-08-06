@@ -1555,7 +1555,8 @@
 				"level": "0",
 				"value": 0,
 				"max": 5,
-				"languages": []
+				"languages": [],
+				"castingModifiers": []
 			},
 			"object": {
 				"container": {

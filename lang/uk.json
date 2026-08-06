@@ -2040,6 +2040,9 @@
 			"usewoundpenalty": "Використовувати штраф поранення",
 			"dicepool": "Пул кубиків",
 			"nonelisted": "Нічого не вказано",
+			"casting": {
+				"meritmodifiers": "Переваги та недоліки"
+			},
 			"aretecasting": {
 				"castspell": "Читати заклинання",
 				"castingspell": "Читання заклинання",

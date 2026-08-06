@@ -124,6 +124,66 @@ export class DialogCasting extends DialogAreteCasting {
 		return { count, sum };
 	}
 
+	/**
+	 * Every Feature item's casting-difficulty modifier that applies to a currently-selected Sphere.
+	 *
+	 * Scans `this.actor.items` for `type === "Feature"` carrying a non-empty
+	 * `system.castingModifiers` (a merit/flaw's own `{sphere, label_es, weight}` triples — see
+	 * design.md §1/§2), keeps only the entries whose `sphere` matches a Sphere the caster has
+	 * currently picked with rank > 0 (`this.object.selectedSpheres`, the same object
+	 * `_calculateDifficulty`/`_setDifficulty` already read), and returns one `{id, label, weight}`
+	 * row per matching (item, modifier) pair.
+	 *
+	 * Recomputed on every `getData()` call — i.e. on every render — so a row appears and disappears
+	 * as the caster's Sphere selection changes, exactly like the four static groups react to their
+	 * own inputs; nothing here is cached across renders.
+	 *
+	 * `id` is the OWNING ITEM's id, not a per-modifier index. Today no shipped Feature carries more
+	 * than one `castingModifiers` entry whose `sphere` could match the same casting at once, so two
+	 * rows can never collide. If that ever changes, two entries from the SAME item matching the SAME
+	 * casting would render two checkboxes sharing one `name` — a real but currently-unreachable edge
+	 * case (the same "not every future shape fits this schema yet" boundary as design.md's Q1), not
+	 * solved here.
+	 */
+	_meritModifiers() {
+		const rows = [];
+
+		for (const item of this.actor.items) {
+			if (item.type !== "Feature") continue;
+
+			const modifiers = item.system?.castingModifiers;
+
+			if (!Array.isArray(modifiers) || modifiers.length === 0) continue;
+
+			for (const modifier of modifiers) {
+				const rank = parseInt(this.object.selectedSpheres?.[modifier.sphere]) || 0;
+
+				if (rank > 0) {
+					rows.push({ id: item.id, label: modifier.label_es, weight: modifier.weight });
+				}
+			}
+		}
+
+		return rows;
+	}
+
+	/** Count/sum for the `meritmods` group's badge, read from the SAME dynamically-named
+	 *  `check_meritmod_<id>` fields `_updateObject`'s generic discovery loop already tallies —
+	 *  mirrors `_groupState` above but over a runtime list instead of a static table. */
+	_meritModifierGroupState(meritModifiers) {
+		let count = 0;
+		let sum = 0;
+
+		for (const row of meritModifiers) {
+			if (this.object[`check_meritmod_${row.id}`]) {
+				count++;
+				sum += row.weight;
+			}
+		}
+
+		return { count, sum };
+	}
+
 	/** The itemised "why is the difficulty this number" list. Display only. */
 	_breakdown() {
 		const rows = [];
@@ -183,6 +243,25 @@ export class DialogCasting extends DialogAreteCasting {
 
 			data.casting.groups[group.id] = state;
 		}
+
+		// The fifth, genuinely data-driven group: one row per matching merit/flaw modifier, unknown
+		// until the actor's items and current Sphere selection are read (§3 of design.md — the four
+		// groups above are hand-written; this one cannot be, because its rows depend on the actor).
+		const meritModifiers = this._meritModifiers();
+
+		// Also stashed on `this.object` (not just returned in `data`) so `_updateObject`'s label
+		// lookup — shared, inherited code in `dialog-aretecasting.js` — can resolve a dynamic
+		// `check_meritmod_<id>` field's label without reaching back into this subclass.
+		this.object.meritModifiers = meritModifiers;
+		this.object.meritModifierLabels = Object.fromEntries(meritModifiers.map(row => [row.id, row.label]));
+
+		const meritGroupState = this._meritModifierGroupState(meritModifiers);
+		meritGroupState.open = (this._openGroups && this._openGroups["meritmods"] !== undefined)
+			? this._openGroups["meritmods"]
+			: meritGroupState.count > 0;
+
+		data.casting.groups.meritmods = meritGroupState;
+		data.casting.meritModifiers = meritModifiers;
 
 		data.casting.anyModifier = Object.values(data.casting.groups).some(g => g.count > 0);
 

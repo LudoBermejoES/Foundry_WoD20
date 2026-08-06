@@ -2040,6 +2040,9 @@
 			"usewoundpenalty": "Usa malus ferita",
 			"dicepool": "Riserva di dadi",
 			"nonelisted": "Nessuna",
+			"casting": {
+				"meritmodifiers": "Pregi e Difetti"
+			},
 			"aretecasting": {
 				"castspell": "Lancia incantesimo",
 				"castingspell": "Lancio di incantesimo",
