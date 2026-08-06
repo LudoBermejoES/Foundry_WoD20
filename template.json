@@ -1554,7 +1554,8 @@
 				"placement": "feature",
 				"level": "0",
 				"value": 0,
-				"max": 5
+				"max": 5,
+				"languages": []
 			},
 			"object": {
 				"container": {

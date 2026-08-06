@@ -195,6 +195,12 @@
 			"relation": "Trasfondo",
 			"portrait": "Retrato"
 		},
+		"languages": {
+			"heading": "Idiomas conocidos",
+			"add": "Añadir idioma",
+			"addplaceholder": "Nombre del idioma",
+			"remove": "Eliminar idioma"
+		},
 		"types": {
 			"maneuver": "Maniobra de combate",
 			"chantry": "Capilla / Constructo",

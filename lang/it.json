@@ -193,6 +193,12 @@
 			"relation": "Background",
 			"portrait": "Ritratto"
 		},
+		"languages": {
+			"heading": "Lingue conosciute",
+			"add": "Aggiungi lingua",
+			"addplaceholder": "Nome della lingua",
+			"remove": "Rimuovi lingua"
+		},
 		"types": {
 			"maneuver": "Manovra di combattimento",
 			"mortal": "Mortale",

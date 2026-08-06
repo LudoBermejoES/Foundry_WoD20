@@ -282,6 +282,16 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 			.find(".image-clear")
 			.click(this._onImageClear.bind(this));
 
+		// add-language-merit-choices — distinct classes from .item-create/.item-delete so
+		// this never collides with the bonuslist/property bindings above.
+		html
+			.find(".language-create")
+			.click(this._onLanguageAdd.bind(this));
+
+		html
+			.find(".language-delete")
+			.click(this._onLanguageRemove.bind(this));
+
 		if (this.item.type === "Trait" && this.item.system.type === "wod.types.shapeform") {
 			html
 				.find(".switch")
@@ -547,7 +557,67 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 			await this.item.update(itemData);
 		}
 		
-		this.render();  
+		this.render();
+	}
+
+	/**
+	 * add-language-merit-choices — mirrors the bonuslist/property push pattern above
+	 * (`_onItemCreate`/`_onItemDelete`, `system.bonuslist`/`system.property`), but for
+	 * `system.languages` (a generic array on every Feature, `template.json`'s
+	 * `templates.feature` block). Bound to its OWN `.language-create`/`.language-delete`
+	 * classes in `activateListeners` rather than reusing `.item-create`/`.item-delete`, so
+	 * this never collides with the bonus/property bindings that already key off those
+	 * classes and a `data-type`.
+	 *
+	 * Unlike `_onItemCreate` (which pushes an empty row the user fills in afterward), this
+	 * reads the free-text input's current value directly and pushes a trimmed, non-empty
+	 * string. A case-sensitive exact duplicate is skipped as a no-op — cosmetic bookkeeping
+	 * only, never a rules gate (no count/rating validation is added anywhere).
+	 */
+	async _onLanguageAdd(event) {
+		event.preventDefault();
+
+		const row = $(event.currentTarget).closest(".language-add-row");
+		const input = row.find(".language-add-input");
+		const value = (input.val() || "").trim();
+
+		if (value === "") {
+			return;
+		}
+
+		const itemData = foundry.utils.duplicate(this.item);
+
+		if (!Array.isArray(itemData.system.languages)) {
+			itemData.system.languages = [];
+		}
+
+		if (itemData.system.languages.includes(value)) {
+			return;
+		}
+
+		itemData.system.languages.push(value);
+		await this.item.update(itemData);
+		this.render();
+	}
+
+	async _onLanguageRemove(event) {
+		event.preventDefault();
+
+		if (this.locked) {
+			ui.notifications.warn(this.game.i18n.localize("wod.system.sheetlocked"));
+			return;
+		}
+
+		const itemId = $(event.currentTarget).data("item-id");
+		const itemData = foundry.utils.duplicate(this.item);
+
+		if (!Array.isArray(itemData.system.languages)) {
+			itemData.system.languages = [];
+		}
+
+		itemData.system.languages.splice(itemId, 1);
+		await this.item.update(itemData);
+		this.render();
 	}
 
 	_onImageClear(event) {

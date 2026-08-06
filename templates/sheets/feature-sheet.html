@@ -130,6 +130,53 @@
 						<span class="floating-label">{{localize "wod.connections.portrait"}}</span>
 					</div>
 				{{/if}}
+
+				{{!--
+					add-language-merit-choices — records which languages the "Idioma" merit purchase(s)
+					actually bought. `system.languages` is a GENERIC array on every Feature
+					(template.json's templates.feature block), harmless-empty on every merit/flaw that
+					isn't Idioma, exactly how `system.bonuslist`/`system.property` already work (see
+					item_bonus.html and the _onItemCreate/_onItemDelete "bonus" case for the identical
+					shape). The editor below is gated on `system.id`, NOT `system.type` — `system.type`
+					must stay "wod.types.merit" unchanged, because
+					`ItemHelper.GetItemType(actor, "Feature", "wod.types.merit")`
+					(pc-actor-sheet.js) is the ONLY thing that puts this item in the actor's Merits list;
+					a distinct sub-type would silently remove it. No validation compares the number of
+					languages to `system.level` (the point rating) — the roster and the dots are allowed
+					to disagree, same precedent as the Contacts/Allies roster above.
+				--}}
+				{{#if (eqAny data.system.id "idioma")}}
+					<div class="infobox bioInformationArea language-list-area">
+						<div class="clearareaBox">
+							<div class="headlineItem headlineBio splatFont">{{localize "wod.languages.heading"}}</div>
+						</div>
+
+						{{#each data.system.languages as | language id |}}
+							<div class="clearareaBox bioInformationArea language-tag-row">
+								<div class="pullLeft infobox">
+									<span class="sheet-infoValues language-tag-name">{{language}}</span>
+								</div>
+								{{#unless ../locked}}
+									<div class="pullLeft pointer">
+										<i class="icon smallicon fa-solid fa-trash-can pointer language-delete" title="{{localize 'wod.languages.remove'}}" aria-hidden="true" data-item-id="{{id}}"></i>
+									</div>
+								{{/unless}}
+							</div>
+						{{/each}}
+
+						{{#unless locked}}
+							<div class="clearareaBox bioInformationArea language-add-row">
+								<div class="pullLeft infobox floating-label-group">
+									<input class="sheet-infoValues language-add-input" type="text" value="" data-dtype="String" autocomplete="off" />
+									<span class="floating-label">{{localize "wod.languages.addplaceholder"}}</span>
+								</div>
+								<div class="pullLeft pointer">
+									<i class="icon fa-solid fa-square-plus language-create pointer" title="{{localize 'wod.languages.add'}}" aria-hidden="true"></i>
+								</div>
+							</div>
+						{{/unless}}
+					</div>
+				{{/if}}
 			</div>
 
 			{{#if (eqAnyNot data.system.type "wod.types.bloodbound" "wod.types.boon")}}

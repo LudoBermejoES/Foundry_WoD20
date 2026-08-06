@@ -193,6 +193,12 @@
 			"relation": "Historique",
 			"portrait": "Portrait"
 		},
+		"languages": {
+			"heading": "Langues connues",
+			"add": "Ajouter une langue",
+			"addplaceholder": "Nom de la langue",
+			"remove": "Supprimer la langue"
+		},
 		"types": {
 			"maneuver": "Manœuvre de combat",
 			"mortal": "Mortel",

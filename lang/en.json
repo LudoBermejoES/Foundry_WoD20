@@ -198,6 +198,12 @@
 			"relation": "Background",
 			"portrait": "Portrait"
 		},
+		"languages": {
+			"heading": "Known languages",
+			"add": "Add language",
+			"addplaceholder": "Language name",
+			"remove": "Remove language"
+		},
 		"types": {
 			"maneuver": "Combat Maneuver",
 			"chantry": "Chantry / Construct",

@@ -193,6 +193,12 @@
 			"relation": "Background",
 			"portrait": "Portrait"
 		},
+		"languages": {
+			"heading": "Відомі мови",
+			"add": "Додати мову",
+			"addplaceholder": "Назва мови",
+			"remove": "Видалити мову"
+		},
 		"types": {
 			"maneuver": "Бойовий прийом",
 			"mortal": "Mortal",
