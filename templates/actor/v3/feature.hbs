@@ -69,15 +69,29 @@
 			      is a fresh design decision. --}}
 			<div class="v3-section v3-bioidentity">
 
+				{{!-- THE PORTRAIT IS A MODULE INTEGRATION POINT, not just an image. `class="profile-img"`
+				      plus `data-edit="img"` is the pair image-replacement modules key on — Tokenizer
+				      and its relatives look for exactly that, and it is what makes the portrait
+				      behave the same here as in every other system.
+
+				      It used to be emitted ONLY on the unlocked, permitted branch, so for most of a
+				      session — sheet locked, just being read — no module could see the portrait at
+				      all. The two are now separated, because they answer different questions:
+				        `data-edit="img"`      MAY this image be replaced -> permission, not lock state
+				        `data-action="editImage"`  does OUR click open the picker -> unlocked only
+				      A user without `changeActorImage` gets neither, so nothing advertises an edit
+				      hook to someone who cannot use it.
+
+				      Right-click to show the image to the table is bound separately, in
+				      `PCActorSheetV3.#bindPortraitShare` — on the CONTEXT menu precisely so that the
+				      left-click contract above stays untouched. --}}
 				<div class="v3-portrait">
-					{{#if locked}}
-						<img class="profile-img {{#if (eq actor.img 'icons/svg/mystery-man.svg')}}defaultimage{{/if}}" src="{{actor.img}}" alt="{{actor.name}}" />
+					{{#if userpermissions.changeActorImage}}
+						<img class="profile-img {{#if (eq actor.img 'icons/svg/mystery-man.svg')}}defaultimage{{/if}}{{#unless locked}} pointer{{/unless}}"
+							src="{{actor.img}}" title="{{actor.name}}" alt="{{actor.name}}"
+							data-edit="img"{{#unless locked}} data-action="editImage"{{/unless}} />
 					{{else}}
-						{{#if userpermissions.changeActorImage}}
-							<img class="profile-img {{#if (eq actor.img 'icons/svg/mystery-man.svg')}}defaultimage{{/if}} pointer" src="{{actor.img}}" title="{{actor.name}}" alt="{{actor.name}}" data-action="editImage" data-edit="img" />
-						{{else}}
-							<img class="profile-img {{#if (eq actor.img 'icons/svg/mystery-man.svg')}}defaultimage{{/if}}" src="{{actor.img}}" alt="{{actor.name}}" />
-						{{/if}}
+						<img class="profile-img {{#if (eq actor.img 'icons/svg/mystery-man.svg')}}defaultimage{{/if}}" src="{{actor.img}}" alt="{{actor.name}}" />
 					{{/if}}
 				</div>
 

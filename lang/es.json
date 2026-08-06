@@ -1633,6 +1633,8 @@
 				"life": "De vida"
 			},
 			"bonus": {
+				"appliedtooltip": "Activo — las bonificaciones de este objeto se están aplicando",
+				"withheldtooltip": "Inactivo — las bonificaciones de este objeto no se están aplicando",
 				"headline": "Bonus",
 				"attributebonus": "Bonus de Atributo",
 				"attributebonushint": "Este modificador añade o sustrae su valor del propio Atributo, alterando el valor total en esa cantidad. Puede sobrepasar el límite máximo del Atributo.",
@@ -1677,11 +1679,12 @@
 				"bonusvalue": "Valor del bonificador"
 			},
 			"ability": {
+				"specialitynone": "Puede tener especialidad — ninguna elegida aún",
 				"worldname": "Item name in world",
 				"id": "Id *",
 				"idhint": "What internal ID this template has within the system. Is used for internal hardcoded rules and settings.",
 				"sheetname": "Visible name on sheet *",
-				"speciality": "Speciality",
+				"speciality": "Especialidad",
 				"startvalue": "Start value of ability",
 				"currentvalue": "Current value of ability",
 				"mandatory": "* Mandatory fields.",

@@ -61,10 +61,26 @@
 	      sit to the LEFT of the description eye, matching that partial's own left-to-right order. --}}
 	<div class="pullLeft width-iconbox draggable"><i class="icon fa-solid fa-grip-vertical"></i></div>
 
-	{{#if (isChecked item.system.isactive)}}
-		<i class="pullLeft item-active pointer icon fa-regular fa-square-check" title="{{localize 'wod.power.active'}}" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive"></i>
-	{{else}}
-		<i class="pullLeft item-active pointer icon fa-regular fa-square" title="{{localize 'wod.power.active'}}" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive"></i>
+	{{!-- ONLY WHERE IT DOES SOMETHING. This checkbox writes `system.isactive`, and on a Feature —
+	      Background, Merit, Flaw, Other Trait — that flag has exactly ONE reader: the bonus system.
+	      An item's `bonuslist` entries are applied while it is active and withheld while it is not
+	      (`bonus-helpers.js:135`), which is how a Merit carrying a `health_buff` grants its extra
+	      health box only when switched on. It is NOT a "do I have this Background" toggle, and it
+	      does not affect rolls, dots or visibility.
+
+	      So on a Background with no bonuses attached the control did nothing whatsoever, and it was
+	      offered on every row — which is precisely the question it prompted the day it shipped. The
+	      Features tab always had it and nobody asked, because that tab is where you go to fiddle
+	      with an item; the Stats tab is where you read the sheet. Gated on the item actually having
+	      a bonus, so it appears only when there is something to switch. `bonuslist` is declared on
+	      the `base` Item template (`template.json:1550`), which `Feature` includes, so it is present
+	      on every one of these rows and the guard can never throw. --}}
+	{{#if item.system.bonuslist.length}}
+		{{#if (isChecked item.system.isactive)}}
+			<i class="pullLeft item-active pointer icon fa-regular fa-square-check" data-tooltip="{{localize 'wod.labels.bonus.appliedtooltip'}}" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive"></i>
+		{{else}}
+			<i class="pullLeft item-active pointer icon fa-regular fa-square" data-tooltip="{{localize 'wod.labels.bonus.withheldtooltip'}}" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive"></i>
+		{{/if}}
 	{{/if}}
 
 	{{!-- The description eye, to the LEFT of the name. This block had no icon column at all, so

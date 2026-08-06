@@ -90,7 +90,7 @@
 							</div>
 						{{else if (hasSpeciality ability)}}
 							<div class="{{#if (gt ability.system.max 8)}}pullLeft{{else}}pullRight{{/if}} speciality-ability-icon">
-								<i class="fa-solid fa-circle-exclamation {{getSpecialityIcon ability}}" title="{{ability.system.speciality}}"></i>
+								<i class="fa-solid fa-circle-exclamation {{getSpecialityIcon ability}}" data-tooltip="{{#if (eq ability.system.speciality '')}}{{localize 'wod.labels.ability.specialitynone'}}{{else}}{{localize 'wod.labels.ability.speciality'}}: {{ability.system.speciality}}{{/if}}"></i>
 							</div>
 						{{else}}
 							<div class="{{#if (gt ability.system.max 8)}}pullLeft{{else}}pullRight{{/if}} speciality-ability-empty-icon">
@@ -205,7 +205,7 @@
 							</div>
 						{{else if (hasSpeciality ability)}}
 							<div class="{{#if (gt ability.system.max 8)}}pullLeft{{else}}pullRight{{/if}} speciality-ability-icon">
-								<i class="fa-solid fa-circle-exclamation {{getSpecialityIcon ability}}" title="{{ability.system.speciality}}"></i>
+								<i class="fa-solid fa-circle-exclamation {{getSpecialityIcon ability}}" data-tooltip="{{#if (eq ability.system.speciality '')}}{{localize 'wod.labels.ability.specialitynone'}}{{else}}{{localize 'wod.labels.ability.speciality'}}: {{ability.system.speciality}}{{/if}}"></i>
 							</div>
 						{{else}}
 							<div class="{{#if (gt ability.system.max 8)}}pullLeft{{else}}pullRight{{/if}} speciality-ability-empty-icon">
@@ -317,7 +317,7 @@
 							</div>
 						{{else if (hasSpeciality ability)}}
 							<div class="{{#if (gt ability.system.max 8)}}pullLeft{{else}}pullRight{{/if}} speciality-ability-icon">
-								<i class="fa-solid fa-circle-exclamation {{getSpecialityIcon ability}}" title="{{ability.system.speciality}}"></i>
+								<i class="fa-solid fa-circle-exclamation {{getSpecialityIcon ability}}" data-tooltip="{{#if (eq ability.system.speciality '')}}{{localize 'wod.labels.ability.specialitynone'}}{{else}}{{localize 'wod.labels.ability.speciality'}}: {{ability.system.speciality}}{{/if}}"></i>
 							</div>
 						{{else}}
 							<div class="{{#if (gt ability.system.max 8)}}pullLeft{{else}}pullRight{{/if}} speciality-ability-empty-icon">

@@ -303,5 +303,62 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		await super._onRender();
 
 		ApplyPcSheetAccessibility(this.element, this);
+		this.#bindPortraitShare(this.element);
+	}
+
+	/**
+	 * Right-click the portrait to show it to everyone.
+	 *
+	 * `ImagePopout` is Foundry's own art viewer and `shareImage()` its own broadcast, so this is the
+	 * mechanism every other system uses rather than something invented here — the same one behind
+	 * "Show Players" elsewhere in the UI. Under v14 it lives at
+	 * `foundry.applications.apps.ImagePopout` (verified against the v14 API docs, not assumed from
+	 * the v12 global, which is why the namespaced path is written out in full).
+	 *
+	 * LEFT-CLICK IS NOT TOUCHED. The portrait already carries `data-action="editImage"` and
+	 * `data-edit="img"`, which is the convention image-replacement modules hook — Tokenizer and
+	 * friends look for exactly that attribute pair plus the `profile-img` class. Binding share on
+	 * the CONTEXT menu leaves all of that intact; a left-click still opens the file picker.
+	 *
+	 * GM-ONLY FOR THE BROADCAST, and deliberately not for the viewing. `shareImage()` pushes a
+	 * window onto every connected client, so a mis-aimed right-click by a player would interrupt the
+	 * whole table. A non-GM still gets the popout locally, which is the useful half and costs nobody
+	 * anything.
+	 *
+	 * Bound with the `dataset` latch the other context menus here use, because `_onRender` runs on
+	 * every re-render and listeners would otherwise stack up — each one firing another popout.
+	 */
+	#bindPortraitShare (root) {
+		if (!root || root.dataset.portraitShareBound) return;
+		root.dataset.portraitShareBound = "true";
+
+		root.addEventListener("contextmenu", (event) => {
+			const img = event.target.closest("img.profile-img");
+
+			if (!img || !img.getAttribute("src")) return;
+
+			event.preventDefault();
+
+			/* SHARE THE IMAGE THAT WAS CLICKED, not `this.actor.img`. `profile-img` is also worn by
+			   the shapeform portraits further down this tab (`feature.hbs:283`, `.shape-image`), so
+			   hard-coding the actor's picture would show a werewolf's Crinos art as the character
+			   portrait — right image, wrong picture. Reading `src` off the element is correct for
+			   every one of them. `uuid` is only meaningful for the actor's own portrait; it is what
+			   lets a recipient click through to the sheet, and pointing it at the actor from a
+			   shapeform row would be a lie. */
+			const isActorPortrait = !img.classList.contains("shape-image");
+
+			const popout = new foundry.applications.apps.ImagePopout({
+				src: img.getAttribute("src"),
+				...(isActorPortrait ? { uuid: this.actor.uuid } : {}),
+				window: { title: isActorPortrait ? this.actor.name : (img.getAttribute("alt") || this.actor.name) }
+			});
+
+			popout.render(true);
+
+			if (game.user.isGM) {
+				popout.shareImage();
+			}
+		});
 	}
 }

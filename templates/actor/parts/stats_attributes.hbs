@@ -83,7 +83,7 @@
 								</div>
 							{{else}}
 								<div class="{{#if (gt attribute.max 8)}}pullLeft{{else}}pullRight{{/if}} speciality-attribute-icon" data-type="Attribute" data-action="itemEdit">
-									<i class="fa-solid fa-circle-exclamation {{#if (eq attribute.speciality '')}}item-warning{{else}}item-notice{{/if}}" title="{{attribute.speciality}}"></i>
+									<i class="fa-solid fa-circle-exclamation {{#if (eq attribute.speciality '')}}item-warning{{else}}item-notice{{/if}}" data-tooltip="{{#if (eq attribute.speciality '')}}{{localize 'wod.labels.ability.specialitynone'}}{{else}}{{localize 'wod.labels.ability.speciality'}}: {{attribute.speciality}}{{/if}}"></i>
 								</div>
 							{{/if}}
 						{{else}}

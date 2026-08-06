@@ -1638,6 +1638,8 @@
 				"life": "Life"
 			},
 			"bonus": {
+				"appliedtooltip": "Active — this item's bonuses are being applied",
+				"withheldtooltip": "Inactive — this item's bonuses are not being applied",
 				"headline": "Bonus",
 				"attributebonus": "Attribute bonus",
 				"attributebonushint": "This bonus adds/subtracts a value to the selected attribute itself altering the total value by the selected amount. Can go beyond the max rating of the attribute.",
@@ -1684,6 +1686,7 @@
 				"bonusvalue": "Bonus value"
 			},
 			"ability": {
+				"specialitynone": "Eligible for a speciality — none chosen yet",
 				"worldname": "Item name in world",
 				"id": "Id *",
 				"idhint": "What internal ID this template has within the system. Is used for internal hardcoded rules and settings.",

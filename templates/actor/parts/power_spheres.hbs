@@ -99,7 +99,7 @@
 					{{else}}
 						{{#if (gte sphere.system.value 4)}}
 							<div class="pullRight speciality-magic-icon">
-								<i class="fa-solid fa-circle-exclamation {{#if (eq sphere.system.speciality '')}}item-warning{{else}}item-notice{{/if}}" title="{{sphere.system.speciality}}"></i>
+								<i class="fa-solid fa-circle-exclamation {{#if (eq sphere.system.speciality '')}}item-warning{{else}}item-notice{{/if}}" data-tooltip="{{#if (eq sphere.system.speciality '')}}{{localize 'wod.labels.ability.specialitynone'}}{{else}}{{localize 'wod.labels.ability.speciality'}}: {{sphere.system.speciality}}{{/if}}"></i>
 							</div>
 						{{else}}
 							<div class="pullRight speciality-magic-empty-icon">
