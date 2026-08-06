@@ -204,6 +204,11 @@ export class DialogGeneralRoll extends FormApplication {
                         let bonus = await BonusHelper.GetAttributeDiceBuff(this.actor, attributeKey);
                         data.object.attributeValue += parseInt(bonus);
                     }
+
+                    if ((data.object.difficulty == 6) && (await BonusHelper.CheckAttributeBonus(this.actor, attributeKey))) {
+                        let bonus = await BonusHelper.GetAttributeBonus(this.actor, attributeKey);
+                        this.object.difficulty += parseInt(bonus);
+                    }
                 }
             }
 
