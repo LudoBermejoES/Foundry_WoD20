@@ -744,22 +744,43 @@
 /* link-mage-focus-as-items — the three Focus blocks (Paradigm/Practice/Instruments), each a
    heading (`.v3-sectiontitle`, ruled above) plus a list of `.v3-focusitem` rows (`focus_item.hbs`).
 
-   `.v3-focusitem` IS `.v3-prose` (same element, two classes) — the disclosure rule, the chevron
-   rotation and the border-bottom separator above are inherited unchanged; nothing here duplicates
-   them. What is added is layout ONLY, for the LIST as a container of several rows rather than one
-   splatfield box: `.v3-focuslist` gives the rows a tight vertical rhythm, and the last row's
-   `.v3-prose` border (meant to separate one splatfield box from the next section) is removed so the
-   list does not end in a lone rule with nothing below it. Zero literal colours, same as the rest of
-   this file — the border it inherits is `var(--main-mid-color)`, declared where `.v3-prose` is. */
+   FOLLOW-UP: `.v3-focusitem` no longer IS `.v3-prose`. The row used to be a `<details>` that
+   inherited the splatfield-prose disclosure rule (chevron, border-bottom) verbatim; it is now a
+   plain name + eye-icon row, styled here directly, because the eye opens the item's own
+   `ItemViewer` window instead of expanding in place — the same gesture every other row on this
+   sheet (merits, flaws, backgrounds, abilities, spheres) already uses. `.v3-prose` and its
+   `.v3-prosesummary`/`.v3-prosechevron`/`.v3-proselabel`/`.v3-prosebody` family are UNCHANGED and
+   still load-bearing above: the general splatfield-textbox loop (`v3/feature.hbs`) still uses them
+   for every other splat's prose fields (and a mage's own non-Focus fields), so none of those rules
+   were touched.
+
+   `.v3-focuslist` still gives the rows a tight vertical rhythm as a flex column; the last row's
+   border is still dropped so the list does not end in a lone rule with nothing below it. Zero
+   literal colours, same as the rest of this file — the border is `var(--main-mid-color)`. */
 .wod20.pc-actor-v3 .v3-focuslist {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
 }
 
+.wod20.pc-actor-v3 .v3-focusitem {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 0 0 3px 0;
+	border-bottom: 1px solid var(--main-mid-color);
+	margin-bottom: 6px;
+}
+
 .wod20.pc-actor-v3 .v3-focuslist .v3-focusitem:last-child {
 	border-bottom: none;
 	margin-bottom: 0;
+}
+
+.wod20.pc-actor-v3 .v3-focuslabel {
+	font-size: calc(1rem * var(--splat-display-scale, 1));
+	line-height: 1.25;
 }
 
 /* The empty-state line ("Ninguno"/"None") a Focus block prints when its list has no picks yet —

@@ -1440,32 +1440,20 @@ export const addBioContext = async function (context, actor) {
 	// elsewhere. `context.splatfields` itself is left untouched: it is shared with the v2/v3
 	// templates that still read it for OTHER splats' textboxes, and removing the three entries from
 	// it here would blank them on v2's Bio tab too, which is explicitly out of scope.
-	context.mageFocusParadigms   = await enrichFocusItems(ItemHelper.GetItemType(actor, "Feature", "wod.types.paradigm"));
-	context.mageFocusPractices   = await enrichFocusItems(ItemHelper.GetItemType(actor, "Feature", "wod.types.practice"));
-	context.mageFocusInstruments = await enrichFocusItems(ItemHelper.GetItemType(actor, "Feature", "wod.types.instrument"));
+	//
+	// A FOLLOW-UP after the initial ship replaced the in-place `<details>` disclosure with the same
+	// eye-icon `ItemViewer` every other row on this sheet opens (see `focus_item.hbs`'s own header).
+	// That viewer resolves the description itself (`ItemViewer#_prepareContext`), so these three
+	// lists no longer need per-item enrichment — the `enrichFocusItems` helper that used to wrap
+	// each call below (and the `enrichedDescription`/`hasDescription` properties it mutated onto
+	// each item) is dead code now that `focus_item.hbs` reads neither, and was removed rather than
+	// left behind. Verified by rendering: a mage's Focus rows still show their names, and the eye
+	// still opens the same populated viewer merit/background/ability rows do.
+	context.mageFocusParadigms   = ItemHelper.GetItemType(actor, "Feature", "wod.types.paradigm");
+	context.mageFocusPractices   = ItemHelper.GetItemType(actor, "Feature", "wod.types.practice");
+	context.mageFocusInstruments = ItemHelper.GetItemType(actor, "Feature", "wod.types.instrument");
 
 	return context;
-}
-
-/**
- * link-mage-focus-as-items — resolves each Focus item's description the SAME way the eye-icon
- * viewer does it (`ItemViewer#_prepareContext`, item-viewer.js): live from the compendium when the
- * item carries provenance and holds no local override, its own stored `system.description`
- * otherwise. Mutates each item in place with `enrichedDescription`/`hasDescription` — the same
- * convenience-property pattern `buildConnectionGroups` already uses for the Connections roster,
- * below. Nothing here is persisted; the properties exist for this render only.
- * @param {Item[]} items
- * @returns {Promise<Item[]>} the same array, for chaining
- */
-async function enrichFocusItems(items) {
-	for (const item of items) {
-		const raw = (await resolveDescription(item)) ?? item?.system?.description ?? "";
-		item.enrichedDescription = raw
-			? await foundry.applications.ux.TextEditor.implementation.enrichHTML(raw, { async: true })
-			: "";
-		item.hasDescription = item.enrichedDescription.trim().length > 0;
-	}
-	return items;
 }
 
 export const prepareBioContext = async function (context, actor) {
