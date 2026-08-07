@@ -201,6 +201,9 @@
 		},
 		"types": {
 			"maneuver": "Manœuvre de combat",
+			"paradigm": "Paradigme",
+			"practice": "Pratique",
+			"instrument": "Instrument",
 			"mortal": "Mortel",
 			"werewolf": "Loup-Garou",
 			"mage": "Mage",
@@ -1689,6 +1692,9 @@
 			},
 			"new": {
 				"maneuver": "Nouvelle manœuvre",
+				"paradigm": "Nouveau paradigme",
+				"practice": "Nouvelle pratique",
+				"instrument": "Nouvel instrument",
 				"create": "Create item",
 				"notfound": "Ce type d'objet n'existe pas",
 				"alreadyexists": "already exists on the sheet.",
@@ -1825,6 +1831,9 @@
 			},
 			"edit": {
 				"maneuver": "Modifier la manœuvre",
+				"paradigm": "Modifier le paradigme",
+				"practice": "Modifier la pratique",
+				"instrument": "Modifier l'instrument",
 				"headline": "Edit",
 				"naturalweapon": "Éditer Arme naturelle",
 				"meleeweapon": "Éditer Arme de mêlée",
@@ -1887,6 +1896,9 @@
 			},
 			"remove": {
 				"maneuver": "Retirer la manœuvre",
+				"paradigm": "Retirer le paradigme",
+				"practice": "Retirer la pratique",
+				"instrument": "Retirer l'instrument",
 				"headline": "Remove",
 				"item": "Enlever Objet",
 				"removing": "Retrait",

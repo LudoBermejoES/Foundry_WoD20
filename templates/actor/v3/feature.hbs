@@ -157,30 +157,96 @@
 			</div>
 
 			{{!-- The splatfield prose. CLAMP_AT = 600, measured on the stored HTML string. See
-			      `v3/bio.hbs`'s header for the full reasoning behind disclosure-not-clamp. --}}
+			      `v3/bio.hbs`'s header for the full reasoning behind disclosure-not-clamp.
+
+			      link-mage-focus-as-items — `paradigm`/`practice`/`instruments` are excluded from
+			      THIS loop for a mage ONLY (the `eqAny` test below), and ONLY here: `context.splatfields`
+			      itself is left untouched, because it is the exact object `bio_splatfields.hbs` also
+			      reads and that partial is SHARED with the v2 sheet's `bio.hbs` — mutating the object
+			      would blank these three boxes on v2 too, which is explicitly out of scope. A wraith's
+			      four textbox fields (`life`/`death`/`regret`/`thorns`) are unaffected: none of their
+			      keys match, and the `eq splat mage` half of the test is false for every wraith anyway. --}}
 			{{#each splatfields as |field key|}}
 				{{#if (eq field.type "textbox")}}
-					<div class="v3-section">
-						{{#if ../locked}}
-							{{#if (gt field.value.length 600)}}
-								<details class="v3-prose">
-									<summary class="v3-prosesummary">
-										<i class="fa-solid fa-angles-right v3-prosechevron" aria-hidden="true"></i>
-										<span class="v3-proselabel splatFont">{{localize field.label}}</span>
-									</summary>
-									<div class="v3-prosebody">
-										{{> "systems/worldofdarkness/templates/actor/parts/description.hbs" proseheadline=field.label locked=../locked headline=false prosename=(concat "system.bio.splatfields." key ".value") prosevalue=field.value proseenriched=field.enriched}}
-									</div>
-								</details>
+					{{#unless (and (eq actor.system.settings.splat config.splat.mage) (eqAny key "paradigm" "practice" "instruments"))}}
+						<div class="v3-section">
+							{{#if ../locked}}
+								{{#if (gt field.value.length 600)}}
+									<details class="v3-prose">
+										<summary class="v3-prosesummary">
+											<i class="fa-solid fa-angles-right v3-prosechevron" aria-hidden="true"></i>
+											<span class="v3-proselabel splatFont">{{localize field.label}}</span>
+										</summary>
+										<div class="v3-prosebody">
+											{{> "systems/worldofdarkness/templates/actor/parts/description.hbs" proseheadline=field.label locked=../locked headline=false prosename=(concat "system.bio.splatfields." key ".value") prosevalue=field.value proseenriched=field.enriched}}
+										</div>
+									</details>
+								{{else}}
+									{{> "systems/worldofdarkness/templates/actor/parts/description.hbs" proseheadline=field.label locked=../locked headline=false prosename=(concat "system.bio.splatfields." key ".value") prosevalue=field.value proseenriched=field.enriched}}
+								{{/if}}
 							{{else}}
 								{{> "systems/worldofdarkness/templates/actor/parts/description.hbs" proseheadline=field.label locked=../locked headline=false prosename=(concat "system.bio.splatfields." key ".value") prosevalue=field.value proseenriched=field.enriched}}
 							{{/if}}
-						{{else}}
-							{{> "systems/worldofdarkness/templates/actor/parts/description.hbs" proseheadline=field.label locked=../locked headline=false prosename=(concat "system.bio.splatfields." key ".value") prosevalue=field.value proseenriched=field.enriched}}
-						{{/if}}
-					</div>
+						</div>
+					{{/unless}}
 				{{/if}}
 			{{/each}}
+
+			{{!-- link-mage-focus-as-items — the three textbox boxes excluded above, replaced with three
+			      labelled blocks of Focus Item rows (design D2: rendered here, where Focus already
+			      lived — this is where the standalone Bio tab's splatfield prose merged to, §8.1/§8.2;
+			      D3: `focus_item.hbs`, not `feature_item.hbs` — see that partial's own header for why,
+			      including why it does NOT reuse the merit rows' eye icon).
+
+			      Always three headings, mirroring the three boxes they replace: a mage with zero
+			      Instruments still had an (empty) Instruments box before this change, and a heading
+			      that disappears when a category happens to be empty would read as "this mage has no
+			      Instruments field" rather than "no Instruments picked yet".
+
+			      `mageFocusParadigms`/`mageFocusPractices`/`mageFocusInstruments` are built by THIS
+			      part's own preparer chain (`prepareFeatureContext` -> `addBioContext`,
+			      pc-actor-sheet.js) for every actor, mage or not — see that function's own comment for
+			      why an unconditional build is the safer default in this sheet. --}}
+			{{#if (eq actor.system.settings.splat config.splat.mage)}}
+				<div class="v3-section v3-focusblock">
+					<h3 class="v3-sectiontitle splatFont">{{localize 'wod.spheres.paradigm'}}</h3>
+					{{#if mageFocusParadigms.length}}
+						<div class="v3-focuslist">
+							{{#each mageFocusParadigms as |item|}}
+								{{> "systems/worldofdarkness/templates/actor/parts/focus_item.hbs" item=item}}
+							{{/each}}
+						</div>
+					{{else}}
+						<p class="information-area">{{localize 'wod.labels.none'}}</p>
+					{{/if}}
+				</div>
+
+				<div class="v3-section v3-focusblock">
+					<h3 class="v3-sectiontitle splatFont">{{localize 'wod.spheres.practice'}}</h3>
+					{{#if mageFocusPractices.length}}
+						<div class="v3-focuslist">
+							{{#each mageFocusPractices as |item|}}
+								{{> "systems/worldofdarkness/templates/actor/parts/focus_item.hbs" item=item}}
+							{{/each}}
+						</div>
+					{{else}}
+						<p class="information-area">{{localize 'wod.labels.none'}}</p>
+					{{/if}}
+				</div>
+
+				<div class="v3-section v3-focusblock">
+					<h3 class="v3-sectiontitle splatFont">{{localize 'wod.spheres.instruments'}}</h3>
+					{{#if mageFocusInstruments.length}}
+						<div class="v3-focuslist">
+							{{#each mageFocusInstruments as |item|}}
+								{{> "systems/worldofdarkness/templates/actor/parts/focus_item.hbs" item=item}}
+							{{/each}}
+						</div>
+					{{else}}
+						<p class="information-area">{{localize 'wod.labels.none'}}</p>
+					{{/if}}
+				</div>
+			{{/if}}
 
 			{{#if graphicsettings.useLinkPlatform}}
 				<div class="v3-section">

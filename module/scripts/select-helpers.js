@@ -233,6 +233,34 @@ export default class SelectHelper {
                 value: "wod.types.thorn",
                 label: game.i18n.localize("wod.types.thorn"),
                 group: game.i18n.localize("wod.games.wraith")
+            },
+            /*
+             * link-mage-focus-as-items — Paradigm / Practice / Instrument, a mage's Focus.
+             *
+             * Same reasoning as Thorn immediately above: these are FEATURE sub-kinds (the packs
+             * `mage-paradigms` / `mage-practices` / `mage-instruments` ship them as
+             * `type: "Feature"`), and listing them here is what lets a GM retype one dragged in
+             * from a pack before it is retyped there, or fix a mistake, WITHOUT this select's own
+             * absence silently clobbering `system.type` back to "" the next time an
+             * `itemAdministrator` saves the item sheet for any unrelated reason (the same failure
+             * mode that gave `wod.types.maneuver` its own dedicated sheet instead — not available
+             * here, because these are Feature, not Trait, and the sheet already used by every
+             * other Feature sub-kind is this generic one).
+             */
+            {
+                value: "wod.types.paradigm",
+                label: game.i18n.localize("wod.types.paradigm"),
+                group: game.i18n.localize("wod.games.mage")
+            },
+            {
+                value: "wod.types.practice",
+                label: game.i18n.localize("wod.types.practice"),
+                group: game.i18n.localize("wod.games.mage")
+            },
+            {
+                value: "wod.types.instrument",
+                label: game.i18n.localize("wod.types.instrument"),
+                group: game.i18n.localize("wod.games.mage")
             }];
 
             listData.BoonTypes = [

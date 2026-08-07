@@ -201,6 +201,9 @@
 		},
 		"types": {
 			"maneuver": "Manovra di combattimento",
+			"paradigm": "Paradigma",
+			"practice": "Pratica",
+			"instrument": "Strumento",
 			"mortal": "Mortale",
 			"werewolf": "Licantropo",
 			"mage": "Mago",
@@ -1689,6 +1692,9 @@
 			},
 			"new": {
 				"maneuver": "Nuova manovra",
+				"paradigm": "Nuovo paradigma",
+				"practice": "Nuova pratica",
+				"instrument": "Nuovo strumento",
 				"create": "Create item",
 				"notfound": "Item type does not exist",
 				"alreadyexists": "already exists on the sheet.",
@@ -1825,6 +1831,9 @@
 			},
 			"edit": {
 				"maneuver": "Modifica manovra",
+				"paradigm": "Modifica paradigma",
+				"practice": "Modifica pratica",
+				"instrument": "Modifica strumento",
 				"headline": "Edit",
 				"naturalweapon": "Modifica Armi Naturali",
 				"meleeweapon": "Modifica Armi da Mischia",
@@ -1887,6 +1896,9 @@
 			},
 			"remove": {
 				"maneuver": "Rimuovi manovra",
+				"paradigm": "Rimuovi paradigma",
+				"practice": "Rimuovi pratica",
+				"instrument": "Rimuovi strumento",
 				"headline": "Remove",
 				"item": "Rimuovi Oggetto",
 				"removing": "Rimozione",

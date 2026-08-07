@@ -201,6 +201,9 @@
 		},
 		"types": {
 			"maneuver": "Бойовий прийом",
+			"paradigm": "Парадигма",
+			"practice": "Практика",
+			"instrument": "Інструмент",
 			"mortal": "Mortal",
 			"werewolf": "Werewolf",
 			"mage": "Mage",
@@ -1689,6 +1692,9 @@
 			},
 			"new": {
 				"maneuver": "Новий прийом",
+				"paradigm": "Нова парадигма",
+				"practice": "Нова практика",
+				"instrument": "Новий інструмент",
 				"create": "Create item",
 				"notfound": "Item type does not exist",
 				"alreadyexists": "already exists on the sheet.",
@@ -1825,6 +1831,9 @@
 			},
 			"edit": {
 				"maneuver": "Редагувати прийом",
+				"paradigm": "Редагувати парадигму",
+				"practice": "Редагувати практику",
+				"instrument": "Редагувати інструмент",
 				"headline": "Edit",
 				"naturalweapon": "Edit natural weapon",
 				"meleeweapon": "Edit melee weapon",
@@ -1887,6 +1896,9 @@
 			},
 			"remove": {
 				"maneuver": "Вилучити прийом",
+				"paradigm": "Вилучити парадигму",
+				"practice": "Вилучити практику",
+				"instrument": "Вилучити інструмент",
 				"headline": "Remove",
 				"item": "Remove item",
 				"removing": "Removing",

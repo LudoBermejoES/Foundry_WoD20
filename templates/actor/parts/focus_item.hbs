@@ -1,0 +1,47 @@
+{{!--
+	link-mage-focus-as-items — one Focus pick (Paradigm / Practice / Instrument): a name and a
+	description toggle, "like a Merit" (design D3, `link-mage-focus-as-items`).
+
+	NOT `feature_item.hbs`. That partial is shared by twelve blocks across three tabs and carries a
+	drag handle, an `isactive` checkbox, rollable dice/difficulty columns and a point-value column —
+	a Focus pick has none of those, and suppressing four things with flags in a partial that busy
+	would put its other twelve callers at risk for this one caller's shape.
+
+	NOT `feature_item.hbs`'s / `stats_feature_row.hbs`'s eye icon either, and that is a discovery
+	recorded here rather than papered over. Both of those rows' inline `.description` panel was
+	REMOVED by `open-item-window-from-eye-icon` (2026-07-31): their eye now opens the item's own
+	read-only `ItemViewer` in a SEPARATE WINDOW (`_handleCollapsibleClick`, pc-actor-sheet.js), not
+	an inline reveal. So there is no still-existing inline toggle on those rows left to copy.
+
+	What this row reuses instead is the OTHER disclosure this tab already has: the native
+	`<details>`/`<summary>` `templates/actor/v3/feature.hbs` (the "Personaje" tab bio's splatfield
+	prose merged into, add-pc-sheet-v3 §8.1/§8.2 — this row lives in the same section) uses to collapse
+	a long splatfield prose box — `.v3-prose` / `.v3-prosesummary` / `.v3-prosechevron` /
+	`.v3-proselabel` / `.v3-prosebody`, all already declared and scoped in `css/pc-actor-v3.css`. It is
+	a genuine existing mechanism in this repo, not an invented one, and it is what actually satisfies
+	"reveals the description in place, collapsed by default": no JavaScript at all, keyboard-operable
+	natively, and its CLOSED state occupies exactly the same height for a 14,000-character description
+	as for an empty one — the acceptance check this change is measured against.
+
+	`item.enrichedDescription`/`item.hasDescription` are set once per render by `enrichFocusItems`
+	(pc-actor-sheet.js), the SAME resolver (`resolveDescription`) the eye-icon viewer itself uses —
+	live from the compendium when the item carries provenance and no override, its own stored text
+	otherwise.
+
+	`data-itemid` carries no `data-action` of its own — nothing on this row writes to the actor — but
+	it is what every other row-shaped partial in this system stamps (`feature_item.hbs`,
+	`stats_feature_row.hbs`), so a future edit/delete affordance for a Focus pick has somewhere to
+	hang one, and it is the ONLY offline evidence `test-part-render.mjs`'s orphan sweep has that a
+	SPECIFIC item (not merely its block) reached the page.
+--}}
+<details class="v3-prose v3-focusitem" data-itemid="{{item._id}}">
+	<summary class="v3-prosesummary">
+		<i class="fa-solid fa-angles-right v3-prosechevron" aria-hidden="true"></i>
+		<span class="v3-proselabel splatFont" title="{{item.name}}">{{item.name}}</span>
+	</summary>
+	{{#if item.hasDescription}}
+		<div class="v3-prosebody">{{{item.enrichedDescription}}}</div>
+	{{else}}
+		<div class="v3-prosebody information-area">{{localize 'wod.notes.descriptionmissing'}}</div>
+	{{/if}}
+</details>

@@ -443,6 +443,30 @@
       "why": "the OTHER carrier of Other Traits: the compendium exporter emits Features, not Traits, and reading only Trait once made every exported clan/kith/totem render nowhere"
     },
     {
+      "key": "feature-focus-paradigm",
+      "type": "Feature",
+      "name": "Un Mundo de Dioses y Monstruos",
+      "system": { "type": "wod.types.paradigm", "placement": "feature", "isvisible": true },
+      "flags": { "wod20-char": { "id": "un-mundo-de-dioses-y-monstruos", "line": "mage", "sourceType": "paradigm" } },
+      "why": "link-mage-focus-as-items — the v3 Personaje tab (feature.hbs, formerly the Bio tab)'s Paradigm block. `system.description` is deliberately OMITTED (defaults to \"\"): entity-backed Feature items snapshot no description at all (read-descriptions-from-compendium), so this fixture is the real shape, not a hand-made one carrying inline text. No compendium pack exists in this harness (caveat 5), so the row is expected to fall back to `wod.notes.descriptionmissing` here; live resolution is proven separately, offline, against the real compendium-description.js."
+    },
+    {
+      "key": "feature-focus-practice",
+      "type": "Feature",
+      "name": "Meditacion",
+      "system": { "type": "wod.types.practice", "placement": "feature", "isvisible": true },
+      "flags": { "wod20-char": { "id": "meditacion", "line": "mage", "sourceType": "practice" } },
+      "why": "link-mage-focus-as-items — the v3 Personaje tab (feature.hbs, formerly the Bio tab)'s Practice(s) block"
+    },
+    {
+      "key": "feature-focus-instrument",
+      "type": "Feature",
+      "name": "Circulos, pentaculos y otros disenos geometricos",
+      "system": { "type": "wod.types.instrument", "placement": "feature", "isvisible": true },
+      "flags": { "wod20-char": { "id": "circulos-pentaculos-y-otros-disenos-geometricos", "line": "mage", "sourceType": "instrument" } },
+      "why": "link-mage-focus-as-items — the v3 Personaje tab (feature.hbs, formerly the Bio tab)'s Instruments block"
+    },
+    {
       "key": "feature-bloodbound",
       "type": "Feature",
       "name": "Vinculo con Lucian",

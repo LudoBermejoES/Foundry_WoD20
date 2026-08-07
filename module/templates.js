@@ -19,6 +19,10 @@ export const preloadHandlebarsTemplates = async function () {
 		"systems/worldofdarkness/templates/actor/parts/bio.hbs",
 			"systems/worldofdarkness/templates/actor/parts/bio_splatfields.hbs",
 			"systems/worldofdarkness/templates/actor/parts/bio_splatboxes.hbs",
+			// link-mage-focus-as-items — the Focus row (Paradigm/Practice/Instrument), included only
+			// from `v3/bio.hbs` (mage-only). See that partial's own header for why it is NOT
+			// `feature_item.hbs`.
+			"systems/worldofdarkness/templates/actor/parts/focus_item.hbs",
 		"systems/worldofdarkness/templates/actor/parts/stats.hbs",
 			"systems/worldofdarkness/templates/actor/parts/stats_attributes.hbs",
 			"systems/worldofdarkness/templates/actor/parts/stats_abilities.hbs",

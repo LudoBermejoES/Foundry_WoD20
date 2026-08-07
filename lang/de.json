@@ -201,6 +201,9 @@
 		},
 		"types": {
 			"maneuver": "Kampfmanöver",
+			"paradigm": "Paradigma",
+			"practice": "Praxis",
+			"instrument": "Instrument",
 			"mortal": "Sterbliche",
 			"werewolf": "Werwolf",
 			"mage": "Magus",
@@ -1689,6 +1692,9 @@
 			},
 			"new": {
 				"maneuver": "Neues Manöver",
+				"paradigm": "Neues Paradigma",
+				"practice": "Neue Praxis",
+				"instrument": "Neues Instrument",
 				"create": "Gegenstand erstellen",
 				"notfound": "Gegenstands Typ existiert nicht",
 				"alreadyexists": "bereits auf dem Bogen vorhanden.",
@@ -1825,6 +1831,9 @@
 			},
 			"edit": {
 				"maneuver": "Manöver bearbeiten",
+				"paradigm": "Paradigma bearbeiten",
+				"practice": "Praxis bearbeiten",
+				"instrument": "Instrument bearbeiten",
 				"headline": "Bearbeiten",
 				"naturalweapon": "Natürliche Waffe bearbeiten",
 				"meleeweapon": "Nahkampfwaffe bearbeiten",
@@ -1887,6 +1896,9 @@
 			},
 			"remove": {
 				"maneuver": "Manöver entfernen",
+				"paradigm": "Paradigma entfernen",
+				"practice": "Praxis entfernen",
+				"instrument": "Instrument entfernen",
 				"headline": "Entfernen",
 				"item": "Gegenstand entfernen",
 				"removing": "Entfernen",

@@ -203,6 +203,9 @@
 		},
 		"types": {
 			"maneuver": "Maniobra de combate",
+			"paradigm": "Paradigma",
+			"practice": "Práctica",
+			"instrument": "Instrumento",
 			"chantry": "Capilla / Constructo",
 			"mortal": "Mortal",
 			"werewolf": "Hombre Lobo",
@@ -1752,6 +1755,9 @@
 			},
 			"new": {
 				"maneuver": "Nueva maniobra",
+				"paradigm": "Nuevo paradigma",
+				"practice": "Nueva práctica",
+				"instrument": "Nuevo instrumento",
 				"create": "Crear objeto",
 				"notfound": "Este tipo de objeto no existe",
 				"alreadyexists": "Ya existe en la ficha",
@@ -1888,6 +1894,9 @@
 			},
 			"edit": {
 				"maneuver": "Editar maniobra",
+				"paradigm": "Editar paradigma",
+				"practice": "Editar práctica",
+				"instrument": "Editar instrumento",
 				"headline": "Editar",
 				"naturalweapon": "Editar arma natural",
 				"meleeweapon": "Editar arma cuerpo a cuerpo",
@@ -1950,6 +1959,9 @@
 			},
 			"remove": {
 				"maneuver": "Quitar maniobra",
+				"paradigm": "Quitar paradigma",
+				"practice": "Quitar práctica",
+				"instrument": "Quitar instrumento",
 				"headline": "Eliminar",
 				"item": "Quitar Objeto",
 				"removing": "Quitando",

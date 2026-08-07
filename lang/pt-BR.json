@@ -201,6 +201,9 @@
 		},
 		"types": {
 			"maneuver": "Manobra de combate",
+			"paradigm": "Paradigma",
+			"practice": "Prática",
+			"instrument": "Instrumento",
 			"mortal": "Mortal",
 			"werewolf": "Lobisomem",
 			"mage": "Mago",
@@ -1689,6 +1692,9 @@
 			},
 			"new": {
 				"maneuver": "Nova manobra",
+				"paradigm": "Novo paradigma",
+				"practice": "Nova prática",
+				"instrument": "Novo instrumento",
 				"create": "Criar item",
 				"notfound": "Tipo de item não existe",
 				"alreadyexists": "Já existe na ficha.",
@@ -1825,6 +1831,9 @@
 			},
 			"edit": {
 				"maneuver": "Editar manobra",
+				"paradigm": "Editar paradigma",
+				"practice": "Editar prática",
+				"instrument": "Editar instrumento",
 				"headline": "Editar",
 				"naturalweapon": "Editar arma natural",
 				"meleeweapon": "Editar arma corpo a corpo",
@@ -1887,6 +1896,9 @@
 			},
 			"remove": {
 				"maneuver": "Remover manobra",
+				"paradigm": "Remover paradigma",
+				"practice": "Remover prática",
+				"instrument": "Remover instrumento",
 				"headline": "Remover",
 				"item": "Remover item",
 				"removing": "Removendo",
