@@ -1627,6 +1627,21 @@ export const registerHandlebarsHelpers = function () {
 		return "";
 	});
 
+	/**
+	 * add-custom-health-scale — an imported creature can carry a per-actor override of the
+	 * "incapacitated" tier's display name (e.g. "Desmaterializado", "Destruido") in
+	 * `system.health.incapacitated.label`, mirroring the existing precedent this same function
+	 * already has for the mummy splat's own hardcoded 6-stage name ladder below: a fixed literal
+	 * is not the only allowed answer for this tier's display text. The schema's own default value
+	 * for that field is the i18n KEY itself (see `actor_health.js`'s `initial: "wod.health.
+	 * incapacitated"`), so an unmodified actor — which never had a reason to write anything else
+	 * there — is unaffected: this only fires when the stored value differs from that default.
+	 */
+	function incapacitatedLabel(health) {
+		const stored = health?.incapacitated?.label;
+		return stored && stored !== "wod.health.incapacitated" ? stored : game.i18n.localize("wod.health.incapacitated");
+	}
+
 	Handlebars.registerHelper("getInjuredLevel", function (type, health, damage) {
 		//let totalDamage = health.damage.bashing + health.damage.lethal + health.damage.aggravated;
 		let totalDamage = damage.bashing + damage.lethal + damage.aggravated;
@@ -1651,13 +1666,13 @@ export const registerHandlebarsHelpers = function () {
 		if (totalDamage <= 0) return game.i18n.localize("wod.health.crippled");
 
 		if (type != CONFIG.worldofdarkness.sheettype.mummy) {
-			return game.i18n.localize("wod.health.incapacitated");
+			return incapacitatedLabel(health);
 		}
 
 		//totalDamage = totalDamage - health.damage.bashing;
 		totalDamage = totalDamage - damage.bashing;
-		
-		if (totalDamage <= 1) return game.i18n.localize("wod.health.incapacitated");
+
+		if (totalDamage <= 1) return incapacitatedLabel(health);
 		if (totalDamage == 2) return game.i18n.localize("wod.health.broken");
 		if (totalDamage == 3) return game.i18n.localize("wod.health.crushed");
 		if (totalDamage == 4) return game.i18n.localize("wod.health.dismembered");

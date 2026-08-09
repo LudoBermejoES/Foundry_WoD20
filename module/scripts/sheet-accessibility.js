@@ -419,7 +419,7 @@ function wireHealthTrack(scope, sheet) {
 		group.setAttribute("role", "group");
 		const cells = [];
 		boxes.forEach(box => {
-			const levelLabel = healthLevelLabel(box.dataset.name);
+			const levelLabel = healthLevelLabel(box.dataset.name, sheet);
 			box.querySelectorAll(":scope > .resource-value-step.healthBox").forEach(cell => {
 				cell.setAttribute("role", "button");
 				describeHealthCell(cell, levelLabel);
@@ -432,8 +432,20 @@ function wireHealthTrack(scope, sheet) {
 	});
 }
 
-function healthLevelLabel(dataName) {
+/**
+ * add-custom-health-scale — `incapacitated` is the one tier whose displayed name a per-actor
+ * override can replace (`system.health.incapacitated.label`, mirrored from the same override
+ * `handlebars.js`'s `getInjuredLevel` reads for the visible status text — the two must agree, or
+ * the aria-label and the on-screen wound state would name the same tier differently). The
+ * schema's own default value for that field is the i18n KEY itself, so an unmodified actor is
+ * unaffected: this only fires when the stored value differs from that default.
+ */
+function healthLevelLabel(dataName, sheet) {
 	const last = (dataName || "").split(".").pop();
+	if (last === "incapacitated") {
+		const stored = sheet?.actor?.system?.health?.incapacitated?.label;
+		if (stored && stored !== "wod.health.incapacitated") return stored;
+	}
 	const key = HEALTH_LEVEL_KEYS[last];
 	return key ? game.i18n.localize(key) : "";
 }
