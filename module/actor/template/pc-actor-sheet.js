@@ -508,8 +508,10 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 		// Attach show/hide handlers for power description toggles
 		this._bindCollapsibleButtons(element);
 
-		// Attach the read-only compendium-description eyes on KEYED traits - the Attributes tab and
-		// the Mage sheet's Spheres block (owner-delegated addition to open-item-window-from-eye-icon)
+		// Attach the read-only compendium-description eyes - the Attributes tab and the Mage sheet's
+		// Spheres block (owner-delegated addition to open-item-window-from-eye-icon), plus its Bio
+		// "Secta" splatfield row (add-faction-sect-entities, matched by value, not by key). Runs over
+		// the WHOLE sheet root, so it needs no per-tab wiring as new eyes are added.
 		this._bindTraitDescriptionButtons(element);
 
 		// Attach expand/collapse handlers for grouped tables (experience, etc.)
@@ -554,10 +556,12 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 	}
 
 	/**
-	 * Attach the read-only compendium-description eyes on KEYED traits - Attributes and Spheres
-	 * today (owner-delegated addition to open-item-window-from-eye-icon; Spheres added by
-	 * add-sphere-descriptions). ONE binder for every kind, because the icons are identical from
-	 * here down: whatever the row, the eye carries a resolved compendium uuid and opens it.
+	 * Attach the read-only compendium-description eyes - Attributes and Spheres, matched by a
+	 * stable per-row key (owner-delegated addition to open-item-window-from-eye-icon; Spheres added
+	 * by add-sphere-descriptions), plus the Mage Bio tab's free-text "Secta" row, matched by the
+	 * field's own value (add-faction-sect-entities). ONE binder for every kind, because the icons
+	 * are identical from here down: whatever the row, the eye carries a resolved compendium uuid
+	 * and opens it.
 	 *
 	 * A separate binder/handler pair from `_bindCollapsibleButtons`/`_handleCollapsibleClick` on
 	 * purpose: those resolve `data-itemid` through `actor.items.get()`, which does not apply here -
@@ -1416,6 +1420,15 @@ export const addBioContext = async function (context, actor) {
 	// never stored, which is the one thing the promotion above structurally cannot do. Runs BEFORE the
 	// enrichment pass below so that a backfilled `textbox` gets its `enriched` like any other.
 	context.splatfields = backfillDeclaredSplatfields(actor, allSplatfields, context.splatfields, context.listData);
+
+	// add-faction-sect-entities — the eye icon next to a Mage's free-text "Secta" splatfield row
+	// (`bio_splatfields.hbs`), resolved by the field's OWN value (there is no per-row key here the
+	// way Attributes/Spheres have — see `trait-enrichment.js`'s `matchNameDirectly`). Degrades to no
+	// eye when the value is empty, unmatched, or the `mage-sects` pack isn't installed — never a
+	// broken sheet. Scoped to `splat === "mage"` since no other line declares this splatfield.
+	if (splat === "mage" && context.splatfields?.sect?.value) {
+		context.sectCompendiumUuid = await buildTraitCompendiumUuidMap("sect", [context.splatfields.sect.value]);
+	}
 
 	// Enrich textbox splatfields for bio_splatboxes.hbs
 	if (context.splatfields) {

@@ -1,5 +1,6 @@
 /**
- * Keyed trait -> compendium document matching, for the eye icon on traits the sheet holds BY KEY.
+ * Trait -> compendium document matching, for the eye icon on traits the sheet holds by a stable
+ * key OR (add-faction-sect-entities) by the field's own free-text value.
  *
  * Was `attribute-enrichment.js` (renamed in 7.5.29, add-sphere-descriptions). It resolved one kind
  * of trait; it now resolves any trait whose row carries a stable key, because a second block needed
@@ -10,6 +11,9 @@
  *     of its own (see open-item-window-from-eye-icon design.md Decision 5).
  *   - `sphere`    - a `Sphere` Item, but one the SYSTEM creates (nine per mage, never dragged from a
  *     compendium), so it carries neither a description nor any provenance.
+ *   - `sect`      - `actor.system.bio.splatfields.sect`, a free-text Mage bio field (add-faction-
+ *     sect-entities) with no per-row key at all: the field's OWN value is the match target, via
+ *     `matchNameDirectly` (see `TRAIT_KINDS` below and `localizedLabel`).
  *
  * WHY NOT `compendium-description.js`. That resolver is the other half of the same problem and is
  * NOT a duplicate of this one: it resolves by the `(id, line, source_type)` provenance triple that
@@ -64,6 +68,19 @@ const TRAIT_KINDS = {
 		// (dialog-edits.js:412), so a Dimensional Science row still carries
 		// `system.id === "spirit"` and matches on the key path long before this fallback is reached.
 		labels: () => CONFIG.worldofdarkness?.allSpheres
+	},
+	// add-faction-sect-entities — a Mage's `bio.splatfields.sect` (see `bio_splatfields.hbs`) is a
+	// free-text field, not a system field with a stable per-row key the way Attributes/Spheres are:
+	// there is exactly one "row" (whatever the player typed or `wod20-char`'s export wrote), and its
+	// own VALUE is already the display text to match, not a key into it. `matchNameDirectly` below
+	// is what makes `localizedLabel` skip the "key -> CONFIG label table -> localize" indirection
+	// the other two kinds need and compare the value directly, normalized, against `mage-sects`
+	// pack document names. `system.id`/flag matching (the other two paths in `matchInPack`) still
+	// run first and simply never hit, since a sect document carries neither for this actor-side key.
+	sect: {
+		packs: ["mage-sects"],
+		flagKey: "sect_key",
+		matchNameDirectly: true
 	}
 };
 
@@ -96,6 +113,7 @@ function candidateTraitPacks(spec) {
  * @returns {string}
  */
 function localizedLabel(spec, key) {
+	if (spec.matchNameDirectly) return normalize(key);
 	const path = spec.labels?.()?.[key];
 	return path ? normalize(game.i18n?.localize?.(path) ?? "") : "";
 }
@@ -139,7 +157,7 @@ function matchInPack(docs, spec, key, normalizedKey) {
  * the next pack's); a nine-attribute or nine-Sphere block now costs one `getDocuments()` per pack
  * instead of nine.
  *
- * @param {string} kind - a key of `TRAIT_KINDS` ("attribute", "sphere")
+ * @param {string} kind - a key of `TRAIT_KINDS` ("attribute", "sphere", "sect")
  * @param {Iterable<string>} keys - the trait keys visible on the sheet
  * @returns {Promise<Record<string, string>>} trait key -> Document uuid, for matches only
  */

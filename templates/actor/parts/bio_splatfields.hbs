@@ -12,7 +12,22 @@
                         <input class="sheet-infoValues" type="text" value="{{localize field.value}}" autofocus required />
                     {{else}}
                         <input class="sheet-infoValues editable" type="text" name="system.bio.splatfields.{{key}}.value" value="{{localize field.value}}" data-dtype="String" autocomplete="off" autofocus required />
-                    {{/if}}                    
+                    {{/if}}
+                    {{!-- add-faction-sect-entities — Mage's free-text "Secta" row gets the same eye every
+                          other trait on this sheet has, opening the matching `mage-sects` compendium
+                          document read-only. `collapsible` is LOAD-BEARING TWICE, same trap as
+                          stats_attributes.hbs: `pc-actor-sheet.js`'s binder selects
+                          `.collapsible.button[data-traituuid]`, so dropping it kills the click, and
+                          `.icon.collapsible.button` is what caps the icon at 20px. Matched by the
+                          field's own VALUE (there is no per-row key here), via
+                          `sectCompendiumUuid` — see `addBioContext`/`trait-enrichment.js`'s
+                          `matchNameDirectly`. Renders nothing for every other splat's/field's input
+                          row: `sectCompendiumUuid` is only ever set for `key === "sect"`. --}}
+                    {{#if (and (eq key "sect") (lookup ../sectCompendiumUuid field.value))}}
+                        <i class="pointer icon collapsible button fa-solid fa-eye wod-namecell-eye"
+                            title="{{localize 'wod.labels.show.description'}}"
+                            data-traituuid="{{lookup ../sectCompendiumUuid field.value}}"></i>
+                    {{/if}}
                     <span class="floating-label">{{localize field.label}}</span>
                 </div>
 

@@ -431,6 +431,18 @@ jobs:
       - name: Prove the advantage block's markup has not moved by one byte
         run: node .github/scripts/test-statarea-identity.mjs
 
+      # add-faction-sect-entities — the Mage Bio tab's free-text "Secta" row grows an eye once its
+      # value matches a `mage-sects` compendium document, via a NEW `matchNameDirectly` match mode
+      # in `trait-enrichment.js` (the two existing kinds, Attribute/Sphere, match a stable per-row
+      # KEY against a CONFIG label table — Secta has no key at all, only its own free-text value).
+      # Pins the template gate (`key === "sect"`), the context wiring (Mage-only), and the resolver
+      # itself against stubbed packs in both directions: a real match, a case/whitespace-insensitive
+      # match, an unmatched/custom value, a missing pack, and a regression check that
+      # `matchNameDirectly` did not leak into the Attribute kind's CONFIG-label matching. Offline, no
+      # Foundry, ~1s.
+      - name: Prove the Mage Secta eye icon resolves by name, and only for Mage
+        run: node .github/scripts/test-sect-eye-icon.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server
