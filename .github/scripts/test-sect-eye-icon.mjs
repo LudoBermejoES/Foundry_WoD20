@@ -42,10 +42,10 @@ check("A2 the icon carries the load-bearing `.collapsible.button[data-traituuid]
 	/class="pointer icon collapsible button fa-solid fa-eye[^"]*"[\s\S]{0,120}data-traituuid="\{\{lookup \.\.\/sectCompendiumUuid field\.value\}\}"/.test(hbsSrc));
 
 const sheetSrc = fs.readFileSync(path.join(ROOT, "module", "actor", "template", "pc-actor-sheet.js"), "utf8");
-check("A3 sectCompendiumUuid is computed only for the mage splat",
-	/splat === "mage" && context\.splatfields\?\.sect\?\.value/.test(sheetSrc));
-check("A4 sectCompendiumUuid is built via the shared buildTraitCompendiumUuidMap(\"sect\", ...)",
-	/buildTraitCompendiumUuidMap\("sect", \[context\.splatfields\.sect\.value\]\)/.test(sheetSrc));
+check("A3 the sect key list is scoped to the mage splat with a value set",
+	/splat === "mage" && context\.splatfields\?\.sect\?\.value \? \[context\.splatfields\.sect\.value\] : \[\]/.test(sheetSrc));
+check("A4 sectCompendiumUuid is built via the shared buildTraitCompendiumUuidMap(\"sect\", ...), UNCONDITIONALLY assigned",
+	/context\.sectCompendiumUuid = await buildTraitCompendiumUuidMap\(\s*"sect",/.test(sheetSrc));
 
 /* ---- 2. behavioural: the real resolver, against stubbed packs ---- */
 

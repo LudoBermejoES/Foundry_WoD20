@@ -1423,12 +1423,17 @@ export const addBioContext = async function (context, actor) {
 
 	// add-faction-sect-entities — the eye icon next to a Mage's free-text "Secta" splatfield row
 	// (`bio_splatfields.hbs`), resolved by the field's OWN value (there is no per-row key here the
-	// way Attributes/Spheres have — see `trait-enrichment.js`'s `matchNameDirectly`). Degrades to no
-	// eye when the value is empty, unmatched, or the `mage-sects` pack isn't installed — never a
-	// broken sheet. Scoped to `splat === "mage"` since no other line declares this splatfield.
-	if (splat === "mage" && context.splatfields?.sect?.value) {
-		context.sectCompendiumUuid = await buildTraitCompendiumUuidMap("sect", [context.splatfields.sect.value]);
-	}
+	// way Attributes/Spheres have — see `trait-enrichment.js`'s `matchNameDirectly`). ALWAYS set,
+	// like `attributeCompendiumUuid`/`sphereCompendiumUuid` above: `test-part-render.mjs` flags a
+	// context key a template reads but a preparer never builds, on EVERY structure, even one where
+	// the condition never holds (every non-Mage splat, or a Mage with no Secta value yet) — an `if`
+	// around the assignment itself is exactly the silent-empty-block shape that harness exists to
+	// catch. `buildTraitCompendiumUuidMap` already degrades an empty/no-op key list to `{}`, so
+	// passing `[]` off-splat costs nothing and needs no pack lookup at all.
+	context.sectCompendiumUuid = await buildTraitCompendiumUuidMap(
+		"sect",
+		splat === "mage" && context.splatfields?.sect?.value ? [context.splatfields.sect.value] : []
+	);
 
 	// Enrich textbox splatfields for bio_splatboxes.hbs
 	if (context.splatfields) {
