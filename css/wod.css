@@ -1040,6 +1040,25 @@ input.sheet-infoWidth {
   height: 30px;
   padding-left: 7px;
 }
+
+/* add-faction-sect-entities — the Mage Secta row's eye icon (`bio_splatfields.hbs`) is invisible
+   without this: `.wod-namecell-eye`'s OWN rule (wod.css "Name cell" section) only sets height/
+   line-height, assuming a `.wod-namecell` flex parent that gives it layout space (Attributes/
+   Spheres rows). Here the icon is a plain inline sibling of an `input.sheet-infoValues`, which is
+   `width: 100%` — the input already fills the whole line box, so the icon has nowhere left to
+   flow into and never paints. `.floating-label-group` is already `position: relative` (for the
+   label above), so pulling the icon OUT of flow and pinning it to the right edge is the minimal
+   fix: it costs the input no width and needs no HTML change. `:has()` padding keeps a long value
+   ("Casa Bonisagus") from running its own text underneath the icon. */
+.wod20 .floating-label-group .wod-namecell-eye {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.wod20 .floating-label-group:has(.wod-namecell-eye) input {
+  padding-right: 24px;
+}
 .wod20 .floating-label-group select {
   height: 30px;
 }
