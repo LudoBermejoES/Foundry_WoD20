@@ -1435,6 +1435,14 @@ export const addBioContext = async function (context, actor) {
 		splat === "mage" && context.splatfields?.sect?.value ? [context.splatfields.sect.value] : []
 	);
 
+	// add-affiliation-eye-icon — same treatment, one splatfield over: "Afiliación" is also free text
+	// matched by its own value, against the separate `mage-affiliation` pack. ALWAYS assigned for
+	// the same test-part-render.mjs reason as `sectCompendiumUuid` above.
+	context.affiliationCompendiumUuid = await buildTraitCompendiumUuidMap(
+		"affiliation",
+		splat === "mage" && context.splatfields?.affiliation?.value ? [context.splatfields.affiliation.value] : []
+	);
+
 	// Enrich textbox splatfields for bio_splatboxes.hbs
 	if (context.splatfields) {
 		for (const [key, field] of Object.entries(context.splatfields)) {

@@ -14,6 +14,9 @@
  *   - `sect`      - `actor.system.bio.splatfields.sect`, a free-text Mage bio field (add-faction-
  *     sect-entities) with no per-row key at all: the field's OWN value is the match target, via
  *     `matchNameDirectly` (see `TRAIT_KINDS` below and `localizedLabel`).
+ *   - `affiliation` - `actor.system.bio.splatfields.affiliation`, the same shape as `sect` one
+ *     splatfield over (add-affiliation-eye-icon), matched against the separate `mage-affiliation`
+ *     pack so the two free-text fields can never cross-match each other's documents.
  *
  * WHY NOT `compendium-description.js`. That resolver is the other half of the same problem and is
  * NOT a duplicate of this one: it resolves by the `(id, line, source_type)` provenance triple that
@@ -80,6 +83,17 @@ const TRAIT_KINDS = {
 	sect: {
 		packs: ["mage-sects"],
 		flagKey: "sect_key",
+		matchNameDirectly: true
+	},
+	// add-affiliation-eye-icon — the SAME shape as `sect` immediately above, one splatfield over:
+	// `bio.splatfields.affiliation` is also free text whose own value IS the display name (wodchar's
+	// exporter already resolves `bio.identity` to its entity's `name_es` here), matched against the
+	// `mage-affiliation` pack. A SEPARATE pack from `mage-sects` on purpose — an Affiliation value
+	// ("Orden de Hermes") must never accidentally match a Sect document and vice versa, even though
+	// both kinds share `matchNameDirectly` and the same matching code path.
+	affiliation: {
+		packs: ["mage-affiliation"],
+		flagKey: "affiliation_key",
 		matchNameDirectly: true
 	}
 };

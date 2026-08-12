@@ -1,23 +1,27 @@
 #!/usr/bin/env node
 /**
- * A Mage's free-text "Secta" bio row must get the same read-only eye every other trait row on this
- * sheet has, once its value matches a `mage-sects` compendium document — add-faction-sect-entities.
+ * A Mage's free-text "Secta"/"Afiliación" bio rows must get the same read-only eye every other
+ * trait row on this sheet has, once their value matches a `mage-sects`/`mage-affiliation`
+ * compendium document — add-faction-sect-entities, then add-affiliation-eye-icon for the second
+ * field (same shape, one splatfield over).
  *
  * WHY THIS EXISTS
  * ---------------
- * `trait-enrichment.js`'s existing two kinds (`attribute`, `sphere`) match by a STABLE PER-ROW KEY
+ * `trait-enrichment.js`'s original two kinds (`attribute`, `sphere`) match by a STABLE PER-ROW KEY
  * (`system.attributes.<key>`, a Sphere Item's `system.id`), looked up against a `CONFIG` label
- * table before the final name comparison. The Mage bio "Secta" field
- * (`actor.system.bio.splatfields.sect`) has no such key at all: it is one free-text string, already
- * the display name (wodchar's exporter writes the resolved `name_es`, or a GM types one directly).
- * `matchNameDirectly` is the one-line change that lets `sect` reuse the SAME resolver instead of a
- * parallel implementation, and it is exactly the kind of one-line change that silently reverts:
- * nothing else in this file's structure would notice `matchNameDirectly` being ignored, since the
- * two existing kinds would keep passing regardless.
+ * table before the final name comparison. The Mage bio "Secta"/"Afiliación" fields
+ * (`actor.system.bio.splatfields.{sect,affiliation}`) have no such key at all: each is one
+ * free-text string, already the display name (wodchar's exporter writes the resolved `name_es`,
+ * or a GM types one directly). `matchNameDirectly` is the one-line-per-kind change that lets both
+ * reuse the SAME resolver instead of a parallel implementation, and it is exactly the kind of
+ * change that silently reverts: nothing else in this file's structure would notice
+ * `matchNameDirectly` being ignored, since the key-based kinds would keep passing regardless.
  *
- * Also pins the render-side wiring: the icon only exists in the DOM when a match was found
- * (`bio_splatfields.hbs`), gated on `key === "sect"` so no other splatfield row grows an eye, and
- * `pc-actor-sheet.js` only computes the lookup for the Mage splat.
+ * Also pins the render-side wiring: each icon only exists in the DOM when a match was found
+ * (`bio_splatfields.hbs`), gated on its own `key ===` check so no other splatfield row grows an
+ * eye, `pc-actor-sheet.js` only computes either lookup for the Mage splat, and — since `sect` and
+ * `affiliation` are two SEPARATE packs sharing one matching code path — that a value for one field
+ * can never accidentally match a document in the other field's pack.
  *
  *     node .github/scripts/test-sect-eye-icon.mjs
  */
@@ -41,11 +45,20 @@ check("A1 the eye icon is gated on key === \"sect\"",
 check("A2 the icon carries the load-bearing `.collapsible.button[data-traituuid]` classes",
 	/class="pointer icon collapsible button fa-solid fa-eye[^"]*"[\s\S]{0,120}data-traituuid="\{\{lookup \.\.\/sectCompendiumUuid field\.value\}\}"/.test(hbsSrc));
 
+check("A2b the affiliation eye icon is gated on key === \"affiliation\"",
+	/\(eq key "affiliation"\)/.test(hbsSrc));
+check("A2c the affiliation icon points at affiliationCompendiumUuid, not sectCompendiumUuid",
+	/class="pointer icon collapsible button fa-solid fa-eye[^"]*"[\s\S]{0,120}data-traituuid="\{\{lookup \.\.\/affiliationCompendiumUuid field\.value\}\}"/.test(hbsSrc));
+
 const sheetSrc = fs.readFileSync(path.join(ROOT, "module", "actor", "template", "pc-actor-sheet.js"), "utf8");
 check("A3 the sect key list is scoped to the mage splat with a value set",
 	/splat === "mage" && context\.splatfields\?\.sect\?\.value \? \[context\.splatfields\.sect\.value\] : \[\]/.test(sheetSrc));
 check("A4 sectCompendiumUuid is built via the shared buildTraitCompendiumUuidMap(\"sect\", ...), UNCONDITIONALLY assigned",
 	/context\.sectCompendiumUuid = await buildTraitCompendiumUuidMap\(\s*"sect",/.test(sheetSrc));
+check("A3b the affiliation key list is scoped to the mage splat with a value set",
+	/splat === "mage" && context\.splatfields\?\.affiliation\?\.value \? \[context\.splatfields\.affiliation\.value\] : \[\]/.test(sheetSrc));
+check("A4b affiliationCompendiumUuid is built via the shared buildTraitCompendiumUuidMap(\"affiliation\", ...), UNCONDITIONALLY assigned",
+	/context\.affiliationCompendiumUuid = await buildTraitCompendiumUuidMap\(\s*"affiliation",/.test(sheetSrc));
 
 /* ---- 2. behavioural: the real resolver, against stubbed packs ---- */
 
@@ -114,6 +127,36 @@ const { buildTraitCompendiumUuidMap } = await import(path.join(ROOT, "module", "
 	const noLabelMap = await buildTraitCompendiumUuidMap("attribute", ["dexterity"]);
 	check("B6 an attribute key with no CONFIG label does not fall back to matching the raw key as a name",
 		!("dexterity" in noLabelMap), JSON.stringify(noLabelMap));
+}
+
+const ORDEN_DE_HERMES = { name: "Orden de Hermes", uuid: "Compendium.wod20-compendium-es.mage-affiliation.ddd", system: {}, flags: {} };
+const VERBENA = { name: "Verbena", uuid: "Compendium.wod20-compendium-es.mage-affiliation.eee", system: {}, flags: {} };
+
+{
+	global.CONFIG = { worldofdarkness: {} };
+	stubGame({ "mage-affiliation": [ORDEN_DE_HERMES, VERBENA] });
+	const map = await buildTraitCompendiumUuidMap("affiliation", ["Orden de Hermes"]);
+	check("B7 an exact-name Afiliación value resolves to that document's uuid",
+		map["Orden de Hermes"] === ORDEN_DE_HERMES.uuid, JSON.stringify(map));
+}
+
+{
+	stubGame({ "mage-affiliation": [ORDEN_DE_HERMES, VERBENA] });
+	const map = await buildTraitCompendiumUuidMap("affiliation", ["Mi tradicion casera"]);
+	check("B8 a custom/unmatched Afiliación value resolves to nothing, not a crash",
+		!("Mi tradicion casera" in map), JSON.stringify(map));
+}
+
+{
+	// Cross-pack regression: `sect` and `affiliation` share the matchNameDirectly code path but
+	// must never resolve against EACH OTHER's pack — a Sect value happening to equal an
+	// Affiliation document's name (or vice versa) must not grow an eye pointed at the wrong pack.
+	stubGame({ "mage-sects": [CASA_BONISAGUS], "mage-affiliation": [ORDEN_DE_HERMES] });
+	const sectMap = await buildTraitCompendiumUuidMap("sect", ["Orden de Hermes"]);
+	const affMap = await buildTraitCompendiumUuidMap("affiliation", ["Casa Bonisagus"]);
+	check("B9 sect never resolves an Afiliación-pack-only name, and vice versa",
+		!("Orden de Hermes" in sectMap) && !("Casa Bonisagus" in affMap),
+		JSON.stringify({ sectMap, affMap }));
 }
 
 console.log(results.join("\n"));
