@@ -133,11 +133,30 @@ function localizedLabel(spec, key) {
 }
 
 /**
+ * Splits a compendium document's display name into its individual aliases, normalized. mago20
+ * joins a historical/alternate name onto several `affiliation` entities this way — e.g. "Sociedad
+ * del Éter / Hijos del Éter", "Euthanatoi / Chakravanti" (5 of 26, measured) — so the document's
+ * own canonical name is a compound that a legacy/free-text bio value naming only ONE of the two
+ * (a real case: an imported Mage's Afiliación stored as plain "Hijos del Éter") would otherwise
+ * never match. A name with no " / " is a single-element list of itself, so this is a no-op for
+ * every other document.
+ * @param {string} name
+ * @returns {string[]}
+ */
+function nameAliases(name) {
+	const whole = normalize(name);
+	const parts = (name ?? "").split(" / ").map(normalize).filter(Boolean);
+	return [...new Set([whole, ...parts])];
+}
+
+/**
  * The match itself, for one key against one pack's already-loaded documents. Three candidate
  * fields, in this order, for every kind: `system.id` (the primary key both `project_attributes()`
  * and `project_spheres()` stamp), then `flags["wod20-compendium-es"].<flagKey>` (the same value
  * again - a flag survives any future schema tightening, because Foundry never validates flags),
- * then a normalized comparison against this system's own localized label, as a last resort.
+ * then a normalized comparison against this system's own localized label (or, for a
+ * `matchNameDirectly` kind, the field's own value) as a last resort - checked against EACH of the
+ * document's `nameAliases()`, not just its name as a whole.
  * @param {Item[]} docs
  * @param {object} spec
  * @param {string} key - the trait's key, as the sheet holds it
@@ -153,7 +172,7 @@ function matchInPack(docs, spec, key, normalizedKey) {
 
 	const label = localizedLabel(spec, key);
 	if (label) {
-		const byName = docs.find(d => normalize(d.name) === label);
+		const byName = docs.find(d => nameAliases(d.name).includes(label));
 		if (byName) return byName;
 	}
 

@@ -159,6 +159,30 @@ const VERBENA = { name: "Verbena", uuid: "Compendium.wod20-compendium-es.mage-af
 		JSON.stringify({ sectMap, affMap }));
 }
 
+const SONS_OF_ETHER = { name: "Sociedad del Éter / Hijos del Éter", uuid: "Compendium.wod20-compendium-es.mage-affiliation.fff", system: {}, flags: {} };
+
+{
+	// Real incident (Salvador Pacheco-König): mago20 joins a historical/alternate name onto 5 of
+	// 26 affiliation entities with " / ", but a legacy/free-text imported character's Afiliación
+	// value often names only ONE of the two — the eye must still show.
+	stubGame({ "mage-affiliation": [SONS_OF_ETHER] });
+	const bySecondAlias = await buildTraitCompendiumUuidMap("affiliation", ["Hijos del Éter"]);
+	check("B10 a compound document name matches its SECOND alias alone",
+		bySecondAlias["Hijos del Éter"] === SONS_OF_ETHER.uuid, JSON.stringify(bySecondAlias));
+
+	const byFirstAlias = await buildTraitCompendiumUuidMap("affiliation", ["Sociedad del Éter"]);
+	check("B11 a compound document name matches its FIRST alias alone",
+		byFirstAlias["Sociedad del Éter"] === SONS_OF_ETHER.uuid, JSON.stringify(byFirstAlias));
+
+	const byFullName = await buildTraitCompendiumUuidMap("affiliation", ["Sociedad del Éter / Hijos del Éter"]);
+	check("B12 the full compound name still matches too",
+		byFullName["Sociedad del Éter / Hijos del Éter"] === SONS_OF_ETHER.uuid, JSON.stringify(byFullName));
+
+	const byPartialWord = await buildTraitCompendiumUuidMap("affiliation", ["Éter"]);
+	check("B13 a bare substring of one alias does NOT falsely match (exact alias only, no fuzzy/partial matching)",
+		!("Éter" in byPartialWord), JSON.stringify(byPartialWord));
+}
+
 console.log(results.join("\n"));
 console.log(failed ? `\n${failed} FAILURE(S)` : `\nall ${results.length} checks pass`);
 process.exit(failed ? 1 : 0);
