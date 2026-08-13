@@ -141,11 +141,19 @@ export async function enrichAllActorsAbilities() {
 // damage. V4 added the unlinked-token-actor walk and was versioned on compendium CONTENT changes -
 // the description-copying reason for its existence, which is now gone.
 //
-// V5 (this one): DESCRIPTION-FREE, `bonuslist`-only. Not `traitsResyncedFromCompendiumV5` - the name
-// would lie about what the migration does once description is gone - but a fresh key regardless
-// (`bonuslistResyncedFromCompendiumV1`), so that every actor already flagged under V4 is processed
-// once more under the new, narrower semantics rather than skipped.
-const TRAIT_RESYNC_FLAG_KEY = "bonuslistResyncedFromCompendiumV1";
+// V5 (bonuslistResyncedFromCompendiumV1): DESCRIPTION-FREE, `bonuslist`-only. Not
+// `traitsResyncedFromCompendiumV5` - the name would lie about what the migration does once
+// description is gone - but a fresh key regardless, so that every actor already flagged under V4
+// is processed once more under the new, narrower semantics rather than skipped.
+//
+// V6 (bonuslistResyncedFromCompendiumV2, propagate-health-bonus-traits): the compendium itself
+// changed, not the migration's logic - `corpulento` (x4 lines), `skeletal-enhancement`, `kishijoten`
+// and `loki` all gained a real `health_buff` bonuslist entry that did not exist when V1 ran. Any
+// actor already flagged under V1 was resynced against the OLD, bonus-less compendium and will never
+// be looked at again unless the flag key changes - this is the exact scenario the versioned-key
+// scheme (see the V1-V4 history above) exists to handle: a compendium CONTENT fix to `bonuslist`
+// still needs a flag bump and a world walk, same as it always has.
+const TRAIT_RESYNC_FLAG_KEY = "bonuslistResyncedFromCompendiumV2";
 
 /**
  * Re-syncs every actor's `bonuslist` (only - see the header comment above) from the compendium,
