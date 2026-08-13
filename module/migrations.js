@@ -153,7 +153,16 @@ export async function enrichAllActorsAbilities() {
 // be looked at again unless the flag key changes - this is the exact scenario the versioned-key
 // scheme (see the V1-V4 history above) exists to handle: a compendium CONTENT fix to `bonuslist`
 // still needs a flag bump and a world walk, same as it always has.
-const TRAIT_RESYNC_FLAG_KEY = "bonuslistResyncedFromCompendiumV2";
+//
+// V7 (bonuslistResyncedFromCompendiumV3): THIS TIME the migration's own MATCHING logic was wrong,
+// not the compendium - `buildCompendiumIndex` picked packs by `settings.splat`, and a wodchar
+// mortal-VARIANT-of-a-line actor (Raffela Diemer: `splat: "mortal"`, `game: "mage"`) has no
+// `mortal-*` packs, so its line-specific traits were silently skipped every run, V1 through V2
+// included - a live GM session under V2 flagged her as done while STILL failing to fix her
+// Corpulento, which is exactly what a versioned flag cannot self-heal without one more bump. Fixed
+// to resolve `settings.game` before `settings.splat`; V3 gives every actor already (wrongly)
+// flagged under V1/V2 one more pass under the corrected logic.
+const TRAIT_RESYNC_FLAG_KEY = "bonuslistResyncedFromCompendiumV3";
 
 /**
  * Re-syncs every actor's `bonuslist` (only - see the header comment above) from the compendium,
