@@ -160,14 +160,22 @@ async function abilityDocsOf(pack) {
 
 /**
  * All installed compendium packs relevant to one actor's line: every Item pack whose name is
- * prefixed with the line (e.g. "mage-talents", "mage-skills", "mage-knowledges" for splat
+ * prefixed with the line (e.g. "mage-talents", "mage-skills", "mage-knowledges" for line
  * "mage"), plus the line-agnostic "shared-secondary-ability" pack, checked last so a
  * line-specific match always wins over the shared fallback. Returns [] if the module is absent
  * (or has no packs registered at all) rather than throwing.
- * @param {string} splat - actor.system.settings.splat value (e.g. "mage", "werewolf", "mortal")
+ *
+ * `line` is NOT `getSplat(actor)` / `actor.system.settings.splat` — see
+ * `stale-description-refresh.js`'s `buildCompendiumIndex` header comment (propagate-health-bonus-
+ * traits) for the full reasoning: a wodchar `mage`-line character exported as its `mortal` variant
+ * has `settings.splat: "mortal"`, which has no compendium packs at all, while
+ * `settings.game: "mage"` is the book line that actually has its Abilities. Callers here resolve
+ * `game` before `splat`, the opposite of `getSplat()`'s priority — that function answers a
+ * different question (which sheet template to render) and is right to prefer `splat` for it.
+ * @param {string} line - the compendium line prefix to search (e.g. "mage", "werewolf")
  * @returns {CompendiumCollection[]}
  */
-function candidateAbilityPacks(splat) {
+function candidateAbilityPacks(line) {
 	const linePacks = [];
 	const sharedPacks = [];
 
@@ -179,7 +187,7 @@ function candidateAbilityPacks(splat) {
 
 		if (packName === "shared-secondary-ability") {
 			sharedPacks.push(pack);
-		} else if (splat && packName.startsWith(`${splat}-`)) {
+		} else if (line && packName.startsWith(`${line}-`)) {
 			linePacks.push(pack);
 		}
 	}
@@ -190,8 +198,10 @@ function candidateAbilityPacks(splat) {
 /**
  * Finds the compendium Ability document that matches `abilityItem`, scoped to `actor`'s line.
  * Never throws: any failure to reach/read a pack is caught, logged, and treated as "no match".
- * @param {Actor} actor - the PC actor the ability belongs to (its `system.settings.splat` picks
- *        which line's packs are searched, unless `splatOverride` is given)
+ * @param {Actor} actor - the PC actor the ability belongs to (`system.settings.game`, falling
+ *        back to `system.settings.splat`, picks which line's packs are searched, unless
+ *        `splatOverride` is given — see `candidateAbilityPacks`'s header comment for why `game`
+ *        goes first)
  * @param {Item} abilityItem - the embedded `Ability` Item to enrich. Only `system.id` and `name`
  *        are read, so a plain creation payload works here as well as a real Document.
  * @param {string} [splatOverride] - the line to search INSTEAD of the actor's own. Required by any
@@ -208,13 +218,13 @@ function candidateAbilityPacks(splat) {
  */
 export async function findAbilityCompendiumMatch(actor, abilityItem, splatOverride) {
 	try {
-		const splat = splatOverride || actor?.system?.settings?.splat || "";
+		const line = splatOverride || actor?.system?.settings?.game || actor?.system?.settings?.splat || "";
 		const canonicalId = abilityKey(abilityItem?.system?.id);
 		const abilityName = (abilityItem?.name ?? "").trim().toLowerCase();
 
 		if (!canonicalId && !abilityName) return null;
 
-		const packs = candidateAbilityPacks(splat);
+		const packs = candidateAbilityPacks(line);
 		if (!packs.length) return null;
 
 		for (const pack of packs) {

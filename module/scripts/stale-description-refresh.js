@@ -66,14 +66,27 @@ function normalizeName(name) {
  * aprestan a proteger... al nuevo changeling"), his Estatus with Hunter's Society of Leopold text, and
  * his Adicción with one that triggers Banality. It ran against 89 live actors before it was caught.
  * The precedent for doing it right was already in this codebase: `ability-enrichment.js`'s
- * `candidateAbilityPacks(splat)`.
+ * `candidateAbilityPacks(line)`.
  *
  * `shared-` packs are indexed LAST and never overwrite an existing key, so a line's own document
  * always beats the cross-line fallback.
- * @param {string} splat - `actor.system.settings.splat` (e.g. "mage", "werewolf", "mortal")
+ *
+ * `line` is NOT `getSplat(actor)` / `actor.system.settings.splat` — this was the bug
+ * (propagate-health-bonus-traits, found by verifying Raffela Diemer's `Corpulento` failed to
+ * resync). `getSplat()`'s priority (`variantsheet` > `splat` > `game` > `actor.type`) is correct
+ * for its own job, choosing which SHEET/RULES-VARIANT template an actor uses, and a wodchar
+ * `mage`-line character exported as its `mortal` variant (a Sleeper) legitimately has
+ * `settings.splat: "mortal"` for that purpose — there is no `mortal-merits` pack, so indexing by
+ * `splat` finds nothing and every mage-line trait on that actor is silently skipped (not even
+ * logged: the caller's loop counts an unindexed item as `skipped`, not `notFound`). The compendium
+ * packs are organised by BOOK LINE, and `settings.game` ("the parent game line" per
+ * `splat-helpers.js`) is that line whether or not the actor is playing a mortal/variant sheet of
+ * it, so callers here resolve `game` first and fall back to `splat` only when `game` is genuinely
+ * absent (a legacy or hand-created actor with no wodchar `game` field at all).
+ * @param {string} line - the compendium line prefix to search (e.g. "mage", "werewolf") — see above
  * @returns {Promise<Map<string, {pack: CompendiumCollection, id: string}>>}
  */
-async function buildCompendiumIndex(splat) {
+async function buildCompendiumIndex(line) {
 	const linePacks = [];
 	const sharedPacks = [];
 	for (const pack of game.packs) {
@@ -81,7 +94,7 @@ async function buildCompendiumIndex(splat) {
 		if (!pack.collection?.startsWith(`${MODULE_ID}.`)) continue;
 		const packName = pack.collection.slice(MODULE_ID.length + 1);
 		if (packName.startsWith("shared-")) sharedPacks.push(pack);
-		else if (splat && packName.startsWith(`${splat}-`)) linePacks.push(pack);
+		else if (line && packName.startsWith(`${line}-`)) linePacks.push(pack);
 		// A pack belonging to ANOTHER line is skipped outright, not merely ranked lower.
 	}
 
@@ -112,8 +125,10 @@ async function buildCompendiumIndex(splat) {
  * @returns {Promise<{bonusFixed: number, skipped: number, notFound: number}>}
  */
 export async function resyncActorTraits(actor) {
-	const splat = actor?.system?.settings?.splat ?? "";
-	const index = await buildCompendiumIndex(splat);
+	// `game` first, `splat` as fallback — see buildCompendiumIndex's header comment for why this
+	// deliberately does NOT match getSplat()'s priority order.
+	const line = actor?.system?.settings?.game || actor?.system?.settings?.splat || "";
+	const index = await buildCompendiumIndex(line);
 	if (!index.size) return { bonusFixed: 0, skipped: 0, notFound: 0 };
 	const stats = { bonusFixed: 0, skipped: 0, notFound: 0 };
 

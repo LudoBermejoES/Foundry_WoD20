@@ -443,6 +443,18 @@ jobs:
       - name: Prove the Mage Secta eye icon resolves by name, and only for Mage
         run: node .github/scripts/test-sect-eye-icon.mjs
 
+      # propagate-health-bonus-traits: `resyncActorTraits`/`buildCompendiumIndex` had NO test
+      # coverage at all before this line existed — measured, no `.github/scripts/*.mjs` referenced
+      # either export. Found by live-verifying a real actor (Raffela Diemer, a mage/mortal Sleeper):
+      # `settings.splat` is "mortal", which has no compendium packs, so a line-specific trait
+      # (Corpulento) was silently skipped forever, and the per-migration-version flag was still set,
+      # so it could never self-heal. Fixed by resolving `settings.game` before `settings.splat`; this
+      # pins that order and its two guard cases (a genuinely splat-less mortal must still no-op; an
+      # item with an existing bonuslist must never be overwritten).
+      # Runnable locally: node .github/scripts/test-trait-resync-line.mjs
+      - name: Prove trait re-sync resolves a mortal-variant actor's real game line
+        run: node .github/scripts/test-trait-resync-line.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server

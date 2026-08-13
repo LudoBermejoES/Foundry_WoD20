@@ -801,6 +801,34 @@ await test("compendiumProvenanceOf degrades to {} for a flagless document", () =
 	assert.deepEqual(compendiumProvenanceOf({ flags: { [MODULE_ID]: { id: "do" } } }), { [MODULE_ID]: { id: "do" } });
 });
 
+console.log("\nJ. `game` is searched before `splat` (propagate-health-bonus-traits)");
+
+await test("a wodchar mortal-variant-of-a-line actor searches its GAME line, not its splat", async () => {
+	// Raffela Diemer: settings.splat "mortal" (a Sleeper, no Arete/Spheres widgets), settings.game
+	// "mage" (the book line her Merits/Backgrounds actually come from). There is no
+	// "mortal-talents" pack; reading splat alone finds nothing, silently.
+	const pack = fakePack("jgamesplit-talents", [doc("Alertness", "alertness")]);
+	game.packs = [pack];
+	const actor = { name: "harness-mortal-variant", type: "PC", system: { settings: { splat: "mortal", game: "jgamesplit" } }, items: [] };
+	const match = await findAbilityCompendiumMatch(actor, { name: "Alertness", type: "Ability", system: { id: "alertness" } });
+	assert.ok(match, "settings.game was not consulted — splat's empty-pack line won instead");
+});
+
+await test("a genuinely splat-less mortal (no `game` at all) still finds nothing — no regression", async () => {
+	game.packs = [fakePack("jgamesplit-talents", [doc("Alertness", "alertness")])];
+	const match = await findAbilityCompendiumMatch(fakeActor("mortal"), { name: "Alertness", type: "Ability", system: { id: "alertness" } });
+	assert.equal(match, null, "a plain 'mortal' splat with no game field started matching a real line's packs");
+});
+
+await test("an explicit splatOverride still wins over both game and splat", async () => {
+	// DropHelper.DropSplatToActor's mid-import window: neither settings.splat nor settings.game
+	// is trustworthy yet, which is exactly why this parameter exists.
+	game.packs = [fakePack("joverride-talents", [doc("Alertness", "alertness")])];
+	const actor = { name: "harness-mid-import", type: "PC", system: { settings: { splat: "stale-splat", game: "stale-game" } }, items: [] };
+	const match = await findAbilityCompendiumMatch(actor, { name: "Alertness", type: "Ability", system: { id: "alertness" } }, "joverride");
+	assert.ok(match, "splatOverride was not honoured over settings.game/settings.splat");
+});
+
 /* ------------------------------------------------------------------ *
  * Result
  * ------------------------------------------------------------------ */
