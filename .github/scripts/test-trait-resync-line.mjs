@@ -214,20 +214,40 @@ await test("fixing a bonuslist triggers calculateTotals and persists its result 
 	assert.equal(actor.updated.system.__recomputedByFakeTotals, true, "the actor was not updated with calculateTotals' own output");
 });
 
-await test("no bonuslist changed → calculateTotals is never called, actor is never re-updated", async () => {
+await test("an already-correct bonuslist from a PRIOR run still triggers the recompute (the V3→V4 catch-up case)", async () => {
+	// Raffela's exact history: V3 correctly fixed her Corpulento's bonuslist (bonusFixed WAS >0
+	// on THAT run), but V3 shipped before this recompute step existed, so her stale total was never
+	// repaired and she was flagged done. On the next flag-versioned pass, `bonusFixed` for THIS run
+	// is 0 (nothing left to fix — the bonuslist is already correct), but the item still HAS a
+	// bonuslist, which must be enough to trigger the recompute on its own. This is why the fix reads
+	// `actor.items`' CURRENT state after the loop, not `stats.bonusFixed` from this run alone.
 	globalThis.__totalsCalls.length = 0;
 	game.packs = [fakePack("mage-merits", {
 		yizq: { name: "Corpulento", type: "Feature", system: { bonuslist: [{ settingtype: "bruised", type: "health_buff", value: 1, isactive: true }] } }
 	})];
-	// Already has a bonuslist — case C's "never overwrite" path, so bonusFixed stays 0.
 	const corpulento = fakeItem("Corpulento", "Feature", [{ settingtype: "bruised", type: "health_buff", value: 1, isactive: true }]);
 	const actor = fakeActor({ splat: "mortal", game: "mage" }, [corpulento]);
 
 	const stats = await resyncActorTraits(actor);
 
+	assert.equal(stats.bonusFixed, 0, "this run had nothing left to fix — the bonuslist was already correct");
+	assert.equal(globalThis.__totalsCalls.length, 1, "an actor with a real bonuslist was not recomputed just because THIS run fixed nothing");
+	assert.ok(actor.updated, "actor.update() was not called");
+});
+
+await test("an actor with no bonuslist-bearing item anywhere is never recomputed", async () => {
+	globalThis.__totalsCalls.length = 0;
+	game.packs = [fakePack("mage-merits", {
+		yizq: { name: "Corpulento", type: "Feature", system: { bonuslist: [] } }
+	})];
+	const weapon = fakeItem("Cuchillo", "Melee Weapon", []);
+	const actor = fakeActor({ splat: "mortal", game: "mage" }, [weapon]);
+
+	const stats = await resyncActorTraits(actor);
+
 	assert.equal(stats.bonusFixed, 0);
-	assert.equal(globalThis.__totalsCalls.length, 0, "calculateTotals ran even though nothing changed");
-	assert.equal(actor.updated, null, "actor.update() was called even though nothing changed");
+	assert.equal(globalThis.__totalsCalls.length, 0, "calculateTotals ran for an actor with no bonuslist anywhere");
+	assert.equal(actor.updated, null, "actor.update() was called even though there was nothing to recompute");
 });
 
 console.log("");

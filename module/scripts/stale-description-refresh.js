@@ -169,17 +169,26 @@ export async function resyncActorTraits(actor) {
 	// same "the fix reaches the data but not the rendered number" shape the whole bug already was,
 	// one layer deeper. Every other place in this codebase that changes an actor's items and expects
 	// totals to reflect it (a drop, a sheet number-field edit) explicitly re-runs `calculateTotals`
-	// and persists it; do the same here, once per actor, only when something actually changed.
-	if (stats.bonusFixed > 0) {
+	// and persists it; do the same here.
+	//
+	// DELIBERATELY NOT `stats.bonusFixed > 0` (this run's count alone). Live-verified this was wrong:
+	// Raffela's Corpulento was correctly fixed under V3, flagging her as done - but V3 shipped BEFORE
+	// this recompute step existed, so her stale total was never repaired and a future run would never
+	// revisit her (already flagged). Checking every item's CURRENT bonuslist, not just what changed
+	// this run, self-heals that exact case on the next flag-version bump (V4) without a second,
+	// narrower one-off migration - and costs nothing extra for the common case, since an actor with no
+	// bonuslist-bearing item anywhere skips this entirely, same as before.
+	const hasAnyBonuslist = actor.items.some((item) => item.system?.bonuslist?.length);
+	if (hasAnyBonuslist) {
 		try {
 			let actorData = foundry.utils.duplicate(actor.toObject());
 			actorData = await calculateTotals(actorData);
 			await actor.update(actorData);
 		} catch (err) {
-			// The bonuslist fixes above already persisted; a failure here means stale TOTALS, not
-			// stale DATA - the next explicit recompute (a drop, a number-field edit, a future
-			// resync run once the underlying item is re-inspected) still repairs it.
-			console.error(`WoD | Trait re-sync: bonuslist(s) fixed for "${actor.name}" but recomputing totals failed:`, err);
+			// Any bonuslist fix above already persisted; a failure here means stale TOTALS, not
+			// stale DATA - the next explicit recompute (a drop, a number-field edit, this migration's
+			// next flag-versioned pass) still repairs it.
+			console.error(`WoD | Trait re-sync: "${actor.name}" owns a bonuslist but recomputing totals failed:`, err);
 		}
 	}
 

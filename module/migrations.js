@@ -162,7 +162,16 @@ export async function enrichAllActorsAbilities() {
 // Corpulento, which is exactly what a versioned flag cannot self-heal without one more bump. Fixed
 // to resolve `settings.game` before `settings.splat`; V3 gives every actor already (wrongly)
 // flagged under V1/V2 one more pass under the corrected logic.
-const TRAIT_RESYNC_FLAG_KEY = "bonuslistResyncedFromCompendiumV3";
+//
+// V8 (bonuslistResyncedFromCompendiumV4): V3 correctly fixed Raffela's `bonuslist` - live-verified -
+// but her rendered Health track still showed the old total, because nothing ever recomputes
+// `system.health.<tier>.total` for a "PC" actor after an item UPDATE (see
+// `stale-description-refresh.js`'s `resyncActorTraits`, which now recomputes and persists totals
+// whenever an actor owns any bonuslist-bearing item at all - not only when THIS run fixed one, since
+// V3 already left her with a correct-but-unrecomputed bonuslist and V3's own flag would otherwise
+// never let anything look at her again). V4 gives every actor already flagged under V1/V2/V3 one
+// more pass so that catch-up recompute actually runs for them.
+const TRAIT_RESYNC_FLAG_KEY = "bonuslistResyncedFromCompendiumV4";
 
 /**
  * Re-syncs every actor's `bonuslist` (only - see the header comment above) from the compendium,
