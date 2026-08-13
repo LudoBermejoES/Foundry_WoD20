@@ -42,8 +42,23 @@ process.on("exit", () => fs.rmSync(sandbox, { recursive: true, force: true }));
 fs.cpSync(path.join(REPO, "module"), path.join(sandbox, "module"), { recursive: true });
 fs.writeFileSync(path.join(sandbox, "package.json"), JSON.stringify({ type: "module" }));
 
+// `calculateTotals` (totals.js) is a ~1850-line function with its own large CONFIG.worldofdarkness
+// dependency graph (sheettype, woundLevels, damageTypes, wererwolfrageSettings, ...) unrelated to
+// what THIS harness tests: whether `resyncActorTraits` calls it and persists the result at all.
+// Stubbing the real function out (in the SANDBOX copy only — the committed module is untouched) is
+// the same "fake the dependency, test the wiring" approach the rest of this file already uses for
+// `game`/`foundry`, rather than dragging in a second harness's worth of Foundry globals to exercise
+// logic `totals.js` is not what this file is about.
+globalThis.__totalsCalls = [];
+fs.writeFileSync(path.join(sandbox, "module", "scripts", "totals.js"), `
+export async function calculateTotals(updateData) {
+	globalThis.__totalsCalls.push(updateData);
+	return { ...updateData, system: { ...updateData.system, __recomputedByFakeTotals: true } };
+}
+`);
+
 globalThis.game = { packs: [] };
-globalThis.foundry = { utils: { deepClone: (o) => structuredClone(o) } };
+globalThis.foundry = { utils: { deepClone: (o) => structuredClone(o), duplicate: (o) => structuredClone(o) } };
 
 const logged = { warn: [] };
 const realWarn = console.warn;
@@ -89,11 +104,30 @@ function fakePack(packName, docsById) {
 	};
 }
 
-/** An embedded trait Item, recording what `update()` is asked to write. */
+/** An embedded trait Item. `update()` records the patch AND applies it (a real Item document
+ * does both — a later `actor.toObject()` in the same run must see the fix already in place). */
 function fakeItem(name, type, bonuslist) {
 	const item = { name, type, system: { bonuslist }, updated: null };
-	item.update = async (patch) => { item.updated = patch; return item; };
+	item.update = async (patch) => {
+		item.updated = patch;
+		if ("system.bonuslist" in patch) item.system.bonuslist = patch["system.bonuslist"];
+		return item;
+	};
 	return item;
+}
+
+/** An actor whose `.toObject()`/`.update()` the totals-recompute step (the fix) exercises.
+ * `toObject()` returns PLAIN DATA only (no item `.update` closures) — `foundry.utils.duplicate`
+ * (`structuredClone` here) cannot clone a function, same as the real Foundry API it mirrors: a
+ * real `Actor#toObject()` never carries methods either. */
+function fakeActor(settings, items) {
+	const actor = { name: "harness-actor", system: { settings }, items, updated: null };
+	actor.toObject = () => ({
+		system: { settings: { ...settings } },
+		items: items.map((i) => ({ name: i.name, type: i.type, system: { bonuslist: i.system.bonuslist } }))
+	});
+	actor.update = async (patch) => { actor.updated = patch; return actor; };
+	return actor;
 }
 
 console.log("\nA. `game` resolves the line when `splat` is a mortal variant (the fix)");
@@ -103,7 +137,7 @@ await test("a mage/mortal actor's Corpulento is fixed from the mage-line pack, n
 		yizq: { name: "Corpulento", type: "Feature", system: { bonuslist: [{ settingtype: "bruised", type: "health_buff", value: 1, isactive: true }] } }
 	})];
 	const corpulento = fakeItem("Corpulento", "Feature", []);
-	const actor = { system: { settings: { splat: "mortal", game: "mage" } }, items: [corpulento] };
+	const actor = fakeActor({ splat: "mortal", game: "mage" }, [corpulento]);
 
 	const stats = await resyncActorTraits(actor);
 
@@ -120,7 +154,7 @@ await test("a genuinely splat-less mortal (no `game` at all) still fixes nothing
 		yizq: { name: "Corpulento", type: "Feature", system: { bonuslist: [{ settingtype: "bruised", type: "health_buff", value: 1, isactive: true }] } }
 	})];
 	const corpulento = fakeItem("Corpulento", "Feature", []);
-	const actor = { system: { settings: { splat: "mortal" } }, items: [corpulento] };
+	const actor = fakeActor({ splat: "mortal" }, [corpulento]);
 
 	const stats = await resyncActorTraits(actor);
 
@@ -136,7 +170,7 @@ await test("an item with an existing bonuslist is left untouched (a hand-tuned b
 	})];
 	const hand_tuned = [{ settingtype: "bruised", type: "health_buff", value: 1, isactive: true }];
 	const corpulento = fakeItem("Corpulento", "Feature", hand_tuned);
-	const actor = { system: { settings: { splat: "mortal", game: "mage" } }, items: [corpulento] };
+	const actor = fakeActor({ splat: "mortal", game: "mage" }, [corpulento]);
 
 	const stats = await resyncActorTraits(actor);
 
@@ -149,12 +183,51 @@ await test("a non-refreshable item type is skipped, not matched", async () => {
 		yizq: { name: "Corpulento", type: "Feature", system: { bonuslist: [{ settingtype: "bruised", type: "health_buff", value: 1, isactive: true }] } }
 	})];
 	const weapon = fakeItem("Corpulento", "Melee Weapon", []);
-	const actor = { system: { settings: { splat: "mortal", game: "mage" } }, items: [weapon] };
+	const actor = fakeActor({ splat: "mortal", game: "mage" }, [weapon]);
 
 	const stats = await resyncActorTraits(actor);
 
 	assert.equal(stats.bonusFixed, 0);
 	assert.equal(weapon.updated, null);
+});
+
+console.log("\nD. a fixed bonuslist is not enough on its own — totals must be recomputed and persisted");
+
+await test("fixing a bonuslist triggers calculateTotals and persists its result on the actor", async () => {
+	// The bug this section exists for: `system.health.<tier>.total` is not derived data for a "PC"
+	// actor (no `prepareDerivedData` recomputes it, and `_onUpdateDescendantDocuments` explicitly
+	// skips PC), so patching an item's `bonuslist` alone left Raffela Diemer's rendered Health track
+	// showing the OLD total — confirmed live, via MCP, after the game/splat fix alone had already
+	// shipped and been verified working for the bonuslist half specifically.
+	globalThis.__totalsCalls.length = 0;
+	game.packs = [fakePack("mage-merits", {
+		yizq: { name: "Corpulento", type: "Feature", system: { bonuslist: [{ settingtype: "bruised", type: "health_buff", value: 1, isactive: true }] } }
+	})];
+	const corpulento = fakeItem("Corpulento", "Feature", []);
+	const actor = fakeActor({ splat: "mortal", game: "mage" }, [corpulento]);
+
+	const stats = await resyncActorTraits(actor);
+
+	assert.equal(stats.bonusFixed, 1);
+	assert.equal(globalThis.__totalsCalls.length, 1, "calculateTotals was not called after a bonuslist was fixed");
+	assert.ok(actor.updated, "actor.update() was not called with calculateTotals' result");
+	assert.equal(actor.updated.system.__recomputedByFakeTotals, true, "the actor was not updated with calculateTotals' own output");
+});
+
+await test("no bonuslist changed → calculateTotals is never called, actor is never re-updated", async () => {
+	globalThis.__totalsCalls.length = 0;
+	game.packs = [fakePack("mage-merits", {
+		yizq: { name: "Corpulento", type: "Feature", system: { bonuslist: [{ settingtype: "bruised", type: "health_buff", value: 1, isactive: true }] } }
+	})];
+	// Already has a bonuslist — case C's "never overwrite" path, so bonusFixed stays 0.
+	const corpulento = fakeItem("Corpulento", "Feature", [{ settingtype: "bruised", type: "health_buff", value: 1, isactive: true }]);
+	const actor = fakeActor({ splat: "mortal", game: "mage" }, [corpulento]);
+
+	const stats = await resyncActorTraits(actor);
+
+	assert.equal(stats.bonusFixed, 0);
+	assert.equal(globalThis.__totalsCalls.length, 0, "calculateTotals ran even though nothing changed");
+	assert.equal(actor.updated, null, "actor.update() was called even though nothing changed");
 });
 
 console.log("");

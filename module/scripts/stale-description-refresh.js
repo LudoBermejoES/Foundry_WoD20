@@ -37,6 +37,8 @@
  * `relation`. Only `bonuslist`, the one field this module still owns, is ever copied.
  */
 
+import { calculateTotals } from "./totals.js";
+
 const MODULE_ID = "wod20-compendium-es";
 
 /** Item types this touches: the trait Items wodchar exports whose `bonuslist` may be missing. */
@@ -154,6 +156,30 @@ export async function resyncActorTraits(actor) {
 		} catch (err) {
 			// One item failing (permission, a mid-flight pack reload) must not stop the rest.
 			console.error(`WoD | Trait re-sync failed for "${item.name}" on "${actor.name}":`, err);
+		}
+	}
+
+	// propagate-health-bonus-traits (found live: Raffela Diemer's Corpulento got a real `bonuslist`
+	// entry, but her rendered Health track still showed the old 7-box total). `system.health.<tier>
+	// .total` is NOT derived data - there is no `prepareDerivedData` on `pc-actor-datamodel.js`, and
+	// the ONE place that recomputes it from `value + bonuslist` on an item change,
+	// `wod-actor-base.js`'s `_onUpdateDescendantDocuments`, explicitly returns early for
+	// `type === "PC"`. So the `item.update()` calls above changed the data a FUTURE `calculateTotals`
+	// run would sum correctly, but nothing about this migration ever triggers that run - exactly the
+	// same "the fix reaches the data but not the rendered number" shape the whole bug already was,
+	// one layer deeper. Every other place in this codebase that changes an actor's items and expects
+	// totals to reflect it (a drop, a sheet number-field edit) explicitly re-runs `calculateTotals`
+	// and persists it; do the same here, once per actor, only when something actually changed.
+	if (stats.bonusFixed > 0) {
+		try {
+			let actorData = foundry.utils.duplicate(actor.toObject());
+			actorData = await calculateTotals(actorData);
+			await actor.update(actorData);
+		} catch (err) {
+			// The bonuslist fixes above already persisted; a failure here means stale TOTALS, not
+			// stale DATA - the next explicit recompute (a drop, a number-field edit, a future
+			// resync run once the underlying item is re-inspected) still repairs it.
+			console.error(`WoD | Trait re-sync: bonuslist(s) fixed for "${actor.name}" but recomputing totals failed:`, err);
 		}
 	}
 
