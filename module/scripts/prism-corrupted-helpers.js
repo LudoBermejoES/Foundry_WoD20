@@ -56,6 +56,31 @@ export function corruptedStateFromResonance(resonanceValue, practiceRating) {
 	return resonanceValue >= (parseInt(practiceRating) || 0) ? "corrupted" : "clean";
 }
 
+/**
+ * followups design.md D1 — the generic resistance roll's own rule (rules digest §2.5.5, L608):
+ * "debe tirar... para evitar ganar un punto de Resonancia" — the roll's only purpose is to AVOID
+ * the point, so a reported success gains nothing and a reported failure (including a botch; the
+ * book draws no distinction here, unlike Vamamarga's separate Jhor mechanic above) gains exactly
+ * one point, never a variable amount.
+ * @param {boolean} avoided - whether the reported resistance roll succeeded (>=1 success)
+ * @returns {0|1}
+ */
+export function corruptedResonanceGain(avoided) {
+	return avoided ? 0 : 1;
+}
+
+/**
+ * D1's reversal gate (rules digest L614-616): a Corrupted Práctica reverses once the SUBSTITUTED
+ * (base) Práctica's rating has been rebuilt back up to at least the corrupted Resonance value that
+ * triggered the substitution.
+ * @param {number} rebuiltBaseRating - the base Práctica's CURRENT owned rating
+ * @param {number} corruptedResonanceValue - the Resonance value recorded when it corrupted
+ * @returns {boolean}
+ */
+export function corruptedReversalAvailable(rebuiltBaseRating, corruptedResonanceValue) {
+	return (parseInt(rebuiltBaseRating) || 0) >= (parseInt(corruptedResonanceValue) || 0);
+}
+
 /** Abismalismo's Precio (D16): a Silence FLOOR, `ceil(rating/2)`. */
 export function abyssalismSilenceFloor(abyssalismRating) {
 	return Math.ceil((parseInt(abyssalismRating) || 0) / 2);

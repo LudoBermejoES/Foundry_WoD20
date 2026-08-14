@@ -5,6 +5,7 @@
 
 import { maybeEnrichAbilityOnRename } from "./scripts/ability-enrichment.js";
 import { PrismZoneDialog } from "./dialogs/dialog-prism-zone.js";
+import { PrismCorruptedCard, FLAG_SCOPE as PRISM_CARD_FLAG_SCOPE, FLAG_KEY as PRISM_CARD_FLAG_KEY } from "./scripts/prism-corrupted-card.js";
 
 /**
  * Is the user in the dark theme?
@@ -652,6 +653,32 @@ export function registerHooks(constants, isTablet) {
 			new PrismZoneDialog(app.document ?? app.object).render(true);
 		});
 		footer.prepend(button);
+	});
+
+	/**
+	 * Hook: renderChatMessageHTML
+	 * followups design.md D1 — the FIRST interactive chat card in `Foundry_WoD20` itself (modeled
+	 * on `wod20-combat-foundryvtt`'s own card pattern; no such pattern existed in this system
+	 * before). Strictly scoped to messages carrying our own flag namespace so it never touches any
+	 * other chat message in the log — the shared-hook blast-radius risk this project's D4 note for
+	 * `dialog-item.js` already flagged applies here too, mitigated the same way: additive, and a
+	 * no-op unless the message is genuinely one of ours.
+	 */
+	Hooks.on("renderChatMessageHTML", (message, html) => {
+		const data = message.getFlag(PRISM_CARD_FLAG_SCOPE, PRISM_CARD_FLAG_KEY);
+		if (!data) return;
+
+		const container = html instanceof HTMLElement ? html : html[0];
+		if (!container) return;
+
+		const card = new PrismCorruptedCard(message);
+		container.querySelectorAll("[data-action^='prism-corrupted-']").forEach((btn) => {
+			btn.addEventListener("click", async (event) => {
+				event.preventDefault();
+				const action = btn.dataset.action.replace("prism-corrupted-", "");
+				await card.handleAction(action);
+			});
+		});
 	});
 }
 

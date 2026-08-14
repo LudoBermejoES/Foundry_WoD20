@@ -26,6 +26,8 @@ import { AUTO_PRACTICE_RULES, CORRUPTED_PRACTICE_RULES, PROMPT_PRACTICE_IDS, FLA
 import {
 	corruptedResistanceRoll,
 	corruptedStateFromResonance,
+	corruptedResonanceGain,
+	corruptedReversalAvailable,
 	abyssalismSilenceFloor,
 	vamamargaJhorRoll,
 	vamamargaJhorDelta,
@@ -320,7 +322,8 @@ test("all wod.prism.* labelKeys referenced across this change's JS source exist 
 	const sourceFiles = [
 		"prism-practice-data.js",
 		"prism-helpers.js",
-		"prism-prompt-calculators.js"
+		"prism-prompt-calculators.js",
+		"prism-corrupted-card.js"
 	].map((f) => path.join(__dirname, "..", "module", "scripts", f));
 	sourceFiles.push(path.join(__dirname, "..", "module", "dialogs", "dialog-prism-prompt.js"));
 	sourceFiles.push(path.join(__dirname, "..", "module", "dialogs", "dialog-aretecasting.js"));
@@ -333,6 +336,7 @@ test("all wod.prism.* labelKeys referenced across this change's JS source exist 
 		"templates/dialogs/dialog-prism-prompt.hbs",
 		"templates/dialogs/dialog-prism-ritual.hbs",
 		"templates/dialogs/dialog-prism-zone.hbs",
+		"templates/dialogs/prism-corrupted-resistance-card.hbs",
 		"templates/sheets/feature-sheet.html"
 	].map((f) => path.join(__dirname, "..", f));
 
@@ -458,6 +462,19 @@ test("every other corrupted Práctica just uses its own item's rating (no chosen
 	const feralismItem = { _id: "f1", type: "Feature", system: { type: "wod.types.practice", kind: "corrupted", value: 3 }, flags: { "wod20-compendium-es": { id: "feralism" } } };
 	const actor = { items: [feralismItem] };
 	assert.equal(PrismHelper.ResolveCorruptedResistancePoolRating(actor, feralismItem), 3);
+});
+
+console.log("prism-corrupted-helpers.js — corruptedResonanceGain/corruptedReversalAvailable (followups design.md D1)");
+
+test("an avoided resistance roll gains nothing; a failed one gains exactly 1, never a variable amount", () => {
+	assert.equal(corruptedResonanceGain(true), 0);
+	assert.equal(corruptedResonanceGain(false), 1);
+});
+
+test("reversal is available once the rebuilt base Práctica reaches the recorded corrupted Resonance value", () => {
+	assert.equal(corruptedReversalAvailable(2, 3), false, "rebuilt 2 < recorded 3 — not yet");
+	assert.equal(corruptedReversalAvailable(3, 3), true, "rebuilt matches exactly");
+	assert.equal(corruptedReversalAvailable(4, 3), true, "rebuilt exceeds — still available");
 });
 
 console.log("PrismHelper.ResolvePracticeRating (followups design.md D4 — the Do -> Artes Marciales maneuver-resolution gap)");

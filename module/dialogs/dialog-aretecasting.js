@@ -2,6 +2,7 @@ import { DiceRoller } from "../scripts/roll-dice.js";
 import { DiceRollContainer } from "../scripts/roll-dice.js";
 import PrismHelper from "../scripts/prism-helpers.js";
 import { AUTO_PRACTICE_RULES, CORRUPTED_PRACTICE_RULES } from "../scripts/prism-practice-data.js";
+import { createCorruptedResistanceCard } from "../scripts/prism-corrupted-card.js";
 
 /**
     * Handles the information needed to use magic.
@@ -692,11 +693,13 @@ export class DialogAreteCasting extends FormApplication {
             let successes = await DiceRoller(powerRoll);
 
             // add-prism-of-focus-foundry — design.md D8/task 10.2: a cast through a corrupted-kind
-            // Práctica surfaces its resistance roll's pool/difficulty as a chat prompt. This is
-            // deliberately NOT a fully automated roll-and-bump-Resonance pipeline (matching this
-            // project's "observed, not enforced" posture): the player still opens the normal
-            // resistance roll (Práctica rating vs. difficulty `3 + highest Sphere used`) themselves,
-            // and a GM updates the "(Práctica) Corrupta" Resonance item by hand.
+            // Práctica surfaces its resistance roll's pool/difficulty as a chat card. The roll
+            // itself stays exactly as manual as it always was (the player opens the normal
+            // resistance roll — Práctica rating vs. difficulty `3 + highest Sphere used` —
+            // themselves, off-system); followups design.md D1 automates only what happens AFTER
+            // that roll resolves: the card's "Evitado"/"Fallo" buttons report the outcome, which
+            // bumps the "(Práctica) Corrupta" Resonance item and flips `corrupted_state` — a GM can
+            // still ignore the card and edit both by hand exactly as before.
             if (PrismHelper.IsActive(this.actor) && this.object.prismPracticeId) {
                 const practices = PrismHelper.ListOwnedPractices(this.actor);
                 const selected = practices.find((p) => p.id === this.object.prismPracticeId);
@@ -710,10 +713,7 @@ export class DialogAreteCasting extends FormApplication {
                     } = await import("../scripts/prism-corrupted-helpers.js");
                     const poolRating = PrismHelper.ResolveCorruptedResistancePoolRating(this.actor, selected.item);
                     const roll = corruptedResistanceRoll(poolRating, highestSphere);
-                    ChatMessage.create({
-                        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-                        content: game.i18n.format("wod.prism.dialog.corruptedresistance", { pool: roll.pool, difficulty: roll.difficulty })
-                    });
+                    await createCorruptedResistanceCard(this.actor, selected.item, selected.id, roll.pool, roll.difficulty);
 
                     // D16/task 10.6 — the 3 non-dice-modifier Precios, surfaced as their own chat
                     // message alongside (never instead of) the generic resistance prompt above.

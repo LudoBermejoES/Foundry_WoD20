@@ -110,6 +110,18 @@ export default class PrismHelper {
 		return actor?.system?.settings?.hasprismoffocus === true;
 	}
 
+	/** Public wrapper over the module-private base-Práctica lookup, for `prism-corrupted-card.js`'s
+	 *  reversal-eligibility check (D1) — needs the owned item itself, not just its rating. */
+	static FindOwnedPracticeItem(actor, practiceId) {
+		return findOwnedPracticeItem(actor, practiceId);
+	}
+
+	/** Public wrapper over `getBasePracticeId`, resolving mechanics the same way every other lookup
+	 *  in this file does. Only meaningful for a `specialty`/`corrupted` item. */
+	static GetPracticeBaseId(item) {
+		return getBasePracticeId(item, mechanicsOf);
+	}
+
 	/**
 	 * D3/D4 — the Asociada/Limitada/Neutra ±1 engine, for one owned Práctica the casting dialog's
 	 * selector resolved.

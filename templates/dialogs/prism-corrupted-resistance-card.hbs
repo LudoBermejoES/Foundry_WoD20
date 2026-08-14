@@ -1,0 +1,34 @@
+<div class="wod20-roll prism-corrupted-resistance">
+    <div class="tray-title-area">{{localize "wod.prism.dialog.corruptedresistancetitle"}}</div>
+
+    <div class="tray-info-area">
+        <div class="tray-action-area">{{practiceName}}</div>
+        <div class="tray-system-area">{{poolText}}</div>
+    </div>
+
+    {{#unless reported}}
+        <div class="tray-roll-area">
+            <button type="button" data-action="prism-corrupted-avoided">{{localize "wod.prism.dialog.corruptedavoidedbutton"}}</button>
+            <button type="button" data-action="prism-corrupted-failed">{{localize "wod.prism.dialog.corruptedfailedbutton"}}</button>
+        </div>
+    {{/unless}}
+
+    {{#if reported}}
+        <div class="tray-system-area">
+            {{#if avoided}}
+                {{localize "wod.prism.dialog.corruptedavoidedresult"}}
+            {{else}}
+                {{failedResultText}}
+            {{/if}}
+        </div>
+        {{#if isCorrupted}}
+            <div class="tray-action-area danger">{{localize "wod.prism.dialog.corruptedflippedresult"}}</div>
+        {{/if}}
+    {{/if}}
+
+    {{#if reversalAvailable}}
+        <div class="tray-roll-area">
+            <button type="button" data-action="prism-corrupted-reverse">{{localize "wod.prism.dialog.corruptedreversebutton"}}</button>
+        </div>
+    {{/if}}
+</div>
