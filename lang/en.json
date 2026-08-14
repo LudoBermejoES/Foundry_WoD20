@@ -2497,7 +2497,10 @@
 				"tier": "Magnitude",
 				"crossactor": "Character analyzing/countering (Weird Science)",
 				"ratingbelowsphere": "Warning: this Practice's rating is below the Sphere level being cast (A11 is a purchase-time gate, not a per-roll block).",
-				"willpowerdisabled": "Willpower-for-automatic-successes disabled while Prism of Focus is active (A19)"
+				"willpowerdisabled": "Willpower-for-automatic-successes disabled while Prism of Focus is active (A19)",
+				"ritualmaster": "Ritual Master",
+				"dice": "dice",
+				"corruptedresistance": "Corrupted Practice resistance roll: {pool} dice, difficulty {difficulty}."
 			}
 		}
 	}

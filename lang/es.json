@@ -2481,7 +2481,10 @@
 				"tier": "Magnitud",
 				"crossactor": "Personaje que analiza/contrarresta (Ciencia Extraña)",
 				"ratingbelowsphere": "Aviso: la puntuación de esta Práctica es menor que el nivel de Esfera lanzado (A11 es una puerta de compra, no se bloquea la tirada).",
-				"willpowerdisabled": "Fuerza de Voluntad para éxitos automáticos deshabilitada con Prisma de Foco activo (A19)"
+				"willpowerdisabled": "Fuerza de Voluntad para éxitos automáticos deshabilitada con Prisma de Foco activo (A19)",
+				"ritualmaster": "Maestro del Ritual",
+				"dice": "dados",
+				"corruptedresistance": "Tirada de resistencia de Práctica Corrupta: {pool} dados, dificultad {difficulty}."
 			}
 		}
 	}

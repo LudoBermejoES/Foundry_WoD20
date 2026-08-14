@@ -36,6 +36,7 @@ import { resolveDescription } from "../../scripts/compendium-description.js";
 import { getSplat } from "../../scripts/splat-helpers.js";
 import ItemViewer from "../../applications/item-viewer.js";
 import PrismHelper from "../../scripts/prism-helpers.js";
+import DialogPrismRitual from "../../dialogs/dialog-prism-ritual.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api
 
@@ -118,7 +119,14 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 
 			// mage
 			quintessenceHandling: OnQuintessenceHandling,
-			quintessenceWheelClick: OnQuintessenceWheelClick			
+			quintessenceWheelClick: OnQuintessenceWheelClick,
+
+			// add-prism-of-focus-foundry — design.md D7: opens the Rituales calculator (a display/
+			// input shell, never auto-driving a roll or a chat card).
+			openPrismRitual: function (event) {
+				event.preventDefault();
+				new DialogPrismRitual().render(true);
+			}
 		},
 		dragDrop: [
             {

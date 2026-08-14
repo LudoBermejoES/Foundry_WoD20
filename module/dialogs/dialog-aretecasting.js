@@ -670,7 +670,27 @@ export class DialogAreteCasting extends FormApplication {
             powerRoll.systemText = this.object.description;
             
             let successes = await DiceRoller(powerRoll);
-            
+
+            // add-prism-of-focus-foundry — design.md D8/task 10.2: a cast through a corrupted-kind
+            // Práctica surfaces its resistance roll's pool/difficulty as a chat prompt. This is
+            // deliberately NOT a fully automated roll-and-bump-Resonance pipeline (matching this
+            // project's "observed, not enforced" posture): the player still opens the normal
+            // resistance roll (Práctica rating vs. difficulty `3 + highest Sphere used`) themselves,
+            // and a GM updates the "(Práctica) Corrupta" Resonance item by hand.
+            if (PrismHelper.IsActive(this.actor) && this.object.prismPracticeId) {
+                const practices = PrismHelper.ListOwnedPractices(this.actor);
+                const selected = practices.find((p) => p.id === this.object.prismPracticeId);
+                if (selected?.kind === "corrupted") {
+                    const highestSphere = this.object._highestRank();
+                    const { corruptedResistanceRoll } = await import("../scripts/prism-corrupted-helpers.js");
+                    const roll = corruptedResistanceRoll(parseInt(selected.item.system.value) || 0, highestSphere);
+                    ChatMessage.create({
+                        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+                        content: game.i18n.format("wod.prism.dialog.corruptedresistance", { pool: roll.pool, difficulty: roll.difficulty })
+                    });
+                }
+            }
+
             if (!this.object.isExtendedCasting) {
                 this.object.close = true;
                 this.close();

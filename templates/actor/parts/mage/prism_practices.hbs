@@ -4,7 +4,10 @@
       the compendium (never copied onto the owned item — task 6.4/10.7). The dot control reuses the
       exact `editDot`/`resource-value` markup `power_spheres.hbs` already establishes for a rated
       owned Item, so no new binder is needed (`editDot` -> `OnDotCounterChange`). --}}
-<h3 class="v3-sectiontitle splatFont">{{localize 'wod.prism.section.practices'}}</h3>
+<h3 class="v3-sectiontitle splatFont">
+	{{localize 'wod.prism.section.practices'}}
+	<a class="pointer pullRight" data-action="openPrismRitual" title="{{localize 'wod.prism.section.rituals'}}"><i class="icon fa-solid fa-people-group"></i></a>
+</h3>
 
 <div class="space dialog-area flex-columns" data-drop-area="features" data-droparea="features">
 	{{#each prismPractices as |row|}}

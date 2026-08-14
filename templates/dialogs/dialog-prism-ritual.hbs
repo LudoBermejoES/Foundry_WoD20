@@ -1,0 +1,49 @@
+{{!-- add-prism-of-focus-foundry — design.md D7/D14. Pure display/input shell around
+      `computeRitualGroup`: ceiling, per-participant dice cap/flat success, missing Esfera coverage. --}}
+<form class="wod20 wod-dialog prism-ritual-form" autocomplete="off">
+	<div class="dialog-area">
+		<div class="headline splatFont">{{localize 'wod.prism.dialog.selectpractice'}} ({{localize 'wod.prism.dialog.ritualmaster'}})</div>
+		<div style="display:flex; gap:6px;">
+			<input name="masterPracticeRating" type="number" min="0" max="5" value="{{object.masterPracticeRating}}" placeholder="Práctica" />
+			<input name="masterPermanentWillpower" type="number" min="0" value="{{object.masterPermanentWillpower}}" placeholder="FV permanente" />
+			<input name="masterSphereCovered" type="text" value="{{object.masterSphereCovered}}" placeholder="Esfera" />
+		</div>
+		<div style="margin-top:4px;">
+			<label>{{localize 'wod.dialog.aretecasting.availspheres'}}:</label>
+			<input name="requiredSpheres" type="text" value="{{object.requiredSpheres}}" placeholder="forces, prime, ..." />
+		</div>
+	</div>
+
+	<div class="dialog-area">
+		<div class="headline splatFont">{{localize 'wod.labels.specialty'}}</div>
+		{{#each object.participants as |p index|}}
+			<div style="display:flex; gap:4px; margin-bottom:2px;">
+				<input name="participants.{{index}}.name" type="text" value="{{p.name}}" placeholder="Nombre" />
+				<select name="participants.{{index}}.role">
+					<option value="participant-with-practice" {{#if (eq p.role "participant-with-practice")}}selected{{/if}}>con Práctica</option>
+					<option value="participant-without" {{#if (eq p.role "participant-without")}}selected{{/if}}>sin Práctica (+1 lego)</option>
+					<option value="participant-via-la-escena" {{#if (eq p.role "participant-via-la-escena")}}selected{{/if}}>La Escena</option>
+				</select>
+				<input name="participants.{{index}}.arete" type="number" min="0" value="{{p.arete}}" placeholder="Areté" />
+				<input name="participants.{{index}}.practiceRating" type="number" min="0" value="{{p.practiceRating}}" placeholder="Práctica" />
+				<input name="participants.{{index}}.laEscenaRating" type="number" min="0" value="{{p.laEscenaRating}}" placeholder="La Escena" />
+				<input name="participants.{{index}}.sphereCovered" type="text" value="{{p.sphereCovered}}" placeholder="Esfera" />
+				<a class="pointer prism-ritual-remove-participant" data-index="{{index}}"><i class="icon fa-solid fa-trash-can"></i></a>
+			</div>
+		{{/each}}
+		<button type="button" class="button fullSplatColor pointer prism-ritual-add-participant">{{localize 'wod.labels.add.item'}}</button>
+	</div>
+
+	<div class="dialog-area">
+		<div class="headline splatFont">{{localize 'wod.labels.difficulty'}}</div>
+		<p>{{localize 'wod.dialog.aretecasting.castingsettings'}}: <strong>{{result.ceiling}}</strong></p>
+		<ul>
+			{{#each result.participants as |p|}}
+				<li>{{p.name}} — {{#if p.diceCap}}{{p.diceCap}} {{localize 'wod.prism.dialog.dice'}}{{/if}}{{#if p.flatSuccess}}+{{p.flatSuccess}} {{localize 'wod.dice.successes'}}{{/if}}</li>
+			{{/each}}
+		</ul>
+		{{#if result.missingSpheres.length}}
+			<p class="item-warning">{{localize 'wod.labels.drop.warning'}}: {{result.missingSpheres}}</p>
+		{{/if}}
+	</div>
+</form>
