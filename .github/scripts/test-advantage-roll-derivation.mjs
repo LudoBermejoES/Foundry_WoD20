@@ -116,7 +116,8 @@ globalThis.CONFIG = {
 		attributeSettings: "20th",
 		fifthEditionWillpowerSetting: "20th",
 		rollSettings: true,
-		sheettype: { vampire: "Vampire" }
+		sheettype: { vampire: "Vampire" },
+		virtuesLimit: false
 	},
 	Item: { dataModels: {} },
 	Actor: { dataModels: {} }
@@ -130,7 +131,14 @@ globalThis.foundry = {
 		TypeDataModel: class TypeDataModel {},
 		DataModel: class DataModel {}
 	},
-	data: { fields: {} }
+	data: { fields: {} },
+	// `WoDActor` (module/actor/data/wod-actor-base.js) pulls in `PCActorAPI` ->
+	// `ActionHelper` (module/scripts/action-helpers.js), which imports several
+	// dialog files (dialog-weaponv2.js, dialog-power-selection.js) that destructure
+	// `foundry.applications.api` at MODULE-TOP-LEVEL (evaluated at import time, not
+	// inside any class method) -- so this stub has to exist before that import chain
+	// runs, same reasoning as the `TypeDataModel`/`DataModel` stubs above.
+	applications: { api: { ApplicationV2: class {}, HandlebarsApplicationMixin: (Base) => Base } }
 };
 
 const { WoDItem } = await import(
@@ -141,6 +149,9 @@ const { computeAdvantageDerivedData } = await import(
 );
 const { default: AdvantageDataModel } = await import(
 	path.join(sandbox, "module", "items", "datamodel", "advantage-item-datamodel.js")
+);
+const { WoDActor } = await import(
+	path.join(sandbox, "module", "actor", "data", "wod-actor-base.js")
 );
 
 let passed = 0;
@@ -424,6 +435,126 @@ await test("the _preUpdate path still derives the same roll the prepare-time pat
 
 	assert.equal(result.system.roll, 5, "_handleAdvantagesCalculations no longer derives `roll` correctly");
 	assert.equal(result, itemData, "the function must still return the same itemData object it was given (its callers rely on this)");
+});
+
+console.log("\nF. WoDActor#_prepareCharacterData -- the actor-level `system.advantages` snapshot (root cause #2)");
+
+/*
+ * Sections A-E proved the ITEM's own `.system.roll` derives correctly (root
+ * cause #1). But the plain "click the Willpower banner to roll" path
+ * (dialog-generalroll.js's generic `noability` branch) does not read the item
+ * at all -- it reads `actor.system.advantages.willpower.roll`, a per-actor
+ * SNAPSHOT map built once per render by `WoDActor#_prepareCharacterData`
+ * (module/actor/data/wod-actor-base.js), via `actorData.system.advantages[key]
+ * = adv.toObject(...)`.
+ *
+ * `Document#toObject(source=true)` (the default before this fix) returns the
+ * item's PERSISTED/source data -- the value as it would be saved to the
+ * database -- not the current in-memory data this render's
+ * `AdvantageDataModel#prepareDerivedData` (section D) already computed on the
+ * live item. Since nothing ever calls `.update()` just to persist `roll`, that
+ * source-mode snapshot stays stuck at whatever was last saved (0, for any
+ * Advantage never hand-edited), even though `adv.system.roll` itself is
+ * correct. The fix is `adv.toObject(false)`.
+ *
+ * `makeAdvantage` below models the `toObject(source)` boundary Foundry's real
+ * Document API provides (unavoidable to fake without a live Foundry runtime --
+ * same category as the `Item`/`Actor`/`foundry.abstract` stubs already used
+ * throughout this harness): `toObject(true)` reflects what is currently
+ * PERSISTED (deliberately stale for `roll`, to reproduce the bug precisely),
+ * `toObject(false)` reflects the item's CURRENT/derived data. The method
+ * actually under test, `_prepareCharacterData`, is the real shipped method --
+ * called directly on a `WoDActor.prototype`-based instance, exactly as
+ * `prepareData()` calls it -- not a reimplementation of it.
+ */
+function makeAdvantage({ id, group = "", permanent, temporary, currentRoll, staleRoll = 0, max = 10, bearing = 0, perturn = 0 }) {
+	const persisted = {
+		id, group, permanent, temporary, max, bearing, perturn,
+		roll: staleRoll,
+		settings: { usepermanent: true, usetemporary: true, useroll: true, usebothrolls: false }
+	};
+	const current = { ...persisted, roll: currentRoll };
+	return {
+		_id: `item-${id}`,
+		name: id,
+		type: "Advantage",
+		// The live item's own data -- what `AdvantageDataModel#prepareDerivedData`
+		// (section D) has already mutated in place by the time this actor-level
+		// loop runs (prepareEmbeddedDocuments, called synchronously from
+		// `super.prepareData()`, always runs before `_prepareCharacterData`).
+		system: current,
+		toObject(source = true) {
+			const sys = source ? persisted : current;
+			return { _id: this._id, name: this.name, type: this.type, system: structuredClone(sys) };
+		}
+	};
+}
+
+function fakePCActor(items) {
+	const actor = Object.create(WoDActor.prototype);
+	actor.type = "PC";
+	actor.id = "harness-actor";
+	actor.items = items;
+	actor.updateEmbeddedDocuments = async () => {};
+	actor.system = {
+		settings: {
+			attributes: { defaultmaxvalue: 10 },
+			abilities: { defaultmaxvalue: 5 },
+			powers: { defaultmaxvalue: 5 }
+		},
+		attributes: {},
+		bio: { splatfields: {} },
+		abilities: {},
+		advantages: {}
+	};
+	return actor;
+}
+
+await test("a fresh Willpower (permanent=temporary=8, stale persisted roll=0) snapshots the DERIVED roll, not 0", async () => {
+	const willpower = makeAdvantage({ id: "willpower", permanent: 8, temporary: 8, currentRoll: 8, staleRoll: 0 });
+	const actor = fakePCActor([willpower]);
+
+	await actor._prepareCharacterData(actor);
+
+	assert.equal(
+		actor.system.advantages.willpower.system.roll,
+		8,
+		"the actor-level snapshot dialog-generalroll.js reads must carry the item's DERIVED roll, not its stale persisted value"
+	);
+});
+
+await test("Rage/Gnosis/Paradox/Glamour/Blood-Pool-shaped advantages all snapshot their derived roll too", async () => {
+	const items = [
+		makeAdvantage({ id: "rage", permanent: 6, temporary: 6, currentRoll: 6, staleRoll: 0 }),
+		makeAdvantage({ id: "gnosis", permanent: 4, temporary: 4, currentRoll: 4, staleRoll: 0 }),
+		makeAdvantage({ id: "paradox", permanent: 2, temporary: 2, currentRoll: 2, staleRoll: 0, max: 20 }),
+		makeAdvantage({ id: "glamour", permanent: 5, temporary: 5, currentRoll: 5, staleRoll: 0 })
+	];
+	const actor = fakePCActor(items);
+
+	await actor._prepareCharacterData(actor);
+
+	assert.equal(actor.system.advantages.rage.system.roll, 6);
+	assert.equal(actor.system.advantages.gnosis.system.roll, 4);
+	assert.equal(actor.system.advantages.paradox.system.roll, 2);
+	assert.equal(actor.system.advantages.glamour.system.roll, 5);
+});
+
+await test("path bearing, virtue max, and bloodpool max/perturn special-case patches still apply on top of the derived snapshot", async () => {
+	const pathItem = makeAdvantage({ id: "path", permanent: 8, temporary: 8, currentRoll: 8, staleRoll: 0 });
+	// `max: 999` simulates a stale/mismatched value the explicit virtue patch must still correct
+	// to `settings.powers.defaultmaxvalue` (5) regardless of what toObject(false) returned.
+	const virtueItem = makeAdvantage({ id: "conscience", group: "virtue", permanent: 3, temporary: 3, currentRoll: 3, staleRoll: 0, max: 999 });
+	const bloodpoolItem = makeAdvantage({ id: "bloodpool", permanent: 10, temporary: 10, currentRoll: 10, staleRoll: 0, max: 10, perturn: 1 });
+
+	const actor = fakePCActor([pathItem, virtueItem, bloodpoolItem]);
+	actor.system.bio.splatfields = { generation: { value: 8 } };
+
+	await actor._prepareCharacterData(actor);
+
+	assert.equal(actor.system.advantages.path.system.bearing, -1, "path permanent=8 must still land in the 8-9 => bearing -1 tier");
+	assert.equal(actor.system.advantages.conscience.system.max, 5, "a virtue's max must still be re-derived from settings.powers.defaultmaxvalue, not left at the item's own max");
+	assert.ok(actor.system.advantages.bloodpool.system.max > 10, "bloodpool max must still be recomputed from generation, not left at the item's own stale max");
 });
 
 console.log("");

@@ -263,7 +263,20 @@ export class WoDActor extends Actor {
             
             for (const adv of advantages) {
                 const key = adv.system.slug ?? adv.system.id ?? adv.name.toLowerCase();
-                actorData.system.advantages[key] = adv.toObject();
+                // `toObject()` defaults to `toObject(source=true)`, i.e. the item's
+                // PERSISTED data as it would be saved to the database -- not its current
+                // in-memory data after this render's `AdvantageDataModel#prepareDerivedData`
+                // has already run (prepareEmbeddedDocuments, called synchronously by
+                // `super.prepareData()` above, runs before this loop). Advantage `roll`
+                // (and, for Willpower under the 5th-ed composure+resolve rule, `permanent`;
+                // and `bearing`/`max` below) are derived fields nothing ever persists back
+                // via an explicit `.update()` -- so a snapshot taken with `source=true` is
+                // stuck on whatever was last saved (0, for any Advantage that was never
+                // hand-edited), even though the live item's own `.system.roll` is correct.
+                // `toObject(false)` snapshots the CURRENT (derived) data instead, which is
+                // what every reader of this actor-level map (dialog-generalroll.js,
+                // dialog-trait.js, dialog-item.js, dialog-power.js) actually needs.
+                actorData.system.advantages[key] = adv.toObject(false);
 
                 // set bearing in path correctly
                 if (actorData.system.advantages[key].system.id === "path") {
