@@ -428,6 +428,89 @@ test("task 10.8 — Demonismo's -1 Beneficio and +1 Precio", () => {
 	assert.equal(PrismHelper.CheckPracticePenalty(null, "demonism", { checked: true }).modifier, 1);
 });
 
+// followups design.md's expanded test-coverage requirement: each of the 31 base Prácticas gets its
+// own individually-named regression guard against AUTO_PRACTICE_RULES — 11 of the 22 checkbox/
+// computed/tiered entries had no dedicated assertion before this backlog (11 others, plus all 7
+// Prácticas Corruptas and all 7 prompt-bucket Prácticas, already did — see the tests above/below).
+test("Apropiación's -1 Beneficio and +1 Precio (checkbox/checkbox)", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "appropriation", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "appropriation", { checked: true }).modifier, 1);
+});
+
+test("El Arte del Deseo's -1 Beneficio and +1 Precio (checkbox/checkbox)", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "art-of-desire", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "art-of-desire", { checked: true }).modifier, 1);
+});
+
+test("Caridad's -1 Beneficio, and its Precio is a vulgarity classification (CheckCharityForcesVulgar), not a modifier", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "charity", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "charity", { checked: true }).modifier, 0, "Charity has no penalty-side dice modifier");
+	assert.equal(PrismHelper.CheckCharityForcesVulgar({ charityTaking: true }), true);
+	assert.equal(PrismHelper.CheckCharityForcesVulgar({ charityTaking: false }), false);
+});
+
+test("Elementalismo's -1 Beneficio and +2 Precio (checkbox/checkbox)", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "elementalism", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "elementalism", { checked: true }).modifier, 2);
+});
+
+test("Vínculo Divino's Beneficio is computed per Areté domain threshold reached, and its Precio is a flat +2 checkbox", () => {
+	const noDomains = { system: { advantages: { arete: { value: 3 } }, practiceTraits: { godBondingDomains: [] } } };
+	const twoDomainsReached = {
+		system: {
+			advantages: { arete: { value: 3 } },
+			practiceTraits: { godBondingDomains: [{ areteThreshold: 1 }, { areteThreshold: 3 }, { areteThreshold: 5 }] }
+		}
+	};
+	assert.equal(PrismHelper.CheckPracticeBenefit(noDomains, "divine-bond", {}).modifier, 0, "no domains bonded yet");
+	assert.equal(
+		PrismHelper.CheckPracticeBenefit(twoDomainsReached, "divine-bond", {}).modifier,
+		-2,
+		"Areté 3 reaches the 1 and 3 thresholds (not the 5), -1 per domain"
+	);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "divine-bond", { checked: true }).modifier, 2);
+});
+
+test("Alta Magia Ritual's -1 Beneficio and +1 Precio (checkbox/checkbox)", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "high-ritual-magick", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "high-ritual-magick", { checked: true }).modifier, 1);
+});
+
+test("Mediumnidad's -1 Beneficio (checkbox) and its Precio is tiered: +1 general resistance, +2 the affinity Umbra", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "mediumship", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "mediumship", { tier: 1 }).modifier, 1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "mediumship", { tier: 2 }).modifier, 2);
+});
+
+test("Hackeo de la Realidad's Beneficio forces coincidental at a ZERO modifier (not a difficulty change), and its Precio is a +1 checkbox", () => {
+	const benefit = PrismHelper.CheckPracticeBenefit(null, "reality-hacking", { checked: true });
+	assert.equal(benefit.modifier, 0, "the benefit is 'always coincidental', not a difficulty reduction");
+	assert.equal(benefit.forcesCoincidental, true);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "reality-hacking", { checked: true }).modifier, 1);
+});
+
+test("Chamanismo's -1 Beneficio is a checkbox; its Precio is flavor-only (D10) and dispatches to 0, never a number", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "shamanism", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "shamanism", { checked: true }).modifier, 0);
+});
+
+test("Vudú's -1 Beneficio and +1 Precio (checkbox/checkbox)", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "voudoun", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "voudoun", { checked: true }).modifier, 1);
+});
+
+test("Yoga's -1 Beneficio and +1 Precio (checkbox/checkbox)", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "yoga", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "yoga", { checked: true }).modifier, 1);
+});
+
+test("Bardismo and Magia Callejera are the 2 fully flavor-only Prácticas: neither side ever dispatches a modifier", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "bardism", { checked: true }).modifier, 0);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "bardism", { checked: true }).modifier, 0);
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "gutter-magick", { checked: true }).modifier, 0);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "gutter-magick", { checked: true }).modifier, 0);
+});
+
 test("CheckImprovisedPenalty (C3) applies +1 only when NOT Fórmula-backed, and Etertecnología ignores it", () => {
 	assert.equal(PrismHelper.CheckImprovisedPenalty(false, "dominion"), 1);
 	assert.equal(PrismHelper.CheckImprovisedPenalty(true, "dominion"), 0);
@@ -502,6 +585,47 @@ test("returns null for an ability key with no Práctica mapping", () => {
 test("returns null when the actor owns no matching Práctica or Especialidad", () => {
 	const actor = { items: [fakePractice("dominion", "base", "", { value: 4 })] };
 	assert.equal(PrismHelper.ResolvePracticeRating(actor, "martialarts"), null);
+});
+
+console.log("PrismHelper.ResolvePracticeForFormula (D13 — the Especialidad-satisfies-base Fórmula-ownership requirement, followups' expanded test-coverage item)");
+
+/** `test()` above is synchronous-only; `ResolvePracticeForFormula` is async (it awaits a possibly
+ *  cold-cache mechanics resolution), so this one small async-aware twin covers it without changing
+ *  the shared harness's contract for the other 60+ synchronous tests. */
+async function testAsync(name, fn) {
+	try {
+		await fn();
+		console.log(`  ok - ${name}`);
+	} catch (err) {
+		failures++;
+		console.error(`  FAIL - ${name}`);
+		console.error(`    ${err.message}`);
+	}
+}
+
+await testAsync("a Especialidad alone satisfies its base Práctica's Fórmula requirement — no base item needed", async () => {
+	const formulaItem = { system: { practice_id: "martial-arts" } };
+	const doSpecialty = fakePractice("do", "specialty", "martial-arts", { value: 2 });
+	const actor = { items: [doSpecialty] };
+	const resolved = await PrismHelper.ResolvePracticeForFormula(actor, formulaItem);
+	assert.ok(resolved, "expected a resolution, got null");
+	assert.equal(resolved.rating, 2);
+	assert.equal(resolved.item, doSpecialty);
+});
+
+await testAsync("the base Práctica itself satisfies its own Fórmula requirement", async () => {
+	const formulaItem = { system: { practice_id: "martial-arts" } };
+	const martialArts = fakePractice("martial-arts", "base", "", { value: 4 });
+	const actor = { items: [martialArts] };
+	const resolved = await PrismHelper.ResolvePracticeForFormula(actor, formulaItem);
+	assert.equal(resolved.rating, 4);
+});
+
+await testAsync("neither the base nor a satisfying Especialidad present fails the requirement", async () => {
+	const formulaItem = { system: { practice_id: "martial-arts" } };
+	const actor = { items: [fakePractice("dominion", "base", "", { value: 5 })] };
+	const resolved = await PrismHelper.ResolvePracticeForFormula(actor, formulaItem);
+	assert.equal(resolved, null);
 });
 
 console.log("PrismHelper.EvaluateVulgarity (D5/D6 — Sanctum + Zona, coupled by default)");
