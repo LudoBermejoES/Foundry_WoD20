@@ -2484,7 +2484,75 @@
 				"willpowerdisabled": "Fuerza de Voluntad para éxitos automáticos deshabilitada con Prisma de Foco activo (A19)",
 				"ritualmaster": "Maestro del Ritual",
 				"dice": "dados",
-				"corruptedresistance": "Tirada de resistencia de Práctica Corrupta: {pool} dados, dificultad {difficulty}."
+				"corruptedresistance": "Tirada de resistencia de Práctica Corrupta: {pool} dados, dificultad {difficulty}.",
+				"abyssalismsilence": "Precio de Abismalismo: este personaje está en Silencio, puntuación mínima {floor}.",
+				"goetiacatastrophic": "Fallo catastrófico de Goetia: no se genera Paradoja — el demonio se manifiesta libre y hostil en su lugar.",
+				"vamamargajhor": "Tirada de resistencia propia de Vamamarga (Jhor): {pool} dados, dificultad {difficulty}.",
+				"openprompt": "Abrir calculadora"
+			},
+			"sanctum": {
+				"enabledheading": "Sanctum: Prácticas habilitadas (coincidente sin condición dentro de él)",
+				"anathemaheading": "Sanctum: Anatema (vulgar para ambos efectos a partir de la puntuación indicada)",
+				"practiceplaceholder": "Id de la Práctica",
+				"ratingplaceholder": "Puntuación",
+				"conflict": "Una Práctica que ya está en la otra lista no puede añadirse también aquí"
+			},
+			"infernal": {
+				"choosebase": "Elige la Práctica base de Ciencias Infernales (queda fijada tras elegirla)",
+				"confirm": "Confirmar",
+				"chosen": "Práctica base",
+				"base": {
+					"hypertech": "Hipertecnología",
+					"cybernetics": "Cibernética",
+					"weirdscience": "Ciencia Extraña"
+				}
+			},
+			"prompt": {
+				"alchemy": {
+					"title": "Alquimia — Coste de creación",
+					"basecost": "Coste base de Quintaesencia/Tass",
+					"result": "Coste reducido a la mitad (redondeado arriba): {cost}"
+				},
+				"maleficia": {
+					"title": "Maleficia — Coste de creación",
+					"basecost": "Coste base de Quintaesencia/Tass",
+					"directcreation": "Efecto de creación directa (+1)",
+					"result": "Coste duplicado: {cost} (modificador de creación directa: +{modifier})"
+				},
+				"invigoration": {
+					"title": "Vigorización — Conversión de Fuerza de Voluntad",
+					"resistencia": "Resistencia",
+					"meditacion": "Meditación",
+					"successes": "Éxitos obtenidos",
+					"result": "Reserva {pool}, dificultad {difficulty}. Fuerza de Voluntad ganada: {gained} (Quintaesencia gastada: {cost})"
+				},
+				"hypertech": {
+					"title": "Hipertecnología — Creación de Dispositivos",
+					"basedevices": "Dispositivos base (por punto de Fuerza de Voluntad permanente gastado)",
+					"result": "Dispositivos creados: {devices}"
+				},
+				"mediacontrol": {
+					"title": "Control de Medios — Difusión/Permanencia",
+					"basesuccesses": "Éxitos base requeridos",
+					"broadcast": "Difundir a todos los que ven el medio",
+					"permanent": "Hacerlo permanente",
+					"result": "Éxitos requeridos: {successes} (dificultad +{modifier})"
+				},
+				"psionics": {
+					"title": "Psiónica — Límite de la reserva de Areté",
+					"aretepool": "Reserva de Areté",
+					"temporarywillpower": "Fuerza de Voluntad temporal",
+					"waivemind": "Renunciar al requisito combinado de Mente 3 para control continuo",
+					"result": "Reserva de Areté limitada: {pool}"
+				},
+				"faith": {
+					"title": "Fe — Punto de Historia",
+					"claim": "Reclamar mi punto de Fe (una vez por Historia, puede superar el máximo normal de Fuerza de Voluntad)",
+					"reset": "Reiniciar (Narrador, nueva Historia)",
+					"violated": "Bloqueado: no se puede usar Fe tras violar su credo",
+					"available": "Disponible",
+					"claimed": "Ya reclamado esta Historia"
+				}
 			}
 		}
 	}

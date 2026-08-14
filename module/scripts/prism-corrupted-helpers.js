@@ -61,6 +61,49 @@ export function abyssalismSilenceFloor(abyssalismRating) {
 	return Math.ceil((parseInt(abyssalismRating) || 0) / 2);
 }
 
+/**
+ * Vamamarga's OWN Jhor Resonance counter — a SEPARATE track from the generic "(Práctica) Corrupta"
+ * Resonance `findCorruptedResonanceItem` above already models (design.md D16's closing paragraph:
+ * "wired alongside — never in place of — the generic engine"). Modeled the same `Trait`/
+ * `wod.types.resonance` shape, matched by its own provenance convention (`vamamarga-jhor-resonance`)
+ * with the same name-regex fallback for a hand-created item.
+ * @param {Actor} actor
+ * @returns {Item|null}
+ */
+export function findJhorResonanceItem(actor) {
+	for (const item of actor?.items ?? []) {
+		if (item?.type !== "Trait" || item?.system?.type !== "wod.types.resonance") continue;
+		const id = provenanceOf(item)?.id ?? "";
+		if (id === "vamamarga-jhor-resonance") return item;
+		if (/jhor/i.test(item?.name ?? "")) return item;
+	}
+	return null;
+}
+
+/**
+ * @param {Actor} actor
+ * @returns {number} current Jhor rating (0 if no item exists yet — the first point is gained
+ *          automatically the first time the trigger fires, per `vamamargaJhorDelta` below)
+ */
+export function getJhorResonanceValue(actor) {
+	const item = findJhorResonanceItem(actor);
+	return parseInt(item?.system?.value ?? 0) || 0;
+}
+
+/**
+ * D16 — whether a just-resolved Vamamarga effect triggers its own Jhor resistance roll: 5+
+ * successes, or the cast failed (fail or botch alike — "or fails" in the book's own text draws no
+ * distinction there; the failure/botch distinction only matters for `vamamargaJhorDelta`'s point
+ * count once that separate resistance roll is itself resolved).
+ * @param {number} successes - the main cast's own success count
+ * @param {"success"|"fail"|"botch"|""} rollResult
+ * @returns {boolean}
+ */
+export function vamamargaJhorTriggered(successes, rollResult) {
+	if ((parseInt(successes) || 0) >= 5) return true;
+	return rollResult === "fail" || rollResult === "botch";
+}
+
 /** Vamamarga's own Jhor Resonance track resistance roll — dice pool = current Jhor rating,
  *  difficulty 6, wired ALONGSIDE (not instead of) the generic resistance roll above.
  * @param {number} currentJhorRating

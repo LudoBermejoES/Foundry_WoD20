@@ -27,6 +27,13 @@
 			<i class="pullRight pointer icon collapsible button fa-solid fa-eye"
 				title="{{localize 'wod.labels.show.description'}}"
 				data-itemid="{{row.item._id}}"></i>
+
+			{{!-- task 6.2 — the 7 `prompt`-bucket Prácticas get their own cost/pool calculator
+			      dialog instead of a casting-dialog checkbox. --}}
+			{{#if row.isPrompt}}
+				<a class="pointer pullRight" data-action="openPrismPrompt" data-practiceid="{{row.id}}" title="{{localize 'wod.prism.dialog.openprompt'}}"><i class="icon fa-solid fa-calculator"></i></a>
+			{{/if}}
+
 			{{#if row.item.system.isremovable}}
 				<a class="pointer item-delete" title="{{localize 'wod.labels.remove.headline'}}" data-itemid="{{row.item._id}}" data-action="itemDelete"><i class="icon fa-solid fa-trash-can"></i></a>
 			{{/if}}
@@ -43,6 +50,22 @@
 			{{#if row.benefit_es}}<div class="information-area">{{{row.benefit_es}}}</div>{{/if}}
 			{{#if row.penalty_es}}<div class="information-area">{{{row.penalty_es}}}</div>{{/if}}
 			{{#if row.price_es}}<div class="information-area">{{{row.price_es}}}</div>{{/if}}
+
+			{{!-- task 10.3 — Ciencias Infernales' one-time, locked base-Práctica choice (A21). --}}
+			{{#if row.needsInfernalBaseChoice}}
+				<div class="information-area">
+					<label>{{localize 'wod.prism.infernal.choosebase'}}</label>
+					<select class="prism-infernal-base-select">
+						<option value="hypertech">{{localize 'wod.prism.infernal.base.hypertech'}}</option>
+						<option value="cybernetics">{{localize 'wod.prism.infernal.base.cybernetics'}}</option>
+						<option value="weird-science">{{localize 'wod.prism.infernal.base.weirdscience'}}</option>
+					</select>
+					<a class="pointer button" data-action="prismChooseInfernalBase" data-itemid="{{row.item._id}}">{{localize 'wod.prism.infernal.confirm'}}</a>
+				</div>
+			{{/if}}
+			{{#if row.chosenBase}}
+				<div class="information-area">{{localize 'wod.prism.infernal.chosen'}}: {{row.chosenBaseLabel}}</div>
+			{{/if}}
 		</div>
 	{{else}}
 		<p class="information-area">{{localize 'wod.labels.none'}}</p>

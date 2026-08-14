@@ -312,6 +312,13 @@ export class DialogAreteCasting extends FormApplication {
         this.object.prismForcesCoincidental = !!benefit.forcesCoincidental;
         this.object.prismForcesParadojaVulgar = !!penalty.forcesParadojaVulgar;
 
+        // D16/task 10.6 — the 3 Prácticas Corruptas whose Precio is NOT a dice modifier (Abismalismo's
+        // Silence floor, Goetia's catastrophic-failure branch, Vamamarga's own Jhor track): captured
+        // here so `_castSpell` can surface each as its own chat message once the roll resolves.
+        this.object.prismSilenceFloor = penalty.silenceFloor ?? null;
+        this.object.prismFailureBranch = !!penalty.failureBranch;
+        this.object.prismJhorResonance = !!penalty.jhorResonance;
+
         // C3/D11 — the general improvised-quick-cast +1, disjoint from Magia del caos's own
         // Fórmula-only Penalización (D11's closing paragraph).
         extra += PrismHelper.CheckImprovisedPenalty(this.object.prismFormulaBacked, practiceId);
@@ -695,12 +702,40 @@ export class DialogAreteCasting extends FormApplication {
                 const selected = practices.find((p) => p.id === this.object.prismPracticeId);
                 if (selected?.kind === "corrupted") {
                     const highestSphere = this.object._highestRank();
-                    const { corruptedResistanceRoll } = await import("../scripts/prism-corrupted-helpers.js");
-                    const roll = corruptedResistanceRoll(parseInt(selected.item.system.value) || 0, highestSphere);
+                    const {
+                        corruptedResistanceRoll,
+                        vamamargaJhorRoll,
+                        vamamargaJhorTriggered,
+                        getJhorResonanceValue
+                    } = await import("../scripts/prism-corrupted-helpers.js");
+                    const poolRating = PrismHelper.ResolveCorruptedResistancePoolRating(this.actor, selected.item);
+                    const roll = corruptedResistanceRoll(poolRating, highestSphere);
                     ChatMessage.create({
                         speaker: ChatMessage.getSpeaker({ actor: this.actor }),
                         content: game.i18n.format("wod.prism.dialog.corruptedresistance", { pool: roll.pool, difficulty: roll.difficulty })
                     });
+
+                    // D16/task 10.6 — the 3 non-dice-modifier Precios, surfaced as their own chat
+                    // message alongside (never instead of) the generic resistance prompt above.
+                    if (this.object.prismSilenceFloor != null) {
+                        ChatMessage.create({
+                            speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+                            content: game.i18n.format("wod.prism.dialog.abyssalismsilence", { floor: this.object.prismSilenceFloor })
+                        });
+                    }
+                    if (this.object.prismFailureBranch && powerRoll.lastRollResult === "botch") {
+                        ChatMessage.create({
+                            speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+                            content: game.i18n.localize("wod.prism.dialog.goetiacatastrophic")
+                        });
+                    }
+                    if (this.object.prismJhorResonance && vamamargaJhorTriggered(successes, powerRoll.lastRollResult)) {
+                        const jhorRoll = vamamargaJhorRoll(getJhorResonanceValue(this.actor));
+                        ChatMessage.create({
+                            speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+                            content: game.i18n.format("wod.prism.dialog.vamamargajhor", { pool: jhorRoll.pool, difficulty: jhorRoll.difficulty })
+                        });
+                    }
                 }
             }
 

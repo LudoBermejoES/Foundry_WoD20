@@ -19,11 +19,12 @@ import {
 	getPracticeKind,
 	getBasePracticeId,
 	stateForPracticeItem,
-	provenanceOf
+	isSanctumBackgroundItem
 } from "./prism-state-engine.js";
 import { AUTO_PRACTICE_RULES, CORRUPTED_PRACTICE_RULES } from "./prism-practice-data.js";
 import { getCachedDescription, resolveDescription } from "./compendium-description.js";
 import { getMechanicsSync, getMechanicsAsync } from "./prism-mechanics-parser.js";
+import { abyssalismSilenceFloor } from "./prism-corrupted-helpers.js";
 
 /** The one place a "get this item's mechanics, synchronously" function is built, so every caller in
  *  this file shares the exact same live-resolve-then-parse behavior `compendium-description.js`
@@ -60,6 +61,26 @@ function getAbilityRating(actor, abilityKey) {
 		return parseInt(ability?.system?.value ?? 0) || 0;
 	}
 	return parseInt(actor?.system?.abilities?.[abilityKey]?.value ?? 0) || 0;
+}
+
+/** Attributes (e.g. "stamina" for Vigorización's Resistencia + Meditación pool) are stored flat on
+ *  `system.attributes.<key>` for every actor type alike — no PC/legacy split, unlike Ability/
+ *  Advantage lookups above (verified against `dialog-generalroll.js`'s own attribute reads). */
+function getAttributeRating(actor, attributeKey) {
+	return parseInt(actor?.system?.attributes?.[attributeKey]?.value ?? 0) || 0;
+}
+
+/** Advantage-backed resource pools (Willpower, Quintaesencia) needed by the `prompt`-bucket
+ *  Prácticas' dialogs (Vigorización, Hipertecnología, Psiónica). Mirrors `getPermanentArete`'s own
+ *  PC-vs-legacy split, with a fallback for the legacy shape's occasional extra `.system.` nesting
+ *  (seen on quintessence/paradox specifically, `wod-actor-base.js`). */
+function getAdvantageField(actor, advantageId, field) {
+	if (actor?.type === "PC") {
+		const adv = actor.api?.getAdvantage?.(advantageId);
+		return parseInt(adv?.system?.[field] ?? adv?.[field] ?? 0) || 0;
+	}
+	const adv = actor?.system?.advantages?.[advantageId];
+	return parseInt(adv?.[field] ?? adv?.system?.[field] ?? 0) || 0;
 }
 
 export default class PrismHelper {
@@ -139,14 +160,27 @@ export default class PrismHelper {
 	 */
 	static _evaluatePracticeRule(actor, practiceId, side, context = {}) {
 		// D16/task 10.6 — a Práctica Corrupta's own named Beneficio/Precio shares this same
-		// dispatch when its shape is a plain checkbox/tiered dice modifier (Feralismo, La Misa
-		// Negra, Ciencias Infernales, Demonismo). The three genuinely non-dice-modifier shapes
-		// (Abismalismo's Silence floor, Goetia's failure branch, Vamamarga's own Jhor track) return
-		// `{modifier: 0}` here by design — `prism-corrupted-helpers.js` exposes their real mechanic.
+		// dispatch, including the three genuinely non-dice-modifier shapes (Abismalismo's Silence
+		// floor, Goetia's failure branch, Vamamarga's own Jhor track): these return `{modifier: 0}`
+		// plus an extra, shape-specific flag (`silenceFloor`/`failureBranch`/`jhorResonance`) the
+		// caller (the casting dialog) reads to drive its own chat-message/warning surface, the same
+		// way `forcesCoincidental`/`forcesParadojaVulgar` already ride alongside `modifier` for the
+		// checkbox/decouple-paradox-only shapes below. Unconditional (no `context.checked` gate):
+		// unlike a per-cast checkbox modifier, these three describe a PERMANENT consequence of
+		// holding the corrupted Práctica, not something the player attests happened on this one cast.
 		const rule = AUTO_PRACTICE_RULES[practiceId]?.[side] ?? CORRUPTED_PRACTICE_RULES[practiceId]?.[side];
 		if (!rule) return { modifier: 0 };
 
 		switch (rule.kind) {
+			case "silence-floor": {
+				const item = findOwnedPracticeItem(actor, practiceId);
+				const rating = parseInt(item?.system?.value ?? 0) || 0;
+				return { modifier: 0, silenceFloor: abyssalismSilenceFloor(rating) };
+			}
+			case "failure-branch":
+				return { modifier: 0, failureBranch: true };
+			case "jhor-resonance":
+				return { modifier: 0, jhorResonance: true };
 			case "checkbox": {
 				if (!context.checked) return { modifier: 0 };
 				if (rule.crossActor) {
@@ -249,6 +283,26 @@ export default class PrismHelper {
 		return null;
 	}
 
+	/**
+	 * D8/task 10.3 — the resistance roll's dice pool for a cast through a corrupted-kind Práctica.
+	 * For every corrupted Práctica except Ciencias Infernales, this is simply the corrupted item's
+	 * own rating. Ciencias Infernales (A21) is the one exception: it derives from whichever base the
+	 * player locked in (`chosen_base_practice_id` — task 10.3's adoption picker), so the pool reads
+	 * THAT base item's own rating when it is resolvable, falling back to the corrupted item's own
+	 * `value` only if no choice has been locked yet (task 10.3's picker is still showing).
+	 * @param {Actor} actor
+	 * @param {Item} corruptedItem - an owned item where `kind === "corrupted"`
+	 * @returns {number}
+	 */
+	static ResolveCorruptedResistancePoolRating(actor, corruptedItem) {
+		if (getPracticeId(corruptedItem) === "infernal-sciences") {
+			const chosenBase = corruptedItem?.system?.chosen_base_practice_id || "";
+			const baseItem = chosenBase ? findOwnedPracticeItem(actor, chosenBase) : null;
+			if (baseItem) return parseInt(baseItem.system?.value ?? 0) || 0;
+		}
+		return parseInt(corruptedItem?.system?.value ?? 0) || 0;
+	}
+
 	// ---------------------------------------------------------------------------------------
 	// D5/D6 — Sanctum anatema + Zonas de Realidad
 	// ---------------------------------------------------------------------------------------
@@ -260,11 +314,7 @@ export default class PrismHelper {
 	 *  Sanctum item, per A9's "a Sanctum can enable SEVERAL Prácticas" (not "several Sanctums", but
 	 *  nothing stops an actor from holding more than one Sanctum-type Background either). */
 	static _sanctumItems(actor) {
-		return (actor?.items ?? []).filter((item) => {
-			if (item?.type !== "Feature" || item?.system?.type !== "wod.types.background") return false;
-			const id = provenanceOf(item)?.id ?? "";
-			return id.startsWith("sanctum") || /sanctuar?y|sanctum/i.test(item?.name ?? "");
-		});
+		return (actor?.items ?? []).filter((item) => isSanctumBackgroundItem(item));
 	}
 
 	/**
@@ -308,4 +358,4 @@ export default class PrismHelper {
 	}
 }
 
-export { mechanicsOf, mechanicsOfAsync, findOwnedPracticeItem, getPermanentArete, getAbilityRating };
+export { mechanicsOf, mechanicsOfAsync, findOwnedPracticeItem, getPermanentArete, getAbilityRating, getAttributeRating, getAdvantageField };

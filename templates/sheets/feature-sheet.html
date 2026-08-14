@@ -145,6 +145,84 @@
 					languages to `system.level` (the point rating) — the roster and the dots are allowed
 					to disagree, same precedent as the Contacts/Allies roster above.
 				--}}
+				{{!--
+					add-prism-of-focus-foundry — design.md D5/task 8.1: the Sanctum Background item's
+					TWO independent lists, `enabled_practices[]` and `anathema[]` (one Práctica point
+					granted / one anathema point per Sanctum point, per A9). Gated on
+					`data.isSanctumItem` (item-sheet.js's `isSanctumBackgroundItem` duck-type — there
+					is no literal `system.id === "sanctum"` in the shipped corpus), never on
+					`data.system.type` alone, so every other Background keeps rendering exactly as
+					before. Same add/remove-row shape as the Idioma roster just below, applied to TWO
+					lists instead of one (`data-list` on each button disambiguates which).
+				--}}
+				{{#if data.isSanctumItem}}
+					<div class="infobox bioInformationArea language-list-area">
+						<div class="clearareaBox">
+							<div class="headlineItem headlineBio splatFont">{{localize "wod.prism.sanctum.enabledheading"}}</div>
+						</div>
+
+						{{#each data.system.enabled_practices as | entry idx |}}
+							<div class="clearareaBox bioInformationArea language-tag-row">
+								<div class="pullLeft infobox">
+									<span class="sheet-infoValues language-tag-name">{{entry.practice_id}} ({{entry.rating}})</span>
+								</div>
+								{{#unless ../locked}}
+									<div class="pullLeft pointer">
+										<i class="icon smallicon fa-solid fa-trash-can pointer prism-sanctum-list-delete" data-list="enabled_practices" data-index="{{idx}}" aria-hidden="true"></i>
+									</div>
+								{{/unless}}
+							</div>
+						{{/each}}
+
+						{{#unless locked}}
+							<div class="clearareaBox bioInformationArea language-add-row prism-sanctum-list-add-row">
+								<div class="pullLeft infobox floating-label-group">
+									<input class="sheet-infoValues prism-sanctum-list-practice-input" type="text" value="" data-dtype="String" autocomplete="off" placeholder="{{localize 'wod.prism.sanctum.practiceplaceholder'}}" />
+								</div>
+								<div class="pullLeft infobox floating-label-group">
+									<input class="sheet-infoValues prism-sanctum-list-rating-input" type="number" min="1" max="5" value="1" data-dtype="Number" autocomplete="off" placeholder="{{localize 'wod.prism.sanctum.ratingplaceholder'}}" />
+								</div>
+								<div class="pullLeft pointer">
+									<i class="icon fa-solid fa-square-plus prism-sanctum-list-create pointer" data-list="enabled_practices" aria-hidden="true"></i>
+								</div>
+							</div>
+						{{/unless}}
+					</div>
+
+					<div class="infobox bioInformationArea language-list-area">
+						<div class="clearareaBox">
+							<div class="headlineItem headlineBio splatFont">{{localize "wod.prism.sanctum.anathemaheading"}}</div>
+						</div>
+
+						{{#each data.system.anathema as | entry idx |}}
+							<div class="clearareaBox bioInformationArea language-tag-row">
+								<div class="pullLeft infobox">
+									<span class="sheet-infoValues language-tag-name">{{entry.practice_id}} ({{entry.rating}})</span>
+								</div>
+								{{#unless ../locked}}
+									<div class="pullLeft pointer">
+										<i class="icon smallicon fa-solid fa-trash-can pointer prism-sanctum-list-delete" data-list="anathema" data-index="{{idx}}" aria-hidden="true"></i>
+									</div>
+								{{/unless}}
+							</div>
+						{{/each}}
+
+						{{#unless locked}}
+							<div class="clearareaBox bioInformationArea language-add-row prism-sanctum-list-add-row">
+								<div class="pullLeft infobox floating-label-group">
+									<input class="sheet-infoValues prism-sanctum-list-practice-input" type="text" value="" data-dtype="String" autocomplete="off" placeholder="{{localize 'wod.prism.sanctum.practiceplaceholder'}}" />
+								</div>
+								<div class="pullLeft infobox floating-label-group">
+									<input class="sheet-infoValues prism-sanctum-list-rating-input" type="number" min="1" max="5" value="1" data-dtype="Number" autocomplete="off" placeholder="{{localize 'wod.prism.sanctum.ratingplaceholder'}}" />
+								</div>
+								<div class="pullLeft pointer">
+									<i class="icon fa-solid fa-square-plus prism-sanctum-list-create pointer" data-list="anathema" aria-hidden="true"></i>
+								</div>
+							</div>
+						{{/unless}}
+					</div>
+				{{/if}}
+
 				{{#if (eqAny data.system.id "idioma")}}
 					<div class="infobox bioInformationArea language-list-area">
 						<div class="clearareaBox">

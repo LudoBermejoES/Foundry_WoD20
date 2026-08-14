@@ -1,0 +1,79 @@
+{{!-- add-prism-of-focus-foundry — design.md D12/task 6.2. Pure display/input shell around
+      `prism-prompt-calculators.js`; one of these blocks renders, matching the dialog's fixed
+      `practiceId` (set once, at open time, by whichever sheet button opened it). `result.text` is
+      already formatted (via `game.i18n.format`) in `getData()` — see that file's own note on why
+      this avoids relying on Handlebars hash-arg localize substitution. --}}
+<form class="wod20 wod-dialog prism-prompt-form" autocomplete="off">
+
+	{{#if (eq practiceId "alchemy")}}
+	<div class="dialog-area">
+		<div class="headline splatFont">{{localize 'wod.prism.prompt.alchemy.basecost'}}</div>
+		<input name="baseCost" type="number" min="0" value="{{object.baseCost}}" />
+		<p>{{result.text}}</p>
+	</div>
+	{{/if}}
+
+	{{#if (eq practiceId "maleficia")}}
+	<div class="dialog-area">
+		<div class="headline splatFont">{{localize 'wod.prism.prompt.maleficia.basecost'}}</div>
+		<input name="baseCost" type="number" min="0" value="{{object.baseCost}}" />
+		<label><input name="directCreation" type="checkbox" {{#if object.directCreation}}checked{{/if}} /> {{localize 'wod.prism.prompt.maleficia.directcreation'}}</label>
+		<p>{{result.text}}</p>
+	</div>
+	{{/if}}
+
+	{{#if (eq practiceId "invigoration")}}
+	<div class="dialog-area">
+		<div style="display:flex; gap:6px;">
+			<label>{{localize 'wod.prism.prompt.invigoration.resistencia'}} <input name="resistencia" type="number" min="0" value="{{object.resistencia}}" /></label>
+			<label>{{localize 'wod.prism.prompt.invigoration.meditacion'}} <input name="meditacion" type="number" min="0" value="{{object.meditacion}}" /></label>
+		</div>
+		<label>{{localize 'wod.prism.prompt.invigoration.successes'}} <input name="successes" type="number" min="0" value="{{object.successes}}" /></label>
+		<p>{{result.text}}</p>
+	</div>
+	{{/if}}
+
+	{{#if (eq practiceId "hypertech")}}
+	<div class="dialog-area">
+		<div class="headline splatFont">{{localize 'wod.prism.prompt.hypertech.basedevices'}}</div>
+		<input name="baseDevices" type="number" min="0" value="{{object.baseDevices}}" />
+		<p>{{result.text}}</p>
+	</div>
+	{{/if}}
+
+	{{#if (eq practiceId "media-control")}}
+	<div class="dialog-area">
+		<div class="headline splatFont">{{localize 'wod.prism.prompt.mediacontrol.basesuccesses'}}</div>
+		<input name="baseSuccesses" type="number" min="0" value="{{object.baseSuccesses}}" />
+		<label><input name="broadcast" type="checkbox" {{#if object.broadcast}}checked{{/if}} /> {{localize 'wod.prism.prompt.mediacontrol.broadcast'}}</label>
+		<label><input name="permanent" type="checkbox" {{#if object.permanent}}checked{{/if}} /> {{localize 'wod.prism.prompt.mediacontrol.permanent'}}</label>
+		<p>{{result.text}}</p>
+	</div>
+	{{/if}}
+
+	{{#if (eq practiceId "psionics")}}
+	<div class="dialog-area">
+		<div style="display:flex; gap:6px;">
+			<label>{{localize 'wod.prism.prompt.psionics.aretepool'}} <input name="aretePool" type="number" min="0" value="{{object.aretePool}}" /></label>
+			<label>{{localize 'wod.prism.prompt.psionics.temporarywillpower'}} <input name="temporaryWillpower" type="number" min="0" value="{{object.temporaryWillpower}}" /></label>
+		</div>
+		<label><input name="waiveMindRequirement" type="checkbox" {{#if object.waiveMindRequirement}}checked{{/if}} /> {{localize 'wod.prism.prompt.psionics.waivemind'}}</label>
+		<p>{{result.text}}</p>
+	</div>
+	{{/if}}
+
+	{{#if (eq practiceId "faith")}}
+	<div class="dialog-area">
+		{{#if result.violated}}
+			<p class="item-warning">{{localize 'wod.prism.prompt.faith.violated'}}</p>
+		{{else}}
+			<p>{{#if result.claimed}}{{localize 'wod.prism.prompt.faith.claimed'}}{{else}}{{localize 'wod.prism.prompt.faith.available'}}{{/if}}</p>
+		{{/if}}
+		<button type="button" class="button fullSplatColor pointer prism-prompt-faith-claim" {{#unless result.available}}disabled{{/unless}}>{{localize 'wod.prism.prompt.faith.claim'}}</button>
+		{{#if isGM}}
+			<button type="button" class="button pointer prism-prompt-faith-reset">{{localize 'wod.prism.prompt.faith.reset'}}</button>
+		{{/if}}
+	</div>
+	{{/if}}
+
+</form>

@@ -2500,7 +2500,75 @@
 				"willpowerdisabled": "Willpower-for-automatic-successes disabled while Prism of Focus is active (A19)",
 				"ritualmaster": "Ritual Master",
 				"dice": "dice",
-				"corruptedresistance": "Corrupted Practice resistance roll: {pool} dice, difficulty {difficulty}."
+				"corruptedresistance": "Corrupted Practice resistance roll: {pool} dice, difficulty {difficulty}.",
+				"abyssalismsilence": "Abyssalism's Price: this character is in Silence, minimum rating {floor}.",
+				"goetiacatastrophic": "Goetia's catastrophic failure: no Paradox is generated — the demon manifests unbound and hostile instead.",
+				"vamamargajhor": "Vamamarga's own Jhor resistance roll: {pool} dice, difficulty {difficulty}.",
+				"openprompt": "Open calculator"
+			},
+			"sanctum": {
+				"enabledheading": "Sanctum: Enabled Practices (unconditionally coincidental within it)",
+				"anathemaheading": "Sanctum: Anathema (vulgar for both purposes at/above the listed rating)",
+				"practiceplaceholder": "Practice id",
+				"ratingplaceholder": "Rating",
+				"conflict": "A Practice already on the other list cannot also be added here"
+			},
+			"infernal": {
+				"choosebase": "Choose Infernal Sciences' base Practice (locked once chosen)",
+				"confirm": "Confirm",
+				"chosen": "Base Practice",
+				"base": {
+					"hypertech": "Hypertech",
+					"cybernetics": "Cybernetics",
+					"weirdscience": "Weird Science"
+				}
+			},
+			"prompt": {
+				"alchemy": {
+					"title": "Alchemy — Crafting Cost",
+					"basecost": "Base Quintessence/Tass cost",
+					"result": "Halved cost (rounded up): {cost}"
+				},
+				"maleficia": {
+					"title": "Maleficia — Crafting Cost",
+					"basecost": "Base Quintessence/Tass cost",
+					"directcreation": "Direct-creation effect (+1)",
+					"result": "Doubled cost: {cost} (direct-creation modifier: +{modifier})"
+				},
+				"invigoration": {
+					"title": "Invigoration — Willpower Conversion",
+					"resistencia": "Stamina",
+					"meditacion": "Meditation",
+					"successes": "Successes rolled",
+					"result": "Pool {pool}, difficulty {difficulty}. Willpower gained: {gained} (Quintessence spent: {cost})"
+				},
+				"hypertech": {
+					"title": "Hypertech — Device Creation",
+					"basedevices": "Base Devices (per permanent Willpower point spent)",
+					"result": "Devices created: {devices}"
+				},
+				"mediacontrol": {
+					"title": "Media Control — Broadcast/Permanent",
+					"basesuccesses": "Base successes required",
+					"broadcast": "Broadcast to everyone who sees the medium",
+					"permanent": "Make it permanent",
+					"result": "Successes required: {successes} (difficulty +{modifier})"
+				},
+				"psionics": {
+					"title": "Psionics — Arete Pool Cap",
+					"aretepool": "Arete pool",
+					"temporarywillpower": "Temporary Willpower",
+					"waivemind": "Waive the combined-Mind-3 continuous-control requirement",
+					"result": "Capped Arete pool: {pool}"
+				},
+				"faith": {
+					"title": "Faith — Story Point",
+					"claim": "Claim my Faith point (once per Story, may exceed the normal Willpower cap)",
+					"reset": "Reset (GM, new Story)",
+					"violated": "Blocked: cannot use Faith after violating its creed",
+					"available": "Available",
+					"claimed": "Already claimed this Story"
+				}
 			}
 		}
 	}

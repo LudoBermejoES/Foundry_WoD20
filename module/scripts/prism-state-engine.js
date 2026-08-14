@@ -245,4 +245,21 @@ export function computePrismStates(actor, getMechanics) {
 	return states;
 }
 
+/**
+ * Is this owned Background item a Sanctum (design.md D5/Arreglo #7, implementation-correction #3)?
+ * There is NO literal `system.id === "sanctum"` in the shipped corpus — the actual entities are
+ * named e.g. "Sanctum / Laboratorio" with `flags['wod20-compendium-es'].id` starting with
+ * `"sanctum-"` — so detection is the same provenance-id-prefix-or-name-regex duck-typing
+ * `PrismHelper._sanctumItems` already established, factored out here so BOTH that engine lookup and
+ * the item sheet's own "show the enabled_practices/anathema editor" gate (task 8.1) share one
+ * definition rather than two copies that could drift.
+ * @param {Item|object} item
+ * @returns {boolean}
+ */
+export function isSanctumBackgroundItem(item) {
+	if (item?.type !== "Feature" || item?.system?.type !== "wod.types.background") return false;
+	const id = provenanceOf(item)?.id ?? "";
+	return id.startsWith("sanctum") || /sanctuar?y|sanctum/i.test(item?.name ?? "");
+}
+
 export const TENET_CATEGORY_LIST = [...TENET_CATEGORIES];

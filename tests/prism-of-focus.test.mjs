@@ -28,9 +28,14 @@ import {
 	corruptedStateFromResonance,
 	abyssalismSilenceFloor,
 	vamamargaJhorRoll,
-	vamamargaJhorDelta
+	vamamargaJhorDelta,
+	findJhorResonanceItem,
+	getJhorResonanceValue,
+	vamamargaJhorTriggered
 } from "../module/scripts/prism-corrupted-helpers.js";
 import PrismHelper from "../module/scripts/prism-helpers.js";
+import { isSanctumBackgroundItem } from "../module/scripts/prism-state-engine.js";
+import * as PromptCalc from "../module/scripts/prism-prompt-calculators.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let failures = 0;
@@ -204,14 +209,150 @@ test("Vamamarga's Jhor roll is difficulty 6, and the first point is automatic", 
 	assert.equal(vamamargaJhorDelta("failure", 2), 1);
 });
 
-console.log("lang/en.json + lang/es.json — every labelKey referenced by prism-practice-data.js resolves in both");
+console.log("prism-corrupted-helpers.js — Vamamarga's Jhor track (its own resonance counter, distinct from the generic engine)");
 
-test("all wod.prism.* labelKeys referenced in prism-practice-data.js exist in both language files", () => {
+test("findJhorResonanceItem/getJhorResonanceValue match by provenance id, then by name fallback", () => {
+	const byProvenance = { type: "Trait", system: { type: "wod.types.resonance", value: 2 }, flags: { "wod20-compendium-es": { id: "vamamarga-jhor-resonance" } } };
+	const byName = { type: "Trait", system: { type: "wod.types.resonance", value: 1 }, name: "Jhor (Vamamarga)" };
+	assert.equal(findJhorResonanceItem({ items: [byProvenance] }), byProvenance);
+	assert.equal(getJhorResonanceValue({ items: [byProvenance] }), 2);
+	assert.equal(findJhorResonanceItem({ items: [byName] }), byName);
+	assert.equal(getJhorResonanceValue({ items: [] }), 0);
+});
+
+test("vamamargaJhorTriggered fires at 5+ successes, or on fail/botch, never on an ordinary success", () => {
+	assert.equal(vamamargaJhorTriggered(5, "success"), true);
+	assert.equal(vamamargaJhorTriggered(6, "success"), true);
+	assert.equal(vamamargaJhorTriggered(2, "fail"), true);
+	assert.equal(vamamargaJhorTriggered(0, "botch"), true);
+	assert.equal(vamamargaJhorTriggered(2, "success"), false);
+});
+
+console.log("PrismHelper — D16's 3 remaining Prácticas Corruptas (Abismalismo/Goetia/Vamamarga), wired into the SAME dispatch as the other 4 (gap #2)");
+
+test("Abismalismo's Precio dispatches a live silenceFloor, computed from the actor's OWN item rating", () => {
+	const actor = { items: [{ _id: "i1", type: "Feature", system: { type: "wod.types.practice", kind: "corrupted", value: 5 }, flags: { "wod20-compendium-es": { id: "abyssalism" } } }] };
+	const result = PrismHelper.CheckPracticePenalty(actor, "abyssalism", {});
+	assert.equal(result.modifier, 0);
+	assert.equal(result.silenceFloor, 3, "ceil(5/2) = 3");
+});
+
+test("Goetia's Precio dispatches a failureBranch flag, not a dice modifier", () => {
+	const result = PrismHelper.CheckPracticePenalty(null, "goetia", {});
+	assert.equal(result.modifier, 0);
+	assert.equal(result.failureBranch, true);
+});
+
+test("Vamamarga's Precio dispatches a jhorResonance flag, not a dice modifier", () => {
+	const result = PrismHelper.CheckPracticePenalty(null, "vamamarga", {});
+	assert.equal(result.modifier, 0);
+	assert.equal(result.jhorResonance, true);
+});
+
+test("Abismalismo/Goetia/Vamamarga's Beneficio still applies its flat -1, same as the other 4 corrupted Prácticas", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "abyssalism", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "goetia", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "vamamarga", { checked: true }).modifier, -1);
+});
+
+console.log("prism-state-engine.js — isSanctumBackgroundItem (task 8.1's shared detector)");
+
+test("isSanctumBackgroundItem matches by provenance id prefix, then by name regex, never a non-Background Feature", () => {
+	const byProvenance = { type: "Feature", system: { type: "wod.types.background" }, flags: { "wod20-compendium-es": { id: "sanctum-laboratorio" } }, name: "Sanctum / Laboratorio" };
+	const byName = { type: "Feature", system: { type: "wod.types.background" }, name: "Sanctuary of the Hollow Ones" };
+	const notBackground = { type: "Feature", system: { type: "wod.types.merit" }, name: "Sanctum-shaped but a Merit" };
+	assert.equal(isSanctumBackgroundItem(byProvenance), true);
+	assert.equal(isSanctumBackgroundItem(byName), true);
+	assert.equal(isSanctumBackgroundItem(notBackground), false);
+});
+
+console.log("prism-prompt-calculators.js — the 7 `prompt`-bucket Prácticas (task 6.2)");
+
+test("Alquimia halves the crafting cost, rounded UP", () => {
+	assert.equal(PromptCalc.alchemyCraftingCost(5), 3);
+	assert.equal(PromptCalc.alchemyCraftingCost(4), 2);
+});
+
+test("Maleficia doubles the crafting cost and adds +1 to direct-creation effects", () => {
+	assert.equal(PromptCalc.maleficiaCraftingCost(5), 10);
+	assert.equal(PromptCalc.maleficiaDirectCreationModifier(true), 1);
+	assert.equal(PromptCalc.maleficiaDirectCreationModifier(false), 0);
+});
+
+test("Vigorización: pool = Resistencia + Meditación, difficulty fixed at 6, 2 Quintaesencia per Willpower success", () => {
+	assert.equal(PromptCalc.invigorationPool(3, 2), 5);
+	assert.equal(PromptCalc.INVIGORATION_DIFFICULTY, 6);
+	assert.equal(PromptCalc.invigorationWillpowerGained(3), 3);
+	assert.equal(PromptCalc.invigorationWillpowerGained(-1), 0);
+	assert.equal(PromptCalc.invigorationQuintessenceCost(3), 6);
+});
+
+test("Hipertecnología doubles the Devices created", () => {
+	assert.equal(PromptCalc.hypertechDevicesCreated(2), 4);
+});
+
+test("Control de Medios (A23): broadcast/permanent each independently double successes AND add a flat +2 (never a compounding +4 to difficulty)", () => {
+	assert.equal(PromptCalc.mediaControlSuccessesRequired(3, false, false), 3);
+	assert.equal(PromptCalc.mediaControlSuccessesRequired(3, true, false), 6);
+	assert.equal(PromptCalc.mediaControlSuccessesRequired(3, true, true), 12);
+	assert.equal(PromptCalc.mediaControlDifficultyModifier(false, false), 0);
+	assert.equal(PromptCalc.mediaControlDifficultyModifier(true, false), 2);
+	assert.equal(PromptCalc.mediaControlDifficultyModifier(true, true), 4);
+});
+
+test("Psiónica caps the Areté pool at TEMPORARY Fuerza de Voluntad, never the (possibly higher) pool itself", () => {
+	assert.equal(PromptCalc.psionicsAretePoolCap(6, 3), 3);
+	assert.equal(PromptCalc.psionicsAretePoolCap(2, 5), 2);
+});
+
+test("Fe's claim is available once per Historia, and blocked outright by a creed violation", () => {
+	assert.equal(PromptCalc.faithClaimAvailable(false, false), true);
+	assert.equal(PromptCalc.faithClaimAvailable(true, false), false);
+	assert.equal(PromptCalc.faithClaimAvailable(false, true), false);
+});
+
+console.log("lang/en.json + lang/es.json — every labelKey referenced by this change's source files resolves in both");
+
+test("all wod.prism.* labelKeys referenced across this change's JS source exist in both language files", () => {
 	const es = JSON.parse(readFileSync(path.join(__dirname, "..", "lang", "es.json"), "utf8"));
 	const en = JSON.parse(readFileSync(path.join(__dirname, "..", "lang", "en.json"), "utf8"));
-	const source = readFileSync(path.join(__dirname, "..", "module", "scripts", "prism-practice-data.js"), "utf8");
-	const keys = [...new Set([...source.matchAll(/"(wod\.prism\.[a-zA-Z0-9_.]+)"/g)].map((m) => m[1]))];
-	assert.ok(keys.length > 0, "expected to find wod.prism.* keys in prism-practice-data.js");
+
+	const sourceFiles = [
+		"prism-practice-data.js",
+		"prism-helpers.js",
+		"prism-prompt-calculators.js"
+	].map((f) => path.join(__dirname, "..", "module", "scripts", f));
+	sourceFiles.push(path.join(__dirname, "..", "module", "dialogs", "dialog-prism-prompt.js"));
+	sourceFiles.push(path.join(__dirname, "..", "module", "dialogs", "dialog-aretecasting.js"));
+	sourceFiles.push(path.join(__dirname, "..", "module", "actor", "template", "pc-actor-sheet.js"));
+
+	const templateFiles = [
+		"templates/actor/parts/mage/prism_practices.hbs",
+		"templates/actor/parts/mage/prism_tenets.hbs",
+		"templates/actor/parts/mage/prism_practice_traits.hbs",
+		"templates/dialogs/dialog-prism-prompt.hbs",
+		"templates/dialogs/dialog-prism-ritual.hbs",
+		"templates/dialogs/dialog-prism-zone.hbs",
+		"templates/sheets/feature-sheet.html"
+	].map((f) => path.join(__dirname, "..", f));
+
+	const keys = new Set();
+	for (const file of [...sourceFiles, ...templateFiles]) {
+		const source = readFileSync(file, "utf8");
+		for (const m of source.matchAll(/["'](wod\.prism\.[a-zA-Z0-9_.]+)["']/g)) {
+			// Skip dynamically-built key PREFIXES such as `(concat "wod.prism.kind." row.kind)` in
+			// `prism_practices.hbs` — a trailing "." means this match is a prefix, not a real key.
+			if (m[1].endsWith(".")) continue;
+			keys.add(m[1]);
+		}
+	}
+	// The 3 Ciencias Infernales base-label keys are built from a TEMPLATE LITERAL in
+	// pc-actor-sheet.js (`wod.prism.infernal.base.${...}`), so the static scan above cannot see
+	// them — added explicitly rather than silently left unchecked.
+	keys.add("wod.prism.infernal.base.hypertech");
+	keys.add("wod.prism.infernal.base.cybernetics");
+	keys.add("wod.prism.infernal.base.weirdscience");
+	assert.ok(keys.size > 0, "expected to find wod.prism.* keys across this change's source files");
 
 	function get(dict, dotted) {
 		return dotted.split(".").reduce((node, part) => (node && typeof node === "object" ? node[part] : undefined), dict);
@@ -251,6 +392,38 @@ test("D16/task 10.6 fix — a Práctica Corrupta's own named rule dispatches thr
 	assert.equal(PrismHelper.CheckPracticeBenefit(null, "infernal-sciences", { tier: 2 }).modifier, -2);
 });
 
+test("A22 — Ciencia Extraña's Beneficio penalizes the ANALYST's roll, gated on the analyst's OWN rating, never the caster's", () => {
+	const analystWithout = { items: [] };
+	const analystWith = { items: [{ _id: "i1", type: "Feature", system: { type: "wod.types.practice", value: 2 }, flags: { "wod20-compendium-es": { id: "weird-science" } } }] };
+
+	assert.equal(
+		PrismHelper.CheckPracticeBenefit(null, "weird-science", { checked: true, targetActor: analystWithout }).modifier,
+		1,
+		"analyst without the Practice: +1"
+	);
+	assert.equal(
+		PrismHelper.CheckPracticeBenefit(null, "weird-science", { checked: true, targetActor: analystWith }).modifier,
+		0,
+		"analyst who already has the Practice: no penalty"
+	);
+	assert.equal(
+		PrismHelper.CheckPracticeBenefit(null, "weird-science", { checked: true, targetActor: null }).modifier,
+		1,
+		"no analyst actor resolved: treated the same as 'without the Practice' (a rating of 0)"
+	);
+});
+
+test("task 10.8 — La Misa Negra's -1 Beneficio and its private(+1)/public(+2) tiered Precio", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "the-black-mass-practice", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "the-black-mass-practice", { tier: 1 }).modifier, 1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "the-black-mass-practice", { tier: 2 }).modifier, 2);
+});
+
+test("task 10.8 — Demonismo's -1 Beneficio and +1 Precio", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "demonism", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "demonism", { checked: true }).modifier, 1);
+});
+
 test("CheckImprovisedPenalty (C3) applies +1 only when NOT Fórmula-backed, and Etertecnología ignores it", () => {
 	assert.equal(PrismHelper.CheckImprovisedPenalty(false, "dominion"), 1);
 	assert.equal(PrismHelper.CheckImprovisedPenalty(true, "dominion"), 0);
@@ -264,6 +437,27 @@ test("D11 — Magia del caos's own Penalización is Fórmula-only, disjoint from
 	// A Fórmula-backed Magia del caos cast: the reverse.
 	assert.equal(PrismHelper.CheckImprovisedPenalty(true, "chaos-magick"), 0);
 	assert.equal(PrismHelper.CheckChaosMagickFormulaPenalty(true), 1);
+});
+
+console.log("PrismHelper.ResolveCorruptedResistancePoolRating (task 10.3 — Ciencias Infernales' chosen-base routing)");
+
+test("Ciencias Infernales' resistance pool reads the CHOSEN BASE item's rating, not its own corrupted item's value", () => {
+	const cyberneticsItem = { _id: "base1", type: "Feature", system: { type: "wod.types.practice", kind: "base", value: 4 }, flags: { "wod20-compendium-es": { id: "cybernetics" } } };
+	const corruptedItem = { _id: "ci1", type: "Feature", system: { type: "wod.types.practice", kind: "corrupted", value: 1, chosen_base_practice_id: "cybernetics" }, flags: { "wod20-compendium-es": { id: "infernal-sciences" } } };
+	const actor = { items: [cyberneticsItem, corruptedItem] };
+	assert.equal(PrismHelper.ResolveCorruptedResistancePoolRating(actor, corruptedItem), 4, "reads Cibernética's rating (4), not its own value (1)");
+});
+
+test("Ciencias Infernales falls back to its own item's value when no base has been chosen yet", () => {
+	const corruptedItem = { _id: "ci1", type: "Feature", system: { type: "wod.types.practice", kind: "corrupted", value: 2, chosen_base_practice_id: "" }, flags: { "wod20-compendium-es": { id: "infernal-sciences" } } };
+	const actor = { items: [corruptedItem] };
+	assert.equal(PrismHelper.ResolveCorruptedResistancePoolRating(actor, corruptedItem), 2);
+});
+
+test("every other corrupted Práctica just uses its own item's rating (no chosen-base indirection)", () => {
+	const feralismItem = { _id: "f1", type: "Feature", system: { type: "wod.types.practice", kind: "corrupted", value: 3 }, flags: { "wod20-compendium-es": { id: "feralism" } } };
+	const actor = { items: [feralismItem] };
+	assert.equal(PrismHelper.ResolveCorruptedResistancePoolRating(actor, feralismItem), 3);
 });
 
 console.log("PrismHelper.EvaluateVulgarity (D5/D6 — Sanctum + Zona, coupled by default)");

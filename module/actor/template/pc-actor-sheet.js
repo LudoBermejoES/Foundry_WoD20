@@ -37,6 +37,13 @@ import { getSplat } from "../../scripts/splat-helpers.js";
 import ItemViewer from "../../applications/item-viewer.js";
 import PrismHelper from "../../scripts/prism-helpers.js";
 import DialogPrismRitual from "../../dialogs/dialog-prism-ritual.js";
+import DialogPrismPrompt from "../../dialogs/dialog-prism-prompt.js";
+import { PROMPT_PRACTICE_IDS } from "../../scripts/prism-practice-data.js";
+
+/** task 10.3 — Ciencias Infernales' 3 possible bases (A21), keyed by their own stable practice id
+ *  (`CORRUPTED_PRACTICE_RULES["infernal-sciences"].base` in `prism-practice-data.js`) to the
+ *  `wod.prism.infernal.base.*` label key used to display the player's locked choice. */
+const INFERNAL_BASE_LABEL_KEY = { hypertech: "hypertech", cybernetics: "cybernetics", "weird-science": "weirdscience" };
 
 const { HandlebarsApplicationMixin } = foundry.applications.api
 
@@ -126,6 +133,38 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 			openPrismRitual: function (event) {
 				event.preventDefault();
 				new DialogPrismRitual().render(true);
+			},
+
+			// add-prism-of-focus-foundry — design.md D12/task 6.2: opens the one `prompt`-bucket
+			// Práctica's own cost/pool calculator dialog, scoped to the practice id the clicked
+			// row's `data-practiceid` carries.
+			openPrismPrompt: function (event, target) {
+				event.preventDefault();
+				const practiceId = target?.getAttribute?.("data-practiceid") ?? "";
+				if (!practiceId) return;
+				new DialogPrismPrompt({ practiceId, actor: this.actor }).render(true);
+			},
+
+			// add-prism-of-focus-foundry — design.md D8/task 10.3: Ciencias Infernales' one-time,
+			// LOCKED base-Práctica choice (A21). Reads the sibling `<select>` this row's own template
+			// renders and persists it onto the owned corrupted-Práctica item; once set, the template
+			// stops rendering the picker (`needsInfernalBaseChoice` goes false on next render) and
+			// shows the locked label instead — there is no "change it later" control by design.
+			prismChooseInfernalBase: async function (event, target) {
+				event.preventDefault();
+				const itemId = target?.getAttribute?.("data-itemid") ?? "";
+				if (!itemId) return;
+
+				const row = target.closest(".v3-focusitem");
+				const select = row?.querySelector(".prism-infernal-base-select");
+				const base = select?.value ?? "";
+				if (!base) return;
+
+				const item = this.actor.items.get(itemId);
+				if (!item) return;
+
+				await item.update({ "system.chosen_base_practice_id": base });
+				this.render();
 			}
 		},
 		dragDrop: [
@@ -1531,7 +1570,18 @@ export const preparePrismContext = function (context, actor) {
 		corruptedState: row.item.system.corrupted_state || "clean",
 		benefit_es: row.mechanics.benefit_es ?? "",
 		penalty_es: row.mechanics.penalty_es ?? "",
-		price_es: row.mechanics.price_es ?? ""
+		price_es: row.mechanics.price_es ?? "",
+		// task 6.2 — the 7 `prompt`-bucket Prácticas get their own cost/pool calculator button
+		// instead of (never in addition to) the checkbox/tiered UI the `auto`/`corrupted` buckets
+		// use, since a flat checkbox modifier cannot express a cost calculation or a choice.
+		isPrompt: PROMPT_PRACTICE_IDS.includes(row.id),
+		// task 10.3 — Ciencias Infernales' one-time, locked base-Práctica choice (A21): shown
+		// inline on its row until `chosen_base_practice_id` is set, then locked read-only.
+		needsInfernalBaseChoice: row.id === "infernal-sciences" && !row.item.system.chosen_base_practice_id,
+		chosenBase: row.item.system.chosen_base_practice_id || "",
+		chosenBaseLabel: row.item.system.chosen_base_practice_id
+			? game.i18n.localize(`wod.prism.infernal.base.${INFERNAL_BASE_LABEL_KEY[row.item.system.chosen_base_practice_id] ?? ""}`)
+			: ""
 	}));
 
 	// task 11.2 — each `practiceTraits.*` field is shown only when its OWNING Práctica's rating is

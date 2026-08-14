@@ -572,6 +572,19 @@ export async function DiceRoller(diceRoll) {
     ChatMessage.applyMode(chatData);
     ChatMessage.create(chatData);
 
+    // --- add-prism-of-focus-foundry integration seam (additive only) ---
+    // Every prior caller reads this function's RETURN VALUE (a plain success count) and nothing
+    // else — that contract is untouched. This mutates the passed-in `diceRoll` CONTAINER (by
+    // reference, same object the caller already holds) with the single-target roll's outcome
+    // ("success" | "fail" | "botch"), which callers may opt into reading afterward without any
+    // change to how they call this function. Needed because Goetia's catastrophic-failure branch
+    // and Vamamarga's own Jhor-resistance trigger (design.md D16) both need to know whether THIS
+    // cast botched/failed, a distinction the plain success count alone cannot make (a `success`
+    // Roll here just means "no reduction was applied", not the roll's true botch/fail/success
+    // classification computed above). Magic casting never populates `targetlist`, so there is
+    // always exactly one entry here.
+    diceRoll.lastRollResult = allDiceResult[0]?.rollResult ?? "";
+
     // --- wod20-combat-foundryvtt integration seam (additive only) ---
     // Broadcast every completed roll's success count so the combat-cards MODULE
     // can capture defense/soak results by (actor, origin). Purely additive:

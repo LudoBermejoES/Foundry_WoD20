@@ -3,6 +3,7 @@ import BonusHelper from "../../scripts/bonus-helpers.js"
 import SelectHelper from "../../scripts/select-helpers.js"
 import { calculateTotals } from "../../scripts/totals.js";
 import { stampDescriptionOverride } from "../../scripts/compendium-description.js";
+import { isSanctumBackgroundItem } from "../../scripts/prism-state-engine.js";
 
 export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 	
@@ -162,6 +163,16 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 			data.item.system.details = await foundry.applications.ux.TextEditor.implementation.enrichHTML(data.item.system.details, {async: true});
 		}
 
+		// add-prism-of-focus-foundry — design.md D5/task 8.1: Sanctum's two independent lists
+		// (`enabled_practices[]`/`anathema[]`), editable ONLY on the Sanctum-shaped Background item
+		// this actor already owns (matched by `isSanctumBackgroundItem`, since there is no literal
+		// `system.id === "sanctum"` in the shipped corpus — see that helper's own header note).
+		data.isSanctumItem = isSanctumBackgroundItem(data.item);
+		if (data.isSanctumItem) {
+			if (!Array.isArray(data.item.system.enabled_practices)) data.item.system.enabled_practices = [];
+			if (!Array.isArray(data.item.system.anathema)) data.item.system.anathema = [];
+		}
+
 		if (data.item.system?.type === "wod.types.shapeform") {
 			const icon = (data.item.system.icon ?? "").trim();
 			const tokenimage = (data.item.system.tokenimage ?? "").trim();
@@ -291,6 +302,17 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 		html
 			.find(".language-delete")
 			.click(this._onLanguageRemove.bind(this));
+
+		// add-prism-of-focus-foundry — task 8.1: Sanctum's `enabled_practices[]`/`anathema[]` list
+		// editors, same add/remove shape as the Idioma roster above but for TWO independent lists on
+		// the same item (`data-list` disambiguates which).
+		html
+			.find(".prism-sanctum-list-create")
+			.click(this._onSanctumListAdd.bind(this));
+
+		html
+			.find(".prism-sanctum-list-delete")
+			.click(this._onSanctumListRemove.bind(this));
 
 		if (this.item.type === "Trait" && this.item.system.type === "wod.types.shapeform") {
 			html
@@ -616,6 +638,68 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 		}
 
 		itemData.system.languages.splice(itemId, 1);
+		await this.item.update(itemData);
+		this.render();
+	}
+
+	/**
+	 * add-prism-of-focus-foundry — task 8.1: adds one `{practice_id, rating}` row to the Sanctum
+	 * item's `enabled_practices[]` OR `anathema[]` (`data-list` on the button picks which). Per
+	 * design.md D5/A9, an id already present in `enabled_practices` may never also be added to
+	 * `anathema` on the SAME Sanctum item, and vice versa — checked both ways here, at add time,
+	 * rather than only documented.
+	 */
+	async _onSanctumListAdd(event) {
+		event.preventDefault();
+
+		if (this.locked) {
+			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+			return;
+		}
+
+		const list = event.currentTarget.dataset.list;
+		if (list !== "enabled_practices" && list !== "anathema") return;
+
+		const row = $(event.currentTarget).closest(".prism-sanctum-list-add-row");
+		const practiceId = (row.find(".prism-sanctum-list-practice-input").val() || "").trim();
+		const rating = parseInt(row.find(".prism-sanctum-list-rating-input").val()) || 0;
+
+		if (practiceId === "") return;
+
+		const itemData = foundry.utils.duplicate(this.item);
+		const enabled = Array.isArray(itemData.system.enabled_practices) ? itemData.system.enabled_practices : [];
+		const anathema = Array.isArray(itemData.system.anathema) ? itemData.system.anathema : [];
+
+		const otherList = list === "enabled_practices" ? anathema : enabled;
+		if (otherList.some((entry) => entry?.practice_id === practiceId)) {
+			ui.notifications.warn(game.i18n.localize("wod.prism.sanctum.conflict"));
+			return;
+		}
+
+		itemData.system.enabled_practices = enabled;
+		itemData.system.anathema = anathema;
+		itemData.system[list].push({ practice_id: practiceId, rating });
+
+		await this.item.update(itemData);
+		this.render();
+	}
+
+	async _onSanctumListRemove(event) {
+		event.preventDefault();
+
+		if (this.locked) {
+			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+			return;
+		}
+
+		const list = event.currentTarget.dataset.list;
+		if (list !== "enabled_practices" && list !== "anathema") return;
+
+		const index = parseInt(event.currentTarget.dataset.index);
+		const itemData = foundry.utils.duplicate(this.item);
+		if (!Array.isArray(itemData.system[list])) itemData.system[list] = [];
+
+		itemData.system[list].splice(index, 1);
 		await this.item.update(itemData);
 		this.render();
 	}
