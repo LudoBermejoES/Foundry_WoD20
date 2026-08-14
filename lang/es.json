@@ -2301,6 +2301,188 @@
 			"breed": "Raza Cambiante",
 			"creature": "Criatura",
 			"chantry": "Capilla / Constructo"
+		},
+		"prism": {
+			"toggle": "Prisma de Foco (Preceptos + Prácticas)",
+			"section": {
+				"tenets": "Preceptos",
+				"practices": "Prácticas",
+				"practicetraits": "Rasgos de Práctica",
+				"corrupted": "Prácticas Corruptas",
+				"sanctum": "Sanctum",
+				"zones": "Zonas de Realidad",
+				"rituals": "Rituales"
+			},
+			"category": {
+				"metaphysical": "Metafísica",
+				"personal": "Personal",
+				"ascension": "Ascensión",
+				"social-role": "Rol social",
+				"epistemology": "Epistemología",
+				"openness": "Apertura",
+				"afterlife": "Vida después de la muerte"
+			},
+			"kind": {
+				"base": "Base",
+				"specialty": "Especialidad",
+				"corrupted": "Corrupta"
+			},
+			"corruptedstate": {
+				"clean": "Limpia",
+				"corrupted": "Corrupta"
+			},
+			"practice": {
+				"animalism": {
+					"benefit": "Animalismo: Beneficio (-1, tiradas de la Bestia del Corazón)",
+					"penalty": "Animalismo: Penalización (+1, Maravillas o vínculo a objeto físico)"
+				},
+				"appropriation": {
+					"benefit": "Apropiación: Beneficio (-1, tras dar sin esperar nada)",
+					"penalty": "Apropiación: Penalización (+1, usar una adquisición que aumenta riqueza/poder)"
+				},
+				"artofdesire": {
+					"benefit": "El Arte del Deseo: Beneficio (-1, Fórmulas basadas en Carisma)",
+					"penalty": "El Arte del Deseo: Penalización (+1, magia vulgar)"
+				},
+				"chaosmagick": {
+					"benefit": "Magia del caos: Beneficio (-1, primer lanzamiento rápido de un efecto nuevo)"
+				},
+				"charity": {
+					"benefit": "Caridad: Beneficio (-1, dar que empeora la posición del mago)"
+				},
+				"craftwork": {
+					"benefit": "Artesanía: Beneficio (-1, tiradas de Artesanía, incluida la magia)",
+					"penalty": "Artesanía: Penalización (+1, Instrumentos no hechos por el mago, no-Maravilla)"
+				},
+				"crazywisdom": {
+					"benefit": "Sabiduría loca: Beneficio (-1, mientras está en un estado alterado)",
+					"penalty": "Sabiduría loca: Penalización (+1, tiradas para volver a un estado mental normal)"
+				},
+				"cybernetics": {
+					"benefit": "Cibernética: Beneficio (-1, reducción tecnoasistida de Atributo+Habilidad)",
+					"penalty": "Cibernética: Penalización (+1, magia lanzada sin Instrumentos)"
+				},
+				"dominion": {
+					"benefit": "Dominio: Beneficio (-1, magia de mando/persuasión o coacción)",
+					"penalty": "Dominio: Penalización (+2, interactuar con algo demasiado poderoso para dominar)"
+				},
+				"elementalism": {
+					"benefit": "Elementalismo: Beneficio (-1, Instrumentos con el elemento primario elegido)",
+					"penalty": "Elementalismo: Penalización (+2, cuando se niega el elemento primario)"
+				},
+				"divinebond": {
+					"benefit": "Vínculo divino: Beneficio (-1 por cada umbral de Areté 1/3/5 alcanzado en los dominios elegidos)",
+					"penalty": "Vínculo divino: Penalización (+2, cuando se usa la vulnerabilidad elegida contra el mago)"
+				},
+				"highritualmagick": {
+					"benefit": "Alta Magia Ritual: Beneficio (-1, cualquier magia lanzada como ritual)",
+					"penalty": "Alta Magia Ritual: Penalización (+1, lanzamiento rápido que no es una Fórmula de AMR)"
+				},
+				"investment": {
+					"benefit": "Inversión: Beneficio (-1, efectos a largo plazo, meses/años)",
+					"penaltylabel": "Inversión: Penalización (efectos a corto plazo)",
+					"penalty": {
+						"subweek": "Menos de una semana (+1)",
+						"subday": "Menos de un día (+2)",
+						"immediate": "Inmediato (+3)"
+					}
+				},
+				"martialarts": {
+					"penalty": "Artes marciales: Penalización (Pelea − Artes Marciales, si es positivo)"
+				},
+				"medicinework": {
+					"benefit": "Medicina: Beneficio (-1, magia de curación)",
+					"penalty": "Medicina: Penalización (Paradoja vulgar forzada en daño directo, dificultad sin cambios)"
+				},
+				"mediumship": {
+					"benefit": "Mediumnidad: Beneficio (-1, trabajar con la Umbra de afinidad)",
+					"penaltylabel": "Mediumnidad: Penalización (resistir posesión)",
+					"penalty": {
+						"general": "Posesión general (+1)",
+						"affinity": "Posesión desde la Umbra de afinidad (+2)"
+					}
+				},
+				"realityhacking": {
+					"benefit": "Hackeo de la realidad: Beneficio (coincidente con explicación plausible)",
+					"penalty": "Hackeo de la realidad: Penalización (+1, magia vulgar)"
+				},
+				"shamanism": {
+					"benefit": "Chamanismo: Beneficio (Celosía, un punto menos con el entorno adecuado)"
+				},
+				"voudoun": {
+					"benefit": "Vudú: Beneficio (-1, bendecir/maldecir con vínculo simpático presente)",
+					"penalty": "Vudú: Penalización (+1, invocar un Loa sin relación previa)"
+				},
+				"weirdscience": {
+					"benefit": "Ciencia Extraña: Beneficio (+1 a quien analiza/contrarresta sin la Práctica)",
+					"penalty": "Ciencia Extraña: Penalización (+1, usarla contra tecnología mundana)"
+				},
+				"witchcraft": {
+					"benefit": "Brujería: Beneficio (-1, magia alineada con el ciclo elegido)",
+					"penalty": "Brujería: Penalización (restricción de tipo de Tass, no es un número)"
+				},
+				"yoga": {
+					"benefit": "Yoga: Beneficio (-1, efectos de autopreservación/expulsión)",
+					"penalty": "Yoga: Penalización (+1, efectos no centrados en el mago)"
+				}
+			},
+			"corrupted": {
+				"feralism": {
+					"benefit": "Feralismo: Beneficio (-1, magia violenta contra productos de la civilización)",
+					"penaltylabel": "Feralismo: Precio (penalización escalante contra la civilización)",
+					"penalty": {
+						"t1": "Leve (+1)",
+						"t2": "Moderado (+2)",
+						"t3": "Severo (+3)"
+					}
+				},
+				"abyssalism": {
+					"benefit": "Abismalismo: Beneficio (-1, ilusiones, mentiras, engaño mágico)",
+					"penalty": "Abismalismo: Precio (suelo de Silencio = mitad de la Práctica, redondeado arriba)"
+				},
+				"blackmass": {
+					"benefit": "La Misa Negra: Beneficio (-1, invocar espíritus hostiles a la Fe original)",
+					"penaltylabel": "La Misa Negra: Precio (penalización social y pérdida de Culto)",
+					"penalty": {
+						"private": "Privado (+1)",
+						"public": "Público (+2, expulsión de la congregación)"
+					}
+				},
+				"goetia": {
+					"benefit": "Goetia: Beneficio (-1, invocar un demonio por su nombre)",
+					"penalty": "Goetia: Precio (fallo catastrófico en vez de Paradoja)"
+				},
+				"infernalsciences": {
+					"benefitlabel": "Ciencias Infernales: Beneficio (Instrumento «alimentado» con daño a una víctima)",
+					"benefit": {
+						"hurt": "Herida (-1)",
+						"killed": "Víctima muerta (-2)"
+					},
+					"penalty": "Ciencias Infernales: Precio (+1, Ciencia/Tecnología mundana sin relación con dañar)"
+				},
+				"demonism": {
+					"benefit": "Demonismo: Beneficio (-1, tiradas Sociales con espíritus del Wyrm)",
+					"penalty": "Demonismo: Precio (+1, tiradas Sociales con alguien con Consciencia)"
+				},
+				"vamamarga": {
+					"benefit": "Vamamarga: Beneficio (-1, influir/controlar o introducir una influencia externa)",
+					"penalty": "Vamamarga: Precio (Resonancia Jhor propia, tirada de resistencia a dificultad 6)"
+				}
+			},
+			"dialog": {
+				"selectpractice": "Práctica que canaliza el efecto",
+				"stateassociated": "Asociada (-1)",
+				"statelimited": "Limitada (+1)",
+				"stateneutral": "Neutra (0)",
+				"formulabacked": "Este lanzamiento se basa en una Fórmula aprendida",
+				"improvisedpenaltynote": "Regla de casa de Prisma de Foco (no está en el libro): +1 si NO se basa en una Fórmula aprendida",
+				"applybenefit": "Aplicar Beneficio de la Práctica",
+				"applypenalty": "Aplicar Penalización de la Práctica",
+				"tier": "Magnitud",
+				"crossactor": "Personaje que analiza/contrarresta (Ciencia Extraña)",
+				"ratingbelowsphere": "Aviso: la puntuación de esta Práctica es menor que el nivel de Esfera lanzado (A11 es una puerta de compra, no se bloquea la tirada).",
+				"willpowerdisabled": "Fuerza de Voluntad para éxitos automáticos deshabilitada con Prisma de Foco activo (A19)"
+			}
 		}
 	}
 }

@@ -1,0 +1,20 @@
+{{!-- add-prism-of-focus-foundry — design.md D6. A minimal add/edit/remove list for one Scene's
+      `prismZones` flag: `{practice_id, value}}`, value -5..5 (A10's symmetric threshold). --}}
+<form class="wod20 wod-dialog prism-zone-form" autocomplete="off">
+	<div class="dialog-area">
+		<p class="information-area">{{localize 'wod.prism.section.zones'}}</p>
+
+		{{#each zones as |zone index|}}
+			<div class="prism-zone-row" style="display:flex; gap:6px; margin-bottom:4px;">
+				<input class="prism-zone-practice sheet-infoValues editable" type="text" value="{{zone.practice_id}}" placeholder="practice id" />
+				<input class="prism-zone-value sheet-infoValues editable numberBox" type="number" min="-5" max="5" value="{{zone.value}}" />
+				<a class="pointer prism-zone-delete" data-index="{{index}}"><i class="icon fa-solid fa-trash-can"></i></a>
+			</div>
+		{{/each}}
+	</div>
+
+	<div class="centerText">
+		<button type="button" class="button fullSplatColor pointer prism-zone-add">{{localize 'wod.labels.add.item'}}</button>
+		<button type="button" class="button fullSplatColor pointer prism-zone-save">{{localize 'wod.dialog.close'}}</button>
+	</div>
+</form>

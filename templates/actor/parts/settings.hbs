@@ -287,6 +287,17 @@
 				</div>
 			{{/if}}
 
+			{{!-- add-prism-of-focus-foundry — design.md D1: `hasprismoffocus` is AUTHORED (by the
+			      wodchar export, or here, manually), never derived every prepare pass like every
+			      sibling `has*` flag on this page. Mage-only; toggling it never deletes any Tenet/
+			      Practice item, it only hides/shows the structured section (Migration Plan). --}}
+			{{#if (eq actor.system.settings.splat config.splat.mage)}}
+				<div style="height: 26px; line-height: 26px; display: flex;">
+					<label class="headline splatFont dialog-casting-type-label">{{localize "wod.prism.toggle"}}</label>
+					<input class="headlineNormal" type="checkbox" name="system.settings.hasprismoffocus" data-dtype="Boolean" {{isChecked actor.system.settings.hasprismoffocus}} {{#if locked}}disabled{{/if}} />
+				</div>
+			{{/if}}
+
 			{{#if actor.system.settings.hasspheres}}
 				<div class="headlineGroup splatFont">{{localize "wod.spheres.spheres"}}</div>
 				<div class="clearareaBox information-area">{{localize "wod.settings.orderhint"}}</div>

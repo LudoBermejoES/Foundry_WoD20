@@ -92,7 +92,7 @@ export const AUTO_PRACTICE_RULES = {
 		benefit: { kind: "checkbox", modifier: -1, labelKey: "wod.prism.practice.investment.benefit" },
 		penalty: {
 			kind: "tiered",
-			labelKey: "wod.prism.practice.investment.penalty",
+			labelKey: "wod.prism.practice.investment.penaltylabel",
 			tiers: [
 				{ value: 1, labelKey: "wod.prism.practice.investment.penalty.subweek" },
 				{ value: 2, labelKey: "wod.prism.practice.investment.penalty.subday" },
@@ -114,7 +114,7 @@ export const AUTO_PRACTICE_RULES = {
 		// choice rather than two separate checkboxes.
 		penalty: {
 			kind: "tiered",
-			labelKey: "wod.prism.practice.mediumship.penalty",
+			labelKey: "wod.prism.practice.mediumship.penaltylabel",
 			traitField: "mediumshipUmbra",
 			tiers: [
 				{ value: 1, labelKey: "wod.prism.practice.mediumship.penalty.general" },
@@ -174,7 +174,7 @@ export const CORRUPTED_PRACTICE_RULES = {
 		benefit: { kind: "checkbox", modifier: -1, labelKey: "wod.prism.corrupted.feralism.benefit" },
 		penalty: {
 			kind: "tiered",
-			labelKey: "wod.prism.corrupted.feralism.penalty",
+			labelKey: "wod.prism.corrupted.feralism.penaltylabel",
 			tiers: [
 				{ value: 1, labelKey: "wod.prism.corrupted.feralism.penalty.t1" },
 				{ value: 2, labelKey: "wod.prism.corrupted.feralism.penalty.t2" },
@@ -193,7 +193,7 @@ export const CORRUPTED_PRACTICE_RULES = {
 		benefit: { kind: "checkbox", modifier: -1, labelKey: "wod.prism.corrupted.blackmass.benefit" },
 		penalty: {
 			kind: "tiered",
-			labelKey: "wod.prism.corrupted.blackmass.penalty",
+			labelKey: "wod.prism.corrupted.blackmass.penaltylabel",
 			tiers: [
 				{ value: 1, labelKey: "wod.prism.corrupted.blackmass.penalty.private" },
 				{ value: 2, labelKey: "wod.prism.corrupted.blackmass.penalty.public" }
@@ -212,7 +212,7 @@ export const CORRUPTED_PRACTICE_RULES = {
 		base: ["hypertech", "cybernetics", "weird-science"],
 		benefit: {
 			kind: "tiered",
-			labelKey: "wod.prism.corrupted.infernalsciences.benefit",
+			labelKey: "wod.prism.corrupted.infernalsciences.benefitlabel",
 			tiers: [
 				{ value: 1, labelKey: "wod.prism.corrupted.infernalsciences.benefit.hurt" },
 				{ value: 2, labelKey: "wod.prism.corrupted.infernalsciences.benefit.killed" }

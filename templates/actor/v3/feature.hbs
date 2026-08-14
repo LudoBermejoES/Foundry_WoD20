@@ -210,31 +210,49 @@
 			      pc-actor-sheet.js) for every actor, mage or not — see that function's own comment for
 			      why an unconditional build is the safer default in this sheet. --}}
 			{{#if (eq actor.system.settings.splat config.splat.mage)}}
-				<div class="v3-section v3-focusblock">
-					<h3 class="v3-sectiontitle splatFont">{{localize 'wod.spheres.paradigm'}}</h3>
-					{{#if mageFocusParadigms.length}}
-						<div class="v3-focuslist">
-							{{#each mageFocusParadigms as |item|}}
-								{{> "systems/worldofdarkness/templates/actor/parts/focus_item.hbs" item=item}}
-							{{/each}}
-						</div>
-					{{else}}
-						<p class="information-area">{{localize 'wod.labels.none'}}</p>
-					{{/if}}
-				</div>
+				{{!-- add-prism-of-focus-foundry — task 1.3: the structured section REPLACES the
+				      free-text-replacement Paradigm/Practice Focus-item lists when `hasprismoffocus`
+				      is active (they are the same underlying `wod.types.paradigm`/`wod.types.practice`
+				      Feature items link-mage-focus-as-items already reads, so both simply wouldn't
+				      show independent facts once a rated Práctica exists). Instrumentos is explicitly
+				      NOT touched (A25/C2 Non-goal) — that block always renders, prism or not. --}}
+				{{#unless prismActive}}
+					<div class="v3-section v3-focusblock">
+						<h3 class="v3-sectiontitle splatFont">{{localize 'wod.spheres.paradigm'}}</h3>
+						{{#if mageFocusParadigms.length}}
+							<div class="v3-focuslist">
+								{{#each mageFocusParadigms as |item|}}
+									{{> "systems/worldofdarkness/templates/actor/parts/focus_item.hbs" item=item}}
+								{{/each}}
+							</div>
+						{{else}}
+							<p class="information-area">{{localize 'wod.labels.none'}}</p>
+						{{/if}}
+					</div>
 
-				<div class="v3-section v3-focusblock">
-					<h3 class="v3-sectiontitle splatFont">{{localize 'wod.spheres.practice'}}</h3>
-					{{#if mageFocusPractices.length}}
-						<div class="v3-focuslist">
-							{{#each mageFocusPractices as |item|}}
-								{{> "systems/worldofdarkness/templates/actor/parts/focus_item.hbs" item=item}}
-							{{/each}}
-						</div>
-					{{else}}
-						<p class="information-area">{{localize 'wod.labels.none'}}</p>
-					{{/if}}
-				</div>
+					<div class="v3-section v3-focusblock">
+						<h3 class="v3-sectiontitle splatFont">{{localize 'wod.spheres.practice'}}</h3>
+						{{#if mageFocusPractices.length}}
+							<div class="v3-focuslist">
+								{{#each mageFocusPractices as |item|}}
+									{{> "systems/worldofdarkness/templates/actor/parts/focus_item.hbs" item=item}}
+								{{/each}}
+							</div>
+						{{else}}
+							<p class="information-area">{{localize 'wod.labels.none'}}</p>
+						{{/if}}
+					</div>
+				{{else}}
+					<div class="v3-section v3-focusblock">
+						{{> "systems/worldofdarkness/templates/actor/parts/mage/prism_tenets.hbs"}}
+					</div>
+					<div class="v3-section v3-focusblock">
+						{{> "systems/worldofdarkness/templates/actor/parts/mage/prism_practices.hbs"}}
+					</div>
+					<div class="v3-section v3-focusblock">
+						{{> "systems/worldofdarkness/templates/actor/parts/mage/prism_practice_traits.hbs"}}
+					</div>
+				{{/unless}}
 
 				<div class="v3-section v3-focusblock">
 					<h3 class="v3-sectiontitle splatFont">{{localize 'wod.spheres.instruments'}}</h3>

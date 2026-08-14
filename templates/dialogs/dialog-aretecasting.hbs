@@ -125,15 +125,83 @@
                     </div>
                     <div style="height: 26px; line-height: 26px; display: flex;">
                         <label for="useWillpower" class="headline splatFont dialog-casting-type-label">{{localize "wod.labels.usewillpower"}}</label>
-                        <input class="headlineNormal" name="object.useWillpower" type="checkbox" {{isChecked object.useWillpower}} />
+                        <input class="headlineNormal" name="object.useWillpower" type="checkbox" {{isChecked object.useWillpower}} {{#if prismActive}}disabled{{/if}} />
                     </div>
+                    {{#if prismActive}}
+                        <div class="information-area">{{localize "wod.prism.dialog.willpowerdisabled"}}</div>
+                    {{/if}}
                     <div style="height: 26px; line-height: 26px; display: flex;">
                         <label for="ignoreSphereBaseDifficulty" class="headline splatFont dialog-casting-type-label">{{localize "wod.labels.ignoreshpehre"}}</label>
                         <input class="headlineNormal" name="object.ignoreSphereBaseDifficulty" type="checkbox" {{isChecked object.ignoreSphereBaseDifficulty}} />
                     </div>
                 </div>
-            </div> 
-        </div>       
+
+                {{!-- add-prism-of-focus-foundry — design.md D4/D11/D12: the Práctica selector, the
+                      Fórmula-backed toggle (feeds C3 AND the corrupted-resistance trigger), and the
+                      selected Práctica's own Beneficio/Penalización checkboxes. Shown only when
+                      `hasprismoffocus` is active on the casting actor. --}}
+                {{#if prismActive}}
+                    <div class="dialog-group prism-casting-group">
+                        <div class="headline splatFont">{{localize "wod.types.tenet"}} / {{localize "wod.spheres.practice"}}</div>
+
+                        <div style="height: 26px; line-height: 26px; display: flex;">
+                            <label class="headline splatFont dialog-casting-type-label">{{localize "wod.prism.dialog.selectpractice"}}</label>
+                            <select name="object.prismPracticeId">
+                                <option value=""></option>
+                                {{#each prismPractices as |p|}}
+                                    <option value="{{p.id}}" {{#if (eq ../object.prismPracticeId p.id)}}selected{{/if}}>{{p.name}} ({{p.value}})</option>
+                                {{/each}}
+                            </select>
+                        </div>
+
+                        {{#if prismSelected}}
+                            <div class="information-area">
+                                {{#if (eq prismStateModifier -1)}}{{localize "wod.prism.dialog.stateassociated"}}{{/if}}
+                                {{#if (eq prismStateModifier 1)}}{{localize "wod.prism.dialog.statelimited"}}{{/if}}
+                                {{#if (eq prismStateModifier 0)}}{{localize "wod.prism.dialog.stateneutral"}}{{/if}}
+                            </div>
+                            {{#if prismRuleWarning}}
+                                <div class="information-area item-warning">{{prismRuleWarning}}</div>
+                            {{/if}}
+                            {{#if prismSelected.benefit_es}}
+                                <div class="information-area">{{{prismSelected.benefit_es}}}</div>
+                            {{/if}}
+                            {{#if prismSelected.penalty_es}}
+                                <div class="information-area">{{{prismSelected.penalty_es}}}</div>
+                            {{/if}}
+                        {{/if}}
+
+                        <div style="height: 26px; line-height: 26px; display: flex;">
+                            <label class="headline splatFont dialog-casting-type-label">{{localize "wod.prism.dialog.formulabacked"}}</label>
+                            <input class="headlineNormal" name="object.prismFormulaBacked" type="checkbox" {{isChecked object.prismFormulaBacked}} {{#if object.isRote}}disabled{{/if}} />
+                        </div>
+                        <div class="information-area">{{localize "wod.prism.dialog.improvisedpenaltynote"}}</div>
+
+                        {{#if prismRule.benefit}}
+                            <div style="height: 26px; line-height: 26px; display: flex;">
+                                <label class="headline splatFont dialog-casting-type-label">{{localize prismRule.benefit.labelKey}}</label>
+                                <input class="headlineNormal" name="object.prismCheckBenefit" type="checkbox" {{isChecked object.prismCheckBenefit}} />
+                            </div>
+                        {{/if}}
+                        {{#if prismRule.penalty}}
+                            <div style="height: 26px; line-height: 26px; display: flex;">
+                                <label class="headline splatFont dialog-casting-type-label">{{localize prismRule.penalty.labelKey}}</label>
+                                {{#if (eq prismRule.penalty.kind "tiered")}}
+                                    <select name="object.prismTier">
+                                        <option value="0"></option>
+                                        {{#each prismRule.penalty.tiers as |tier|}}
+                                            <option value="{{tier.value}}" {{#if (eq ../object.prismTier tier.value)}}selected{{/if}}>{{localize tier.labelKey}}</option>
+                                        {{/each}}
+                                    </select>
+                                {{else}}
+                                    <input class="headlineNormal" name="object.prismCheckPenalty" type="checkbox" {{isChecked object.prismCheckPenalty}} />
+                                {{/if}}
+                            </div>
+                        {{/if}}
+                    </div>
+                {{/if}}
+            </div>
+        </div>
     </div>
 
     <div class="dialog-area">

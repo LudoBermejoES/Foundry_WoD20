@@ -1,0 +1,29 @@
+{{!-- add-prism-of-focus-foundry — task 2.2: a Preceptos list, grouped by category, drag-from-
+      compendium add / remove. Each Tenet's Asociada/Limitada Práctica lists are shown read-only
+      (copied at pick time, per design.md D2 — never re-resolved live from the compendium). --}}
+<h3 class="v3-sectiontitle splatFont">{{localize 'wod.prism.section.tenets'}}</h3>
+
+<div class="space dialog-area flex-columns" data-drop-area="features" data-droparea="features">
+	{{#each prismTenetGroups as |rows category|}}
+		<div class="v3-focuslist">
+			<div class="headlineNormal" style="width:100%; font-weight:bold;">{{localize (concat "wod.prism.category." category)}}</div>
+			{{#each rows as |row|}}
+				<div class="v3-focusitem" data-itemid="{{row.item._id}}">
+					<span class="v3-focuslabel splatFont" title="{{row.item.name}}">{{row.item.name}}</span>
+					<i class="pullRight pointer icon collapsible button fa-solid fa-eye"
+						title="{{localize 'wod.labels.show.description'}}"
+						data-itemid="{{row.item._id}}"></i>
+					{{#if row.item.system.isremovable}}
+						<a class="pointer item-delete" title="{{localize 'wod.labels.remove.headline'}}" data-itemid="{{row.item._id}}" data-action="itemDelete"><i class="icon fa-solid fa-trash-can"></i></a>
+					{{/if}}
+					<div class="information-area">
+						{{#if row.associated.length}}<span>{{localize 'wod.prism.dialog.stateassociated'}}: {{row.associatedText}}</span>{{/if}}
+						{{#if row.limited.length}}<span> — {{localize 'wod.prism.dialog.statelimited'}}: {{row.limitedText}}</span>{{/if}}
+					</div>
+				</div>
+			{{/each}}
+		</div>
+	{{else}}
+		<p class="information-area">{{localize 'wod.labels.none'}}</p>
+	{{/each}}
+</div>

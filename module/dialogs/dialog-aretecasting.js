@@ -1,5 +1,7 @@
 import { DiceRoller } from "../scripts/roll-dice.js";
 import { DiceRollContainer } from "../scripts/roll-dice.js";
+import PrismHelper from "../scripts/prism-helpers.js";
+import { AUTO_PRACTICE_RULES } from "../scripts/prism-practice-data.js";
 
 /**
     * Handles the information needed to use magic.
@@ -69,6 +71,16 @@ export class Rote {
         this.keepDifficulty = false;
         this.totalSuccesses = 0;
         this.selectedMods = [];
+
+        // add-prism-of-focus-foundry — design.md D4/D11/D12. Only meaningful when the casting
+        // actor has `hasprismoffocus` active; every field below is a no-op otherwise (see
+        // `DialogAreteCasting._applyPrismModifiers`).
+        this.prismPracticeId = "";               // the Práctica channeling this cast (D4 selector)
+        this.prismFormulaBacked = (item != undefined); // is this cast backed by a learned Fórmula? (D11/D13)
+        this.prismCheckBenefit = false;         // D12 auto-bucket Beneficio checkbox
+        this.prismCheckPenalty = false;         // D12 auto-bucket Penalización checkbox
+        this.prismTier = 0;                      // D12 tiered-rule magnitude (Inversión, Mediumnidad, ...)
+        this.prismCrossActorUuid = "";           // A22 Ciencia Extraña's cross-actor target
 
         if (item != undefined) {
             this.name = item["name"];
@@ -216,7 +228,85 @@ export class DialogAreteCasting extends FormApplication {
              data.spheres = data.spheres.sort((a, b) => Number(a.system.settings.order) - Number(b.system.settings.order));
         }
 
+        // add-prism-of-focus-foundry — D4's casting-dialog Práctica selector, shown only when the
+        // ruleset is active on this actor (byte-identical dialog otherwise).
+        data.prismActive = PrismHelper.IsActive(this.actor);
+
+        if (data.prismActive) {
+            data.prismPractices = PrismHelper.ListOwnedPractices(this.actor).map((row) => ({
+                id: row.id,
+                name: row.item.name,
+                value: parseInt(row.item.system.value) || 0,
+                state: row.state,
+                benefit_es: row.mechanics.benefit_es ?? "",
+                penalty_es: row.mechanics.penalty_es ?? ""
+            }));
+
+            // D4 — default to the highest-rated Práctica covering the Sphere level being cast,
+            // remaining a plain, editable dropdown (never locking the field).
+            if (!this.object.prismPracticeId && data.prismPractices.length) {
+                const targetRank = this.object._highestRank();
+                const covering = data.prismPractices.filter((p) => targetRank < 0 || p.value >= targetRank);
+                const pool = covering.length ? covering : data.prismPractices;
+                this.object.prismPracticeId = pool.reduce((best, p) => (!best || p.value > best.value ? p : best), null)?.id ?? "";
+            }
+
+            const selected = data.prismPractices.find((p) => p.id === this.object.prismPracticeId) ?? null;
+            data.prismSelected = selected;
+            data.prismStateModifier = selected ? PrismHelper.CheckPracticeState(this.actor, selected.id) : 0;
+            data.prismRule = selected ? AUTO_PRACTICE_RULES[selected.id] : null;
+            data.prismRuleWarning = (selected && this.object._highestRank() > selected.value)
+                ? game.i18n.localize("wod.prism.dialog.ratingbelowsphere")
+                : "";
+        }
+
         return data;
+    }
+
+    /**
+     * D4/D11/D12/D15 — applies every Prisma de Foco modifier this dialog gathers, ADDITIONAL to
+     * the existing `sumSelectedDifficulty` the generic checkbox loop in `_updateObject` already
+     * computed. Kept as its own method (rather than folded into that loop) because these modifiers
+     * are keyed off a dynamically-selected Práctica, not a static per-checkbox `value` attribute the
+     * generic loop reads from the DOM.
+     * @returns {number} the extra difficulty modifier to add to `sumSelectedDifficulty`
+     */
+    _applyPrismModifiers() {
+        if (!PrismHelper.IsActive(this.actor)) return 0;
+        if (!this.object.prismPracticeId) return 0;
+
+        let extra = 0;
+        const practiceId = this.object.prismPracticeId;
+
+        extra += PrismHelper.CheckPracticeState(this.actor, practiceId);
+
+        const targetActor = this.object.prismCrossActorUuid
+            ? fromUuidSync?.(this.object.prismCrossActorUuid) ?? null
+            : null;
+
+        const benefit = PrismHelper.CheckPracticeBenefit(this.actor, practiceId, {
+            checked: this.object.prismCheckBenefit,
+            tier: this.object.prismTier,
+            targetActor
+        });
+        const penalty = PrismHelper.CheckPracticePenalty(this.actor, practiceId, {
+            checked: this.object.prismCheckPenalty,
+            tier: this.object.prismTier,
+            targetActor
+        });
+
+        extra += (benefit.modifier || 0) + (penalty.modifier || 0);
+        this.object.prismForcesCoincidental = !!benefit.forcesCoincidental;
+        this.object.prismForcesParadojaVulgar = !!penalty.forcesParadojaVulgar;
+
+        // C3/D11 — the general improvised-quick-cast +1, disjoint from Magia del caos's own
+        // Fórmula-only Penalización (D11's closing paragraph).
+        extra += PrismHelper.CheckImprovisedPenalty(this.object.prismFormulaBacked, practiceId);
+        if (practiceId === "chaos-magick") {
+            extra += PrismHelper.CheckChaosMagickFormulaPenalty(this.object.prismFormulaBacked);
+        }
+
+        return extra;
     }
 
     activateListeners(html) {
@@ -365,6 +455,19 @@ export class DialogAreteCasting extends FormApplication {
                     this.object[objectname] = parseInt(formValue);
                 }                
             }
+        }
+
+        // add-prism-of-focus-foundry — parsed OUTSIDE the generic `object.check_*`/`object.select_*`
+        // loops above (deliberately not prefixed `check_`/`select_`): their modifiers are dynamic,
+        // keyed off the selected Práctica, not a static per-checkbox `value` attribute the generic
+        // loop reads from the DOM.
+        if (PrismHelper.IsActive(this.actor)) {
+            this.object.prismPracticeId = formData["object.prismPracticeId"] ?? this.object.prismPracticeId;
+            this.object.prismCheckBenefit = !!formData["object.prismCheckBenefit"];
+            this.object.prismCheckPenalty = !!formData["object.prismCheckPenalty"];
+            this.object.prismTier = parseInt(formData["object.prismTier"]) || 0;
+            this.object.prismFormulaBacked = this.object.isRote ? true : !!formData["object.prismFormulaBacked"];
+            totalDiff += this._applyPrismModifiers();
         }
 
         this.object.quintessence = parseInt(formData["object.quintessence"]);
@@ -553,7 +656,14 @@ export class DialogAreteCasting extends FormApplication {
             powerRoll.woundpenalty = 0;
             powerRoll.difficulty = parseInt(this.object.totalDifficulty);           
             powerRoll.speciality = specialityRoll;
-            powerRoll.usewillpower = this.object.useWillpower;
+            // design.md D15/task 5.5 (cross-spec-audit-pass3 Arreglo #5) — A19's second clause:
+            // Willpower cannot buy an automatic success/bonus dice on an Areté/Fórmula roll once
+            // Prisma de Foco is active, overriding the base system's generic Willpower-spend path
+            // (`roll-dice.js`'s `usewillpower && !willpowerBonusDice` minimum-1-success rule) that is
+            // otherwise wired straight into this same casting flow. A mage who has not enabled
+            // Prisma de Foco is completely unaffected — this only forces the flag when the ruleset
+            // is on, never touches the checkbox's behavior on a non-Areté roll.
+            powerRoll.usewillpower = PrismHelper.IsActive(this.actor) ? false : this.object.useWillpower;
             powerRoll.specialityText = specialityText;
             powerRoll.dicetext = template;
             powerRoll.extraInfo = extraInfo;

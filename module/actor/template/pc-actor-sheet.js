@@ -35,6 +35,7 @@ import { buildTraitCompendiumUuidMap } from "../../scripts/trait-enrichment.js";
 import { resolveDescription } from "../../scripts/compendium-description.js";
 import { getSplat } from "../../scripts/splat-helpers.js";
 import ItemViewer from "../../applications/item-viewer.js";
+import PrismHelper from "../../scripts/prism-helpers.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api
 
@@ -1488,6 +1489,59 @@ export const prepareBioContext = async function (context, actor) {
 	return addBioContext(context, actor);
 }
 
+/**
+ * add-prism-of-focus-foundry — builds the render context for the structured Preceptos+Prácticas
+ * section (task groups 1-3/8/11), a sibling of the free-text Focus items `addBioContext` builds
+ * just above this function's one caller. Built for every actor (mirroring `addBioContext`'s own
+ * "unconditional build, template gates on splat/flag" convention) — `context.prismActive` is what
+ * actually decides whether the template renders anything.
+ * @param {object} context
+ * @param {Actor} actor
+ * @returns {object} context, for chaining
+ */
+export const preparePrismContext = function (context, actor) {
+	context.prismActive = PrismHelper.IsActive(actor);
+	if (!context.prismActive) return context;
+
+	const tenetRows = PrismHelper.ListOwnedTenets(actor).map((row) => ({
+		...row,
+		associatedText: row.associated.join(", "),
+		limitedText: row.limited.join(", ")
+	}));
+	context.prismTenetGroups = {};
+	for (const row of tenetRows) {
+		const category = row.category || "othertraits";
+		(context.prismTenetGroups[category] ??= []).push(row);
+	}
+
+	context.prismPractices = PrismHelper.ListOwnedPractices(actor).map((row) => ({
+		item: row.item,
+		id: row.id,
+		kind: row.kind,
+		state: row.state,
+		value: parseInt(row.item.system.value) || 0,
+		corruptedState: row.item.system.corrupted_state || "clean",
+		benefit_es: row.mechanics.benefit_es ?? "",
+		penalty_es: row.mechanics.penalty_es ?? "",
+		price_es: row.mechanics.price_es ?? ""
+	}));
+
+	// task 11.2 — each `practiceTraits.*` field is shown only when its OWNING Práctica's rating is
+	// above 0 (display gate is per-Práctica; storage stays per-actor, design.md D9).
+	const ratingFor = (practiceId) => context.prismPractices.find((p) => p.id === practiceId)?.value ?? 0;
+	context.prismTraitsVisible = {
+		heartBeast: ratingFor("animalism") > 0,
+		primaryElement: ratingFor("elementalism") > 0,
+		godBonding: ratingFor("divine-bond") > 0,
+		mediumshipUmbra: ratingFor("mediumship") > 0,
+		shamanismEnvironment: ratingFor("shamanism") > 0,
+		witchcraftCycle: ratingFor("witchcraft") > 0
+	};
+	context.practiceTraits = actor.system.practiceTraits;
+
+	return context;
+}
+
 /** The content module whose provenance flags the sheet reads. Same constant, same reason, as in
  *  `trait-enrichment.js` and `compendium-description.js`. */
 const COMPENDIUM_MODULE = "wod20-compendium-es";
@@ -2262,6 +2316,11 @@ export const prepareFeatureContext = async function (context, actor) {
 	// consumes. `addBioContext` deliberately does not set `context.tab` — this function already
 	// set it to `tabs.feature` above, and that is the tab the merged Personaje view highlights.
 	await addBioContext(context, actor);
+
+	// add-prism-of-focus-foundry — task groups 1-3/11: the structured Preceptos+Prácticas section,
+	// alongside the free-text Focus items `addBioContext` just built. See `preparePrismContext`'s
+	// own header for why this lives here rather than in a dedicated part.
+	preparePrismContext(context, actor);
 
 	// backgrounds / merits / flaws / othertraits - shared with the Attributes tab's Advantages
 	// block, so the two views can never disagree. See prepareAdvantageLists.

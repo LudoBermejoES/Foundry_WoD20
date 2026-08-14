@@ -4,6 +4,7 @@
  */
 
 import { maybeEnrichAbilityOnRename } from "./scripts/ability-enrichment.js";
+import { PrismZoneDialog } from "./dialogs/dialog-prism-zone.js";
 
 /**
  * Is the user in the dark theme?
@@ -629,6 +630,28 @@ export function registerHooks(constants, isTablet) {
 		}
 
 		dragRuler.registerSystem("worldofdarkness", GndWoD20thSpeedProvider)
+	});
+
+	/**
+	 * Hook: renderSceneConfig
+	 * add-prism-of-focus-foundry — design.md D6: a Zona de Realidad is a Scene property
+	 * (`scene.flags["worldofdarkness"].prismZones`), edited from a small dialog opened from the
+	 * Scene's OWN controls — its Configuration sheet — rather than a new sheet type or Journal page.
+	 */
+	Hooks.on("renderSceneConfig", (app, html) => {
+		const container = html instanceof HTMLElement ? html : html[0];
+		if (!container || container.querySelector(".prism-zone-button")) return;
+
+		const footer = container.querySelector("footer") ?? container;
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = "prism-zone-button";
+		button.textContent = game.i18n.localize("wod.prism.section.zones");
+		button.addEventListener("click", (event) => {
+			event.preventDefault();
+			new PrismZoneDialog(app.document ?? app.object).render(true);
+		});
+		footer.prepend(button);
 	});
 }
 

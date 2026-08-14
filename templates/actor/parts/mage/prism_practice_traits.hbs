@@ -1,0 +1,48 @@
+{{!-- add-prism-of-focus-foundry — task 11.2: the §4.2 creation-trait fields, one per owning
+      Práctica, shown ONLY when that Práctica's rating is above 0 (display gate is per-Práctica;
+      storage is `system.practiceTraits.*` on the ACTOR, design.md D9 — do not conflate the two). --}}
+{{#if (or prismTraitsVisible.heartBeast prismTraitsVisible.primaryElement prismTraitsVisible.godBonding prismTraitsVisible.mediumshipUmbra prismTraitsVisible.shamanismEnvironment prismTraitsVisible.witchcraftCycle)}}
+	<h3 class="v3-sectiontitle splatFont">{{localize 'wod.prism.section.practicetraits'}}</h3>
+
+	{{#if prismTraitsVisible.heartBeast}}
+		<div style="height: 26px; line-height: 26px; display: flex;">
+			<label class="headline splatFont dialog-casting-type-label">{{localize 'wod.prism.practice.animalism.benefit'}}</label>
+			<input class="sheet-infoValues editable" type="text" name="system.practiceTraits.heartBeast" value="{{practiceTraits.heartBeast}}" />
+		</div>
+	{{/if}}
+	{{#if prismTraitsVisible.primaryElement}}
+		<div style="height: 26px; line-height: 26px; display: flex;">
+			<label class="headline splatFont dialog-casting-type-label">{{localize 'wod.prism.practice.elementalism.benefit'}}</label>
+			<input class="sheet-infoValues editable" type="text" name="system.practiceTraits.primaryElement" value="{{practiceTraits.primaryElement}}" />
+		</div>
+	{{/if}}
+	{{#if prismTraitsVisible.godBonding}}
+		<div style="height: 26px; line-height: 26px; display: flex;">
+			<label class="headline splatFont dialog-casting-type-label">{{localize 'wod.prism.practice.divinebond.penalty'}}</label>
+			<input class="sheet-infoValues editable" type="text" name="system.practiceTraits.godBondingVulnerability" value="{{practiceTraits.godBondingVulnerability}}" />
+		</div>
+		<div class="information-area">
+			{{#each practiceTraits.godBondingDomains as |domain|}}
+				<span>{{domain.domain}} (Areté {{domain.areteThreshold}})</span>
+			{{/each}}
+		</div>
+	{{/if}}
+	{{#if prismTraitsVisible.mediumshipUmbra}}
+		<div style="height: 26px; line-height: 26px; display: flex;">
+			<label class="headline splatFont dialog-casting-type-label">{{localize 'wod.prism.practice.mediumship.benefit'}}</label>
+			<input class="sheet-infoValues editable" type="text" name="system.practiceTraits.mediumshipUmbra" value="{{practiceTraits.mediumshipUmbra}}" />
+		</div>
+	{{/if}}
+	{{#if prismTraitsVisible.shamanismEnvironment}}
+		<div style="height: 26px; line-height: 26px; display: flex;">
+			<label class="headline splatFont dialog-casting-type-label">{{localize 'wod.prism.practice.shamanism.benefit'}}</label>
+			<input class="sheet-infoValues editable" type="text" name="system.practiceTraits.shamanismEnvironment" value="{{practiceTraits.shamanismEnvironment}}" />
+		</div>
+	{{/if}}
+	{{#if prismTraitsVisible.witchcraftCycle}}
+		<div style="height: 26px; line-height: 26px; display: flex;">
+			<label class="headline splatFont dialog-casting-type-label">{{localize 'wod.prism.practice.witchcraft.benefit'}}</label>
+			<input class="sheet-infoValues editable" type="text" name="system.practiceTraits.witchcraftCycle" value="{{practiceTraits.witchcraftCycle}}" />
+		</div>
+	{{/if}}
+{{/if}}

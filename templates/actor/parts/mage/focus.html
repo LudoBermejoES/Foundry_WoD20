@@ -1,5 +1,19 @@
 {{#if (ne (checkSystemsetting "viewBiotabPermission") "mini")}}
 
+    {{!-- add-prism-of-focus-foundry — task 1.3: this legacy v2 free-text Focus box is REPLACED
+          (not merely supplemented) once `hasprismoffocus` is active. The structured Preceptos+
+          Prácticas section itself only renders on the v3 sheet (`v3/feature.hbs`) — this v2
+          Bio tab has no equivalent context builder wired (`prepareBioContext` never calls
+          `preparePrismContext`, only v3's `prepareFeatureContext` does) — so a v2 user sees a
+          pointer to the v3 sheet rather than a duplicated, un-fed UI. --}}
+    {{#if actor.system.settings.hasprismoffocus}}
+        <div class="clearareaBox sheet-area flex-columns">
+            <div class="clearareaBox area-box">
+                <p class="information-area">{{localize 'wod.prism.toggle'}} — {{localize 'wod.sheet.pcv3'}}</p>
+            </div>
+        </div>
+    {{else}}
+
     <div class="clearareaBox sheet-area flex-columns">
 
         <div class="clearareaBox area-box">
@@ -28,5 +42,7 @@
 
         </div>
     </div>
+
+    {{/if}}
 
 {{/if}}

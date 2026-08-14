@@ -2317,6 +2317,188 @@
 			"breed": "Changing Breed",
 			"creature": "Creature",
 			"chantry": "Chantry / Construct"
+		},
+		"prism": {
+			"toggle": "Prism of Focus (Tenets + Practices)",
+			"section": {
+				"tenets": "Tenets",
+				"practices": "Practices",
+				"practicetraits": "Practice Traits",
+				"corrupted": "Corrupted Practices",
+				"sanctum": "Sanctum",
+				"zones": "Zones of Reality",
+				"rituals": "Rituals"
+			},
+			"category": {
+				"metaphysical": "Metaphysical",
+				"personal": "Personal",
+				"ascension": "Ascension",
+				"social-role": "Social Role",
+				"epistemology": "Epistemology",
+				"openness": "Openness",
+				"afterlife": "Afterlife"
+			},
+			"kind": {
+				"base": "Base",
+				"specialty": "Specialty",
+				"corrupted": "Corrupted"
+			},
+			"corruptedstate": {
+				"clean": "Clean",
+				"corrupted": "Corrupted"
+			},
+			"practice": {
+				"animalism": {
+					"benefit": "Animalism: Benefit (-1, Heart Beast rolls)",
+					"penalty": "Animalism: Penalty (+1, Wonders or binding to a physical object)"
+				},
+				"appropriation": {
+					"benefit": "Appropriation: Benefit (-1, after giving without expecting anything)",
+					"penalty": "Appropriation: Penalty (+1, using a wealth/power-increasing acquisition)"
+				},
+				"artofdesire": {
+					"benefit": "The Art of Desire: Benefit (-1, Charisma-based Rotes)",
+					"penalty": "The Art of Desire: Penalty (+1, vulgar magic)"
+				},
+				"chaosmagick": {
+					"benefit": "Chaos Magick: Benefit (-1, first quick-cast of a new effect)"
+				},
+				"charity": {
+					"benefit": "Charity: Benefit (-1, giving that leaves the mage worse off)"
+				},
+				"craftwork": {
+					"benefit": "Craftwork: Benefit (-1, Craft-skill rolls, including magic)",
+					"penalty": "Craftwork: Penalty (+1, Instruments the mage did not make, non-Wonder)"
+				},
+				"crazywisdom": {
+					"benefit": "Crazy Wisdom: Benefit (-1, while in an altered state)",
+					"penalty": "Crazy Wisdom: Penalty (+1, rolls to return to a normal mental state)"
+				},
+				"cybernetics": {
+					"benefit": "Cybernetics: Benefit (-1, tech-assisted Attribute+Ability reduction)",
+					"penalty": "Cybernetics: Penalty (+1, magic cast with no Instruments)"
+				},
+				"dominion": {
+					"benefit": "Dominion: Benefit (-1, command/persuasion or coercion magic)",
+					"penalty": "Dominion: Penalty (+2, interacting with something too powerful to dominate)"
+				},
+				"elementalism": {
+					"benefit": "Elementalism: Benefit (-1, Instruments incorporating the chosen element)",
+					"penalty": "Elementalism: Penalty (+2, when denied the chosen element)"
+				},
+				"divinebond": {
+					"benefit": "Divine Bond: Benefit (-1 per Arete 1/3/5 threshold reached in the chosen domains)",
+					"penalty": "Divine Bond: Penalty (+2, when the chosen vulnerability is used against the mage)"
+				},
+				"highritualmagick": {
+					"benefit": "High Ritual Magick: Benefit (-1, any ritual-cast magic)",
+					"penalty": "High Ritual Magick: Penalty (+1, quick-cast magic that is not an HRM Rote)"
+				},
+				"investment": {
+					"benefit": "Investment: Benefit (-1, long-term effects, months/years)",
+					"penaltylabel": "Investment: Penalty (short-term effects)",
+					"penalty": {
+						"subweek": "Under a week (+1)",
+						"subday": "Under a day (+2)",
+						"immediate": "Immediate (+3)"
+					}
+				},
+				"martialarts": {
+					"penalty": "Martial Arts: Penalty (Brawl minus Martial Arts, when positive)"
+				},
+				"medicinework": {
+					"benefit": "Medicine: Benefit (-1, healing magic)",
+					"penalty": "Medicine: Penalty (forces vulgar Paradox on direct harm, difficulty unchanged)"
+				},
+				"mediumship": {
+					"benefit": "Mediumship: Benefit (-1, working with the affinity Umbra)",
+					"penaltylabel": "Mediumship: Penalty (resisting possession)",
+					"penalty": {
+						"general": "General possession (+1)",
+						"affinity": "Possession from the affinity Umbra (+2)"
+					}
+				},
+				"realityhacking": {
+					"benefit": "Reality Hacking: Benefit (coincidental with a plausible explanation)",
+					"penalty": "Reality Hacking: Penalty (+1, vulgar magic)"
+				},
+				"shamanism": {
+					"benefit": "Shamanism: Benefit (Lattice, one point lower with the right environment)"
+				},
+				"voudoun": {
+					"benefit": "Voudoun: Benefit (-1, blessing/cursing with a sympathetic link present)",
+					"penalty": "Voudoun: Penalty (+1, invoking an unaligned Loa)"
+				},
+				"weirdscience": {
+					"benefit": "Weird Science: Benefit (+1 to whoever analyzes/counters it without the Practice)",
+					"penalty": "Weird Science: Penalty (+1, using it against mundane technology)"
+				},
+				"witchcraft": {
+					"benefit": "Witchcraft: Benefit (-1, magic aligned with the chosen cycle)",
+					"penalty": "Witchcraft: Penalty (Tass-type restriction, not a dice number)"
+				},
+				"yoga": {
+					"benefit": "Yoga: Benefit (-1, self-preservation/expulsion effects)",
+					"penalty": "Yoga: Penalty (+1, effects not centered on the mage)"
+				}
+			},
+			"corrupted": {
+				"feralism": {
+					"benefit": "Feralism: Benefit (-1, violent magic aimed at products of civilization)",
+					"penaltylabel": "Feralism: Price (escalating penalty against civilization)",
+					"penalty": {
+						"t1": "Mild (+1)",
+						"t2": "Moderate (+2)",
+						"t3": "Severe (+3)"
+					}
+				},
+				"abyssalism": {
+					"benefit": "Abyssalism: Benefit (-1, illusions, lies, magical deception)",
+					"penalty": "Abyssalism: Price (Silence floor = half the Practice, rounded up)"
+				},
+				"blackmass": {
+					"benefit": "The Black Mass: Benefit (-1, invoking spirits hostile to the mage's original Faith)",
+					"penaltylabel": "The Black Mass: Price (social penalty and loss of Culto)",
+					"penalty": {
+						"private": "Private (+1)",
+						"public": "Public (+2, expelled from congregation)"
+					}
+				},
+				"goetia": {
+					"benefit": "Goetia: Benefit (-1, invoking a demon by name)",
+					"penalty": "Goetia: Price (catastrophic failure instead of Paradox)"
+				},
+				"infernalsciences": {
+					"benefitlabel": "Infernal Sciences: Benefit (a \"fed\" Instrument, harm to an unwilling victim)",
+					"benefit": {
+						"hurt": "Injured (-1)",
+						"killed": "Victim killed (-2)"
+					},
+					"penalty": "Infernal Sciences: Price (+1, mundane Science/Tech unrelated to causing harm)"
+				},
+				"demonism": {
+					"benefit": "Demonism: Benefit (-1, Social rolls with Wyrm-aligned spirits)",
+					"penalty": "Demonism: Price (+1, Social rolls with anyone holding Consciousness)"
+				},
+				"vamamarga": {
+					"benefit": "Vamamarga: Benefit (-1, influencing/controlling or introducing an outside influence)",
+					"penalty": "Vamamarga: Price (its own Jhor Resonance, difficulty-6 resistance roll)"
+				}
+			},
+			"dialog": {
+				"selectpractice": "Practice channeling this effect",
+				"stateassociated": "Associated (-1)",
+				"statelimited": "Limited (+1)",
+				"stateneutral": "Neutral (0)",
+				"formulabacked": "This cast is backed by a learned Rote",
+				"improvisedpenaltynote": "Prism of Focus house rule (not in the book): +1 if NOT backed by a learned Rote",
+				"applybenefit": "Apply the Practice's Benefit",
+				"applypenalty": "Apply the Practice's Penalty",
+				"tier": "Magnitude",
+				"crossactor": "Character analyzing/countering (Weird Science)",
+				"ratingbelowsphere": "Warning: this Practice's rating is below the Sphere level being cast (A11 is a purchase-time gate, not a per-roll block).",
+				"willpowerdisabled": "Willpower-for-automatic-successes disabled while Prism of Focus is active (A19)"
+			}
 		}
 	}
 }

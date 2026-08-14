@@ -1,0 +1,47 @@
+{{!-- add-prism-of-focus-foundry — task 3.3: the Prácticas dot-allocator (0-5). Each row shows its
+      derived `prism_state` (Asociada/Limitada/Neutra), a warning when `corrupted_state ===
+      "corrupted"`, and the Práctica's `benefit_es`/`penalty_es`/`price_es` text resolved LIVE from
+      the compendium (never copied onto the owned item — task 6.4/10.7). The dot control reuses the
+      exact `editDot`/`resource-value` markup `power_spheres.hbs` already establishes for a rated
+      owned Item, so no new binder is needed (`editDot` -> `OnDotCounterChange`). --}}
+<h3 class="v3-sectiontitle splatFont">{{localize 'wod.prism.section.practices'}}</h3>
+
+<div class="space dialog-area flex-columns" data-drop-area="features" data-droparea="features">
+	{{#each prismPractices as |row|}}
+		<div class="v3-focusitem" data-itemid="{{row.item._id}}" style="width:100%;">
+			<span class="v3-focuslabel splatFont" title="{{row.item.name}}">
+				{{row.item.name}} ({{localize (concat "wod.prism.kind." row.kind)}})
+			</span>
+
+			<div class="resource-value pullLeft"
+				data-itemid="{{row.item._id}}"
+				data-name="system.value">
+				{{#numLoop 5}}
+					<span class="resource-value-step {{#if (gte row.value (add this 1))}}active{{/if}}" data-action="editDot" data-type="{{../config.sheettype.mage}}" data-index="{{this}}" data-itemid="{{row.item._id}}" data-ability="core"></span>
+				{{/numLoop}}
+			</div>
+
+			<i class="pullRight pointer icon collapsible button fa-solid fa-eye"
+				title="{{localize 'wod.labels.show.description'}}"
+				data-itemid="{{row.item._id}}"></i>
+			{{#if row.item.system.isremovable}}
+				<a class="pointer item-delete" title="{{localize 'wod.labels.remove.headline'}}" data-itemid="{{row.item._id}}" data-action="itemDelete"><i class="icon fa-solid fa-trash-can"></i></a>
+			{{/if}}
+
+			<div class="information-area">
+				{{#if (eq row.state "associated")}}{{localize 'wod.prism.dialog.stateassociated'}}{{/if}}
+				{{#if (eq row.state "limited")}}{{localize 'wod.prism.dialog.statelimited'}}{{/if}}
+				{{#if (eq row.state "neutral")}}{{localize 'wod.prism.dialog.stateneutral'}}{{/if}}
+				{{#if (eq row.corruptedState "corrupted")}}
+					<span class="item-warning">{{localize 'wod.prism.corruptedstate.corrupted'}}</span>
+				{{/if}}
+			</div>
+
+			{{#if row.benefit_es}}<div class="information-area">{{{row.benefit_es}}}</div>{{/if}}
+			{{#if row.penalty_es}}<div class="information-area">{{{row.penalty_es}}}</div>{{/if}}
+			{{#if row.price_es}}<div class="information-area">{{{row.price_es}}}</div>{{/if}}
+		</div>
+	{{else}}
+		<p class="information-area">{{localize 'wod.labels.none'}}</p>
+	{{/each}}
+</div>
