@@ -47,6 +47,26 @@ function findOwnedPracticeItem(actor, practiceId) {
 	return null;
 }
 
+/** Base-or-specialty scan shared by `ResolvePracticeForFormula` (D13) and `ResolvePracticeRating`
+ *  (followups D4): an owned Especialidad satisfies its base Práctica's id exactly like the base
+ *  item itself would, per `getBasePracticeId`. */
+function findPracticeOrSpecialtyItem(actor, practiceId) {
+	if (!practiceId) return null;
+	for (const item of actor?.items ?? []) {
+		if (!isPracticeItem(item)) continue;
+		const id = getPracticeId(item);
+		const kind = getPracticeKind(item, mechanicsOf);
+		const base = kind === "specialty" ? getBasePracticeId(item, mechanicsOf) : id;
+		if (id === practiceId || base === practiceId) return item;
+	}
+	return null;
+}
+
+/** Maps a maneuver's `dice2` ability key to the Práctica id that can substitute for it, for
+ *  followups D4's dialog-item.js branch. Only `martialarts` today (the Do → Artes Marciales case);
+ *  extend here, not at the call site, if another Ability/Práctica pair needs the same treatment. */
+const DICE2_PRACTICE_ID = { martialarts: "martial-arts" };
+
 function getPermanentArete(actor) {
 	if (actor?.type === "PC") {
 		const arete = actor.api?.getAdvantage?.("arete");
@@ -271,16 +291,24 @@ export default class PrismHelper {
 		const practiceId = mech.practice_id ?? formulaItem?.system?.practice_id ?? "";
 		if (!practiceId) return null;
 
-		for (const item of actor?.items ?? []) {
-			if (!isPracticeItem(item)) continue;
-			const id = getPracticeId(item);
-			const kind = getPracticeKind(item, mechanicsOf);
-			const base = kind === "specialty" ? getBasePracticeId(item, mechanicsOf) : id;
-			if (id === practiceId || base === practiceId) {
-				return { item, rating: parseInt(item?.system?.value ?? 0) || 0, practiceId };
-			}
-		}
-		return null;
+		const item = findPracticeOrSpecialtyItem(actor, practiceId);
+		return item ? { item, rating: parseInt(item?.system?.value ?? 0) || 0, practiceId } : null;
+	}
+
+	/**
+	 * followups design.md D4 — the Do → Artes Marciales maneuver-resolution gap. Resolves the rating
+	 * an owned Práctica (base or Especialidad) grants for a plain ability key, without a Fórmula item
+	 * in hand — `dialog-item.js`'s `dice2` chain calls this for a `hasprismoffocus` actor before
+	 * falling through to the ordinary Ability lookup, which never sees a Práctica Feature item.
+	 * @param {Actor} actor
+	 * @param {string} abilityKey - e.g. "martialarts"
+	 * @returns {{item: Item, rating: number}|null}
+	 */
+	static ResolvePracticeRating(actor, abilityKey) {
+		const practiceId = DICE2_PRACTICE_ID[abilityKey];
+		if (!practiceId) return null;
+		const item = findPracticeOrSpecialtyItem(actor, practiceId);
+		return item ? { item, rating: parseInt(item?.system?.value ?? 0) || 0 } : null;
 	}
 
 	/**

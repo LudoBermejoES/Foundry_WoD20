@@ -460,6 +460,33 @@ test("every other corrupted Práctica just uses its own item's rating (no chosen
 	assert.equal(PrismHelper.ResolveCorruptedResistancePoolRating(actor, feralismItem), 3);
 });
 
+console.log("PrismHelper.ResolvePracticeRating (followups design.md D4 — the Do -> Artes Marciales maneuver-resolution gap)");
+
+test("resolves an owned BASE Práctica's rating for its mapped ability key", () => {
+	const martialArts = fakePractice("martial-arts", "base", "", { value: 3 });
+	const actor = { items: [martialArts] };
+	const resolved = PrismHelper.ResolvePracticeRating(actor, "martialarts");
+	assert.equal(resolved.rating, 3);
+	assert.equal(resolved.item, martialArts);
+});
+
+test("resolves an owned ESPECIALIDAD's rating when no base item is owned (the Do case)", () => {
+	const doSpecialty = fakePractice("do", "specialty", "martial-arts", { value: 2 });
+	const actor = { items: [doSpecialty] };
+	const resolved = PrismHelper.ResolvePracticeRating(actor, "martialarts");
+	assert.equal(resolved.rating, 2, "reads the Do Especialidad's own rating, not a fallback of 0");
+});
+
+test("returns null for an ability key with no Práctica mapping", () => {
+	const actor = { items: [fakePractice("martial-arts", "base", "", { value: 5 })] };
+	assert.equal(PrismHelper.ResolvePracticeRating(actor, "brawl"), null);
+});
+
+test("returns null when the actor owns no matching Práctica or Especialidad", () => {
+	const actor = { items: [fakePractice("dominion", "base", "", { value: 4 })] };
+	assert.equal(PrismHelper.ResolvePracticeRating(actor, "martialarts"), null);
+});
+
 console.log("PrismHelper.EvaluateVulgarity (D5/D6 — Sanctum + Zona, coupled by default)");
 
 function fakeSanctumActor({ anathema = [], enabled = [] } = {}) {

@@ -1,6 +1,7 @@
 import { DiceRoller } from "../scripts/roll-dice.js";
 import { DiceRollContainer } from "../scripts/roll-dice.js";
 import CombatHelper from "../scripts/combat-helpers.js";
+import PrismHelper from "../scripts/prism-helpers.js";
 
 export class Magicitem {
     constructor(item) {
@@ -55,7 +56,40 @@ export class DialogItem extends FormApplication {
     /** @override */
 	get template() {
         return "systems/worldofdarkness/templates/dialogs/dialog-item.hbs";
-	}    
+	}
+
+    /**
+     * followups design.md D4 — the Do -> Artes Marciales maneuver-resolution gap. A `dice2` ability
+     * key like "martialarts" normally resolves against an owned Ability item; a Prisma de Foco
+     * actor's "Artes Marciales" rating lives only on a Práctica Feature item instead (Prácticas are
+     * never written into `actor.system.abilities`), and a standard (non-Prism) Do character's rating
+     * lives only on a player-named secondary-Ability Trait item, neither of which the ordinary chain
+     * below ever sees. Returns an override `{value, label}` when one of those applies, or `null` to
+     * let the ordinary chain run unchanged.
+     * @param {string} dice2
+     * @returns {{value: number, label: string}|null}
+     */
+    _resolveManeuverAbilityOverride(dice2) {
+        if (PrismHelper.IsActive(this.actor)) {
+            const resolved = PrismHelper.ResolvePracticeRating(this.actor, dice2);
+            return resolved ? { value: resolved.rating, label: resolved.item.name } : null;
+        }
+
+        // Pre-existing, non-Prism-of-Focus bug found in the same research: a standard Do character's
+        // rating lives on a secondary-Ability Trait item they name "Do" (this system has no fixed
+        // "do" Ability slot), matched by name the same way `ItemHelper.GetPowerId` already matches
+        // parent powers by name elsewhere in this codebase.
+        if (dice2 === "martialarts") {
+            const doItem = (this.actor?.items ?? []).find((item) =>
+                item.system?.type === "wod.types.talentsecondability" &&
+                (item.name ?? "").trim().toLowerCase() === "do"
+            );
+            if (doItem) {
+                return { value: parseInt(doItem.system?.value ?? 0) || 0, label: doItem.name };
+            }
+        }
+        return null;
+    }
 
     async getData() {
         const data = super.getData();
@@ -172,7 +206,12 @@ export class DialogItem extends FormApplication {
             }
         }
 
-        if ((this.actor.type == "PC") && this.actor.api && data.object.dice2 && data.object.dice2 !== "") {
+        const maneuverOverride = data.object.dice2 ? this._resolveManeuverAbilityOverride(data.object.dice2) : null;
+        if (maneuverOverride) {
+            data.object.abilityValue = maneuverOverride.value;
+            data.object.abilityName = maneuverOverride.label;
+        }
+        else if ((this.actor.type == "PC") && this.actor.api && data.object.dice2 && data.object.dice2 !== "") {
             const abilityItem = this.actor.api.getAbility(data.object.dice2);
             if (abilityItem) {
                 data.object.abilityValue = parseInt(abilityItem.system.value);
