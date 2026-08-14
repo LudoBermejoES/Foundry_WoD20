@@ -1,7 +1,7 @@
 import { DiceRoller } from "../scripts/roll-dice.js";
 import { DiceRollContainer } from "../scripts/roll-dice.js";
 import PrismHelper from "../scripts/prism-helpers.js";
-import { AUTO_PRACTICE_RULES } from "../scripts/prism-practice-data.js";
+import { AUTO_PRACTICE_RULES, CORRUPTED_PRACTICE_RULES } from "../scripts/prism-practice-data.js";
 
 /**
     * Handles the information needed to use magic.
@@ -81,6 +81,7 @@ export class Rote {
         this.prismCheckPenalty = false;         // D12 auto-bucket Penalización checkbox
         this.prismTier = 0;                      // D12 tiered-rule magnitude (Inversión, Mediumnidad, ...)
         this.prismCrossActorUuid = "";           // A22 Ciencia Extraña's cross-actor target
+        this.formulaItem = item;                 // kept for D13's ResolvePracticeForFormula lookup
 
         if (item != undefined) {
             this.name = item["name"];
@@ -217,7 +218,7 @@ export class DialogAreteCasting extends FormApplication {
         });
     }
 
-    getData() {
+    async getData() {
         const data = super.getData();
 
         data.config = CONFIG.worldofdarkness;
@@ -242,6 +243,16 @@ export class DialogAreteCasting extends FormApplication {
                 penalty_es: row.mechanics.penalty_es ?? ""
             }));
 
+            // D13/task 7.3 — when this cast IS a learned Fórmula, resolve which owned Práctica (or
+            // its Especialidad) actually backs it, rather than assuming the player's default pick.
+            // Never overrides a selection the player already made.
+            if (!this.object.prismPracticeId && this.object.formulaItem) {
+                const resolved = await PrismHelper.ResolvePracticeForFormula(this.actor, this.object.formulaItem);
+                if (resolved && data.prismPractices.some((p) => p.id === resolved.practiceId)) {
+                    this.object.prismPracticeId = resolved.practiceId;
+                }
+            }
+
             // D4 — default to the highest-rated Práctica covering the Sphere level being cast,
             // remaining a plain, editable dropdown (never locking the field).
             if (!this.object.prismPracticeId && data.prismPractices.length) {
@@ -254,7 +265,9 @@ export class DialogAreteCasting extends FormApplication {
             const selected = data.prismPractices.find((p) => p.id === this.object.prismPracticeId) ?? null;
             data.prismSelected = selected;
             data.prismStateModifier = selected ? PrismHelper.CheckPracticeState(this.actor, selected.id) : 0;
-            data.prismRule = selected ? AUTO_PRACTICE_RULES[selected.id] : null;
+            // D16/task 10.6 — a Práctica Corrupta's own rule table is consulted too, so its named
+            // Beneficio/Precio gets the same checkbox/tiered UI when its shape is a dice modifier.
+            data.prismRule = selected ? (AUTO_PRACTICE_RULES[selected.id] ?? CORRUPTED_PRACTICE_RULES[selected.id]) : null;
             data.prismRuleWarning = (selected && this.object._highestRank() > selected.value)
                 ? game.i18n.localize("wod.prism.dialog.ratingbelowsphere")
                 : "";

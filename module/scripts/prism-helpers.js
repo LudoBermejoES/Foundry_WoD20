@@ -21,7 +21,7 @@ import {
 	stateForPracticeItem,
 	provenanceOf
 } from "./prism-state-engine.js";
-import { AUTO_PRACTICE_RULES } from "./prism-practice-data.js";
+import { AUTO_PRACTICE_RULES, CORRUPTED_PRACTICE_RULES } from "./prism-practice-data.js";
 import { getCachedDescription, resolveDescription } from "./compendium-description.js";
 import { getMechanicsSync, getMechanicsAsync } from "./prism-mechanics-parser.js";
 
@@ -138,7 +138,12 @@ export default class PrismHelper {
 	 * @returns {{modifier: number, forcesParadojaVulgar?: boolean, forcesCoincidental?: boolean}}
 	 */
 	static _evaluatePracticeRule(actor, practiceId, side, context = {}) {
-		const rule = AUTO_PRACTICE_RULES[practiceId]?.[side];
+		// D16/task 10.6 — a Práctica Corrupta's own named Beneficio/Precio shares this same
+		// dispatch when its shape is a plain checkbox/tiered dice modifier (Feralismo, La Misa
+		// Negra, Ciencias Infernales, Demonismo). The three genuinely non-dice-modifier shapes
+		// (Abismalismo's Silence floor, Goetia's failure branch, Vamamarga's own Jhor track) return
+		// `{modifier: 0}` here by design — `prism-corrupted-helpers.js` exposes their real mechanic.
+		const rule = AUTO_PRACTICE_RULES[practiceId]?.[side] ?? CORRUPTED_PRACTICE_RULES[practiceId]?.[side];
 		if (!rule) return { modifier: 0 };
 
 		switch (rule.kind) {

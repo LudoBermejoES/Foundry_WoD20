@@ -180,7 +180,19 @@
                         {{#if prismRule.benefit}}
                             <div style="height: 26px; line-height: 26px; display: flex;">
                                 <label class="headline splatFont dialog-casting-type-label">{{localize prismRule.benefit.labelKey}}</label>
-                                <input class="headlineNormal" name="object.prismCheckBenefit" type="checkbox" {{isChecked object.prismCheckBenefit}} />
+                                {{#if (eq prismRule.benefit.kind "tiered")}}
+                                    {{!-- D16 — Ciencias Infernales' "fed Instrument" Beneficio is the
+                                          one tiered BENEFIT in this triage; reuses `object.prismTier`
+                                          since no Práctica ever has both sides tiered at once. --}}
+                                    <select name="object.prismTier">
+                                        <option value="0"></option>
+                                        {{#each prismRule.benefit.tiers as |tier|}}
+                                            <option value="{{tier.value}}" {{#if (eq ../object.prismTier tier.value)}}selected{{/if}}>{{localize tier.labelKey}}</option>
+                                        {{/each}}
+                                    </select>
+                                {{else}}
+                                    <input class="headlineNormal" name="object.prismCheckBenefit" type="checkbox" {{isChecked object.prismCheckBenefit}} />
+                                {{/if}}
                             </div>
                         {{/if}}
                         {{#if prismRule.penalty}}

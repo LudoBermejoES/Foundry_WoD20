@@ -30,6 +30,7 @@ import {
 	vamamargaJhorRoll,
 	vamamargaJhorDelta
 } from "../module/scripts/prism-corrupted-helpers.js";
+import PrismHelper from "../module/scripts/prism-helpers.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let failures = 0;
@@ -220,6 +221,94 @@ test("all wod.prism.* labelKeys referenced in prism-practice-data.js exist in bo
 		assert.notEqual(get(es, key), undefined, `missing ES key: ${key}`);
 		assert.notEqual(get(en, key), undefined, `missing EN key: ${key}`);
 	}
+});
+
+console.log("PrismHelper (D12/D16 dispatch, the checkbox/computed/tiered rule evaluator)");
+
+test("Dominio's auto-bucket checkbox rules apply their flat modifier", () => {
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "dominion", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "dominion", { checked: false }).modifier, 0);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "dominion", { checked: true }).modifier, 2);
+});
+
+test("Investment's tiered penalty applies the selected tier's magnitude", () => {
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "investment", { tier: 1 }).modifier, 1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "investment", { tier: 3 }).modifier, 3);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "investment", { tier: 0 }).modifier, 0);
+});
+
+test("Medicina's Penalización decouples Paradox from difficulty (D5's decoupler)", () => {
+	const result = PrismHelper.CheckPracticePenalty(null, "medicine-work", { checked: true });
+	assert.equal(result.modifier, 0);
+	assert.equal(result.forcesParadojaVulgar, true);
+});
+
+test("D16/task 10.6 fix — a Práctica Corrupta's own named rule dispatches through the SAME engine as the base 31 (previously only defined as data, never wired to CheckPracticeBenefit/Penalty)", () => {
+	// Feralismo: -1 Beneficio (checkbox), tiered +1/+2/+3 Precio.
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "feralism", { checked: true }).modifier, -1);
+	assert.equal(PrismHelper.CheckPracticePenalty(null, "feralism", { tier: 3 }).modifier, 3);
+	// Ciencias Infernales: tiered -1/-2 Beneficio (the one tiered BENEFIT in this triage).
+	assert.equal(PrismHelper.CheckPracticeBenefit(null, "infernal-sciences", { tier: 2 }).modifier, -2);
+});
+
+test("CheckImprovisedPenalty (C3) applies +1 only when NOT Fórmula-backed, and Etertecnología ignores it", () => {
+	assert.equal(PrismHelper.CheckImprovisedPenalty(false, "dominion"), 1);
+	assert.equal(PrismHelper.CheckImprovisedPenalty(true, "dominion"), 0);
+	assert.equal(PrismHelper.CheckImprovisedPenalty(false, "ethertech"), 0);
+});
+
+test("D11 — Magia del caos's own Penalización is Fórmula-only, disjoint from C3 (Arreglo #17)", () => {
+	// An improvised Magia del caos cast: C3's +1 fires, Magia del caos's own Penalización does not.
+	assert.equal(PrismHelper.CheckImprovisedPenalty(false, "chaos-magick"), 1);
+	assert.equal(PrismHelper.CheckChaosMagickFormulaPenalty(false), 0);
+	// A Fórmula-backed Magia del caos cast: the reverse.
+	assert.equal(PrismHelper.CheckImprovisedPenalty(true, "chaos-magick"), 0);
+	assert.equal(PrismHelper.CheckChaosMagickFormulaPenalty(true), 1);
+});
+
+console.log("PrismHelper.EvaluateVulgarity (D5/D6 — Sanctum + Zona, coupled by default)");
+
+function fakeSanctumActor({ anathema = [], enabled = [] } = {}) {
+	return {
+		items: [{
+			type: "Feature",
+			system: { type: "wod.types.background", anathema, enabled_practices: enabled },
+			flags: { "wod20-compendium-es": { id: "sanctum-laboratorio" } },
+			name: "Sanctum / Laboratorio"
+		}]
+	};
+}
+
+test("Sanctum anathema at/above threshold flips BOTH flags to vulgar (A8, reversed default per Arreglo #2)", () => {
+	const actor = fakeSanctumActor({ anathema: [{ practice_id: "witchcraft", rating: 3 }] });
+	const result = PrismHelper.EvaluateVulgarity(actor, {
+		practiceId: "witchcraft", sphereLevel: 3, scene: null, baseDificultadVulgar: false, baseParadojaVulgar: false
+	});
+	assert.deepEqual(result, { dificultadVulgar: true, paradojaVulgar: true });
+});
+
+test("an enabled Sanctum Práctica is unconditionally coincidental on BOTH flags", () => {
+	const actor = fakeSanctumActor({ enabled: [{ practice_id: "witchcraft", rating: 2 }] });
+	const result = PrismHelper.EvaluateVulgarity(actor, {
+		practiceId: "witchcraft", sphereLevel: 5, scene: null, baseDificultadVulgar: true, baseParadojaVulgar: true
+	});
+	assert.deepEqual(result, { dificultadVulgar: false, paradojaVulgar: false });
+});
+
+test("A10 — a Zona's symmetric threshold flips both flags; Sanctum and Zona stack independently", () => {
+	const actor = fakeSanctumActor();
+	const scene = { flags: { worldofdarkness: { prismZones: [{ practice_id: "gutter-magick", value: -3 }] } } };
+	const vulgar = PrismHelper.EvaluateVulgarity(actor, {
+		practiceId: "gutter-magick", sphereLevel: 4, scene, baseDificultadVulgar: false, baseParadojaVulgar: false
+	});
+	assert.deepEqual(vulgar, { dificultadVulgar: true, paradojaVulgar: true });
+
+	const coincidental = PrismHelper.EvaluateVulgarity(actor, {
+		practiceId: "hypertech", sphereLevel: 2,
+		scene: { flags: { worldofdarkness: { prismZones: [{ practice_id: "hypertech", value: 3 }] } } },
+		baseDificultadVulgar: true, baseParadojaVulgar: true
+	});
+	assert.deepEqual(coincidental, { dificultadVulgar: false, paradojaVulgar: false });
 });
 
 console.log(`\n${failures === 0 ? "All prism-of-focus pure-function tests passed." : `${failures} test(s) FAILED.`}`);
