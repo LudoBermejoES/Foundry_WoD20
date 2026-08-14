@@ -1556,7 +1556,18 @@
 				"value": 0,
 				"max": 5,
 				"languages": [],
-				"castingModifiers": []
+				"castingModifiers": [],
+				"category": "",
+				"associated_practices": [],
+				"limited_practices": [],
+				"kind": "",
+				"base_practice_id": "",
+				"corrupted_practice_id": "",
+				"chosen_base_practice_id": "",
+				"corrupted_state": "clean",
+				"prism_state": "neutral",
+				"enabled_practices": [],
+				"anathema": []
 			},
 			"object": {
 				"container": {

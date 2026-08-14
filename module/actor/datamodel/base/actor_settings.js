@@ -96,6 +96,19 @@ export default class settings extends foundry.abstract.DataModel {
             // is still accepted (imports send one) but is overwritten before anything reads it.
             hasarcanoi: new fields.BooleanField({initial: false}),
 
+            // add-prism-of-focus-foundry — M20 Prism of Focus's structured Preceptos+Prácticas
+            // ruleset, gated per character. UNLIKE every flag above, this one is AUTHORED, never
+            // derived every `_prepareCharacterData` pass (design.md D1): the presence of a Tenet/
+            // Practice item is not a reliable "this character uses this ruleset" signal the way an
+            // item of type Sphere is for `hasspheres` — a GM could drag a `practice` compendium
+            // reference onto a sheet purely for the pre-existing `link-mage-focus-as-items` Focus
+            // list (`wod.types.practice` is the SAME system.type that feature already uses), which
+            // must never silently flip this ruleset on. Set by (a) the wodchar Actor-JSON export, or
+            // (b) a manual sheet toggle for a Foundry-native character. Toggling it off never deletes
+            // Tenet/Practice items — it only hides the structured section, like every other `has*`
+            // guard hides rather than destroys.
+            hasprismoffocus: new fields.BooleanField({initial: false}),
+
             version: new fields.StringField({...valueString}),
             era: new fields.StringField({initial: 'wod.era.modern', nullable: false}),
             splat: new fields.StringField({...valueString}),

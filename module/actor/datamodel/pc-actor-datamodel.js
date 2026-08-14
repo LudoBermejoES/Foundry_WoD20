@@ -118,6 +118,25 @@ export default class PCDataModel extends foundry.abstract.DataModel {
                 nullable: false,
         }));
 
+        // add-prism-of-focus-foundry §4.2 / design.md D9 — the seven creation-trait fields for the
+        // six Prácticas that ask for one, named EXACTLY as `add-prism-of-focus-wodchar` exports them
+        // so no renaming step is needed at import. A sibling of `settings`, not per-item fields on
+        // the Practice item itself (storage is per-actor; DISPLAY is gated per-Práctica, see the
+        // `prism_practices.hbs` partial). All default to empty/null so an actor that never sets
+        // `hasprismoffocus` is entirely unaffected (Migration Plan).
+        schema.practiceTraits = new fields.SchemaField({
+            heartBeast: new fields.StringField({...valueString}),                 // Animalismo
+            primaryElement: new fields.StringField({...valueString}),             // Elementalismo
+            godBondingDomains: new fields.ArrayField(new fields.SchemaField({      // Vínculo divino
+                domain: new fields.StringField({...valueString}),
+                areteThreshold: new fields.NumberField({required: true, nullable: false, integer: true, initial: 1})
+            })),
+            godBondingVulnerability: new fields.StringField({...valueString}),     // Vínculo divino
+            mediumshipUmbra: new fields.StringField({...valueString}),            // Mediumnidad
+            shamanismEnvironment: new fields.StringField({...valueString}),       // Chamanismo
+            witchcraftCycle: new fields.StringField({...valueString})             // Brujería
+        });
+
         return schema;
     }
 
