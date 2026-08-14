@@ -1,5 +1,6 @@
 import { calculateTotals } from "../../scripts/totals.js";
 import AbilityHelper from "../../scripts/ability-helpers.js";
+import { computeAdvantageDerivedData } from "./advantage-derivations.js";
 
 /**
  * Extend the basic Item with some very simple modifications.
@@ -264,7 +265,7 @@ export class WoDItem extends Item {
         try {
 			const item = this;
 			let actor = null;
-			
+
 			if ((item.actor !== undefined) && (item.actor !== null)) {
 				actor = game.actors.get(item.actor._id);
 
@@ -273,94 +274,16 @@ export class WoDItem extends Item {
 				}
 			}
 
-            let traitMax = 5;
-			// let bloodpoolMax = 10;
-			// let bloodSpending = 1;
-			let advantageRollSetting = true;  
-
-			try {
-                advantageRollSetting = CONFIG.worldofdarkness.rollSettings;
-            } 
-            catch (e) {
-                advantageRollSetting = true;
-            }
-
-
-			if (actor !== null) {
-				traitMax = actor.system.settings.powers.defaultmaxvalue;
-			}
-
-			if ((itemData.system?.id === "willpower") && (actor !== null)) {
-			 	if ((CONFIG.worldofdarkness.attributeSettings === "5th") && (CONFIG.worldofdarkness.fifthEditionWillpowerSetting === "5th") && (actor !== null)) {
-					if (actor.system.settings.variant !== "spirit") {
-						itemData.system.permanent = parseInt(actor.system.attributes.composure.value) + parseInt(actor.system.attributes.resolve.value);
-					}			 		
-			 	}
-			}
-
-			if (itemData.system?.group == "virtue") {       
-				itemData.system.max = traitMax;
-			}
-
-			if (itemData.system?.id == "path") {          
-				let bearing = 0;
-
-				if (itemData.system.permanent <= 1) {
-					bearing = 2;
-				}
-				else if ((itemData.system.permanent >= 2) && (itemData.system.permanent <= 3)) {
-					bearing = 1;
-				}
-				else if ((itemData.system.permanent >= 4) && (itemData.system.permanent <= 7)) {
-					bearing = 0;
-				}
-				else if ((itemData.system.permanent >= 8) && (itemData.system.permanent <= 9)) {
-					bearing = -1;
-				}
-				else if (itemData.system.permanent == 10) {
-					bearing = -2;
-				}
-
-				itemData.system.bearing = bearing;
-			} 
-
-			if ((itemData.system?.settings?.usepermanent) && (itemData.system?.settings?.usetemporary)) {
-			 	if (itemData.system.permanent > itemData.system.max) {
-			 	    itemData.system.permanent = itemData.system.max;
-			 	}
-				
-			 	if ((itemData.system.permanent < itemData.system.temporary) && (!itemData.system.settings.highertemporary)) {
-			 	    itemData.system.temporary = itemData.system.permanent;
-			 	}
-			}
-
-			// Set roll for advantages that use roll
-			if (itemData.system?.settings?.useroll) {
-				itemData.system.roll = 0;
-
-			 	if ((itemData.system.settings.usepermanent) && (itemData.system.settings.usetemporary)) {
-					if (itemData.system.settings.usebothrolls) {
-						itemData.system.roll = itemData.system.permanent + itemData.system.temporary;
-					}
-			 		else if (advantageRollSetting) {
-			 			itemData.system.roll = itemData.system.permanent;
-			 		}
-			 		else if ((itemData.system.settings.usepermanent) && (itemData.system.settings.usetemporary)) {
-			 			itemData.system.roll = itemData.system.permanent > itemData.system.temporary ? itemData.system.temporary : itemData.system.permanent; 
-			 		}
-			 	}
-			 	else if (itemData.system.settings.usepermanent) {
-			 		itemData.system.roll = itemData.system.permanent;
-			 	}
-			 	else if (itemData.system.settings.usetemporary) {
-			 		itemData.system.roll = itemData.system.temporary;
-			 	}
-			} 
+			// The actual computation (roll/bearing/max/permanent-clamping) is
+			// shared with AdvantageDataModel#prepareDerivedData -- see
+			// module/items/data/advantage-derivations.js for why this exists
+			// in two call sites and why it has to be the SAME function.
+			computeAdvantageDerivedData(itemData.system, actor);
         }
         catch (err) {
             err.message = `Failed _handleAdvantagesCalculations Item ${itemData.name}: ${err.message}`;
             console.error(err);
-        }				
+        }
 
         return itemData;
     }

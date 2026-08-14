@@ -455,6 +455,30 @@ jobs:
       - name: Prove trait re-sync resolves a mortal-variant actor's real game line
         run: node .github/scripts/test-trait-resync-line.mjs
 
+      # fix-advantage-roll-zero-on-prepare. Reported live: clicking to roll
+      # Willpower (or any other Advantage-type trait -- Rage, Gnosis, Paradox,
+      # Glamour, Blood Pool, a virtue) always showed a dice pool of 0 on a
+      # freshly-created or imported "PC" actor, regardless of its real rating,
+      # until a GM happened to edit that item's dots once. Root cause:
+      # `WoDItem#_handleAdvantagesCalculations` derived `system.roll` but ran
+      # ONLY from `_preUpdate`, i.e. only as a side effect of an explicit item
+      # `.update()` -- nothing derived it during ordinary data preparation
+      # (actor load, sheet render, right after Actor.create()/
+      # createEmbeddedDocuments(), which is exactly what
+      # `worldofdarkness-import-actor` and every freshly-created actor go
+      # through), and every shipped template/exporter ships a hardcoded
+      # `"roll": 0`. Fixed by extracting the computation into
+      # `computeAdvantageDerivedData` (module/items/data/
+      # advantage-derivations.js) and wiring it into BOTH the existing
+      # `_preUpdate` path AND `AdvantageDataModel#prepareDerivedData`
+      # (module/items/datamodel/advantage-item-datamodel.js) -- the hook
+      # Foundry calls automatically for any Item type with a registered
+      # `TypeDataModel`, which is what actually closes the gap. This harness
+      # had zero prior coverage of Advantage roll derivation at all.
+      # Runnable locally: node .github/scripts/test-advantage-roll-derivation.mjs
+      - name: Prove an Advantage's roll pool is derived without an explicit update
+        run: node .github/scripts/test-advantage-roll-derivation.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server

@@ -1,4 +1,5 @@
 import base_settings from "./base/item_base_settings.js";
+import { computeAdvantageDerivedData } from "../data/advantage-derivations.js";
 
 /**
  * Data schema, attributes, and methods specific to Actor.
@@ -52,5 +53,44 @@ export default class AdvantageDataModel extends foundry.abstract.TypeDataModel {
 
     static migrateData(source) {
         return super.migrateData(source);
+    }
+
+    /**
+     * @inheritDoc
+     * Called automatically by Foundry as part of the OWNING ITEM's normal
+     * data-preparation pass (actor load, sheet render, right after
+     * Actor.create()/createEmbeddedDocuments()) -- unlike
+     * WoDItem#_handleAdvantagesCalculations (module/items/data/wod-item-base.js),
+     * which only ever ran as a side effect of an explicit item .update() call.
+     * That gap is the root cause of "the Willpower/Rage/Gnosis/Paradox/Glamour/
+     * Blood Pool/virtue roll pool always shows 0 on a freshly created or
+     * imported actor, until a GM edits that item's dots once": `roll` was never
+     * derived at prepare-time, so the raw stored `0` (every shipped template
+     * and the wodchar exporter both initialize `roll: 0`) just sat there.
+     *
+     * `this` here is the Item's `system` data already (a TypeDataModel
+     * instance), not the Item itself -- `this.parent` is the owning Item
+     * document, and `this.parent.actor` is the owning Actor for an embedded
+     * item (or null/undefined for an unowned one, e.g. a compendium entry).
+     */
+    prepareDerivedData() {
+        super.prepareDerivedData?.();
+
+        let actor = null;
+
+        try {
+            actor = this.parent?.actor ?? null;
+        }
+        catch (err) {
+            actor = null;
+        }
+
+        try {
+            computeAdvantageDerivedData(this, actor);
+        }
+        catch (err) {
+            err.message = `Failed AdvantageDataModel#prepareDerivedData for Item ${this.parent?.name}: ${err.message}`;
+            console.error(err);
+        }
     }
 }
