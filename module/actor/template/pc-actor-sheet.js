@@ -150,6 +150,15 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 			// renders and persists it onto the owned corrupted-Práctica item; once set, the template
 			// stops rendering the picker (`needsInfernalBaseChoice` goes false on next render) and
 			// shows the locked label instead — there is no "change it later" control by design.
+			// The `.v3-focusitem`/`.prism-infernal-base-select` selectors below only exist in
+			// templates/actor/v3/feature.hbs's tree (v3-only markup), so PCActorSheet (the legacy,
+			// non-v3 sheet, which inherits this whole `actions` object) can never produce them — a
+			// verified, deliberate dead branch there, allowlisted in
+			// .github/scripts/binder-selector-check.py's ALLOWLIST_UNPRODUCIBLE rather than moved to
+			// a PCActorSheetV3-only actions override, because overriding `actions` on the subclass
+			// broke sheet-invariants.py's static action-detection for every OTHER inherited action
+			// (it does not resolve `...PCActorSheet.DEFAULT_OPTIONS.actions` spreads) — verified by
+			// trying it: 137 false positives.
 			prismChooseInfernalBase: async function (event, target) {
 				event.preventDefault();
 				const itemId = target?.getAttribute?.("data-itemid") ?? "";

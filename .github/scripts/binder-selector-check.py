@@ -134,9 +134,21 @@ INTERPOLATED_CLASSES: dict[str, str] = {
 }
 
 ALLOWLIST_UNPRODUCIBLE: dict[str, str] = {
-    # Empty on purpose. Its only entry was `.ability-statArea[data-droparea]`, a drag highlight
-    # whose attribute no PC-sheet template authors, so it had never fired. The branch was deleted
-    # rather than tolerated. The dict and the STALE check stay for the next one.
+    # add-prism-of-focus-foundry — design.md D8/task 10.3, verified 2026-08-14. Both selectors are
+    # authored in templates/actor/parts/mage/prism_practices.hbs, but that partial is reachable ONLY
+    # through templates/actor/v3/feature.hbs (PCActorSheetV3's own template tree) — the legacy,
+    # non-v3 sheet's templates/actor/parts/feature.hbs never includes it. `prismChooseInfernalBase`
+    # (module/actor/template/pc-actor-sheet.js) lives in the shared `actions` object PCActorSheet AND
+    # PCActorSheetV3 both inherit, so PCActorSheet is checked against these selectors even though it
+    # can never render the row that would trigger the action. Moving the action into a
+    # PCActorSheetV3-only `actions` override was tried and rejected: it broke
+    # sheet-invariants.py's static action-detection for every OTHER inherited action (that checker
+    # does not resolve `...PCActorSheet.DEFAULT_OPTIONS.actions` spreads), producing 137 false
+    # positives. Harmless as dead code: PCActorSheet never renders the Ciencias Infernales adoption
+    # row at all (Prisma de Foco is v3-only), so the branch has never fired and never will.
+    ".v3-focusitem": "prismChooseInfernalBase's row lookup — v3-only markup, dead on PCActorSheet",
+    ".prism-infernal-base-select": "prismChooseInfernalBase's <select> lookup — v3-only markup, "
+                                    "dead on PCActorSheet",
 }
 
 errors: list[str] = []
