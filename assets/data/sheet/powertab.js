@@ -57,6 +57,10 @@ export const datapowertab = {
         creature: {
             primary: ["charms"],
         },
+        // add-changeling-chimera-bestiary — a chimera's `variantsheet` resolves its splat to
+        // "changeling" (not "creature"; see the `chimera` variant in create-helpers.js), so Redes
+        // reaches the sheet via the `defaultOrder` fallback below, exactly the way `charms` already
+        // reaches Mage Companions despite not being in `mage`'s own `primary` list.
         mortal: {
             primary: [],
         },
@@ -78,6 +82,7 @@ export const datapowertab = {
             "edges",
             "numinas",
             "charms",
+            "redes",
             "arcanoi"
         ],
         unsorted: {

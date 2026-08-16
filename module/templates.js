@@ -207,7 +207,8 @@ export const preloadHandlebarsTemplates = async function () {
 		"systems/worldofdarkness/templates/actor/parts/variant/stats_quintessence.html",	
 		
 		// Creature
-		"systems/worldofdarkness/templates/actor/parts/creature/charms.html",		
+		"systems/worldofdarkness/templates/actor/parts/creature/charms.html",
+		"systems/worldofdarkness/templates/actor/parts/creature/redes.html",
 		"systems/worldofdarkness/templates/actor/parts/creature/power.html",
 
 		// Item Sheet Partials - .hbs files

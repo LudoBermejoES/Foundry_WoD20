@@ -776,6 +776,7 @@ export default class SelectHelper {
     
             let creature = {
                 "wod.types.charm": game.i18n.localize("wod.types.charm") + " (Creature)",
+                "wod.types.rede": game.i18n.localize("wod.types.rede") + " (Creature)",
                 "wod.types.power": game.i18n.localize("wod.types.power") + " (Creature)"
             }
     

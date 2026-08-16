@@ -589,6 +589,7 @@ export class WoDActor extends Actor {
             actorData.system.settings.hasrenown = actorData.system.settings.hasrenown || holdsAdvantageGroup("renown");
             actorData.system.settings.hasquintessence = actorData.system.settings.hasquintessence || holdsAdvantageGroup("quintessence");
             actorData.system.settings.hascharms = actorData.system.settings.hascharms || holdsPowerType("wod.types.charm");
+            actorData.system.settings.hasredes = actorData.system.settings.hasredes || holdsPowerType("wod.types.rede");
 
             if (itemList.length > 0) {
                 this.updateEmbeddedDocuments("Item", itemList);

@@ -875,9 +875,10 @@ export default class CreateHelper {
 		actorData.system.settings.powers.hasedges = false;
 		actorData.system.settings.powers.haslores = false;
 		actorData.system.settings.powers.hascharms = false;
+		actorData.system.settings.powers.hasredes = false;
 		actorData.system.settings.powers.haspowers = false;
 		actorData.system.settings.powers.hashekau = false;
-		actorData.system.settings.powers.hasnumina = false;		
+		actorData.system.settings.powers.hasnumina = false;
 
 		actorData.system.settings.powers.hashorrors = false;
 		actorData.system.settings.powers.hasstains = false;
@@ -968,16 +969,18 @@ export default class CreateHelper {
 		actorData.system.settings.powers.hasedges = false;
 		actorData.system.settings.powers.haslores = false;
 		actorData.system.settings.powers.hascharms = false;
-		actorData.system.settings.powers.hashekau = false;			
+		actorData.system.settings.powers.hasredes = false;
+		actorData.system.settings.powers.hashekau = false;
 
 		if (actorData.type == CONFIG.worldofdarkness.sheettype.creature) {
 			actorData.system.settings.variantsheet = "";
 
 			if (variant == 'general') {
-				
+
 			}
 			if (variant == 'chimera') {
 				actorData.system.settings.hasglamour = true;
+				actorData.system.settings.powers.hasredes = true;
 				actorData.system.settings.variantsheet = CONFIG.worldofdarkness.sheettype.changeling;
 			}
 			if (variant == 'familiar') {
@@ -1382,6 +1385,16 @@ export default class CreateHelper {
 				system: {
 					game: "werewolf",
 					type: "wod.types.charm"
+				}
+			};
+		}
+		if (type == "rede") {
+			itemData = {
+				name: game.i18n.localize("wod.labels.new.rede"),
+				type: "Power",
+				system: {
+					game: "changeling",
+					type: "wod.types.rede"
 				}
 			};
 		}
@@ -2411,6 +2424,31 @@ export default class CreateHelper {
 							system: {
 								game: "werewolf",
 								type: "wod.types.charm"
+							}
+						};
+
+						await this.CreateItem(actor, itemData);
+						return;
+					}
+				}
+			};
+		}
+
+		// add-changeling-chimera-bestiary — Redes, mirroring the Charm button immediately above.
+		// Unlike Charms (a legacy Werewolf-category quirk), a Rede is genuinely a Changeling-line
+		// power, so its button groups under "changeling" with no inherited grouping quirk to match.
+		if ((getSplat(actor) === CONFIG.worldofdarkness.splat.creature) || actor.system.settings.hasredes) {
+			allButtons.rede = {
+				game: "changeling",
+				button: {
+					label: game.i18n.localize("wod.types.rede"),
+					callback: async () => {
+						let itemData = {
+							name: game.i18n.localize("wod.labels.new.rede"),
+							type: "Power",
+							system: {
+								game: "changeling",
+								type: "wod.types.rede"
 							}
 						};
 
@@ -3484,6 +3522,18 @@ export default class CreateHelper {
 				label: game.i18n.localize("wod.types.charm"),
 				callback: async () => {
 					let itemData = await this.CreateItemPower("charm", system);
+
+					await this.CreateItem(actor, itemData);
+					return;
+				}
+			};
+		}
+
+		if (actor.system.settings.powers.hasredes) {
+			buttons.rede = {
+				label: game.i18n.localize("wod.types.rede"),
+				callback: async () => {
+					let itemData = await this.CreateItemPower("rede", system);
 
 					await this.CreateItem(actor, itemData);
 					return;

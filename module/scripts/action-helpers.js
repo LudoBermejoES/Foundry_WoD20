@@ -236,6 +236,15 @@ export default class ActionHelper {
 				return;
 			}
 
+			// used a Rede
+			if (dataset.object == "wod.types.rede") {
+				const rede = new PowerDialog.Rede(item);
+				let redeUse = new PowerDialog.DialogPower(actor, rede);
+				redeUse.render(true);
+
+				return;
+			}
+
 			// used a Power
 			if (dataset.object == "wod.types.power") {
 				const power = new PowerDialog.Power(item);

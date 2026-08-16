@@ -136,6 +136,10 @@ export default class ItemHelper {
 			this._createCharmStructure(actor);
 		}
 
+		if (actor.system.settings.powers.hasredes) {
+			this._createRedeStructure(actor);
+		}
+
 		if (actor.system.settings.powers.hasdisciplines) {
 			this._createDisciplineStructure(actor);
 		}
@@ -354,6 +358,9 @@ export default class ItemHelper {
 			if (actor.system.settings.powers.hascharms) {
 				this._sortCharms(item, actor);
 			}
+			if (actor.system.settings.powers.hasredes) {
+				this._sortRedes(item, actor);
+			}
 			if (actor.system.settings.powers.hasdisciplines) {
 				this._sortDisciplines(item, actor);
 			}
@@ -422,6 +429,12 @@ export default class ItemHelper {
 		}
 	}
 
+	static async _sortRedes(item, actor) {
+		if (item.system.type == "wod.types.rede") {
+			actor.system.listdata.powers.redes.redelist.push(item);
+		}
+	}
+
 	static _createSpecialPowersStructure(actor) {
 		actor.system.listdata.powers.powerlist = _createList(actor.system.listdata.powers.powerlist);
 	}
@@ -457,6 +470,11 @@ export default class ItemHelper {
 	static _createCharmStructure(actor) {
 		actor.system.listdata.powers.charms = _createList(actor.system.listdata.powers.charms);
 		actor.system.listdata.powers.charms.charmlist = _createList(actor.system.listdata.powers.charms.charmlist);
+	}
+
+	static _createRedeStructure(actor) {
+		actor.system.listdata.powers.redes = _createList(actor.system.listdata.powers.redes);
+		actor.system.listdata.powers.redes.redelist = _createList(actor.system.listdata.powers.redes.redelist);
 	}
 
 	static async _organizeSpecialPowers(actor) {
@@ -995,6 +1013,13 @@ export default class ItemHelper {
 					data: { items: context.charms },
 					localizeKey: "wod.power.charms",
 					condition: actor.system.settings.hascharms && context.charms?.length
+				},
+				redes: {
+					id: "redes",
+					template: "simple",
+					data: { items: context.redes },
+					localizeKey: "wod.power.redes",
+					condition: actor.system.settings.hasredes && context.redes?.length
 				},
 				rites: {
 					id: "rites",

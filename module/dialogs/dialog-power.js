@@ -66,6 +66,18 @@ export class Charm extends BasePower {
     }
 }
 
+export class Rede extends BasePower {
+    constructor(item) {
+        super(item);
+
+        // add-changeling-chimera-bestiary — `sheettype` is a CSS class only (dialog-power.hbs:1),
+        // with one string comparison elsewhere gating a hunter-specific tweak; "creatureDialog"
+        // (the generic Power dialog's own class) needs no new CSS, unlike a bespoke "chimeraDialog"
+        // would.
+        this.sheettype = "creatureDialog";
+    }
+}
+
 export class Power extends BasePower {
     constructor(item) {
         super(item);

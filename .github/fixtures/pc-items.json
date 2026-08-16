@@ -355,6 +355,14 @@
       "why": "creature Charms -- D9c's one Tier A case that bites now: 6 live actors, a section definition, a powertab entry, and until 9.1 a flag with no writer"
     },
     {
+      "key": "power-rede",
+      "type": "Power",
+      "name": "Vuelo",
+      "section": "redes",
+      "system": { "type": "wod.types.rede", "level": "1", "isvisible": true },
+      "why": "add-changeling-chimera-bestiary -- Changeling chimera Redes, mirroring the Charm fixture above: a section definition, a powertab entry, and a flag derived the same way (wod-actor-base.js)"
+    },
+    {
       "key": "power-sliver",
       "type": "Power",
       "name": "Verdage",

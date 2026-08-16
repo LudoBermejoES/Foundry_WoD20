@@ -685,6 +685,10 @@ export default class DropHelper {
                 actorData.system.settings.hascharms = true;
             }
 
+            if (powerData.type == "Power" && powerData.system.type == "wod.types.rede") {
+                actorData.system.settings.hasredes = true;
+            }
+
             itemlistData.push(powerData);
         }
 
@@ -913,6 +917,7 @@ export default class DropHelper {
         actorData.system.settings.hasresonances = false;
         actorData.system.settings.hasnuminas = false;
         actorData.system.settings.hascharms = false;
+        actorData.system.settings.hasredes = false;
 
         // Reset chimerical
         actorData.system.settings.usechimerical = false;

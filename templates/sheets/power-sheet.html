@@ -83,11 +83,15 @@
 									{{captilize (localize "wod.labels.rank")}}  {{data.system.level}}
 								{{/if}}
 
-								{{#if (eq data.system.type "wod.types.charm")}} 
+								{{#if (eq data.system.type "wod.types.charm")}}
 									{{captilize (localize "wod.types.charm")}}
 								{{/if}}
 
-								{{#if (eq data.system.type "wod.types.stain")}} 
+								{{#if (eq data.system.type "wod.types.rede")}}
+									{{captilize (localize "wod.types.rede")}}
+								{{/if}}
+
+								{{#if (eq data.system.type "wod.types.stain")}}
 									{{captilize (localize "wod.types.stain")}}
 								{{/if}}
 
@@ -411,7 +415,7 @@
 
 			<!-- dice -->
 			{{#if (ne data.system.type "")}}
-				{{#if (eqAny data.system.type "wod.types.disciplinepower" "wod.types.ritual" "wod.types.combination" "wod.types.gift" "wod.types.rite" "wod.types.edgepower" "wod.types.lorepower" "wod.types.arcanoipower" "wod.types.hekaupower" "wod.types.numinapower" "wod.types.horror" "wod.types.exaltedcharm" "wod.types.exaltedsorcery" "wod.types.charm" "wod.types.power")}}
+				{{#if (eqAny data.system.type "wod.types.disciplinepower" "wod.types.ritual" "wod.types.combination" "wod.types.gift" "wod.types.rite" "wod.types.edgepower" "wod.types.lorepower" "wod.types.arcanoipower" "wod.types.hekaupower" "wod.types.numinapower" "wod.types.horror" "wod.types.exaltedcharm" "wod.types.exaltedsorcery" "wod.types.charm" "wod.types.rede" "wod.types.power")}}
 					<div class="dialog-area">
 						<div class="infobox">
 							<label class="headlineItem headlineBio splatFont" for="data.isrollable">{{localize "wod.labels.power.rollable"}}</label>

@@ -14,6 +14,7 @@ export default class BonusHelper {
         "wod.types.numinapower",
         "wod.types.gift",
         "wod.types.charm",
+        "wod.types.rede",
         "wod.types.horror",
         "wod.types.stain",
         "wod.types.exaltedcharm",

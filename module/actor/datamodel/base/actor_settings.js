@@ -86,6 +86,13 @@ export default class settings extends foundry.abstract.DataModel {
             // never run for a PC actor. Charms still render — `BuildPowerSections` reads the flat flag
             // (item-helpers.js) and the section is `template: "simple"`, so it needs no sorted structure.
             hascharms: new fields.BooleanField({initial: false}),
+            // add-changeling-chimera-bestiary — Redes, the changeling chimera power axis. FLAT here
+            // for the same reason `hascharms` is: this schema governs only `type: "PC"`, the actor
+            // type a wodchar-imported chimera uses (splat resolved via `variantsheet`, not a separate
+            // Actor document type). `BuildPowerSections`/`item-helpers.js` read this flat flag exactly
+            // like `hascharms`; `_prepareCharacterData` derives it from held `wod.types.rede` items
+            // the same way (`wod-actor-base.js`).
+            hasredes: new fields.BooleanField({initial: false}),
             // add-wraith-pc-splat — Arcanoi, the wraith power axis. Two-level like Disciplines: a
             // container (`wod.types.arcanoi`) holding powers (`wod.types.arcanoipower`). Both i18n keys
             // already exist, as does `wod.power.unsortedarcanois`, which is strong evidence this was the

@@ -32,6 +32,15 @@ export function getPowerDice1List(itemData) {
     return list;
   }
 
+  // Redes — every glossary Rede rolls either the quimera's Glamour or its Fuerza de Voluntad
+  // (e.g. "el Narrador tira el Glamour de la quimera", "el jugador de la quimera tira Fuerza de
+  // Voluntad"), never an Attribute+Ability pool, mirroring Charms' flat single-trait shape.
+  if (type === "wod.types.rede") {
+    list.push({ value: "glamour", label: game.i18n.localize("wod.advantages.glamour") });
+    list.push({ value: "willpower", label: game.i18n.localize("wod.advantages.willpower") });
+    return list;
+  }
+
   // Attributes
   if (attrSetting === "5th") {
     for (const attribute in CONFIG.worldofdarkness.attributes) {
@@ -203,6 +212,9 @@ export function getPowerDice2List(itemData) {
 
   // Charms do not use dice2
   if (type === "wod.types.charm") return list;
+
+  // Redes do not use dice2 either — same flat single-trait roll shape as Charms.
+  if (type === "wod.types.rede") return list;
 
   list.push({ value: "custom", label: selectPlaceholder("wod.labels.usesecondary") });
 
