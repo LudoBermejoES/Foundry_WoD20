@@ -3,6 +3,7 @@ import { DiceRollContainer } from "../scripts/roll-dice.js";
 
 import CombatHelper from "../scripts/combat-helpers.js";
 import BonusHelper from "../scripts/bonus-helpers.js";
+import { resolveDescription } from "../scripts/compendium-description.js";
 
 export class BasePower {
     constructor(item) {
@@ -423,6 +424,20 @@ export class DialogPower extends FormApplication {
         data.object.specialityText = this._combineSpecialityText(data, attributeSpeciality.value, abilitySpeciality.value);
         this._handleNightmareDice(data);
         await this._applyAbilityBuffs(data);
+
+        // read-descriptions-from-compendium covered the eye icon and the chat card
+        // (compendium-description.js's own header lists both) but never this roll dialog, which
+        // still reads `BasePower`'s constructor-time `this.description`/`this.system` — a direct,
+        // synchronous copy of the embedded item's OWN `system.description`/`details`, always empty
+        // for a compendium-backed Power by design. Resolved here the same way: only overwrites
+        // when a live match is found, otherwise the item's own (possibly hand-written) text stands.
+        const liveItem = this.actor.items?.get(this.object._id);
+        if (liveItem) {
+            const resolved = await resolveDescription(liveItem);
+            if (resolved) {
+                data.object.description = resolved;
+            }
+        }
 
         return data;
     }
