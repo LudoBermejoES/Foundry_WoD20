@@ -1568,7 +1568,10 @@
 				"corrupted_state": "clean",
 				"prism_state": "neutral",
 				"enabled_practices": [],
-				"anathema": []
+				"anathema": [],
+				"mask": "",
+				"figure": "",
+				"thesis": ""
 			},
 			"object": {
 				"container": {

@@ -2099,6 +2099,8 @@ export const preparePowersContext = async function (context, actor) {
 	
 	context.charms = ItemHelper.GetPowersByType(actor, "wod.types.charm", true);
 	context.redes = ItemHelper.GetPowersByType(actor, "wod.types.rede", true);
+	// add-changeling-bestiary — Estigma powers, mirroring `redes` exactly.
+	context.estigmas = ItemHelper.GetPowersByType(actor, "wod.types.estigma", true);
 
 	context.combinations = ItemHelper.GetPowersByType(actor, "wod.types.combination", true);
 	context.rituals = ItemHelper.GetPowersByType(actor, "wod.types.ritual", true);

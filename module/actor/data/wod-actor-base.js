@@ -590,6 +590,8 @@ export class WoDActor extends Actor {
             actorData.system.settings.hasquintessence = actorData.system.settings.hasquintessence || holdsAdvantageGroup("quintessence");
             actorData.system.settings.hascharms = actorData.system.settings.hascharms || holdsPowerType("wod.types.charm");
             actorData.system.settings.hasredes = actorData.system.settings.hasredes || holdsPowerType("wod.types.rede");
+            // add-changeling-bestiary — Estigma powers, same self-healing derivation as `hasredes`.
+            actorData.system.settings.hasestigmas = actorData.system.settings.hasestigmas || holdsPowerType("wod.types.estigma");
 
             if (itemList.length > 0) {
                 this.updateEmbeddedDocuments("Item", itemList);

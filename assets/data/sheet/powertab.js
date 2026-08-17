@@ -83,6 +83,9 @@ export const datapowertab = {
             "numinas",
             "charms",
             "redes",
+            // add-changeling-bestiary — Estigma powers (Autumn People/Deshechos), reaching any splat
+            // via this fallback exactly the way `redes` reaches `changeling`/`creatures`.
+            "estigmas",
             "arcanoi"
         ],
         unsorted: {

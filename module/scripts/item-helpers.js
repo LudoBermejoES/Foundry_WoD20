@@ -1021,6 +1021,18 @@ export default class ItemHelper {
 					localizeKey: "wod.power.redes",
 					condition: actor.system.settings.hasredes && context.redes?.length
 				},
+				// add-changeling-bestiary — the 6 Estigma powers (Autumn People/Deshechos convert
+				// Banalidad into an offensive weapon), a Changeling-adjacent flat power axis of its
+				// own, mirroring `redes` exactly (own systemType, own flat `hasestigmas` gate, own
+				// `context.estigmas` from `GetPowersByType`, in `defaultOrder` so it reaches any
+				// splat via the fallback the same way Redes reaches `changeling`).
+				estigmas: {
+					id: "estigmas",
+					template: "simple",
+					data: { items: context.estigmas },
+					localizeKey: "wod.power.estigmas",
+					condition: actor.system.settings.hasestigmas && context.estigmas?.length
+				},
 				rites: {
 					id: "rites",
 					template: "simple",
