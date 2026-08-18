@@ -266,6 +266,13 @@
 						<p class="information-area">{{localize 'wod.labels.none'}}</p>
 					{{/if}}
 				</div>
+
+				{{!-- add-mage-resonance — design.md D4: always rendered for splat mage, deliberately
+				      OUTSIDE the `{{#unless prismActive}}...{{else}}...{{/unless}}` split just above
+				      (Resonancia is independent of Prism of Focus, on or off). --}}
+				<div class="v3-section v3-focusblock">
+					{{> "systems/worldofdarkness/templates/actor/parts/mage/resonance.hbs"}}
+				</div>
 			{{/if}}
 
 			{{#if graphicsettings.useLinkPlatform}}

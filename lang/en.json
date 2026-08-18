@@ -2589,6 +2589,26 @@
 					"claimed": "Already claimed this Story"
 				}
 			}
+		},
+		"resonance": {
+			"section": {
+				"title": "Resonance and Synergy"
+			},
+			"dialog": {
+				"title": "Add Resonance Mark",
+				"flavor": "Flavor",
+				"mark": "Mark",
+				"markrequired": "The mark is required"
+			},
+			"flavor": {
+				"devoted": "Devoted Resonance",
+				"elemental": "Elemental Resonance",
+				"stabilizing": "Stabilizing Resonance",
+				"temperamental": "Temperamental Resonance",
+				"dynamic": "Dynamic Synergy",
+				"entropic": "Entropic Synergy",
+				"static": "Static Synergy"
+			}
 		}
 	}
 }

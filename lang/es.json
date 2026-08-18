@@ -2573,6 +2573,26 @@
 					"claimed": "Ya reclamado esta Historia"
 				}
 			}
+		},
+		"resonance": {
+			"section": {
+				"title": "Resonancia y Sinergia"
+			},
+			"dialog": {
+				"title": "Añadir Marca de Resonancia",
+				"flavor": "Sabor",
+				"mark": "Marca",
+				"markrequired": "La marca es obligatoria"
+			},
+			"flavor": {
+				"devoted": "Resonancia Devota",
+				"elemental": "Resonancia Elemental",
+				"stabilizing": "Resonancia Estabilizadora",
+				"temperamental": "Resonancia Temperamental",
+				"dynamic": "Sinergia Dinámica",
+				"entropic": "Sinergia Entrópica",
+				"static": "Sinergia Estática"
+			}
 		}
 	}
 }

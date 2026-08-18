@@ -1,0 +1,23 @@
+{{!-- add-mage-resonance — task 5.3: a mark's two defining fields, collected up front so there is
+      nothing left to edit on the created item's own sheet beyond the dot rating (already editable
+      from the row itself, resonance.hbs). --}}
+<form class="wod20 wod-dialog resonance-mark-form" autocomplete="off">
+
+	<div class="dialog-area">
+		<label class="headline splatFont">{{localize 'wod.resonance.dialog.flavor'}}</label>
+		<select name="flavorId">
+			{{#each flavors as |flavor|}}
+				<option value="{{flavor.id}}" {{#if (eq flavor.id ../object.flavorId)}}selected{{/if}}>{{flavor.label}}</option>
+			{{/each}}
+		</select>
+	</div>
+
+	<div class="dialog-area">
+		<label class="headline splatFont">{{localize 'wod.resonance.dialog.mark'}}</label>
+		<input type="text" name="mark" value="{{object.mark}}" autocomplete="off" />
+	</div>
+
+	<footer class="sheet-footer flexrow">
+		<button type="submit"><i class="far fa-save"></i>{{localize "wod.dialog.save"}}</button>
+	</footer>
+</form>

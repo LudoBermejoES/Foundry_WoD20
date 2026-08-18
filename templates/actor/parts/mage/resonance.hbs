@@ -1,0 +1,41 @@
+{{!-- add-mage-resonance — task 5.1/5.2: the Resonancia/Sinergia dot-allocator (0-5), one row per
+      mark. Reuses the exact `.v3-focusitem`/`.resource-value[data-value]` dot-row markup
+      `prism_practices.hbs` established (and this session's own Prácticas dots-bug fix proved
+      correct) — `SetupDotCounters_v2` repaints every `.resource-value-step` from the container's
+      own `data-value` attribute on every render, so omitting it is exactly the bug that fix caught.
+      Always rendered for `splat === mage`, NOT gated on `prismActive`/`hasprismoffocus` — Resonancia
+      is a Core-rulebook/Book-of-Secrets optional rule independent of Prism of Focus (design.md D4).
+--}}
+<h3 class="v3-sectiontitle splatFont">
+	{{localize 'wod.resonance.section.title'}}
+	<a class="pointer pullRight" data-action="addResonanceMark" title="{{localize 'wod.resonance.dialog.title'}}"><i class="icon fa-solid fa-square-plus"></i></a>
+</h3>
+
+<div class="space dialog-area flex-columns" data-drop-area="features" data-droparea="features">
+	{{#each resonanceMarks as |row|}}
+		<div class="v3-focusitem v3-resonancerow" data-itemid="{{row.item._id}}" style="width:100%;">
+			<span class="v3-focuslabel splatFont" title="{{row.item.name}}">
+				{{row.item.name}} ({{localize row.flavorLabelKey}})
+			</span>
+
+			<div class="resource-value pullLeft"
+				data-itemid="{{row.item._id}}"
+				data-value="{{row.item.system.value}}"
+				data-name="system.value">
+				{{#numLoop 5}}
+					<span class="resource-value-step {{#if (gte row.item.system.value (add this 1))}}active{{/if}}" data-action="editDot" data-type="{{../config.sheettype.mage}}" data-index="{{this}}" data-itemid="{{row.item._id}}" data-ability="core"></span>
+				{{/numLoop}}
+			</div>
+
+			<i class="pullRight pointer icon collapsible button fa-solid fa-eye"
+				title="{{localize 'wod.labels.show.description'}}"
+				data-itemid="{{row.item._id}}"></i>
+
+			{{#if row.item.system.isremovable}}
+				<a class="pointer item-delete" title="{{localize 'wod.labels.remove.headline'}}" data-itemid="{{row.item._id}}" data-action="itemDelete"><i class="icon fa-solid fa-trash-can"></i></a>
+			{{/if}}
+		</div>
+	{{else}}
+		<p class="information-area">{{localize 'wod.labels.none'}}</p>
+	{{/each}}
+</div>

@@ -783,8 +783,13 @@
    `justify-content: space-between` leaves the label at its shrunk content-fit size rather than
    letting it claim the free space. Scoped to the Prácticas row only (`.v3-prism-practicerow`,
    the one `.v3-focusitem` variant that also carries a `.resource-value` dot-allocator) so the
-   generic Tenets/merits/flaws/backgrounds rows that reuse `.v3-focuslabel` are untouched. */
-.wod20.pc-actor-v3 .v3-prism-practicerow .v3-focuslabel {
+   generic Tenets/merits/flaws/backgrounds rows that reuse `.v3-focuslabel` are untouched.
+
+   add-mage-resonance — `.v3-resonancerow` shares the same defect for the same reason: its label
+   is also "name (parenthetical)" (e.g. "Furioso (Resonancia Temperamental)"), so it gets the
+   identical fix rather than re-discovering the bug a second time. */
+.wod20.pc-actor-v3 .v3-prism-practicerow .v3-focuslabel,
+.wod20.pc-actor-v3 .v3-resonancerow .v3-focuslabel {
 	white-space: nowrap;
 	flex: 0 1 auto;
 }

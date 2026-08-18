@@ -137,6 +137,7 @@ export const preloadHandlebarsTemplates = async function () {
 		"systems/worldofdarkness/templates/actor/parts/mage/prism_tenets.hbs",
 		"systems/worldofdarkness/templates/actor/parts/mage/prism_practices.hbs",
 		"systems/worldofdarkness/templates/actor/parts/mage/prism_practice_traits.hbs",
+		"systems/worldofdarkness/templates/actor/parts/mage/resonance.hbs",
 
 		// Werewolf
 		"systems/worldofdarkness/templates/actor/parts/werewolf/bio_werewolf_background.html",

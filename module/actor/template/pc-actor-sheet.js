@@ -39,6 +39,8 @@ import PrismHelper from "../../scripts/prism-helpers.js";
 import DialogPrismRitual from "../../dialogs/dialog-prism-ritual.js";
 import DialogPrismPrompt from "../../dialogs/dialog-prism-prompt.js";
 import { PROMPT_PRACTICE_IDS, PRACTICE_NAME_ES } from "../../scripts/prism-practice-data.js";
+import DialogAddResonanceMark from "../../dialogs/dialog-add-resonance-mark.js";
+import { RESONANCE_FLAVOR_LABEL_KEY, isPlayerFacingResonanceMark } from "../../scripts/resonance-data.js";
 
 /** task 10.3 — Ciencias Infernales' 3 possible bases (A21), keyed by their own stable practice id
  *  (`CORRUPTED_PRACTICE_RULES["infernal-sciences"].base` in `prism-practice-data.js`) to the
@@ -143,6 +145,14 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 				const practiceId = target?.getAttribute?.("data-practiceid") ?? "";
 				if (!practiceId) return;
 				new DialogPrismPrompt({ practiceId, actor: this.actor }).render(true);
+			},
+
+			// add-mage-resonance — task 5.3: the "add a mark" affordance. A small flavor-picker +
+			// mark-word dialog, same FormApplication convention as DialogPrismPrompt/DialogPrismRitual
+			// above rather than a bespoke one-off.
+			addResonanceMark: function (event) {
+				event.preventDefault();
+				new DialogAddResonanceMark({ actor: this.actor }).render(true);
 			},
 
 			// add-prism-of-focus-foundry — design.md D8/task 10.3: Ciencias Infernales' one-time,
@@ -2437,6 +2447,16 @@ export const prepareFeatureContext = async function (context, actor) {
 	context.passions 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.passion");
 	context.darkpassions 	= ItemHelper.GetItemType(actor, "Feature", "wod.types.darkpassion");
 	context.fetters 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.fetter");
+
+	// add-mage-resonance — every `wod.types.resonance` Trait carrying one of the seven known
+	// flavor ids in `system.category` is a player-facing mark; the corrupted-Práctica resistance
+	// counter and a bare hand-made Jhor item never set `category` at all (see
+	// `prism-corrupted-helpers.js`'s own header) and are excluded by this same filter — see
+	// design.md D3. Built unconditionally, mage or not (same "safer default" convention
+	// `mageFocusParadigms`/etc. already establish in `addBioContext`) — empty for every other line.
+	context.resonanceMarks = ItemHelper.GetItemType(actor, "Trait", "wod.types.resonance")
+		.filter(isPlayerFacingResonanceMark)
+		.map(item => ({ item, flavorLabelKey: RESONANCE_FLAVOR_LABEL_KEY[item.system.category] }));
 
 	prepareShadowAreaContext(context, actor);
 
