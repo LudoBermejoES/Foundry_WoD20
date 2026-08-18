@@ -11,7 +11,7 @@
 
 <div class="space dialog-area flex-columns" data-drop-area="features" data-droparea="features">
 	{{#each prismPractices as |row|}}
-		<div class="v3-focusitem" data-itemid="{{row.item._id}}" style="width:100%;">
+		<div class="v3-focusitem v3-prism-practicerow" data-itemid="{{row.item._id}}" style="width:100%;">
 			<span class="v3-focuslabel splatFont" title="{{row.item.name}}">
 				{{row.item.name}} ({{localize (concat "wod.prism.kind." row.kind)}})
 			</span>

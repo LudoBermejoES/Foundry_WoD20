@@ -778,6 +778,17 @@
 	margin-bottom: 0;
 }
 
+/* Third follow-up (same day) — Prácticas name column ("Medicina (Base)") was wrapping onto two
+   lines even though the row has plenty of unused width to its right: `.v3-focusitem`'s
+   `justify-content: space-between` leaves the label at its shrunk content-fit size rather than
+   letting it claim the free space. Scoped to the Prácticas row only (`.v3-prism-practicerow`,
+   the one `.v3-focusitem` variant that also carries a `.resource-value` dot-allocator) so the
+   generic Tenets/merits/flaws/backgrounds rows that reuse `.v3-focuslabel` are untouched. */
+.wod20.pc-actor-v3 .v3-prism-practicerow .v3-focuslabel {
+	white-space: nowrap;
+	flex: 0 1 auto;
+}
+
 .wod20.pc-actor-v3 .v3-focuslabel {
 	font-size: calc(1rem * var(--splat-display-scale, 1));
 	line-height: 1.25;
