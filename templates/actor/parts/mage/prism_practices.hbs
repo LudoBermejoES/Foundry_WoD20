@@ -18,6 +18,7 @@
 
 			<div class="resource-value pullLeft"
 				data-itemid="{{row.item._id}}"
+				data-value="{{row.value}}"
 				data-name="system.value">
 				{{#numLoop 5}}
 					<span class="resource-value-step {{#if (gte row.value (add this 1))}}active{{/if}}" data-action="editDot" data-type="{{../config.sheettype.mage}}" data-index="{{this}}" data-itemid="{{row.item._id}}" data-ability="core"></span>

@@ -824,12 +824,29 @@
 	flex-wrap: wrap;
 }
 
+/* Second follow-up (same day) — the eye icon now sits inline right after the item name (was a
+   separate flex child pushed to the far right by `.v3-focusitem`'s `justify-content:space-between`,
+   leaving a huge gap on rows with nothing else between name and eye). Asociada/Limitada are now two
+   ALWAYS-separate block rows (`.v3-prism-tagrow`, one per `{{#if}}` in the template) instead of one
+   flex-wrap container, so Limitada never shares a line with Asociada even when both fit. */
+.wod20.pc-actor-v3 .v3-prism-tenetgroup .v3-focuslabel .fa-eye {
+	margin-left: 6px;
+	font-size: 0.85em;
+}
+
 .wod20.pc-actor-v3 .v3-prism-tenetgroup .information-area {
 	width: 100%;
 	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
+	flex-direction: column;
+	gap: 3px;
 	margin-top: 2px;
+}
+
+.wod20.pc-actor-v3 .v3-prism-tagrow {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
 }
 
 .wod20.pc-actor-v3 .v3-prism-tag {
@@ -850,7 +867,6 @@
 	font-size: 0.72rem;
 	font-weight: bold;
 	opacity: 0.75;
-	align-self: center;
 }
 
 /* ── Float neutralisers for the two combat partials that still float ────────────────────────
