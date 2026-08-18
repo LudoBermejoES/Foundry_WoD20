@@ -58,6 +58,14 @@ export class DialogAddResonanceMark extends FormApplication {
 		if (!RESONANCE_FLAVOR_IDS.includes(flavorId)) return;
 		if (!actor) return;
 
+		// Stamp the SAME provenance flags a compendium-dragged Item carries
+		// (`wod20-compendium-es/module.json`'s own `mage-resonance` pack, 17 documents including
+		// all 7 flavor markers, source_type "resonance" on every one — verified against the
+		// compiled src/). `compendium-description.js`'s `resolveDescription()` is already wired
+		// into the eye icon's `ItemViewer` (`item-viewer.js`) for ANY document carrying this
+		// provenance, regardless of item type — so this is the ONLY thing needed for the eye icon
+		// to show the flavor's real description live from the compendium; no new
+		// description-rendering code, and the text is never copied/duplicated onto the item.
 		await actor.createEmbeddedDocuments("Item", [{
 			name: mark,
 			type: "Trait",
@@ -67,6 +75,9 @@ export class DialogAddResonanceMark extends FormApplication {
 				value: 0,
 				max: 5,
 				isremovable: true,
+			},
+			flags: {
+				"wod20-compendium-es": { id: flavorId, line: "mage", source_type: "resonance" },
 			},
 		}]);
 	}
