@@ -38,7 +38,7 @@ import ItemViewer from "../../applications/item-viewer.js";
 import PrismHelper from "../../scripts/prism-helpers.js";
 import DialogPrismRitual from "../../dialogs/dialog-prism-ritual.js";
 import DialogPrismPrompt from "../../dialogs/dialog-prism-prompt.js";
-import { PROMPT_PRACTICE_IDS } from "../../scripts/prism-practice-data.js";
+import { PROMPT_PRACTICE_IDS, PRACTICE_NAME_ES } from "../../scripts/prism-practice-data.js";
 
 /** task 10.3 — Ciencias Infernales' 3 possible bases (A21), keyed by their own stable practice id
  *  (`CORRUPTED_PRACTICE_RULES["infernal-sciences"].base` in `prism-practice-data.js`) to the
@@ -1559,10 +1559,11 @@ export const preparePrismContext = function (context, actor) {
 	context.prismActive = PrismHelper.IsActive(actor);
 	if (!context.prismActive) return context;
 
+	const practiceNameEs = (practiceId) => PRACTICE_NAME_ES[practiceId] ?? practiceId;
 	const tenetRows = PrismHelper.ListOwnedTenets(actor).map((row) => ({
 		...row,
-		associatedText: row.associated.join(", "),
-		limitedText: row.limited.join(", ")
+		associatedNames: row.associated.map(practiceNameEs),
+		limitedNames: row.limited.map(practiceNameEs)
 	}));
 	context.prismTenetGroups = {};
 	for (const row of tenetRows) {

@@ -791,6 +791,68 @@
 	font-size: 0.85rem;
 }
 
+/* add-prism-of-focus-foundry follow-up (2026-08-18) — Preceptos redesign per user feedback: each
+   category ("Metafísico", "Personal"...) now reads as its own card instead of a plain-text
+   headline sitting flush against the next category's rows, and the Asociada/Limitada practice
+   lists render as small tags instead of one packed inline sentence. Zero literal colours, same
+   convention as the rest of this file — accents come from the splat CSS variables Foundry's core
+   sets per actor type (`--splat-line`, `--splat-text`, both already used by `.v3-navbadge` above). */
+.wod20.pc-actor-v3 .v3-prism-tenetgroup {
+	border: 1px solid var(--main-mid-color);
+	border-radius: 4px;
+	padding: 6px 8px;
+	margin-bottom: 8px;
+}
+
+.wod20.pc-actor-v3 .v3-prism-tenetgroup:last-child {
+	margin-bottom: 0;
+}
+
+.wod20.pc-actor-v3 .v3-prism-tenetgroup-header {
+	width: 100%;
+	font-weight: bold;
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	color: var(--splat-line, var(--main-full-color));
+	border-bottom: 1px solid var(--main-mid-color);
+	padding-bottom: 3px;
+	margin-bottom: 4px;
+}
+
+.wod20.pc-actor-v3 .v3-prism-tenetgroup .v3-focusitem {
+	flex-wrap: wrap;
+}
+
+.wod20.pc-actor-v3 .v3-prism-tenetgroup .information-area {
+	width: 100%;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 2px;
+}
+
+.wod20.pc-actor-v3 .v3-prism-tag {
+	display: inline-block;
+	border-radius: 8px;
+	padding: 1px 7px;
+	font-size: 0.72rem;
+	line-height: 1.3;
+	background: var(--main-mid-color);
+}
+
+.wod20.pc-actor-v3 .v3-prism-tag-limited {
+	background: transparent;
+	border: 1px solid var(--main-mid-color);
+}
+
+.wod20.pc-actor-v3 .v3-prism-taglabel {
+	font-size: 0.72rem;
+	font-weight: bold;
+	opacity: 0.75;
+	align-self: center;
+}
+
 /* ── Float neutralisers for the two combat partials that still float ────────────────────────
    NOT in the `!important` budget below, because none of these IS an `!important`: every rule here
    makes a container a grid or flex container, and a grid/flex item's `float` computes to `none`.

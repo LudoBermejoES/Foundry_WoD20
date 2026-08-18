@@ -47,9 +47,11 @@
 				{{/if}}
 			</div>
 
-			{{#if row.benefit_es}}<div class="information-area">{{{row.benefit_es}}}</div>{{/if}}
-			{{#if row.penalty_es}}<div class="information-area">{{{row.penalty_es}}}</div>{{/if}}
-			{{#if row.price_es}}<div class="information-area">{{{row.price_es}}}</div>{{/if}}
+			{{!-- benefit_es/penalty_es/price_es are parsed from this same Práctica's compendium
+			      description (see prism-mechanics-parser.js) — the eye icon above already opens the
+			      full description in the read-only ItemViewer, so showing these fragments inline too
+			      was a duplicate of what the eye already reveals. Dropped per user feedback
+			      (2026-08-18): keep only the eye as the single way to read this text. --}}
 
 			{{!-- task 10.3 — Ciencias Infernales' one-time, locked base-Práctica choice (A21). --}}
 			{{#if row.needsInfernalBaseChoice}}
