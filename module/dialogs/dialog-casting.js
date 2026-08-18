@@ -211,16 +211,39 @@ export class DialogCasting extends DialogAreteCasting {
 		return rows;
 	}
 
-	getData() {
-		const data = super.getData();
-		const arete = this._areteValue();
+	/**
+	 * fix-formula-casting fix — `super.getData()` (`DialogAreteCasting.getData()`) is `async`
+	 * (since `add-prism-of-focus-foundry`'s D13 Práctica-resolution `await`), so calling it WITHOUT
+	 * `await` returns the wrapping Promise, not the resolved data object. Every property this
+	 * method used to attach afterward (`data.casting`, `data.casting.groups`, ...) was being set on
+	 * that Promise wrapper — silently discarded the moment Foundry's render pipeline awaits
+	 * `getData()`, since awaiting unwraps to the ORIGINAL object the base method resolved, not the
+	 * wrapper. Verified with a minimal reproduction (a synchronous override of an async base
+	 * method, mutating the un-awaited return value): the mutation never survives the await. Adding
+	 * `async`/`await` here makes every subsequent `data.xxx = ...` write onto the actual resolved
+	 * object, so it correctly reaches the template.
+	 */
+	async getData() {
+		const data = await super.getData();
 		const areteModifier = parseInt(this.object.areteModifier) || 0;
+
+		// fix-formula-casting D3 — a Fórmula declaring both Atributo+Habilidad shows/rolls THAT
+		// pool instead of Areté (`_castSpell`, dialog-aretecasting.js, applies the same branch to
+		// the actual roll — this only mirrors it for display).
+		const isFormulaRoll = this.object.isFormulaRoll();
+		const arete = isFormulaRoll ? 0 : this._areteValue();
+		const formulaPool = isFormulaRoll ? this._formulaPool() : null;
+		const dicePoolBase = isFormulaRoll
+			? formulaPool.attributeValue + formulaPool.abilityValue
+			: arete;
 
 		data.casting = {
 			arete: arete,
 			areteModifier: areteModifier,
+			isFormulaRoll: isFormulaRoll,
+			formulaPool: formulaPool,
 			// A pool can never go below zero dice; the roller would reject it anyway.
-			dicePool: Math.max(0, arete + areteModifier),
+			dicePool: Math.max(0, dicePoolBase + areteModifier),
 			// `shownDifficulty` is the authoritative, already-clamped value the roll will use.
 			difficulty: this.object.shownDifficulty,
 			// -1 is the sentinel `_calculateDifficulty` leaves when no sphere is chosen yet.

@@ -24,6 +24,9 @@
  * - `AttackAttributes`: Attack attribute list for weapons.
  * - `AttackAbilities`: Attack ability list for melee/ranged weapons (+ custom).
  * - `DamageAttribute`: Alias of `AttackAttributes` (used by weapon damage roll config).
+ * - `FormulaAttributes`: Attribute list for a Rote/Fórmula's Atributo+Habilidad pool
+ *   (fix-formula-casting). The Ability half is a free-text field, not listData — see
+ *   `item-sheet.js`'s `getData()` for the linked-Práctica hint text.
  *
  * **Powers (item sheets)**
  * - `Dice1List`, `Dice2List`: Lists for `templates/sheets/parts/power_rollable.html` (dice selection).
@@ -143,6 +146,25 @@ export default class SelectHelper {
 
             // Damage attribute uses the same attribute list as attack attribute
             listData.DamageAttribute = listData.AttackAttributes;
+        }
+
+        // fix-formula-casting (design.md D1/D2) — a Fórmula's own Atributo+Habilidad pair
+        // (M20 Prism of Focus, "Fórmulas": "en lugar de Areté, el mago tira su Atributo +
+        // Habilidad"). Attribute is a closed 9-value picker, same list weapons already use; Ability
+        // is a free-text field (see item-sheet.js's getData(), which resolves the linked
+        // Práctica's Associated Abilities as a hint) so this list only needs the Attribute values.
+        if (data.type === "Rote") {
+            listData.FormulaAttributes = [{
+                value: "",
+                label: "- " + game.i18n.localize("wod.labels.none") + " -"
+            }];
+
+            for (const attribute in CONFIG.worldofdarkness.attackAttributes) {
+                listData.FormulaAttributes.push({
+                    value: attribute,
+                    label: game.i18n.localize(CONFIG.worldofdarkness.attackAttributes[attribute])
+                });
+            }
         }
 
         // Combat maneuvers (Trait subtype): reuse the weapon Attribute pool + the

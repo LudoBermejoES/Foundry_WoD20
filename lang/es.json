@@ -2185,6 +2185,14 @@
 				"keepdiffdesc": "Mantener dificultad hace que cuando usas tiradas extendidas la dificultad no se incrementa en cada tirada.",
 				"difficultylimit": "La dificultad nunca puede ser superior o inferior a la dificultad base ±3."
 			},
+			"formula": {
+				"attribute": "Atributo",
+				"ability": "Habilidad",
+				"abilityhint": "La Habilidad debe estar asociada a la Práctica vinculada:",
+				"abilityhintgeneric": "Esta Fórmula no está vinculada a ninguna Práctica; si lo estuviera, la Habilidad debería estar asociada a ella.",
+				"poolbonus": "Bono de reserva",
+				"spherewarning": "Aviso: tu puntuación en esta Esfera es menor que el nivel que requiere esta Fórmula (no bloquea la tirada)."
+			},
 			"checkfrenzy": {
 				"headline": "Tirada de Frenesí",
 				"ragebonus": "Dados adicionales de Rabia",

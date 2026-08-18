@@ -74,6 +74,33 @@
                 </div>
             </div>
 
+            {{!-- fix-formula-casting (design.md D1/D2) — M20 Prism of Focus, "Fórmulas": "en lugar
+                  de Areté, el mago tira su Atributo + Habilidad". Both fields are optional; empty
+                  Attribute or Ability means this Fórmula keeps rolling Areté, exactly as before
+                  this change (see the casting dialog's pool branch). Ability is free text, not a
+                  picker — see design.md D2 for why a dropdown was rejected twice. --}}
+            <div class="dialog-area">
+                <div class="infobox bioInformationArea floating-label-group">
+                    <select class="sheet-infoValues editable" name="system.attribute">
+                        {{selectOptions listData.FormulaAttributes selected=data.system.attribute localize=false}}
+                    </select>
+                    <span class="floating-label">{{localize "wod.dialog.formula.attribute"}}</span>
+                </div>
+
+                <div class="infobox bioInformationArea floating-label-group">
+                    <input class="sheet-infoValues editable" name="system.ability" type="text" value="{{data.system.ability}}" data-dtype="String" autocomplete="off" />
+                    <span class="floating-label">{{localize "wod.dialog.formula.ability"}}</span>
+                </div>
+
+                <div class="information-area">
+                    {{#if formulaPracticeName}}
+                        {{localize "wod.dialog.formula.abilityhint"}} {{formulaPracticeName}}
+                    {{else}}
+                        {{localize "wod.dialog.formula.abilityhintgeneric"}}
+                    {{/if}}
+                </div>
+            </div>
+
             <div class="dialog-area">
 
                 <!-- Spheres -->

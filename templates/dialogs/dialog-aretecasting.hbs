@@ -6,43 +6,75 @@
                 <div class="dialog-group">
                     <div class="headlineGroup splatFont">{{localize "wod.dialog.aretecasting.availspheres"}}</div>
 
-                    <!-- Legacy actors -->
-                    {{#each actorData.spheres as |sphere key|}}
-                        <div class="attribute-rowheight {{#if (eq sphere.value 0)}}hide{{/if}}">
-                            <label for="{{key}}" class="pullLeft spheres-headlineWidth headlineNormal">{{localize sphere.label}}</label>
-                            <div class="resource-value pullLeft" id="{{key}}" data-name="{{key}}">
+                    {{!-- fix-formula-casting D4 — a saved Rote/Fórmula shows ITS OWN required
+                          Spheres+levels (formulaSphereRows, built from object.selectedSpheres in
+                          getData()), never the caster's owned Spheres — those are two different
+                          things this dialog used to conflate (design.md's Context). Dots are
+                          inert (the requirement is fixed, not something the caster picks here)
+                          and warn — never block, matching the existing Práctica-rating-shortfall
+                          precedent — when the caster's own rating in that Sphere falls short. --}}
+                    {{#if object.isRote}}
+                        {{#each formulaSphereRows as |row|}}
+                            <div class="attribute-rowheight">
+                                <label class="pullLeft spheres-headlineWidth headlineNormal">{{localize row.labelKey}}</label>
+                                <div class="resource-value pullLeft" data-name="{{row.key}}">
+                                    {{!-- Dots are set active directly here, not left to
+                                          `_setupDotCounters` (which reads `this.getData()`
+                                          synchronously against what is, as of
+                                          `add-prism-of-focus-foundry`, an async method — a
+                                          pre-existing, unrelated bug this change does not
+                                          otherwise touch; sidestepped here the same way
+                                          dialog-casting.hbs's equivalent row already is). --}}
+                                    {{#numLoop row.requiredRank}}
+                                        <span class="resource-value-step active" data-index="{{this}}"></span>
+                                    {{/numLoop}}
+                                </div>
+                                {{#if row.warn}}
+                                    <div class="pullRight speciality-attribute-icon">
+                                        <i class="fa-solid fa-circle-exclamation item-warning" title="{{localize 'wod.dialog.formula.spherewarning'}}"></i>
+                                    </div>
+                                {{/if}}
+                            </div>
+                        {{/each}}
+                    {{else}}
+                        <!-- Legacy actors -->
+                        {{#each actorData.spheres as |sphere key|}}
+                            <div class="attribute-rowheight {{#if (eq sphere.value 0)}}hide{{/if}}">
+                                <label for="{{key}}" class="pullLeft spheres-headlineWidth headlineNormal">{{localize sphere.label}}</label>
+                                <div class="resource-value pullLeft" id="{{key}}" data-name="{{key}}">
 
-                                {{#numLoop sphere.value}}
-                                
-                                    <span class="resource-value-step" data-type="{{../config.sheettype.mage}}" data-index="{{this}}"></span>
-                                
-                                {{/numLoop}}
+                                    {{#numLoop sphere.value}}
+
+                                        <span class="resource-value-step" data-type="{{../config.sheettype.mage}}" data-index="{{this}}"></span>
+
+                                    {{/numLoop}}
+                                </div>
+                                {{#if (gte sphere.value 4)}}
+                                    <div class="pullRight speciality-attribute-icon">
+                                        <i class="fa-solid fa-circle-exclamation {{#if (eq sphere.speciality '')}}item-warning{{else}}item-notice{{/if}}" title="{{sphere.speciality}}"></i>
+                                    </div>
+                                {{/if}}
                             </div>
-                            {{#if (gte sphere.value 4)}}
-							    <div class="pullRight speciality-attribute-icon">
-									<i class="fa-solid fa-circle-exclamation {{#if (eq sphere.speciality '')}}item-warning{{else}}item-notice{{/if}}" title="{{sphere.speciality}}"></i>
-								</div>
-							{{/if}}
-                        </div>
-                    {{/each}}
-                    <!-- PC Actor -->
-                    {{#each spheres as |sphere key|}}
-                        <div class="attribute-rowheight {{#if (eq sphere.value 0)}}hide{{/if}}">
-                            <label for="{{key}}" class="pullLeft spheres-headlineWidth headlineNormal">{{localize sphere.system.label}}</label>
-                            <div class="resource-value pullLeft" id="{{key}}" data-name="{{sphere.system.id}}">
-                                {{#numLoop sphere.system.value}}
-                                
-                                    <span class="resource-value-step" data-type="{{../config.sheettype.mage}}" data-index="{{this}}"></span>
-                                
-                                {{/numLoop}}
+                        {{/each}}
+                        <!-- PC Actor -->
+                        {{#each spheres as |sphere key|}}
+                            <div class="attribute-rowheight {{#if (eq sphere.value 0)}}hide{{/if}}">
+                                <label for="{{key}}" class="pullLeft spheres-headlineWidth headlineNormal">{{localize sphere.system.label}}</label>
+                                <div class="resource-value pullLeft" id="{{key}}" data-name="{{sphere.system.id}}">
+                                    {{#numLoop sphere.system.value}}
+
+                                        <span class="resource-value-step" data-type="{{../config.sheettype.mage}}" data-index="{{this}}"></span>
+
+                                    {{/numLoop}}
+                                </div>
+                                {{#if (gte sphere.system.value 4)}}
+                                    <div class="pullRight speciality-attribute-icon">
+                                        <i class="fa-solid fa-circle-exclamation {{#if (eq sphere.system.speciality '')}}item-warning{{else}}item-notice{{/if}}" title="{{sphere.system.speciality}}"></i>
+                                    </div>
+                                {{/if}}
                             </div>
-                            {{#if (gte sphere.system.value 4)}}
-							    <div class="pullRight speciality-attribute-icon">
-									<i class="fa-solid fa-circle-exclamation {{#if (eq sphere.system.speciality '')}}item-warning{{else}}item-notice{{/if}}" title="{{sphere.system.speciality}}"></i>
-								</div>
-							{{/if}}
-                        </div>
-                    {{/each}}
+                        {{/each}}
+                    {{/if}}
                 </div>
 
                 {{#if (gt object.totalSuccesses 0)}}

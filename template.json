@@ -1725,7 +1725,9 @@
 			},
 			"spendingtime": 0,
 			"spelltype": "",
-			"isextended": false
+			"isextended": false,
+			"attribute": "",
+			"ability": ""
 		},
 		"Fetish": {
 			"templates": [

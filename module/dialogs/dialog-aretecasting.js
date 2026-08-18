@@ -3,6 +3,11 @@ import { DiceRollContainer } from "../scripts/roll-dice.js";
 import PrismHelper from "../scripts/prism-helpers.js";
 import { AUTO_PRACTICE_RULES, CORRUPTED_PRACTICE_RULES } from "../scripts/prism-practice-data.js";
 import { createCorruptedResistanceCard } from "../scripts/prism-corrupted-card.js";
+import {
+    isFormulaRoll as _isFormulaRoll,
+    resolveAttributeRating,
+    resolveAbilityRating
+} from "../scripts/formula-casting-helpers.js";
 
 /**
     * Handles the information needed to use magic.
@@ -68,6 +73,12 @@ export class Rote {
         this.canCast = false;
         this.close = false;
 
+        // fix-formula-casting D1/D3 — a Fórmula's own Atributo+Habilidad pair, empty by default
+        // (every pre-existing Rote and every improvised cast). Both non-empty is what D3's pool
+        // branch and D5's Willpower-restriction fix key on — see `isFormulaRoll()` below.
+        this.attribute = "";
+        this.ability = "";
+
         this.isExtendedCasting = false;
         this.keepDifficulty = false;
         this.totalSuccesses = 0;
@@ -112,6 +123,11 @@ export class Rote {
 
             this.isRote = true;
 
+            // fix-formula-casting D1 — read once at cast time; the item's own fields are the
+            // single source of truth, never re-derived from the Práctica selector below.
+            this.attribute = item.system["attribute"] || "";
+            this.ability = item.system["ability"] || "";
+
             if (this.check_instrumentPerson) {
                 this.sumSelectedDifficulty -= 1;
             }
@@ -124,6 +140,16 @@ export class Rote {
 
             this._setDifficulty(this._highestRank());            
         }
+    }
+
+    /**
+     * fix-formula-casting D3 — true only when this Fórmula declares BOTH an Attribute and an
+     * Ability (M20 Prism of Focus: "en lugar de Areté, el mago tira su Atributo + Habilidad").
+     * False for every improvised cast and every Rote that predates this change (both fields
+     * default to ""), which keeps rolling Areté exactly as before — D1's explicit safe default.
+     */
+    isFormulaRoll() {
+        return _isFormulaRoll(this);
     }
 
     _highestRank() {
@@ -230,6 +256,24 @@ export class DialogAreteCasting extends FormApplication {
              data.spheres = data.spheres.sort((a, b) => Number(a.system.settings.order) - Number(b.system.settings.order));
         }
 
+        // fix-formula-casting D4 — "Esferas disponibles" must show the ROTE's OWN required
+        // Spheres+levels (object.selectedSpheres, already correctly computed for difficulty) when
+        // casting a saved Rote/Fórmula, not the caster's owned Spheres — those are two different
+        // things this dialog was conflating (see design.md's Context). Built once here so both
+        // templates (legacy and redesigned) read the same data. Warns, never blocks (D4/Non-Goals'
+        // "warn, don't block" convention, matching the existing Práctica-rating-shortfall
+        // precedent) when the caster's own rating in a required Sphere falls short.
+        if (this.object.isRote) {
+            data.formulaSphereRows = Object.entries(this.object.selectedSpheres)
+                .filter(([, requiredRank]) => requiredRank > 0)
+                .map(([sphereKey, requiredRank]) => ({
+                    key: sphereKey,
+                    labelKey: CONFIG.worldofdarkness.allSpheres[sphereKey],
+                    requiredRank: requiredRank,
+                    warn: this._callerSphereRank(sphereKey) < requiredRank
+                }));
+        }
+
         // add-prism-of-focus-foundry — D4's casting-dialog Práctica selector, shown only when the
         // ruleset is active on this actor (byte-identical dialog otherwise).
         data.prismActive = PrismHelper.IsActive(this.actor);
@@ -328,6 +372,76 @@ export class DialogAreteCasting extends FormApplication {
         }
 
         return extra;
+    }
+
+    /**
+     * fix-formula-casting D4 — the caster's OWN rating in a Sphere, regardless of the
+     * `isvisible`/rank-0 filtering `getData()`'s `data.spheres` already applies (a required
+     * Sphere the caster rates at 0 must still be comparable against the Fórmula's requirement).
+     */
+    _callerSphereRank(sphereKey) {
+        if (this.actor.type === "PC") {
+            const item = this.actor.items.find((i) => i.type === "Sphere" && i.system.id === sphereKey);
+            return parseInt(item?.system?.value ?? 0) || 0;
+        }
+
+        return parseInt(this.actor.system?.spheres?.[sphereKey]?.value ?? 0) || 0;
+    }
+
+    /**
+     * fix-formula-casting D3 — resolves the Atributo+Habilidad pool for a Fórmula whose
+     * `isFormulaRoll()` is true. Attribute rating read the same way `api-handler.js`'s
+     * `rollAttribute` already does (`actor.system.attributes[key].total`). Ability rating checks
+     * an owned PRIMARY Ability item by `system.id` first (covers the fixed 41-entry vocabulary,
+     * and every canonical Fórmula this change's own content extraction resolved to one), then an
+     * owned SECONDARY-ability Trait item by its `wod20-compendium-es` provenance flag (secondary
+     * abilities carry no catalog-slug field of their own — see design.md D2's note on the split
+     * vocabulary). Either half resolves to 0, never throws, when the caster doesn't own a
+     * matching item — the same "flag missing data, don't fabricate" norm as the content parser
+     * (design.md, Risks).
+     * @returns {{attributeValue: number, attributeLabel: string, abilityValue: number, abilityLabel: string}}
+     */
+    _formulaPool() {
+        const attributeKey = this.object.attribute;
+        const abilityKey = this.object.ability;
+
+        const attributeValue = resolveAttributeRating(this.actor, attributeKey);
+        const attributeLabelKey = CONFIG.worldofdarkness.attributes20?.[attributeKey]
+            ?? CONFIG.worldofdarkness.attributes?.[attributeKey];
+        const attributeLabel = attributeLabelKey ? game.i18n.localize(attributeLabelKey) : attributeKey;
+
+        const abilityValue = resolveAbilityRating(this.actor, abilityKey);
+
+        const primaryAbility = this.actor.items?.find(
+            (i) => i.type === "Ability" && i.system.id === abilityKey
+        );
+
+        let abilityLabel = abilityKey;
+
+        if (primaryAbility) {
+            abilityLabel = game.i18n.localize(primaryAbility.system.label) || primaryAbility.name;
+        }
+        else {
+            const secondaryAbility = this.actor.items?.find(
+                (i) => i.type === "Trait"
+                    && i.flags?.["wod20-compendium-es"]?.id === abilityKey
+            );
+
+            if (secondaryAbility) {
+                abilityLabel = secondaryAbility.system.label || secondaryAbility.name;
+            }
+            else {
+                const configKey = CONFIG.worldofdarkness.talents?.[abilityKey]
+                    ?? CONFIG.worldofdarkness.skills?.[abilityKey]
+                    ?? CONFIG.worldofdarkness.knowledges?.[abilityKey];
+
+                if (configKey) {
+                    abilityLabel = game.i18n.localize(configKey);
+                }
+            }
+        }
+
+        return { attributeValue, attributeLabel, abilityValue, abilityLabel };
     }
 
     activateListeners(html) {
@@ -578,21 +692,36 @@ export class DialogAreteCasting extends FormApplication {
                 action = game.i18n.localize("wod.dialog.aretecasting.castingarete");
             }           
             
-            if (this.actor.type === "PC") {
+            // fix-formula-casting D3/D6 — a Fórmula declaring both Atributo+Habilidad rolls THAT
+            // pool instead of Areté; `areteModifier` is reused unchanged as a generic pool
+            // modifier either way (D6), only the chat-card label differs.
+            const isFormulaRoll = this.object.isFormulaRoll();
+            let formulaPool = null;
+
+            if (isFormulaRoll) {
+                formulaPool = this._formulaPool();
+                template.push(`${formulaPool.attributeLabel} (${formulaPool.attributeValue})`);
+                template.push(`${formulaPool.abilityLabel} (${formulaPool.abilityValue})`);
+            }
+            else if (this.actor.type === "PC") {
                 const arete = this.actor.api?.getAdvantage("arete");
                 template.push(`${game.i18n.localize("wod.advantages.arete")} (${arete?.system?.roll ?? 0})`);
             }
             else {
                 template.push(`${game.i18n.localize("wod.advantages.arete")} (${this.actor.system.advantages.arete.roll})`);
-            }            
+            }
+
+            const poolBonusLabel = isFormulaRoll
+                ? "wod.dialog.formula.poolbonus"
+                : "wod.dialog.aretecasting.aretebonus";
 
             if (parseInt(this.object.areteModifier) > 0) {
-                template.push(`${game.i18n.localize("wod.dialog.aretecasting.aretebonus")} +${this.object.areteModifier}`);
+                template.push(`${game.i18n.localize(poolBonusLabel)} +${this.object.areteModifier}`);
             }
             else if (parseInt(this.object.areteModifier) < 0) {
-                template.push(`${game.i18n.localize("wod.dialog.aretecasting.aretebonus")} -${this.object.areteModifier}`);
-            }      
-            
+                template.push(`${game.i18n.localize(poolBonusLabel)} -${this.object.areteModifier}`);
+            }
+
             if (this.object.isExtendedCasting) {
                 extraInfo.push(`${game.i18n.localize("wod.dialog.aretecasting.extendedcasting")} - ${this.object.totalSuccesses} ${game.i18n.localize("wod.dice.successes")}`);
 
@@ -661,8 +790,11 @@ export class DialogAreteCasting extends FormApplication {
             }
 
             let numDices = 0;
-            
-            if (this.actor.type === "PC") {
+
+            if (isFormulaRoll) {
+                numDices = formulaPool.attributeValue + formulaPool.abilityValue + parseInt(this.object.areteModifier);
+            }
+            else if (this.actor.type === "PC") {
                 const arete = this.actor.api?.getAdvantage("arete");
                 numDices = parseInt(arete?.system?.roll ?? 0) + parseInt(this.object.areteModifier);
             }
@@ -678,13 +810,18 @@ export class DialogAreteCasting extends FormApplication {
             powerRoll.difficulty = parseInt(this.object.totalDifficulty);           
             powerRoll.speciality = specialityRoll;
             // design.md D15/task 5.5 (cross-spec-audit-pass3 Arreglo #5) — A19's second clause:
-            // Willpower cannot buy an automatic success/bonus dice on an Areté/Fórmula roll once
-            // Prisma de Foco is active, overriding the base system's generic Willpower-spend path
+            // Willpower cannot buy an automatic success/bonus dice on an ARETÉ roll once Prisma de
+            // Foco is active, overriding the base system's generic Willpower-spend path
             // (`roll-dice.js`'s `usewillpower && !willpowerBonusDice` minimum-1-success rule) that is
             // otherwise wired straight into this same casting flow. A mage who has not enabled
-            // Prisma de Foco is completely unaffected — this only forces the flag when the ruleset
-            // is on, never touches the checkbox's behavior on a non-Areté roll.
-            powerRoll.usewillpower = PrismHelper.IsActive(this.actor) ? false : this.object.useWillpower;
+            // Prisma de Foco is completely unaffected.
+            // fix-formula-casting D5 — corrected to key on the ACTUAL roll type (`isFormulaRoll`,
+            // resolved above), not on "is this a Rote": A19's own reasoning is "esa mecánica es de
+            // Areté, no de Atributo+Habilidad" — a genuine Atributo+Habilidad Fórmula roll must NOT
+            // have Willpower force-disabled, even though it IS a Rote.
+            powerRoll.usewillpower = (PrismHelper.IsActive(this.actor) && !isFormulaRoll)
+                ? false
+                : this.object.useWillpower;
             powerRoll.specialityText = specialityText;
             powerRoll.dicetext = template;
             powerRoll.extraInfo = extraInfo;

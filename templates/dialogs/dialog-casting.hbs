@@ -22,45 +22,71 @@
 				<p class="casting-hint">{{localize "wod.dialog.casting.spherehint"}}</p>
 			{{/if}}
 
-			{{!-- Legacy actors keep their own shape; PC actors carry Sphere Items. --}}
-			{{#each actorData.spheres as |sphere key|}}
-				{{#if (gt sphere.value 0)}}
+			{{!-- fix-formula-casting D4 — a saved Rote/Fórmula shows ITS OWN required Spheres+levels
+			      (formulaSphereRows, built from object.selectedSpheres in getData()), never the
+			      caster's owned Spheres: those are two different things this dialog used to
+			      conflate (design.md's Context). Dots are inert `<span>`s (the requirement is
+			      fixed, not something the caster picks here) and warn — never block, matching the
+			      existing Práctica-rating-shortfall precedent — when the caster's own rating in
+			      that Sphere falls short. --}}
+			{{#if object.isRote}}
+				{{#each formulaSphereRows as |row|}}
 					<div class="casting-sphere-row">
-						<span class="casting-sphere-name headlineNormal">{{localize sphere.label}}</span>
-						<div class="resource-value casting-sphere-dots" role="group" aria-label="{{localize sphere.label}}" data-name="{{key}}">
-							{{#numLoop sphere.value}}
-								{{!-- data-type is inert on these dots: nothing in CSS matches it and
-								      `_onDotSphereChange` only reads data-index and the parent's
-								      data-name. Written the same way the old template writes it so
-								      the two screens stay comparable, not because it does anything. --}}
-								<button type="button" class="resource-value-step" data-type="{{../config.sheettype.mage}}" data-index="{{this}}" aria-label="{{localize 'wod.labels.level'}} {{add this 1}}"></button>
+						<span class="casting-sphere-name headlineNormal">{{localize row.labelKey}}</span>
+						<div class="resource-value casting-sphere-dots" role="group" aria-label="{{localize row.labelKey}}" data-name="{{row.key}}">
+							{{#numLoop row.requiredRank}}
+								<span class="resource-value-step active" data-index="{{this}}" aria-label="{{localize 'wod.labels.level'}} {{add this 1}}"></span>
 							{{/numLoop}}
 						</div>
-					</div>
-				{{/if}}
-			{{/each}}
-
-			{{#each spheres as |sphere key|}}
-				{{!-- fix-zero-rank-sphere-rows: the old template tested `sphere.value`, which is
-				      undefined on a PC actor's Sphere Item, so every 0-rank sphere rendered as a
-				      label with no dots beside it. The value lives at `sphere.system.value`. --}}
-				{{#if (gt sphere.system.value 0)}}
-					<div class="casting-sphere-row">
-						<span class="casting-sphere-name headlineNormal">{{localize sphere.system.label}}</span>
-						<div class="resource-value casting-sphere-dots" role="group" aria-label="{{localize sphere.system.label}}" data-name="{{sphere.system.id}}">
-							{{#numLoop sphere.system.value}}
-								<button type="button" class="resource-value-step" data-type="{{../config.sheettype.mage}}" data-index="{{this}}" aria-label="{{localize 'wod.labels.level'}} {{add this 1}}"></button>
-							{{/numLoop}}
-						</div>
-						{{#if (gte sphere.system.value 4)}}
-							<i class="fa-solid fa-circle-exclamation casting-speciality {{#if (eq sphere.system.speciality '')}}item-warning{{else}}item-notice{{/if}}"
+						{{#if row.warn}}
+							<i class="fa-solid fa-circle-exclamation casting-speciality item-warning"
 							   role="img"
-							   aria-label="{{localize 'wod.dialog.attribute.speciality'}}{{#unless (eq sphere.system.speciality '')}}: {{sphere.system.speciality}}{{/unless}}"
-							   title="{{sphere.system.speciality}}"></i>
+							   aria-label="{{localize 'wod.dialog.formula.spherewarning'}}"
+							   title="{{localize 'wod.dialog.formula.spherewarning'}}"></i>
 						{{/if}}
 					</div>
-				{{/if}}
-			{{/each}}
+				{{/each}}
+			{{else}}
+				{{!-- Legacy actors keep their own shape; PC actors carry Sphere Items. --}}
+				{{#each actorData.spheres as |sphere key|}}
+					{{#if (gt sphere.value 0)}}
+						<div class="casting-sphere-row">
+							<span class="casting-sphere-name headlineNormal">{{localize sphere.label}}</span>
+							<div class="resource-value casting-sphere-dots" role="group" aria-label="{{localize sphere.label}}" data-name="{{key}}">
+								{{#numLoop sphere.value}}
+									{{!-- data-type is inert on these dots: nothing in CSS matches it and
+									      `_onDotSphereChange` only reads data-index and the parent's
+									      data-name. Written the same way the old template writes it so
+									      the two screens stay comparable, not because it does anything. --}}
+									<button type="button" class="resource-value-step" data-type="{{../config.sheettype.mage}}" data-index="{{this}}" aria-label="{{localize 'wod.labels.level'}} {{add this 1}}"></button>
+								{{/numLoop}}
+							</div>
+						</div>
+					{{/if}}
+				{{/each}}
+
+				{{#each spheres as |sphere key|}}
+					{{!-- fix-zero-rank-sphere-rows: the old template tested `sphere.value`, which is
+					      undefined on a PC actor's Sphere Item, so every 0-rank sphere rendered as a
+					      label with no dots beside it. The value lives at `sphere.system.value`. --}}
+					{{#if (gt sphere.system.value 0)}}
+						<div class="casting-sphere-row">
+							<span class="casting-sphere-name headlineNormal">{{localize sphere.system.label}}</span>
+							<div class="resource-value casting-sphere-dots" role="group" aria-label="{{localize sphere.system.label}}" data-name="{{sphere.system.id}}">
+								{{#numLoop sphere.system.value}}
+									<button type="button" class="resource-value-step" data-type="{{../config.sheettype.mage}}" data-index="{{this}}" aria-label="{{localize 'wod.labels.level'}} {{add this 1}}"></button>
+								{{/numLoop}}
+							</div>
+							{{#if (gte sphere.system.value 4)}}
+								<i class="fa-solid fa-circle-exclamation casting-speciality {{#if (eq sphere.system.speciality '')}}item-warning{{else}}item-notice{{/if}}"
+								   role="img"
+								   aria-label="{{localize 'wod.dialog.attribute.speciality'}}{{#unless (eq sphere.system.speciality '')}}: {{sphere.system.speciality}}{{/unless}}"
+								   title="{{sphere.system.speciality}}"></i>
+							{{/if}}
+						</div>
+					{{/if}}
+				{{/each}}
+			{{/if}}
 
 			{{#if (gt object.totalSuccesses 0)}}
 				<div class="casting-successes">

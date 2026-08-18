@@ -90,6 +90,16 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 		data.graphicsettings = ActionHelper._getGraphicSettings();
 		data.listData = SelectHelper.SetupItem(this.item);
 
+		// fix-formula-casting (design.md D2) — a static authoring hint for the Ability field:
+		// which Práctica's sheet to check for its Associated Abilities, resolved from the
+		// SAME provenance flag `buildRoteItem`/`webgen/foundry_export.py` already stamp on every
+		// linked Fórmula. A single `.name` read off the compendium index, not a prose parse — the
+		// full Associated-Abilities LIST is deliberately left to that Práctica's own sheet
+		// (already correct) rather than re-resolved here.
+		if (itemData.type === "Rote") {
+			data.formulaPracticeName = await this._resolveFormulaPracticeName(itemData);
+		}
+
 		data.locked = this.locked;
 		data.isCharacter = this.isCharacter;
 		data.isGM = game.user.isGM;	
@@ -756,13 +766,41 @@ export default class WoDItemSheet extends foundry.appv1.sheets.ItemSheet {
 	}
 
 	_assignToItemField(fields, value) {
-		const itemData = foundry.utils.duplicate(this.item);		
+		const itemData = foundry.utils.duplicate(this.item);
 
 		if (fields[1] === "spheres") {
 			itemData.system[fields[2]] = value;
 			this.item.update(itemData);
-		}		
-	}	
+		}
+	}
+
+	/**
+	 * fix-formula-casting (design.md D2) — resolves a Rote/Fórmula's linked Práctica NAME for the
+	 * sheet's static Ability hint. Reads `flags['wod20-compendium-es'].practice_id` (the same
+	 * provenance flag `wod20-char`'s `buildRoteItem` and `webgen/foundry_export.py` already stamp
+	 * on every catalog-sourced Fórmula) and looks it up against the `mage-practices` compendium
+	 * index by its OWN `flags['wod20-compendium-es'].id` — never invented, and never a second
+	 * source of truth for the id-to-name mapping. Returns `null` (never throws) when the module
+	 * isn't installed, the pack is missing, or nothing matches — a homebrew Fórmula with no
+	 * resolvable Práctica simply gets no hint (spec's own explicit fallback).
+	 */
+	async _resolveFormulaPracticeName(itemData) {
+		const practiceId = itemData.flags?.["wod20-compendium-es"]?.practice_id;
+		if (!practiceId) return null;
+
+		const pack = game.packs?.get("wod20-compendium-es.mage-practices");
+		if (!pack) return null;
+
+		try {
+			const index = await pack.getIndex({ fields: ["flags"] });
+			const entry = index.find((doc) => doc.flags?.["wod20-compendium-es"]?.id === practiceId);
+			return entry?.name ?? null;
+		}
+		catch (err) {
+			console.warn(`WoD | _resolveFormulaPracticeName: could not resolve practice "${practiceId}"`, err);
+			return null;
+		}
+	}
 }
 
 

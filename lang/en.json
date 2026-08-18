@@ -2198,6 +2198,14 @@
 				"keepdiffdesc": "Keep difficulty is when you are to use extended casting but the difficulty are not to be increased for each roll.",
 				"difficultylimit": "Difficulty can never be higher or lower than the base difficulty +3/-3."
 			},
+			"formula": {
+				"attribute": "Attribute",
+				"ability": "Ability",
+				"abilityhint": "The Ability should be one associated with the linked Práctica:",
+				"abilityhintgeneric": "This Fórmula isn't linked to a Práctica; if it were, the Ability should be one associated with it.",
+				"poolbonus": "Pool bonus",
+				"spherewarning": "Warning: your rating in this Sphere is below what this Fórmula requires (does not block the roll)."
+			},
 			"checkfrenzy": {
 				"headline": "Roll for frenzy",
 				"ragebonus": "Bonus dice to Rage",
