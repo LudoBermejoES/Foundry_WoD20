@@ -8,7 +8,13 @@
 --}}
 <h3 class="v3-sectiontitle splatFont">
 	{{localize 'wod.resonance.section.title'}}
-	<a class="pointer pullRight" data-action="addResonanceMark" title="{{localize 'wod.resonance.dialog.title'}}"><i class="icon fa-solid fa-square-plus"></i></a>
+	{{!-- NOT `class="icon fa-solid fa-square-plus"` — `css/wod.css`'s `.wod20.wod-sheet .icon.
+	      fa-square-plus { display: none }` unconditionally hides that exact combo anywhere in
+	      the sheet (a rule written for a different, unrelated legacy icon), which is why this
+	      header's own add-a-mark affordance was invisible until this fix. The v3 tab's OWN
+	      "Añadir objeto" button proves the glyph itself is fine without `.icon` — same pattern
+	      here. --}}
+	<a class="pointer pullRight" data-action="addResonanceMark" title="{{localize 'wod.resonance.dialog.title'}}"><i class="fa-solid fa-square-plus" aria-hidden="true"></i></a>
 </h3>
 
 <div class="space dialog-area flex-columns" data-drop-area="features" data-droparea="features">
