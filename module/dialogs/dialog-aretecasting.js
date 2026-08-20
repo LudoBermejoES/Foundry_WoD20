@@ -8,6 +8,7 @@ import {
     resolveAttributeRating,
     resolveAbilityRating
 } from "../scripts/formula-casting-helpers.js";
+import { activeDotCount } from "../scripts/casting-dot-helpers.js";
 
 /**
     * Handles the information needed to use magic.
@@ -470,25 +471,42 @@ export class DialogAreteCasting extends FormApplication {
         super.close()
     }
 
+    /**
+     * Restores the active dots after a render. Load-bearing: `_onDotSphereChange()` ends in
+     * `this.render()`, so this runs after EVERY dot click and is the only thing that puts the
+     * caster's selection back on screen.
+     *
+     * fix-casting-sphere-dots — reads `this.object.selectedSpheres` DIRECTLY and must keep doing
+     * so. It used to call `this.getData()`, which silently broke the moment
+     * `add-prism-of-focus-foundry` made that method `async`: the returned `Promise` has no
+     * `.object`, the optional chain short-circuited, no dot was ever activated, and every click
+     * looked like it erased the caster's own selection. Awaiting it would have worked and would
+     * have left the same trap armed for the next async lifecycle method; `selectedSpheres` lives on
+     * `this.object`, so this method never needed `getData()` in the first place.
+     * Guarded by `.github/scripts/test-casting-dots.mjs`.
+     */
     _setupDotCounters(html) {
-        const data = this.getData();
+        const selectedSpheres = this.object?.selectedSpheres;
 
         html.find(".resource-value").each(function () {
             const sphere = this.dataset.name;
 
-            // Only fill dots based on selectedSpheres from the rote
-            // Works for both legacy and PC actors since they use the same sphere IDs
-            if (data.object?.selectedSpheres[sphere] > 0) {
-                const value = Number(data.object?.selectedSpheres[sphere]);
+            // Fills from the dialog's current selection — the Rote's own required Spheres when
+            // casting a saved Fórmula, whatever the caster has clicked on an improvised cast.
+            // Works for both legacy and PC actors since they use the same sphere IDs.
+            const value = activeDotCount(selectedSpheres, sphere);
 
-                $(this)
-                    .find(".resource-value-step")
-                    .each(function (i) {
-                        if (i + 1 <= value) {
-                            $(this).addClass("active");
-                        }
-                    });
+            if (value <= 0) {
+                return;
             }
+
+            $(this)
+                .find(".resource-value-step")
+                .each(function (i) {
+                    if (i + 1 <= value) {
+                        $(this).addClass("active");
+                    }
+                });
         });
     }
 

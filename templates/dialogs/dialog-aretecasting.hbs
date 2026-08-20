@@ -18,13 +18,13 @@
                             <div class="attribute-rowheight">
                                 <label class="pullLeft spheres-headlineWidth headlineNormal">{{localize row.labelKey}}</label>
                                 <div class="resource-value pullLeft" data-name="{{row.key}}">
-                                    {{!-- Dots are set active directly here, not left to
-                                          `_setupDotCounters` (which reads `this.getData()`
-                                          synchronously against what is, as of
-                                          `add-prism-of-focus-foundry`, an async method — a
-                                          pre-existing, unrelated bug this change does not
-                                          otherwise touch; sidestepped here the same way
-                                          dialog-casting.hbs's equivalent row already is). --}}
+                                    {{!-- Dots are set active directly here rather than left to
+                                          `_setupDotCounters`, because a Fórmula's requirement is
+                                          fixed display, not a selection: this row must read the
+                                          same whether or not the counter runs. The counter would
+                                          now agree with it — it was broken when this branch was
+                                          written (it read the by-then-async `getData()`), and
+                                          `fix-casting-sphere-dots` has since repaired it. --}}
                                     {{#numLoop row.requiredRank}}
                                         <span class="resource-value-step active" data-index="{{this}}"></span>
                                     {{/numLoop}}

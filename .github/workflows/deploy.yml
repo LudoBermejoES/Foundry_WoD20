@@ -413,6 +413,16 @@ jobs:
       # lang/es.json from disk, so it cannot pass against a deleted translation.
       - name: Prove the eye's window is titled in the reader's language
         run: node .github/scripts/test-item-viewer-title.mjs
+      # Reported from the live sheet as "the sphere dots don't fill in properly". The counter that
+      # restores them read `this.getData()`, which `add-prism-of-focus-foundry` had quietly turned
+      # async: the Promise has no `.object`, the optional chain short-circuited, and no dot was ever
+      # activated. Nothing threw. Because `_onDotSphereChange()` ends in `this.render()`, every
+      # click erased the caster's own selection on screen while the difficulty maths stayed right
+      # underneath. `js-syntax-check` cannot see it (a missing `await` is valid JS) and the repo's
+      # `tests/*.mjs` are not run by this workflow at all. Mutation-tested: reverting the counter
+      # fails B2/B3/B4.
+      - name: Prove the casting dialog's Sphere dots do not depend on the async getData()
+        run: node .github/scripts/test-casting-dots.mjs
 
       # The advantage block (Arete, Willpower, Quintessence, Renown, Virtues, Corpus — every line)
       # is built by string concatenation in `getGetStatArea_v2`, and add-pc-sheet-v3 D6 splits it
