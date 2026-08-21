@@ -60,9 +60,17 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DIALOG_PATH = path.join(ROOT, "module", "dialogs", "dialog-aretecasting.js");
-const TEMPLATE_PATH = path.join(ROOT, "templates", "dialogs", "dialog-aretecasting.hbs");
+// DOS plantillas, no una. `dialog-aretecasting.hbs` es la legacy y `dialog-casting.hbs` la
+// REDISEÑADA, que es la que el diálogo usa de verdad hoy. La primera versión de este gate solo
+// leía la legacy, así que dio 45/45 verdes mientras el abanico fijo seguía en pantalla en la
+// rediseñada — el usuario lo vio con un mago de 2 puntos al que se le ofrecían -1 a -5. Cualquier
+// aserción sobre el selector tiene que recorrer LAS DOS.
+const TEMPLATE_PATHS = [
+	path.join(ROOT, "templates", "dialogs", "dialog-aretecasting.hbs"),
+	path.join(ROOT, "templates", "dialogs", "dialog-casting.hbs"),
+];
 const dialogSrc = fs.readFileSync(DIALOG_PATH, "utf8");
-const templateSrc = fs.readFileSync(TEMPLATE_PATH, "utf8");
+const templates = TEMPLATE_PATHS.map((p) => ({ name: path.basename(p), src: fs.readFileSync(p, "utf8") }));
 
 const results = [];
 let failed = 0;
@@ -244,12 +252,27 @@ check("E5 declaring 0 (no spend) discharges nothing and flags no discrepancy",
 /* F. the TEMPLATE must offer the calculated range, never the old fixed fan                     */
 /* ============================================================================================ */
 
-check("F1 the fixed 0..-5 fan is GONE from the Quintaesencia radio group",
-	!/name="object\.quintessence"[\s\S]{0,400}numDownToLoop 0 -5/.test(templateSrc) &&
-	!/numDownToLoop 0 -5[\s\S]{0,400}name="object\.quintessence"/.test(templateSrc));
+for (const { name, src } of templates) {
+	check(`F1 (${name}) the fixed 0..-5 fan is GONE from the Quintaesencia radio group`,
+		!/name="object\.quintessence"[\s\S]{0,400}numDownToLoop 0 -5/.test(src) &&
+		!/numDownToLoop 0 -5[\s\S]{0,400}name="object\.quintessence"/.test(src));
 
-check("F2 the Quintaesencia radios are built from the calculated quintessenceOptions list",
-	/\{\{#each quintessenceOptions as \|q\|\}\}[\s\S]{0,400}name="object\.quintessence" value="\{\{q\}\}"/.test(templateSrc));
+	check(`F2 (${name}) the Quintaesencia radios are built from the calculated quintessenceOptions list`,
+		/\{\{#each quintessenceOptions as \|q\|\}\}[\s\S]{0,400}name="object\.quintessence" value="\{\{q\}\}"/.test(src));
+}
+
+// El fallo que este gate no vio la primera vez no fue una aserción débil: fue una plantilla que
+// nadie miró. Así que se comprueba también que la lista de plantillas cubre TODAS las que pintan
+// un radio de `object.quintessence`, para que añadir una tercera no vuelva a pasar inadvertida.
+{
+	const dir = path.join(ROOT, "templates", "dialogs");
+	const conRadio = fs.readdirSync(dir)
+		.filter((f) => f.endsWith(".hbs"))
+		.filter((f) => /name="object\.quintessence"/.test(fs.readFileSync(path.join(dir, f), "utf8")));
+	const cubiertas = templates.map((t) => t.name).sort();
+	check(`F3 el gate cubre TODAS las plantillas con un radio de quintaesencia (halladas: ${conRadio.sort().join(", ")})`,
+		JSON.stringify(conRadio.sort()) === JSON.stringify(cubiertas));
+}
 
 /* ============================================================================================ */
 /* G. the DIALOG wires the helpers correctly: import, getData(), and the write's own trigger     */

@@ -117,13 +117,21 @@
 			<div class="casting-field">
 				<span class="casting-field-label" id="cast-lbl-quintessence">{{localize "wod.dialog.aretecasting.quintessence"}}</span>
 				<div class="casting-field-control casting-segmented" role="radiogroup" aria-labelledby="cast-lbl-quintessence">
-					{{#numDownToLoop 0 -5}}
-						<label class="casting-segment casting-segment-narrow">
-							<input type="radio" name="object.quintessence" value="{{this}}" aria-label="{{localize 'wod.labels.difficulty'}} {{this}}" {{isChecked (eq ../object.quintessence this)}}>
-							<span>{{this}}</span>
-						</label>
-					{{/numDownToLoop}}
+					{{!-- add-quintessence-spending D1/D2/D4 — rango CALCULADO (quintessenceOptions, desde
+					      min(disponible, Avatar) en getData()), nunca el abanico fijo 0..-5. Esta plantilla
+					      es la REDISEÑADA y es la que el diálogo usa de verdad: el primer intento del cambio
+					      arregló solo la legacy y el abanico fijo siguió en pantalla. Su gate comprueba AMBAS. --}}
+					{{#each quintessenceOptions as |q|}}
+							<input type="radio" name="object.quintessence" value="{{q}}" aria-label="{{localize 'wod.labels.difficulty'}} {{q}}" {{isChecked (eq ../object.quintessence this)}}>
+							<span>{{q}}</span>
+					{{/each}}
 				</div>
+				{{!-- Paridad con la plantilla legacy: el aviso de que la ficha no trae el Trasfondo
+				      Avatar, y que por tanto no se aplica su tope (D2). Sin esto, el mismo estado se
+				      explicaría en un diálogo y no en el otro. --}}
+				{{#if quintessenceAvatarMissing}}
+					<p class="casting-hint">{{localize "wod.dialog.aretecasting.quintessencenoavatar"}}</p>
+				{{/if}}
 			</div>
 
 			<div class="casting-field">
