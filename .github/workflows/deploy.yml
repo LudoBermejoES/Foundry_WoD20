@@ -513,14 +513,14 @@ jobs:
       # A wrong number here would silently misprice every vulgar cast at the table; nothing else in
       # this repo would notice, `js-syntax-check` stays green on bad arithmetic (it's still valid
       # JS), and the repo's `tests/*.mjs` are never invoked by this workflow. Covers all five
-      # ganancia rows, the book's own worked example end to end (Areté 6/Tiempo 4 vulgar con
-      # testigos: éxito -> 1, pifia -> 10, reserva 6 -> 16, contragolpe de 16 dados -> 10 éxitos ->
-      # descarga 10 + 10 dados contundente), the highest-Sphere rule (never the sum), ritual tax
+      # ganancia rows, the book's own worked example end to end (Areté 6/Tiempo 4, vulgar with
+      # witnesses: success -> 1, botch -> 10, reserve 6 -> 16, a 16-dice contragolpe -> 10 successes
+      # -> discharge 10 + 10 bashing dice), the highest-Sphere rule (never the sum), ritual tax
       # accumulation/discard, M1 in both switch positions, the botch-benefits-the-mage backlash
-      # case, the permanente that never discharges, every table-row boundary (5/6, 10/11, 15/16,
+      # case, the permanent side that never discharges, every table-row boundary (5/6, 10/11, 15/16,
       # 20/21), Defecto amplification, and Silencio's level-from-current-reserve rule (M5) including
-      # the irreversible nivel 6 confirmation boundary. Mutation-tested: altering either the pifia
-      # vulgar con testigos formula or the discharge cap fails this harness; restoring it passes
+      # the irreversible level-6 confirmation boundary. Mutation-tested: altering either the vulgar
+      # botch with witnesses formula or the discharge cap fails this harness; restoring it passes
       # again. Runnable locally: node .github/scripts/test-paradox.mjs
       - name: Prove the Paradoja ganancia table and contragolpe engine
         run: node .github/scripts/test-paradox.mjs

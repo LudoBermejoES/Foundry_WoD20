@@ -205,10 +205,10 @@ def main() -> int:
     errors: list[str] = []
     preloaded = preloaded_templates()
     for path in files:
-        # Normalizado a barra POSIX a propósito: las claves de KNOWN_IMBALANCED se escriben con
-        # barra normal, así que en Windows `str(relative_to)` produce barras invertidas y NINGUNA
-        # excepción casa — el gate denunciaba sus propios 4 casos ya aceptados y no se podía correr
-        # en local, que es exactamente cuando hace falta.
+        # Normalized to POSIX slashes on purpose: the KNOWN_IMBALANCED keys are written with
+        # forward slashes, so on Windows `str(relative_to)` produces backslashes and NO
+        # exception matches — the gate flagged its own 4 already-accepted cases and could not be
+        # run locally, which is exactly when it is needed.
         rel = path.relative_to(ROOT).as_posix()
         raw = path.read_text(encoding="utf-8")
         if check_comment_terminators(raw, rel, errors):

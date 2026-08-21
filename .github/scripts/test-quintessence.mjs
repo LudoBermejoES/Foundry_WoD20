@@ -60,11 +60,11 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DIALOG_PATH = path.join(ROOT, "module", "dialogs", "dialog-aretecasting.js");
-// DOS plantillas, no una. `dialog-aretecasting.hbs` es la legacy y `dialog-casting.hbs` la
-// REDISEÑADA, que es la que el diálogo usa de verdad hoy. La primera versión de este gate solo
-// leía la legacy, así que dio 45/45 verdes mientras el abanico fijo seguía en pantalla en la
-// rediseñada — el usuario lo vio con un mago de 2 puntos al que se le ofrecían -1 a -5. Cualquier
-// aserción sobre el selector tiene que recorrer LAS DOS.
+// TWO templates, not one. `dialog-aretecasting.hbs` is the legacy one and `dialog-casting.hbs`
+// the REDESIGNED one, which is the one the dialog actually uses today. The first version of this
+// gate only read the legacy one, so it reported 45/45 green while the fixed fan was still on
+// screen in the redesigned one — the user saw it with a 2-point mage being offered -1 to -5. Any
+// assertion about the selector has to walk BOTH of them.
 const TEMPLATE_PATHS = [
 	path.join(ROOT, "templates", "dialogs", "dialog-aretecasting.hbs"),
 	path.join(ROOT, "templates", "dialogs", "dialog-casting.hbs"),
@@ -261,16 +261,16 @@ for (const { name, src } of templates) {
 		/\{\{#each quintessenceOptions as \|q\|\}\}[\s\S]{0,400}name="object\.quintessence" value="\{\{q\}\}"/.test(src));
 }
 
-// El fallo que este gate no vio la primera vez no fue una aserción débil: fue una plantilla que
-// nadie miró. Así que se comprueba también que la lista de plantillas cubre TODAS las que pintan
-// un radio de `object.quintessence`, para que añadir una tercera no vuelva a pasar inadvertida.
+// The failure this gate missed the first time was not a weak assertion: it was a template nobody
+// looked at. So it also checks that the template list covers ALL the templates that render an
+// `object.quintessence` radio, so that adding a third one cannot slip by unnoticed again.
 {
 	const dir = path.join(ROOT, "templates", "dialogs");
 	const conRadio = fs.readdirSync(dir)
 		.filter((f) => f.endsWith(".hbs"))
 		.filter((f) => /name="object\.quintessence"/.test(fs.readFileSync(path.join(dir, f), "utf8")));
 	const cubiertas = templates.map((t) => t.name).sort();
-	check(`F3 el gate cubre TODAS las plantillas con un radio de quintaesencia (halladas: ${conRadio.sort().join(", ")})`,
+	check(`F3 the gate covers ALL templates carrying a Quintaesencia radio (found: ${conRadio.sort().join(", ")})`,
 		JSON.stringify(conRadio.sort()) === JSON.stringify(cubiertas));
 }
 

@@ -1,8 +1,8 @@
 /**
  * add-paradox-system — pure helpers for Paradoja: how much a casting generates
  * (`computeParadoxGain`) and what a contragolpe (backlash) does to the reserve
- * (`computeBacklash`), plus the small pieces both need (Esfera más alta, nivel de
- * Silencio, amplificación de Defectos, umbrales de aviso).
+ * (`computeBacklash`), plus the small pieces both need (highest Sphere, Silencio
+ * level, Defecto amplification, warning thresholds).
  *
  * WHY THIS FILE EXISTS
  * ---------------------
@@ -301,8 +301,9 @@ export function amplifyDefect(existingDegree, candidateDegree) {
 }
 
 /* ------------------------------------------------------------------------------------------------
- * 2.2 — computeBacklash(): tirar (temporal + permanente) dados a dificultad 6 con la regla del
- * uno, consultar la tabla, calcular descarga, Quemadura, Defecto y Silencio potencial.
+ * 2.2 — computeBacklash(): roll (temporary + permanent) dice at difficulty 6 under the rule of
+ * ones, look the row up in the table, then compute discharge, Quemadura, Defecto and the
+ * potential Silencio.
  * ------------------------------------------------------------------------------------------------ */
 
 function defaultRoll(diceCount) {
@@ -496,10 +497,10 @@ export function computeBacklash({
 		optionsList = ["permanentParadoxPlusOne", "defect", "spirit", "quiet", "banishment"];
 		optionsNote = "El libro imprime esta fila de dos formas incompatibles (M8: core:17904 \"y uno de\" frente a core:19649 \"o bien\"): o bien +1 Paradoja permanente, o bien elige DOS de Defecto severo / espíritu / Silencio moderado / destierro. Se presenta la lista completa sin resolver la ambigüedad ni imponer el recuento de selección.";
 	} else if (row === "21+") {
-		// Verificado contra el texto literal del corpus (core:19649 y core:17904), NO extrapolado de
-		// la fila 16-20: esta fila tiene su PROPIA lista y difiere en tres de sus cinco entradas (DOS
-		// puntos permanentes en vez de uno, Defecto drástico en vez de severo, Silencio severo en vez
-		// de moderado). Reutilizar la lista de 16-20 aquí sería un error de contenido.
+		// Verified against the literal corpus text (core:19649 and core:17904), NOT extrapolated from
+		// the 16-20 row: this row has its OWN list and differs in three of its five entries (TWO
+		// permanent points instead of one, a drastic Defecto instead of a severe one, a severe
+		// Silencio instead of a moderate one). Reusing the 16-20 list here would be a content error.
 		optionsList = ["permanentParadoxPlusTwo", "defect", "spirit", "quiet", "banishment"];
 		optionsNote = "El libro imprime esta fila de dos formas incompatibles (M8: core:19649 \"Quemadura de daño agravado O BIEN [lista]\" frente a core:17904 \"Quemadura de daño agravado Y UNO de [lista]\"). La lista literal es: dos puntos de Paradoja permanente, un Defecto de la Paradoja drástico, la visita de un espíritu de la Paradoja, un Silencio severo o el destierro a un Reino de la Paradoja. Se presenta sin resolver la conjunción ni imponer el recuento.";
 	}

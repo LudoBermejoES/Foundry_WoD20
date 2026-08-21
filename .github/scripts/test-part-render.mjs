@@ -383,9 +383,9 @@ globalThis.fromUuid = async () => null;
  * 3. LOAD THE REAL SYSTEM AND BUILD CONFIG THE WAY wod.js DOES
  * ============================================================================================ */
 
-// Devuelve un `file://` href, no una ruta: `M` se usa EXCLUSIVAMENTE como argumento de
-// `import()` dinamico (verificado: no hay ningun otro uso), y en Windows una ruta absoluta
-// como C:\... no es un especificador ESM valido para el cargador por defecto.
+// Returns a `file://` href, not a path: `M` is used EXCLUSIVELY as the argument of a dynamic
+// `import()` (verified: there is no other use), and on Windows an absolute path like C:\... is
+// not a valid ESM specifier for the default loader.
 const M = (...p) => pathToFileURL(path.join(sandbox, "module", ...p)).href;
 
 const { wod } = await import(M("config.js"));
