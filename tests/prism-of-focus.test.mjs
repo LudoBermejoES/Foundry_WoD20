@@ -83,6 +83,49 @@ test("degrades to {} for absent/malformed input, never throws", () => {
 	assert.deepEqual(parseMechanicsBlock("<p>no mechanics block here</p>"), {});
 });
 
+// fix-mech-block-raw-keys — `models.mech_block()` no longer prints the raw key as the visible text:
+// the text is the Spanish label and the key travels in `data-key`. The four tests below cover the new
+// format, the old one (still live inside an actor carrying a copied description), the precedence
+// between them, and the reason a label->key map would not have worked.
+test("parses the new data-key format, whose visible text is the LABEL (real regenerated HTML)", () => {
+	const html = `<p>...</p><hr><ul class='wod-kb-mech'><li data-key='paradigmas_asociados'><strong>Paradigmas asociados:</strong> Un Cosmos Mecánico, Un Mundo de Dioses y Monstruos</li><li data-key='common_instruments'><strong>Instrumentos comunes:</strong> Armas, computadoras, danzas</li><li data-key='benefit_es'><strong>Beneficio:</strong> La Magia del mando les resulta más fácil.</li><li data-key='kind'><strong>Tipo:</strong> base</li><li data-key='faction_specialty_ids'><strong>Especialidades de facción:</strong> authority</li></ul>`;
+	const mech = parseMechanicsBlock(html);
+	assert.equal(mech.kind, "base");
+	assert.equal(mech.benefit_es, "La Magia del mando les resulta más fácil.");
+	assert.deepEqual(mech.faction_specialty_ids, ["authority"]);
+	assert.deepEqual(mech.paradigmas_asociados, ["Un Cosmos Mecánico", "Un Mundo de Dioses y Monstruos"]);
+	// `common_instruments` is a LIST_FIELD as of this change: the previous entry named
+	// `instrumentos_comunes`, which exists in no shipped document.
+	assert.deepEqual(mech.common_instruments, ["Armas", "computadoras", "danzas"]);
+	// And no label leaks in as a key.
+	assert.deepEqual(Object.keys(mech).filter((k) => k.includes(" ")), []);
+});
+
+test("`data-key` wins over the visible text, because a label cannot identify a key", () => {
+	// Both rows DISPLAY «Prácticas asociadas» — 95 keys in `mechanic_labels.json` share a label with
+	// another — and they still have to reach distinct keys.
+	const html = `<ul class='wod-kb-mech'><li data-key='associated_practices'><strong>Prácticas asociadas:</strong> alchemy, craftwork</li><li data-key='practicas_asociadas'><strong>Prácticas asociadas:</strong> faith</li></ul>`;
+	const mech = parseMechanicsBlock(html);
+	assert.deepEqual(mech.associated_practices, ["alchemy", "craftwork"]);
+	assert.equal(mech.practicas_asociadas, "faith");
+	assert.equal(mech["Prácticas asociadas"], undefined);
+});
+
+test("legacy raw-key rows still parse (an actor's stored description copy predates the change)", () => {
+	const html = `<ul class='wod-kb-mech'><li><strong>kind:</strong> specialty</li><li><strong>base_practice_id:</strong> martial-arts</li><li><strong>associated_practices:</strong> alchemy, craftwork</li></ul>`;
+	const mech = parseMechanicsBlock(html);
+	assert.equal(mech.kind, "specialty");
+	assert.equal(mech.base_practice_id, "martial-arts");
+	assert.deepEqual(mech.associated_practices, ["alchemy", "craftwork"]);
+});
+
+test("a mixed block (one row migrated, one not) parses both rows", () => {
+	const html = `<ul class='wod-kb-mech'><li data-key='kind'><strong>Tipo:</strong> corrupted</li><li><strong>practice_id:</strong> faith</li></ul>`;
+	const mech = parseMechanicsBlock(html);
+	assert.equal(mech.kind, "corrupted");
+	assert.equal(mech.practice_id, "faith");
+});
+
 console.log("prism-state-engine.js");
 
 function fakeTenet(associated, limited, category = "metaphysical") {

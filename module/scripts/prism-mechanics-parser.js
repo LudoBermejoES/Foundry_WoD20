@@ -31,6 +31,30 @@
  * Slugs inside list-type fields (`associated_practices: alchemy, craftwork, ...`) are already the
  * SAME `id` slugs `flags['wod20-compendium-es'].id` uses elsewhere in this corpus, so no separate
  * name-normalization step is needed to key this project's Práctica/Tenet ids.
+ *
+ * TWO ROW SHAPES, AND THE KEY IS NO LONGER THE TEXT (`fix-mech-block-raw-keys`).
+ * `models.mech_block()` used to print the RAW KEY as the visible text, so a player read
+ * `common_instruments:` on the item sheet where the reading site, from the same datum, writes
+ * «Instrumentos comunes». The text is now the LABEL and the key travels in `data-key`:
+ *
+ *   new      <li data-key='common_instruments'><strong>Instrumentos comunes:</strong> …</li>
+ *   legacy   <li><strong>common_instruments:</strong> …</li>
+ *
+ * BOTH are accepted, and the legacy shape is not a courtesy: `getMechanicsSync` falls back, as a last
+ * resort, to the `system.description` the Item itself carries copied inside an actor, and that copy
+ * may predate the format change. `data-key` WINS over the text when both are present.
+ *
+ * WHY NOT A LABEL->KEY MAP HERE: labels are not unique. Measured over `webgen/mechanic_labels.json`
+ * (253 keys, 202 distinct labels), 95 keys share a label with another (44 distinct labels affected),
+ * and the collisions land exactly on what this file resolves —
+ * `associated_practices`/`practicas_asociadas` are both «Prácticas asociadas»,
+ * `paradigmas_asociados`/`associated_paradigms` both «Paradigmas asociados», `kind`/`tipo` both
+ * «Tipo», `practice`/`practice_id` both «Práctica». Inverting the label would be ambiguous by
+ * construction. The guard that crosses the two sides is
+ * `wod20/webgen/tests/test_mech_block_parser_contract.py`: it renders rows with the real exporter and
+ * parses them with THIS file, so a format change on either side fails in CI instead of breaking
+ * Práctica resolution silently — which is the reason `add-formula-authoring` declared this change
+ * out of scope in the first place.
  */
 
 /** Fields whose value is a comma-separated list, split into a trimmed, non-empty array. */
@@ -39,15 +63,22 @@ const LIST_FIELDS = new Set([
 	"limited_practices",
 	"faction_specialty_ids",
 	"paradigmas_asociados",
-	// `associated_abilities`, no `habilidades_asociadas`: ese era uno de los CUATRO nombres con que
-	// esta lista vivia, y `add-formula-authoring` los unifico en uno. La entrada vieja quedo muerta
-	// aqui — nada la leia, asi que no rompio nada, pero declaraba un campo que ya no existe.
+	// `associated_abilities`, NOT `habilidades_asociadas`: that was one of the FOUR names this list
+	// lived under, and `add-formula-authoring` unified them into one. The old entry was left dead here
+	// — nothing read it, so nothing broke, but it declared a field that no longer exists.
 	"associated_abilities",
-	"instrumentos_comunes"
+	// `common_instruments`, NOT `instrumentos_comunes`: the SAME dead-entry defect the comment above
+	// describes, in its second instance, found by the new cross-side guard — `instrumentos_comunes`
+	// appears in 0 shipped documents while `common_instruments` appears in 42, carrying exactly the
+	// value this line means to split (comma-separated prose: "Armas, computadoras, danzas, …").
+	// Corrected here because that guard requires every member of this set to exist in what is emitted.
+	"common_instruments"
 ]);
 
 const MECH_BLOCK_RE = /<ul class=['"]wod-kb-mech['"]>([\s\S]*?)<\/ul>/;
-const MECH_ROW_RE = /<li><strong>([^<:]+):<\/strong>\s*([\s\S]*?)<\/li>/g;
+//                        1: <li> attributes   2: label, or legacy raw key   3: value
+const MECH_ROW_RE = /<li([^>]*)><strong>([^<]*?):<\/strong>\s*([\s\S]*?)<\/li>/g;
+const DATA_KEY_RE = /\bdata-key=['"]([^'"]*)['"]/;
 
 /**
  * Parses a resolved description's `wod-kb-mech` block into a plain object. Never throws: an absent
@@ -66,8 +97,13 @@ export function parseMechanicsBlock(descriptionHtml) {
 	MECH_ROW_RE.lastIndex = 0;
 	let rowMatch;
 	while ((rowMatch = MECH_ROW_RE.exec(blockMatch[1])) !== null) {
-		const key = rowMatch[1].trim();
-		const rawValue = rowMatch[2].replace(/<[^>]+>/g, "").trim();
+		// `data-key` first, the <strong> text second: see the header note. In the new format that
+		// text is the LABEL, and a label does not identify a key, so it only serves as the key when
+		// no attribute is present — i.e. for a description written in the old format.
+		const dataKey = DATA_KEY_RE.exec(rowMatch[1] || "");
+		const key = (dataKey ? dataKey[1] : rowMatch[2]).trim();
+		if (!key) continue;
+		const rawValue = rowMatch[3].replace(/<[^>]+>/g, "").trim();
 
 		if (LIST_FIELDS.has(key)) {
 			result[key] = rawValue ? rawValue.split(",").map((v) => v.trim()).filter(Boolean) : [];
