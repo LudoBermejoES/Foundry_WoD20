@@ -2183,7 +2183,9 @@
 				"keepdifficulty": "Mantener la misma dificultad",
 				"keepdiff": "Mantener dificultad",
 				"keepdiffdesc": "Mantener dificultad hace que cuando usas tiradas extendidas la dificultad no se incrementa en cada tirada.",
-				"difficultylimit": "La dificultad nunca puede ser superior o inferior a la dificultad base ±3."
+				"difficultylimit": "La dificultad nunca puede ser superior o inferior a la dificultad base ±3.",
+				"quintessencenoavatar": "Sin Trasfondo Avatar en la ficha: el límite se basa solo en la Quintaesencia disponible, sin tope de Avatar.",
+				"quintessencediscrepancy": "La reserva de Quintaesencia solo tenía {available} punto(s); se han descontado {spent} en lugar de los {requested} declarados."
 			},
 			"formula": {
 				"attribute": "Atributo",

@@ -2196,7 +2196,9 @@
 				"keepdifficulty": "Keeps the difficulty the same",
 				"keepdiff": "Keep difficulty",
 				"keepdiffdesc": "Keep difficulty is when you are to use extended casting but the difficulty are not to be increased for each roll.",
-				"difficultylimit": "Difficulty can never be higher or lower than the base difficulty +3/-3."
+				"difficultylimit": "Difficulty can never be higher or lower than the base difficulty +3/-3.",
+				"quintessencenoavatar": "No Avatar Background on the sheet: the limit is based only on the Quintessence available, with no Avatar cap applied.",
+				"quintessencediscrepancy": "Quintessence had only {available} point(s) left; {spent} were discharged instead of the {requested} declared."
 			},
 			"formula": {
 				"attribute": "Attribute",

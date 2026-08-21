@@ -543,6 +543,26 @@ jobs:
       - name: Prove the Paradoja chat card's idempotency, Narrador-gating and Silencio confirmation
         run: node .github/scripts/test-paradox-card.mjs
 
+      # add-quintessence-spending tasks 2-5 — spending Quintaesencia at casting time used to do
+      # NOTHING to the sheet: the declared spend fed the difficulty calculation
+      # (`dialog-aretecasting.js:191`) and produced one chat line, with no `.update(` anywhere in the
+      # dialog or `roll-dice.js`. The selector offering the spend was also a fixed 0..-5 fan that
+      # never looked at the reserve or at the Avatar Background's per-turn cap (`core:11736`,
+      # `core:19159`). `module/scripts/quintessence-helpers.js` now holds `min(available, Avatar)`,
+      # the three-step Avatar-id cascade (wod20-char flag -> wod20-compendium-es flag -> tolerant
+      # name match, because a Background carries no `system.id` at all), the calculated selector
+      # range, and the never-negative write-time discharge — dependency-free for the same reason
+      # `casting-difficulty-helpers.js`/`paradox-helpers.js` are. This harness reads the TEMPLATE and
+      # the DIALOG's own source (never just the pure arithmetic) so a selector quietly reverting to
+      # the fixed fan, or the write reappearing on the wrong trigger or a third storage location,
+      # both fail here even though `js-syntax-check.sh` and every diff-based gate stay green on
+      # either regression. Mutation-tested: the fixed selector fan reintroduced, the Avatar cap
+      # removed, and each of the three cascade steps removed individually — all six caught, all
+      # restored.
+      # Runnable locally: node .github/scripts/test-quintessence.mjs
+      - name: Prove Quintaesencia spending is discounted, capped by the Avatar, and never negative
+        run: node .github/scripts/test-quintessence.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server

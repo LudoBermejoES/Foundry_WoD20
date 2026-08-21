@@ -15,6 +15,12 @@ import {
     computeCastingDifficulty,
     capDifficultyToRollable
 } from "../scripts/casting-difficulty-helpers.js";
+import {
+    resolveAvatarRating,
+    resolveAvailableQuintessence,
+    quintessenceSpendOptions,
+    resolveQuintessenceDischarge
+} from "../scripts/quintessence-helpers.js";
 
 /**
     * Handles the information needed to use magic.
@@ -244,6 +250,16 @@ export class DialogAreteCasting extends FormApplication {
              data.spheres = this.actor.items.filter(item => item.type === "Sphere" && item.system.settings.isvisible);
              data.spheres = data.spheres.sort((a, b) => Number(a.system.settings.order) - Number(b.system.settings.order));
         }
+
+        // add-quintessence-spending D1/D2/D4 — the selector's own range, calculated from what the
+        // caster can ACTUALLY pay this turn (min(available, Avatar), or just `available` when there
+        // is no Avatar Background at all — D2), never the old fixed 0..-5 fan. `data.quintessenceOptions`
+        // feeds the template's radio loop directly.
+        const quintessenceAvailable = resolveAvailableQuintessence(this.actor);
+        const avatarRating = resolveAvatarRating(this.actor);
+
+        data.quintessenceOptions = quintessenceSpendOptions({ available: quintessenceAvailable, avatarRating });
+        data.quintessenceAvatarMissing = (avatarRating === null);
 
         // fix-formula-casting D4 — "Esferas disponibles" must show the ROTE's OWN required
         // Spheres+levels (object.selectedSpheres, already correctly computed for difficulty) when
@@ -838,6 +854,52 @@ export class DialogAreteCasting extends FormApplication {
             powerRoll.systemText = this.object.description;
             
             let successes = await DiceRoller(powerRoll);
+
+            // add-quintessence-spending D3 — the discount happens HERE, once the roll has actually
+            // resolved, never when the selector was moved (the player can change their mind freely
+            // right up to this point) and never when the dialog is closed without casting (that path
+            // never reaches `_castSpell` at all). Re-reads the actor's CURRENT state rather than
+            // trusting whatever was last rendered on screen — D3's "la reserva bajó por otra vía" — and
+            // `resolveQuintessenceDischarge()` re-validates against both limits (available AND
+            // Avatar) so the write can never leave the pool negative. Writes through the exact same
+            // fields the manual Quintaesencia wheel already uses (`action-helpers.js`'s
+            // `OnQuintessenceWheelClick`/`mage-actor-sheet.js`'s `_onQuintessenceChange`), never a
+            // third route: the PC `Advantage` item's `system.temporary`, or the legacy actor's
+            // `system.quintessence.temporary`.
+            if (parseInt(this.object.quintessence) < 0) {
+                const quintessenceAvailableNow = resolveAvailableQuintessence(this.actor);
+                const avatarRatingNow = resolveAvatarRating(this.actor);
+
+                const discharge = resolveQuintessenceDischarge({
+                    requestedSpend: this.object.quintessence,
+                    available: quintessenceAvailableNow,
+                    avatarRating: avatarRatingNow
+                });
+
+                if (discharge.spend > 0) {
+                    if (this.actor.type === "PC") {
+                        const quintessenceItem = this.actor.api?.getAdvantage("quintessence");
+
+                        if (quintessenceItem) {
+                            await quintessenceItem.update({ "system.temporary": discharge.remaining });
+                        }
+                    }
+                    else {
+                        await this.actor.update({ "system.quintessence.temporary": discharge.remaining });
+                    }
+                }
+
+                if (discharge.discrepancy) {
+                    ChatMessage.create({
+                        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+                        content: game.i18n.format("wod.dialog.aretecasting.quintessencediscrepancy", {
+                            requested: discharge.requestedMagnitude,
+                            spent: discharge.spend,
+                            available: quintessenceAvailableNow
+                        })
+                    });
+                }
+            }
 
             // add-paradox-system task 3.4 — every completed casting roll feeds the Paradoja gain
             // calculation with exactly what this dialog already knows: the caster's own

@@ -88,16 +88,19 @@
                 <div class="headlineGroup splatFont">{{localize "wod.dialog.aretecasting.castingsettings"}}</div>
                 <div class="dialog-group">
                     <div style="height: 26px; line-height: 26px; display: flex;">
-                        <label for="quintessence" class="headline splatFont dialog-casting-type-label">{{localize "wod.dialog.aretecasting.quintessence"}}</label>                        
-                    
-                        {{#numDownToLoop 0 -5}}
-                            {{#if (eq this 0)}}
-                                <span class="headlineNormal"><input type="radio" class="setting-radiobuttons setting-radiospan" name="object.quintessence" value="{{this}}" {{isChecked (eq ../object.quintessence this)}}>{{this}}</input></span>
-                            {{else}}
-                                <span class="headlineNormal"><input type="radio" class="setting-radiobuttons setting-radiospan" name="object.quintessence" value="{{this}}" {{isChecked (eq ../object.quintessence this)}}>{{this}}</input></span>
-                            {{/if}}
-                        {{/numDownToLoop}}
+                        <label for="quintessence" class="headline splatFont dialog-casting-type-label">{{localize "wod.dialog.aretecasting.quintessence"}}</label>
+
+                        {{!-- add-quintessence-spending D1/D2/D4 — a CALCULATED range
+                              (quintessenceOptions, built in getData() from min(available, Avatar)),
+                              never the old fixed 0..-5 fan: the caster can only select what can
+                              actually be paid this turn. --}}
+                        {{#each quintessenceOptions as |q|}}
+                            <span class="headlineNormal"><input type="radio" class="setting-radiobuttons setting-radiospan" name="object.quintessence" value="{{q}}" {{isChecked (eq ../object.quintessence q)}}>{{q}}</input></span>
+                        {{/each}}
                     </div>
+                    {{#if quintessenceAvatarMissing}}
+                        <div class="information-area">{{localize "wod.dialog.aretecasting.quintessencenoavatar"}}</div>
+                    {{/if}}
                 </div>
 
                 <div class="dialog-group">
