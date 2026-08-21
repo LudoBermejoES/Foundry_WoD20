@@ -150,19 +150,27 @@ export default class SelectHelper {
 
         // fix-formula-casting (design.md D1/D2) — a Fórmula's own Atributo+Habilidad pair
         // (M20 Prism of Focus, "Fórmulas": "en lugar de Areté, el mago tira su Atributo +
-        // Habilidad"). Attribute is a closed 9-value picker, same list weapons already use; Ability
-        // is a free-text field (see item-sheet.js's getData(), which resolves the linked
-        // Práctica's Associated Abilities as a hint) so this list only needs the Attribute values.
+        // Habilidad"). Attribute is a closed 9-value picker: the M20 Atributos, i.e.
+        // `CONFIG.worldofdarkness.attributes20` (also used for the labels in
+        // dialog-aretecasting.js's `_formulaPool()`). It is NOT the weapon `attackAttributes`
+        // map — that one only has 4 keys (strength/dexterity/manipulation/wits) and exists to
+        // populate a weapon's attack-roll selector, not to enumerate Atributos; using it here
+        // silently dropped Resistencia, Carisma, Apariencia, Percepción e Inteligencia, so a
+        // Fórmula with `attribute: "perception"` (the change's own canonical example) rendered
+        // with nothing selected and degraded to an Areté roll on first save (`isFormulaRoll()`
+        // requires both `attribute` and `ability`). Ability is a free-text field (see
+        // item-sheet.js's getData(), which resolves the linked Práctica's Associated Abilities
+        // as a hint) so this list only needs the Attribute values.
         if (data.type === "Rote") {
             listData.FormulaAttributes = [{
                 value: "",
                 label: "- " + game.i18n.localize("wod.labels.none") + " -"
             }];
 
-            for (const attribute in CONFIG.worldofdarkness.attackAttributes) {
+            for (const attribute in CONFIG.worldofdarkness.attributes20) {
                 listData.FormulaAttributes.push({
                     value: attribute,
-                    label: game.i18n.localize(CONFIG.worldofdarkness.attackAttributes[attribute])
+                    label: game.i18n.localize(CONFIG.worldofdarkness.attributes20[attribute])
                 });
             }
         }

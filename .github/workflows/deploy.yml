@@ -563,6 +563,22 @@ jobs:
       - name: Prove Quintaesencia spending is discounted, capped by the Avatar, and never negative
         run: node .github/scripts/test-quintessence.mjs
 
+      # add-formula-authoring task 3.1 — a Fórmula (Rote item) sheet's Atributo dropdown iterated
+      # `CONFIG.worldofdarkness.attackAttributes`, a WEAPON attack-roll map with only four keys
+      # (strength/dexterity/manipulation/wits). It is missing five real M20 Atributos —
+      # Resistencia, Carisma, Apariencia, Percepción, Inteligencia — so a Fórmula whose `attribute`
+      # was one of those five rendered with nothing selected, and the first save silently wiped
+      # `attribute` back to `""` and downgraded the Fórmula to a plain Areté roll
+      # (`isFormulaRoll()` requires both `attribute` and `ability`). Fixed by iterating
+      # `CONFIG.worldofdarkness.attributes20` instead — the same nine-Atributo map
+      # `dialog-aretecasting.js`'s `_formulaPool()` already uses for labels. Not a template, not an
+      # i18n key, not a selector, not a colour, and iterating the wrong-but-existing map is valid
+      # JS, so no other gate here would have caught it. Mutation-tested: reverting to
+      # `attackAttributes` fails A2/A3; restoring passes again.
+      # Runnable locally: node .github/scripts/test-rote-attribute-picker.mjs
+      - name: Prove the Fórmula sheet's Atributo dropdown offers all nine M20 Atributos
+        run: node .github/scripts/test-rote-attribute-picker.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server
