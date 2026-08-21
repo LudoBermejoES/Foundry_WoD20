@@ -37,7 +37,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..", "..");
@@ -121,12 +121,12 @@ globalThis.foundry = {
  * 3. Import the REAL code out of the copied tree.
  * ------------------------------------------------------------------ */
 
-const { WoDItem } = await import(
+const { WoDItem } = await import(pathToFileURL(
 	path.join(sandbox, "module", "items", "data", "wod-item-base.js")
-);
-const AbilityHelper = (await import(
+).href);
+const AbilityHelper = (await import(pathToFileURL(
 	path.join(sandbox, "module", "scripts", "ability-helpers.js")
-)).default;
+).href)).default;
 
 /* ------------------------------------------------------------------ *
  * 4. Test scaffolding

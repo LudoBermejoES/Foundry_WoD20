@@ -55,7 +55,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..", "..");
@@ -165,9 +165,9 @@ globalThis.foundry = {
  * 3. Import the REAL code out of the copied tree.
  * ------------------------------------------------------------------ */
 
-const enrichment = await import(
+const enrichment = await import(pathToFileURL(
 	path.join(sandbox, "module", "scripts", "ability-enrichment.js")
-);
+).href);
 const {
 	isEnrichableAbility,
 	findAbilityCompendiumMatch,
@@ -176,13 +176,13 @@ const {
 	compendiumProvenanceOf
 } = enrichment;
 
-const { enrichActorAbilities } = await import(
+const { enrichActorAbilities } = await import(pathToFileURL(
 	path.join(sandbox, "module", "migrations.js")
-);
+).href);
 
-const AbilityHelper = (await import(
+const AbilityHelper = (await import(pathToFileURL(
 	path.join(sandbox, "module", "scripts", "ability-helpers.js")
-)).default;
+).href)).default;
 
 /* ------------------------------------------------------------------ *
  * 4. Test scaffolding

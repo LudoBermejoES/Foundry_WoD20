@@ -32,7 +32,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..", "..");
@@ -65,9 +65,9 @@ const realWarn = console.warn;
 function captureConsole() { console.warn = (...a) => logged.warn.push(a.map(String).join(" ")); }
 function releaseConsole() { console.warn = realWarn; }
 
-const { resyncActorTraits } = await import(
+const { resyncActorTraits } = await import(pathToFileURL(
 	path.join(sandbox, "module", "scripts", "stale-description-refresh.js")
-);
+).href);
 
 let passed = 0;
 const failures = [];

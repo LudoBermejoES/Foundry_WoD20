@@ -39,7 +39,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..", "..");
@@ -110,16 +110,16 @@ globalThis.foundry = {
 
 /* CONFIG.worldofdarkness is the REAL config, not a stub: the splat switches below are the decisions
    under test, so renaming `sheettype.wraith` must break this harness rather than pass it. */
-const { wod } = await import(path.join(sandbox, "module", "config.js"));
+const { wod } = await import(pathToFileURL(path.join(sandbox, "module", "config.js")).href);
 globalThis.CONFIG = { worldofdarkness: wod, Item: { dataModels: {} }, Actor: { dataModels: {} } };
 
 /* ------------------------------------------------------------------ *
  * 3. The REAL code, out of the copied tree.
  * ------------------------------------------------------------------ */
 
-const { registerHandlebarsHelpers, buildStatArea } = await import(
+const { registerHandlebarsHelpers, buildStatArea } = await import(pathToFileURL(
 	path.join(sandbox, "module", "handlebars.js")
-);
+).href);
 
 registerHandlebarsHelpers();
 

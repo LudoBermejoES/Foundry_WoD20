@@ -132,7 +132,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..", "..");
@@ -383,7 +383,10 @@ globalThis.fromUuid = async () => null;
  * 3. LOAD THE REAL SYSTEM AND BUILD CONFIG THE WAY wod.js DOES
  * ============================================================================================ */
 
-const M = (...p) => path.join(sandbox, "module", ...p);
+// Devuelve un `file://` href, no una ruta: `M` se usa EXCLUSIVAMENTE como argumento de
+// `import()` dinamico (verificado: no hay ningun otro uso), y en Windows una ruta absoluta
+// como C:\... no es un especificador ESM valido para el cargador por defecto.
+const M = (...p) => pathToFileURL(path.join(sandbox, "module", ...p)).href;
 
 const { wod } = await import(M("config.js"));
 const templatesModule = await import(M("templates.js"));

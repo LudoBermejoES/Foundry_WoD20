@@ -16,7 +16,7 @@
 import { mkdtempSync, cpSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..", "..");
 let checks = 0;
@@ -79,7 +79,7 @@ cpSync(join(ROOT, "module"), join(tmp, "module"), { recursive: true });
 writeFileSync(join(tmp, "package.json"), JSON.stringify({ type: "module" }));
 let resolveViewerTitle;
 try {
-	({ resolveViewerTitle } = await import(join(tmp, "module", "applications", "item-viewer.js")));
+	({ resolveViewerTitle } = await import(pathToFileURL(join(tmp, "module", "applications", "item-viewer.js")).href));
 } finally {
 	// keep tmp until after import; removed at exit below
 }

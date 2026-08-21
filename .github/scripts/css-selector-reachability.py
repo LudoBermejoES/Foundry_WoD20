@@ -108,7 +108,7 @@ def _element_class_sets() -> list[tuple[str, int, set[str]]]:
                 tokens = {t for t in re.split(r"\s+", cleaned) if t and re.fullmatch(r"[A-Za-z0-9_-]+", t)}
                 if tokens:
                     line = text[: match.start()].count("\n") + 1
-                    out.append((str(path.relative_to(ROOT)), line, tokens))
+                    out.append((path.relative_to(ROOT).as_posix(), line, tokens))
     return out
 
 
@@ -192,7 +192,7 @@ def _compound_selectors() -> list[tuple[str, int, tuple[str, ...]]]:
                         continue
                     classes = tuple(c for c in target.split(".") if c)
                     if len(classes) >= 2:
-                        found.append((str(path.relative_to(ROOT)), line, classes))
+                        found.append((path.relative_to(ROOT).as_posix(), line, classes))
     return found
 
 

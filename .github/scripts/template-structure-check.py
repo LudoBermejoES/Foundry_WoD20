@@ -205,7 +205,11 @@ def main() -> int:
     errors: list[str] = []
     preloaded = preloaded_templates()
     for path in files:
-        rel = str(path.relative_to(ROOT))
+        # Normalizado a barra POSIX a propósito: las claves de KNOWN_IMBALANCED se escriben con
+        # barra normal, así que en Windows `str(relative_to)` produce barras invertidas y NINGUNA
+        # excepción casa — el gate denunciaba sus propios 4 casos ya aceptados y no se podía correr
+        # en local, que es exactamente cuando hace falta.
+        rel = path.relative_to(ROOT).as_posix()
         raw = path.read_text(encoding="utf-8")
         if check_comment_terminators(raw, rel, errors):
             body = strip_comments(raw)

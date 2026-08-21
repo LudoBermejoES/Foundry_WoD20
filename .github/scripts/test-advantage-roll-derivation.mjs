@@ -76,7 +76,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..", "..");
@@ -141,18 +141,18 @@ globalThis.foundry = {
 	applications: { api: { ApplicationV2: class {}, HandlebarsApplicationMixin: (Base) => Base } }
 };
 
-const { WoDItem } = await import(
+const { WoDItem } = await import(pathToFileURL(
 	path.join(sandbox, "module", "items", "data", "wod-item-base.js")
-);
-const { computeAdvantageDerivedData } = await import(
+).href);
+const { computeAdvantageDerivedData } = await import(pathToFileURL(
 	path.join(sandbox, "module", "items", "data", "advantage-derivations.js")
-);
-const { default: AdvantageDataModel } = await import(
+).href);
+const { default: AdvantageDataModel } = await import(pathToFileURL(
 	path.join(sandbox, "module", "items", "datamodel", "advantage-item-datamodel.js")
-);
-const { WoDActor } = await import(
+).href);
+const { WoDActor } = await import(pathToFileURL(
 	path.join(sandbox, "module", "actor", "data", "wod-actor-base.js")
-);
+).href);
 
 let passed = 0;
 const failures = [];

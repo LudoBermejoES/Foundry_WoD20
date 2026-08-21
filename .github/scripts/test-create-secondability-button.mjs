@@ -81,7 +81,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..", "..");
@@ -239,26 +239,26 @@ globalThis.foundry = {
  * 4. Import the REAL code out of the copied tree.
  * ------------------------------------------------------------------ */
 
-const CreateHelper = (await import(
+const CreateHelper = (await import(pathToFileURL(
 	path.join(sandbox, "module", "scripts", "create-helpers.js")
-)).default;
+).href)).default;
 
-const AbilityHelper = (await import(
+const AbilityHelper = (await import(pathToFileURL(
 	path.join(sandbox, "module", "scripts", "ability-helpers.js")
-)).default;
+).href)).default;
 
-const { WoDItem } = await import(
+const { WoDItem } = await import(pathToFileURL(
 	path.join(sandbox, "module", "items", "data", "wod-item-base.js")
-);
+).href);
 
-const { isEnrichableAbility } = await import(
+const { isEnrichableAbility } = await import(pathToFileURL(
 	path.join(sandbox, "module", "scripts", "ability-enrichment.js")
-);
+).href);
 
 /** The LEGACY sheets' reader for the same item. See section C. */
-const ItemHelper = (await import(
+const ItemHelper = (await import(pathToFileURL(
 	path.join(sandbox, "module", "scripts", "item-helpers.js")
-)).default;
+).href)).default;
 
 /* ------------------------------------------------------------------ *
  * 5. Test scaffolding
