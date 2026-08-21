@@ -27,8 +27,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "..");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const results = [];
 let failed = 0;
@@ -82,7 +83,7 @@ const CASA_BONISAGUS = { name: "Casa Bonisagus", uuid: "Compendium.wod20-compend
 const CYBERPUNKS = { name: "Cyberpunks", uuid: "Compendium.wod20-compendium-es.mage-sects.bbb", system: {}, flags: {} };
 
 global.CONFIG = { worldofdarkness: {} };
-const { buildTraitCompendiumUuidMap } = await import(path.join(ROOT, "module", "scripts", "trait-enrichment.js"));
+const { buildTraitCompendiumUuidMap } = await import(pathToFileURL(path.join(ROOT, "module", "scripts", "trait-enrichment.js")).href);
 
 {
 	stubGame({ "mage-sects": [CASA_BONISAGUS, CYBERPUNKS] });

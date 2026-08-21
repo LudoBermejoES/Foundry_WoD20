@@ -28,8 +28,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "..");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SRC = path.join(ROOT, "module", "scripts", "create-helpers.js");
 const src = fs.readFileSync(SRC, "utf8");
 
@@ -61,7 +62,7 @@ const CONFIG = { worldofdarkness: { splat: { creature: "creature", mage: "mage",
    Foundry global, so it loads standalone; importing it means this harness cannot drift from the
    precedence the gate actually uses. An earlier draft reimplemented it here, which is the exact
    hand-copy rot this repo keeps being bitten by. */
-const { getSplat } = await import(path.join(ROOT, "module", "scripts", "splat-helpers.js"));
+const { getSplat } = await import(pathToFileURL(path.join(ROOT, "module", "scripts", "splat-helpers.js")).href);
 
 /* THE GATE IS EXTRACTED FROM SOURCE AND EXECUTED, not restated here. An earlier draft hardcoded the
    condition, and a mutation that swapped the real gate for `hascharms`-only still passed every
