@@ -108,6 +108,16 @@ function makeActor({ temporary = 0, permanent = 0 } = {}) {
 	const actor = {
 		id: "actor1",
 		type: "PC",
+		// add-paradox-system §5.4.3 — Silencio/Defecto now live on `system.paradoxSilence` /
+		// `system.paradoxDefect`, schema fields on BOTH `pc-actor-datamodel.js` and `template.json`
+		// (see §5.4.3 checks below), with these exact all-empty defaults. Present here from the
+		// start, matching what a real DataModel/template.json actor would already have BEFORE any
+		// contragolpe — never created lazily by a write, so a read before any write sees the real
+		// default shape, not `undefined`.
+		system: {
+			paradoxSilence: { level: 0, type: "" },
+			paradoxDefect: { degree: "none", description: "" }
+		},
 		items: { find: (fn) => [paradoxItem].find(fn) },
 		async update(patch) {
 			for (const [k, v] of Object.entries(patch)) setDotted(actor, k, v);
@@ -211,7 +221,19 @@ check("A1 a coincidental success (gain 0) posts no card", !noCardThrew && noCard
 	check("C2 a non-GM call leaves data.backlash null", card.data.backlash === null);
 
 	game.user.isGM = true;
-	await card.handleAction("backlash");
+	// The card's backlash path deliberately does NOT inject dice — production must roll for real —
+	// so this gate would otherwise depend on Math.random(). It is genuinely flaky that way: a roll
+	// of 0 NET successes without a botch (raw successes cancelled by ones) discharges nothing, the
+	// reserve stays at 10, and C3 fails for no reason. A preflight gate that fails at random blocks
+	// a deploy at random, so the randomness is pinned here instead: 0.75 -> face 8 on every die,
+	// which is a success at difficulty 6 and therefore always discharges.
+	const realRandom = Math.random;
+	Math.random = () => 0.75;
+	try {
+		await card.handleAction("backlash");
+	} finally {
+		Math.random = realRandom;
+	}
 	check("C3 a GM call rolls and discharges (temp changed from 10)", paradoxTemp(actor) !== 10);
 	check("C4 a GM call records a backlash result", card.data.backlash !== null);
 
@@ -220,6 +242,18 @@ check("A1 a coincidental success (gain 0) posts no card", !noCardThrew && noCard
 	await card.handleAction("backlash");
 	check("C5 a second backlash call does not re-roll (idempotent — one roll per card)",
 		paradoxTemp(actor) === temporaryAfterFirstRoll && JSON.stringify(card.data.backlash) === backlashAfterFirstRoll);
+
+	// §5.4.3 regression: a mandatory Defecto (rows 1-10) must land on the schema field, never on
+	// an actor flag — whichever row this random roll landed on.
+	if (!card.data.backlash.defect?.optional && card.data.backlash.defect?.degree && card.data.backlash.defect.degree !== "none") {
+		check("C6 a mandatory Defecto writes system.paradoxDefect.degree, not a flag",
+			actor.system.paradoxDefect.degree === card.data.backlash.defect.degree);
+	} else {
+		check("C6 no mandatory Defecto to check on this roll (skipped)", true,
+			`(degree=${card.data.backlash.defect?.degree}, optional=${card.data.backlash.defect?.optional})`);
+	}
+	check("C7 backlash never wrote an actor flag for paradoxDefect (regression: schema, not flags)",
+		actor.getFlag("worldofdarkness", "paradoxDefect") === undefined);
 
 	game.user.isGM = false; // restore for the next block
 }
@@ -239,18 +273,22 @@ check("A1 a coincidental success (gain 0) posts no card", !noCardThrew && noCard
 	check("D1 a reserve of 25 proposes Silencio nivel 6", card.data.backlash.potentialSilenceLevel === 6);
 
 	await card.handleAction("backlash-silence", { confirmed: false, type: "negation" });
-	check("D2 nivel 6 WITHOUT confirmation writes nothing", actor.getFlag("worldofdarkness", "paradoxSilence") === undefined);
+	check("D2 nivel 6 WITHOUT confirmation writes nothing",
+		actor.system.paradoxSilence.level === 0 && actor.system.paradoxSilence.type === "");
 	check("D3 nivel 6 WITHOUT confirmation leaves the card unmarked", card.data.backlash.silenceApplied === false);
 
 	await card.handleAction("backlash-silence", { confirmed: true, type: "madness" });
-	check("D4 nivel 6 WITH confirmation writes the flag",
-		JSON.stringify(actor.getFlag("worldofdarkness", "paradoxSilence")) === JSON.stringify({ level: 6, type: "madness" }));
+	check("D4 nivel 6 WITH confirmation writes system.paradoxSilence (schema, not a flag)",
+		JSON.stringify(actor.system.paradoxSilence) === JSON.stringify({ level: 6, type: "madness" }));
 	check("D5 nivel 6 WITH confirmation marks the card applied", card.data.backlash.silenceApplied === true);
 
-	const writtenAfterFirstConfirm = JSON.stringify(actor.getFlag("worldofdarkness", "paradoxSilence"));
+	const writtenAfterFirstConfirm = JSON.stringify(actor.system.paradoxSilence);
 	await card.handleAction("backlash-silence", { confirmed: true, type: "morbidity" });
 	check("D6 a repeat confirmed call does not re-apply a different type (idempotent)",
-		JSON.stringify(actor.getFlag("worldofdarkness", "paradoxSilence")) === writtenAfterFirstConfirm);
+		JSON.stringify(actor.system.paradoxSilence) === writtenAfterFirstConfirm);
+
+	check("D6b backlash-silence never wrote an actor flag for paradoxSilence (regression: schema, not flags)",
+		actor.getFlag("worldofdarkness", "paradoxSilence") === undefined);
 
 	game.user.isGM = false;
 }
@@ -268,7 +306,7 @@ check("A1 a coincidental success (gain 0) posts no card", !noCardThrew && noCard
 	if (level > 0 && level < 6) {
 		await card.handleAction("backlash-silence", { confirmed: false, type: "negation" });
 		check(`D7 nivel ${level} (< 6) needs NO confirmation to apply`,
-			actor.getFlag("worldofdarkness", "paradoxSilence")?.level === level);
+			actor.system.paradoxSilence?.level === level);
 	} else {
 		check("D7 nivel < 6 confirmation-free path (skipped — this reserve rolled outside 1-5)", true, `(level=${level})`);
 	}
@@ -284,6 +322,8 @@ const CARD_SRC = fs.readFileSync(path.join(ROOT, "module", "scripts", "paradox-c
 const HOOKS_SRC = fs.readFileSync(path.join(ROOT, "module", "hooks.js"), "utf8");
 const TEMPLATE_SRC = fs.readFileSync(path.join(ROOT, "templates", "dialogs", "paradox-card.hbs"), "utf8");
 const DIALOG_SRC = fs.readFileSync(path.join(ROOT, "module", "dialogs", "dialog-aretecasting.js"), "utf8");
+const PC_DATAMODEL_SRC = fs.readFileSync(path.join(ROOT, "module", "actor", "datamodel", "pc-actor-datamodel.js"), "utf8");
+const TEMPLATE_JSON = JSON.parse(fs.readFileSync(path.join(ROOT, "template.json"), "utf8"));
 
 check("E1 handleAction('apply') source contains the idempotency guard",
 	/if \(data\.applied\) return;/.test(CARD_SRC));
@@ -366,6 +406,56 @@ check("I4 every en.json wod.paradox key exists in es.json", missingInEs.length =
 
 check("I5 the terminology is Silencio, never Quietud, anywhere in es.json's wod.paradox block",
 	!/Quietud/.test(JSON.stringify(es.wod?.paradox ?? {})));
+
+/* =================================================================================================
+ * J — §5.4.3: Silencio/Defecto SHALL live in the schema (both actor shapes), never in flags.
+ * ================================================================================================= */
+
+const { DEFECT_DEGREES } = await import("../../module/scripts/paradox-helpers.js");
+
+// J1-J3 — the PC DataModel side.
+
+check("J1 pc-actor-datamodel.js imports DEFECT_DEGREES from paradox-helpers.js (not a parallel list)",
+	/import \{ DEFECT_DEGREES \} from "\.\.\/\.\.\/scripts\/paradox-helpers\.js";/.test(PC_DATAMODEL_SRC));
+
+check("J2 pc-actor-datamodel.js does NOT redefine the degree list as a literal array anywhere",
+	!/\[\s*"none",\s*"trivial",\s*"minor",\s*"significant",\s*"severe",\s*"drastic"\s*\]/.test(PC_DATAMODEL_SRC));
+
+check("J3 schema.paradoxSilence exists as a SchemaField with a 0-6 integer level",
+	/schema\.paradoxSilence = new fields\.SchemaField\(\{[\s\S]{0,400}?level: new fields\.NumberField\(\{[^}]*integer: true[^}]*initial: 0[^}]*min: 0[^}]*max: 6[^}]*\}\)/.test(PC_DATAMODEL_SRC));
+
+check("J4 schema.paradoxDefect exists as a SchemaField whose degree field uses `choices: DEFECT_DEGREES`",
+	/schema\.paradoxDefect = new fields\.SchemaField\(\{[\s\S]{0,400}?degree: new fields\.StringField\(\{[^}]*initial: "none"[^}]*choices: DEFECT_DEGREES[^}]*\}\)/.test(PC_DATAMODEL_SRC));
+
+check("J5 schema.paradoxDefect has a free-text description field (M7: no invented catalogue)",
+	/schema\.paradoxDefect = new fields\.SchemaField\(\{[\s\S]{0,600}?description: new fields\.StringField/.test(PC_DATAMODEL_SRC));
+
+// J6-J9 — the legacy `template.json` (`Mage` actor type) side.
+
+check("J6 template.json's Mage actor type composes the `mage` template",
+	Array.isArray(TEMPLATE_JSON.Actor?.Mage?.templates) && TEMPLATE_JSON.Actor.Mage.templates.includes("mage"));
+
+check("J7 template.json's `mage` template declares paradoxSilence with level 0 / type \"\"",
+	JSON.stringify(TEMPLATE_JSON.Actor?.templates?.mage?.paradoxSilence) === JSON.stringify({ level: 0, type: "" }));
+
+check("J8 template.json's `mage` template declares paradoxDefect with degree \"none\" / description \"\"",
+	JSON.stringify(TEMPLATE_JSON.Actor?.templates?.mage?.paradoxDefect) === JSON.stringify({ degree: "none", description: "" }));
+
+check("J9 template.json's paradoxDefect.degree default is one of DEFECT_DEGREES (same list, not a parallel one)",
+	DEFECT_DEGREES.includes(TEMPLATE_JSON.Actor?.templates?.mage?.paradoxDefect?.degree));
+
+// J10 — the antirregression assertion that matters most: paradox-card.js no longer touches
+// `actor.flags` for either state, on ANY code path (only the ChatMessage-scoped card bookkeeping,
+// via `this.message.getFlag/update`, may still use flags).
+
+check("J10 paradox-card.js never calls actor.getFlag/setFlag for paradoxSilence or paradoxDefect",
+	!/actor\.(get|set)Flag\([^)]*"paradox(Silence|Defect)"/.test(CARD_SRC));
+
+check("J11 paradox-card.js writes Defecto via system.paradoxDefect.degree, not a flag",
+	/actor\.update\(\{ ?"system\.paradoxDefect\.degree": degree ?\}\)/.test(CARD_SRC));
+
+check("J12 paradox-card.js writes Silencio via system.paradoxSilence.{level,type}, not a flag",
+	/actor\.update\(\{ ?"system\.paradoxSilence\.level": level, ?"system\.paradoxSilence\.type": type ?\}\)/.test(CARD_SRC));
 
 console.log("test-paradox-card.mjs");
 for (const line of results) console.log(line);

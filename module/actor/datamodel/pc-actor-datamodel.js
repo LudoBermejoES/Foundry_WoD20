@@ -2,6 +2,10 @@ import attributes from "./base/actor_attributes.js";
 import settings from "./base/actor_settings.js";
 import traits from "./base/actor_traits.js";
 import health from "./base/actor_health.js";
+// add-paradox-system §5.4.3 — the only piece of `paradox-helpers.js` this schema needs: the
+// canonical Defecto de Paradoja grade list, imported (never redefined) so the schema field below
+// and `paradox-card.js`'s write path can never disagree on what a valid grade is.
+import { DEFECT_DEGREES } from "../../scripts/paradox-helpers.js";
 
 export default class PCDataModel extends foundry.abstract.DataModel {
     static defineSchema() {
@@ -135,6 +139,34 @@ export default class PCDataModel extends foundry.abstract.DataModel {
             mediumshipUmbra: new fields.StringField({...valueString}),            // Mediumnidad
             shamanismEnvironment: new fields.StringField({...valueString}),       // Chamanismo
             witchcraftCycle: new fields.StringField({...valueString})             // Brujería
+        });
+
+        // add-paradox-system §5.4.3 — Silencio and Defecto de Paradoja lived in
+        // `actor.flags.worldofdarkness.paradoxSilence` / `paradoxDefect` because no schema field
+        // existed for either. Both are now schema fields, siblings of `practiceTraits` above, so
+        // this state travels in a clean export and is visible to any future validator — following
+        // exactly that field's own precedent: a new SchemaField sibling with every default
+        // empty/null/zero, so an actor that never suffers a contragolpe is entirely unaffected.
+        schema.paradoxSilence = new fields.SchemaField({
+            level: new fields.NumberField({required: true, nullable: false, integer: true, initial: 0, min: 0, max: 6}),
+            // Canonical values are "", "negation", "madness", "morbidity" — see `SILENCE_TYPES` in
+            // `paradox-card.js` and the `wod.paradox.card.silence*` i18n keys. Left as a plain
+            // string with no schema-level `choices`, matching every other controlled-vocabulary
+            // string on this model (`splat`, `variant`, `dicesetting`, …) — none of them enforce
+            // their vocabulary at the schema level either, and the actual UI-facing constant lives
+            // in a script, not in the Foundry-free `paradox-helpers.js` this DataModel otherwise
+            // depends on.
+            type: new fields.StringField({...valueString})
+        });
+
+        schema.paradoxDefect = new fields.SchemaField({
+            // The grade IS mechanical (spec M7); the values come from `DEFECT_DEGREES` above —
+            // `choices` enforces that this field can never silently drift into a second, parallel
+            // list.
+            degree: new fields.StringField({required: true, nullable: false, initial: "none", choices: DEFECT_DEGREES}),
+            // The spec forbids inventing a catalogue of named Defectos: only the grade is
+            // mechanical, so the concrete Defecto is free text left to the table.
+            description: new fields.StringField({...valueString})
         });
 
         return schema;

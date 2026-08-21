@@ -306,8 +306,11 @@ export function amplifyDefect(existingDegree, candidateDegree) {
  * ------------------------------------------------------------------------------------------------ */
 
 function defaultRoll(diceCount) {
-	// Real, non-deterministic fallback for production use; every test in this repo supplies `dice`
-	// or `roll` instead, so this branch is never exercised by the gate.
+	// Real, non-deterministic fallback for production use. NOTE: this branch IS reached by the gate
+	// — `paradox-card.js`'s backlash path calls `computeBacklash()` without injecting dice, because
+	// production must roll for real — so `test-paradox-card.mjs` pins `Math.random` around that call
+	// rather than relying on luck. Do not "simplify" that stub away: without it the gate fails
+	// whenever a roll nets zero successes without botching.
 	const results = [];
 	for (let i = 0; i < diceCount; i++) {
 		results.push(Math.floor(Math.random() * 10) + 1);

@@ -7,11 +7,14 @@
  *
  * STATE
  * -----
- * Everything lives in `flags.worldofdarkness.paradoxGain` on the `ChatMessage`. The card's OWN
- * bookkeeping (has "aplicar" been clicked, has the contragolpe been rolled, has Silencio been
- * confirmed) is the only thing cached there; the character's actual Paradoja/Defecto values are
- * always read LIVE off the actor in `renderCardContent()`/`handleAction()`, never cached, so a
- * stale card can never disagree with the sheet.
+ * The card's OWN bookkeeping (has "aplicar" been clicked, has the contragolpe been rolled, has
+ * Silencio been confirmed) lives in `flags.worldofdarkness.paradoxGain` on the `ChatMessage` — that
+ * flag is ChatMessage-scoped scratch state, not character state, so it stays a flag. The
+ * character's actual Paradoja/Defecto/Silencio values are always read LIVE off the actor in
+ * `renderCardContent()`/`handleAction()`, never cached, so a stale card can never disagree with the
+ * sheet — and, since §5.4.3, they are schema fields on the actor (`system.paradox`,
+ * `system.paradoxDefect`, `system.paradoxSilence`), never actor flags: character state that must
+ * show up in a clean export and be visible to a validator does not belong in `flags`.
  *
  * WHY THE BACKLASH BUTTON IS NEVER BAKED OUT OF THE HTML
  * --------------------------------------------------------
@@ -34,6 +37,14 @@
  * optional rows (16-20/21+) ever propose it, and even then this module does not auto-write it: M8
  * presents it as one of several options for the Narrador to enact by hand, exactly like the
  * Defecto/espíritu/destierro options on those same rows.
+ *
+ * SILENCIO / DEFECTO WRITE PATH (§5.4.3) — unlike the Paradoja counter above, there is no Item
+ * involved on either actor shape: both `pc-actor-datamodel.js` (PC) and `template.json`'s `mage`
+ * template (legacy `Mage`) declare `paradoxSilence`/`paradoxDefect` as plain schema fields on
+ * `system`, so a SINGLE `actor.update({"system.paradoxDefect.degree": ...})` /
+ * `actor.update({"system.paradoxSilence.level": ..., "system.paradoxSilence.type": ...})` covers
+ * both actor types — see `writeParadoxDefect()`/`writeParadoxSilence()` below. Neither field is
+ * ever written through `actor.setFlag()`.
  */
 import {
 	computeParadoxGain,
@@ -108,6 +119,25 @@ async function writeParadoxTemporary(actor, newTemporary) {
 	} else {
 		await actor.update({ "system.paradox.temporary": newTemporary });
 	}
+}
+
+/**
+ * add-paradox-system §5.4.3 — Silencio and Defecto de Paradoja now live on `system.paradoxSilence`
+ * / `system.paradoxDefect`, a schema field on BOTH actor shapes (`pc-actor-datamodel.js`'s
+ * `paradoxSilence`/`paradoxDefect` SchemaFields for `PC`, `template.json`'s `mage` template for
+ * legacy `Mage` actors) — unlike the Paradoja counter above, there is no Item involved on either
+ * side, so a SINGLE `actor.update()` path covers both actor types; no PC/legacy branch needed.
+ */
+function currentDefectDegree(actor) {
+	return actor?.system?.paradoxDefect?.degree || "none";
+}
+
+async function writeParadoxDefect(actor, degree) {
+	await actor.update({ "system.paradoxDefect.degree": degree });
+}
+
+async function writeParadoxSilence(actor, level, type) {
+	await actor.update({ "system.paradoxSilence.level": level, "system.paradoxSilence.type": type });
 }
 
 /**
@@ -249,7 +279,7 @@ export class ParadoxCard {
 			if (!game.user?.isGM) return;
 			if (data.backlash) return; // idempotent — one contragolpe roll per card
 			const reserve = currentParadox(actor);
-			const existingDefectDegree = actor.getFlag(FLAG_SCOPE, "paradoxDefect")?.degree ?? "none";
+			const existingDefectDegree = currentDefectDegree(actor);
 			const result = computeBacklash({
 				temporaryParadox: reserve.temporary,
 				permanentParadox: reserve.permanent,
@@ -265,7 +295,7 @@ export class ParadoxCard {
 			// ";", not "or"); rows 11+ are only CANDIDATES among a list the Narrador chooses from
 			// (M8) and must never be auto-written.
 			if (!result.defect.optional && result.defect.degree && result.defect.degree !== "none") {
-				await actor.setFlag(FLAG_SCOPE, "paradoxDefect", { degree: result.defect.degree });
+				await writeParadoxDefect(actor, result.defect.degree);
 			}
 
 			await this.save({ backlash: { ...result, silenceApplied: false, silenceType: null } });
@@ -281,7 +311,7 @@ export class ParadoxCard {
 			// click must never be able to do that. Every OTHER level needs no such gate.
 			if (silenceRequiresConfirmation(level) && !extra.confirmed) return;
 			const type = SILENCE_TYPES.includes(extra.type) ? extra.type : "negation";
-			await actor.setFlag(FLAG_SCOPE, "paradoxSilence", { level, type });
+			await writeParadoxSilence(actor, level, type);
 			await this.save({ backlash: { ...data.backlash, silenceApplied: true, silenceType: type } });
 		}
 	}
