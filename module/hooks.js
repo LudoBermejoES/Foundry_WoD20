@@ -6,6 +6,7 @@
 import { maybeEnrichAbilityOnRename } from "./scripts/ability-enrichment.js";
 import { PrismZoneDialog } from "./dialogs/dialog-prism-zone.js";
 import { PrismCorruptedCard, FLAG_SCOPE as PRISM_CARD_FLAG_SCOPE, FLAG_KEY as PRISM_CARD_FLAG_KEY } from "./scripts/prism-corrupted-card.js";
+import { ParadoxCard, FLAG_SCOPE as PARADOX_CARD_FLAG_SCOPE, FLAG_KEY as PARADOX_CARD_FLAG_KEY } from "./scripts/paradox-card.js";
 
 /**
  * Is the user in the dark theme?
@@ -677,6 +678,43 @@ export function registerHooks(constants, isTablet) {
 				event.preventDefault();
 				const action = btn.dataset.action.replace("prism-corrupted-", "");
 				await card.handleAction(action);
+			});
+		});
+	});
+
+	/**
+	 * Hook: renderChatMessageHTML
+	 * add-paradox-system tasks 3.2/3.3/3.6 — the Paradoja gain/contragolpe chat card. Same
+	 * own-flag guard as the Prisma card above (a no-op on any other chat message), plus a
+	 * per-CLIENT visibility gate the Prisma card does not need: `ChatMessage#content` is one
+	 * string replicated to every connected client verbatim, so a Narrador-only control can never
+	 * be baked out of the template at save time (that would bake in whichever client happened to
+	 * save it) — every `.paradox-gm-only` element is always rendered, then removed from the DOM
+	 * HERE, on every client independently, using THAT client's own `game.user.isGM`.
+	 */
+	Hooks.on("renderChatMessageHTML", (message, html) => {
+		const data = message.getFlag(PARADOX_CARD_FLAG_SCOPE, PARADOX_CARD_FLAG_KEY);
+		if (!data) return;
+
+		const container = html instanceof HTMLElement ? html : html[0];
+		if (!container) return;
+
+		if (!game.user?.isGM) {
+			container.querySelectorAll(".paradox-gm-only").forEach((el) => el.remove());
+		}
+
+		const card = new ParadoxCard(message);
+		container.querySelectorAll("[data-action^='paradox-']").forEach((btn) => {
+			btn.addEventListener("click", async (event) => {
+				event.preventDefault();
+				const action = btn.dataset.action.replace("paradox-", "");
+				if (action === "backlash-silence") {
+					const confirmed = container.querySelector(".paradox-silence-confirm")?.checked ?? false;
+					const type = container.querySelector(".paradox-silence-type")?.value ?? "negation";
+					await card.handleAction(action, { confirmed, type });
+				} else {
+					await card.handleAction(action);
+				}
 			});
 		});
 	});

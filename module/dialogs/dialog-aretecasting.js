@@ -3,12 +3,18 @@ import { DiceRollContainer } from "../scripts/roll-dice.js";
 import PrismHelper from "../scripts/prism-helpers.js";
 import { AUTO_PRACTICE_RULES, CORRUPTED_PRACTICE_RULES } from "../scripts/prism-practice-data.js";
 import { createCorruptedResistanceCard } from "../scripts/prism-corrupted-card.js";
+import { createParadoxCard } from "../scripts/paradox-card.js";
 import {
     isFormulaRoll as _isFormulaRoll,
     resolveAttributeRating,
     resolveAbilityRating
 } from "../scripts/formula-casting-helpers.js";
 import { activeDotCount } from "../scripts/casting-dot-helpers.js";
+import {
+    highestSelectedSphereRank,
+    computeCastingDifficulty,
+    capDifficultyToRollable
+} from "../scripts/casting-difficulty-helpers.js";
 
 /**
     * Handles the information needed to use magic.
@@ -85,6 +91,12 @@ export class Rote {
         this.totalSuccesses = 0;
         this.selectedMods = [];
 
+        // add-paradox-system task 3.4 — this Rote instance's own roll index within an extended
+        // (ritual) casting, fed to `computeParadoxGain()`'s `ritualRollNumber`. Incremented once
+        // per `_castSpell()` call on this SAME dialog instance; never reset by an intermediate
+        // failure, matching the ritual tax's own "no reset on failure" rule.
+        this.paradoxRollCount = 0;
+
         // add-prism-of-focus-foundry — design.md D4/D11/D12. Only meaningful when the casting
         // actor has `hasprismoffocus` active; every field below is a no-op otherwise (see
         // `DialogAreteCasting._applyPrismModifiers`).
@@ -153,66 +165,42 @@ export class Rote {
         return _isFormulaRoll(this);
     }
 
+    /**
+     * add-paradox-system task 4.3 — delegates to the pure helper so the arithmetic (highest rank,
+     * never the sum, `core:19575`) is importable by a test. Behaviour unchanged.
+     */
     _highestRank() {
-        let highestRank = -1;
-
-        for (const sphere in this.selectedSpheres) {
-            let rank = this.selectedSpheres[sphere];
-
-            if (rank > 0) {
-                if (highestRank < rank) {
-                    highestRank = rank;
-                }
-            }
-        }
-
-        return highestRank;
+        return highestSelectedSphereRank(this.selectedSpheres);
     }
 
+    /**
+     * add-paradox-system task 4.1 — delegates to `computeCastingDifficulty()` so this arithmetic is
+     * importable by a test. Behaviour unchanged: when the helper returns `null` (no recognised
+     * `spelltype`/no Sphere selected and no manual override), `baseDifficulty`/`totalDifficulty`/
+     * `shownDifficulty` are left exactly as they were, and -1 is returned, same as before.
+     */
     _setDifficulty(rank) {
-        let diff = -1;
+        const result = computeCastingDifficulty({
+            rank,
+            spelltype: this.spelltype,
+            witnesses: this.witnesses,
+            ignoreSphereBaseDifficulty: this.ignoreSphereBaseDifficulty,
+            manualBaseDifficulty: this.baseDifficulty,
+            sumSelectedDifficulty: this.sumSelectedDifficulty,
+            difficultyModifier: this.difficultyModifier,
+            quintessence: this.quintessence,
+            lowestDifficulty: CONFIG.worldofdarkness.lowestDifficulty
+        });
 
-        if (this.ignoreSphereBaseDifficulty) {
-            diff = this.baseDifficulty;
-        }
-        else {
-            if (rank > -1) {
-                if ((this.witnesses) && (this.spelltype == "vulgar")) {
-                    diff = parseInt(rank) + 5;
-                }
-                else if ((!this.witnesses) && (this.spelltype == "vulgar")) {
-                    diff = parseInt(rank) + 4;
-                }
-                else if (this.spelltype == "coincidental") {
-                    diff = parseInt(rank) + 3;
-                }
-            }
-        }       
-
-        if (diff > -1) {
-            this.baseDifficulty = diff;
-            this.totalDifficulty = parseInt(this.baseDifficulty) + parseInt(this.sumSelectedDifficulty) + parseInt(this.difficultyModifier) + parseInt(this.quintessence);
-
-            if (this.totalDifficulty > this.baseDifficulty + 3)
-            {
-                this.totalDifficulty = this.baseDifficulty + 3;
-            }
-            if (this.totalDifficulty < this.baseDifficulty - 3)
-            {
-                this.totalDifficulty = this.baseDifficulty - 3;
-            }
-
-            this.shownDifficulty = this.totalDifficulty;
-
-            if (this.totalDifficulty > 10) {
-                this.shownDifficulty = 10;
-            }
-            else if (this.totalDifficulty < CONFIG.worldofdarkness.lowestDifficulty) {
-                this.shownDifficulty = CONFIG.worldofdarkness.lowestDifficulty;
-            }
+        if (result === null) {
+            return -1;
         }
 
-        return diff;
+        this.baseDifficulty = result.baseDifficulty;
+        this.totalDifficulty = result.totalDifficulty;
+        this.shownDifficulty = result.shownDifficulty;
+
+        return result.baseDifficulty;
     }
 
 }
@@ -770,14 +758,18 @@ export class DialogAreteCasting extends FormApplication {
                 extraInfo.push(`${game.i18n.localize("wod.dialog.aretecasting.spendquintessence")} (${spentPoints})`);
             }
 
-            if (this.object.totalDifficulty > 10) {
-                const extraSuccesses = this.object.totalDifficulty - 10;
-                extraInfo.push(`${game.i18n.localize("wod.dialog.aretecasting.increaseddifficulty")} +${extraSuccesses}`);
-                this.object.totalDifficulty = 10;
+            // add-paradox-system task 4.2 — the [lowestDifficulty, 10] cap and its consequence (the
+            // excess over 10 becomes required successes 1:1, core:17703) now live in exactly one
+            // place, `capDifficultyToRollable()`, shared with `_setDifficulty()`'s `shownDifficulty`.
+            // Behaviour unchanged: only `extraSuccesses > 0` (i.e. the old `totalDifficulty > 10`
+            // branch) pushes the extra-successes line.
+            const cappedDifficulty = capDifficultyToRollable(this.object.totalDifficulty, CONFIG.worldofdarkness.lowestDifficulty);
+
+            if (cappedDifficulty.extraSuccesses > 0) {
+                extraInfo.push(`${game.i18n.localize("wod.dialog.aretecasting.increaseddifficulty")} +${cappedDifficulty.extraSuccesses}`);
             }
-            else if (this.object.totalDifficulty < CONFIG.worldofdarkness.lowestDifficulty) {
-                this.object.totalDifficulty = CONFIG.worldofdarkness.lowestDifficulty; 
-            }
+
+            this.object.totalDifficulty = cappedDifficulty.difficulty;
 
             for (const sphere in CONFIG.worldofdarkness.allSpheres) {
                 let exists = (this.object.selectedSpheres[sphere] === undefined) ? false : true;
@@ -846,6 +838,69 @@ export class DialogAreteCasting extends FormApplication {
             powerRoll.systemText = this.object.description;
             
             let successes = await DiceRoller(powerRoll);
+
+            // add-paradox-system task 3.4 — every completed casting roll feeds the Paradoja gain
+            // calculation with exactly what this dialog already knows: the caster's own
+            // coincidental/vulgar call (Non-Goal to automate — proposal.md), whether Sleeper
+            // witnesses were present, the highest Sphere involved (`_highestRank()`, never the
+            // sum) and the roll's own outcome (`powerRoll.lastRollResult`). `paradoxRollCount`
+            // tracks THIS Rote instance's own roll index across an extended (ritual) casting, so
+            // repeated `_castSpell` calls on the same dialog instance feed `ritualRollNumber`
+            // correctly without a separate counter field to maintain by hand.
+            //
+            // task 2.4/D8 — resolves the two dead halves of the Prisma's vulgarity engine as an
+            // override on the PARADOJA-ONLY classification, never on `totalDifficulty`'s own
+            // coincidental/vulgar split (that pipeline is already shipped and separately gated by
+            // test-casting-difficulty.mjs; this change does not touch it):
+            //   1. `prismForcesCoincidental`/`prismForcesParadojaVulgar` (D12's per-Práctica
+            //      Beneficio/Penalización checkboxes, `_applyPrismModifiers()` above) — already
+            //      computed live on this same `this.object` by the time this line runs.
+            //   2. `PrismHelper.EvaluateVulgarity()` (D5/D6's Sanctum-anatema/Zonas-de-Realidad
+            //      engine) — called here for the first time anywhere in the system, feeding it the
+            //      result of (1) as its base and consuming ONLY its `.paradojaVulgar` output.
+            // A vulgar-forcing rule always wins a tie against a coincidental-forcing one, mirroring
+            // `EvaluateVulgarity`'s own documented precedence.
+            this.object.paradoxRollCount = (parseInt(this.object.paradoxRollCount) || 0) + 1;
+
+            let paradoxVulgar = this.object.spelltype === "vulgar";
+            let paradoxVulgarForcedBy = null;
+
+            if (this.object.prismForcesCoincidental) {
+                paradoxVulgar = false;
+                paradoxVulgarForcedBy = "practice";
+            }
+            if (this.object.prismForcesParadojaVulgar) {
+                paradoxVulgar = true;
+                paradoxVulgarForcedBy = "practice";
+            }
+
+            if (this.object.prismPracticeId) {
+                const vulgarity = PrismHelper.EvaluateVulgarity(this.actor, {
+                    practiceId: this.object.prismPracticeId,
+                    sphereLevel: this.object._highestRank(),
+                    scene: this.actor.getActiveTokens(false, true)?.[0]?.parent
+                        ?? canvas?.scene
+                        ?? game.scenes?.current
+                        ?? null,
+                    baseDificultadVulgar: paradoxVulgar,
+                    baseParadojaVulgar: paradoxVulgar
+                });
+                if (vulgarity.paradojaVulgar !== paradoxVulgar) {
+                    paradoxVulgarForcedBy = "practice";
+                }
+                // `vulgarity.dificultadVulgar` is deliberately never read anywhere: overriding the
+                // difficulty pipeline's own coincidental/vulgar split is out of this change's scope.
+                paradoxVulgar = vulgarity.paradojaVulgar;
+            }
+
+            await createParadoxCard(this.actor, {
+                vulgar: paradoxVulgar,
+                witnesses: !!this.object.witnesses,
+                highestSphere: this.object._highestRank(),
+                rollResult: powerRoll.lastRollResult,
+                ritualRollNumber: this.object.paradoxRollCount,
+                vulgarForcedBy: paradoxVulgarForcedBy
+            });
 
             // add-prism-of-focus-foundry — design.md D8/task 10.2: a cast through a corrupted-kind
             // Práctica surfaces its resistance roll's pool/difficulty as a chat card. The roll

@@ -489,6 +489,60 @@ jobs:
       - name: Prove an Advantage's roll pool is derived without an explicit update
         run: node .github/scripts/test-advantage-roll-derivation.mjs
 
+      # add-paradox-system task 4 — the Sphere-casting difficulty arithmetic (base difficulty from
+      # the highest Sphere, the ±3 modifier band, the [lowestDifficulty, 10] cap, and the
+      # excess-over-10-becomes-required-successes conversion) used to live entirely inside `Rote`,
+      # a class in `dialog-aretecasting.js` — a file that `extends FormApplication` at module load
+      # and so could never be imported by a test. It now lives in
+      # `module/scripts/casting-difficulty-helpers.js`, dependency-free, with `Rote._setDifficulty`/
+      # `Rote._highestRank` delegating to it and `_castSpell`'s excess conversion sharing the same
+      # single cap function instead of duplicating it. This harness also pins that
+      # `dialog-casting.js`'s authoritative `shownDifficulty` and `_castSpell`'s rolled
+      # `totalDifficulty` cannot diverge, by construction rather than by execution order.
+      # Runnable locally: node .github/scripts/test-casting-difficulty.mjs
+      - name: Prove the Sphere-casting difficulty chain, extracted and pinned against the two dialogs
+        run: node .github/scripts/test-casting-difficulty.mjs
+
+      # add-paradox-system tasks 2.1-2.3 — Paradoja did not exist as a mechanic at all before this
+      # change: it was a manual counter with zero connection to casting (`paradox` never appears in
+      # `dialog-aretecasting.js` or `roll-dice.js`; Silencio/contragolpe did not exist anywhere in
+      # the repo, verified by grep). `module/scripts/paradox-helpers.js` is the single place the
+      # real arithmetic now lives — `computeParadoxGain()` (the five-row ganancia table plus the
+      # ritual tax) and `computeBacklash()` (the reserve roll at difficulty 6, discharge, Quemadura,
+      # Defecto and nivel de Silencio) — dependency-free so it is importable by this harness at all.
+      # A wrong number here would silently misprice every vulgar cast at the table; nothing else in
+      # this repo would notice, `js-syntax-check` stays green on bad arithmetic (it's still valid
+      # JS), and the repo's `tests/*.mjs` are never invoked by this workflow. Covers all five
+      # ganancia rows, the book's own worked example end to end (Areté 6/Tiempo 4 vulgar con
+      # testigos: éxito -> 1, pifia -> 10, reserva 6 -> 16, contragolpe de 16 dados -> 10 éxitos ->
+      # descarga 10 + 10 dados contundente), the highest-Sphere rule (never the sum), ritual tax
+      # accumulation/discard, M1 in both switch positions, the botch-benefits-the-mage backlash
+      # case, the permanente that never discharges, every table-row boundary (5/6, 10/11, 15/16,
+      # 20/21), Defecto amplification, and Silencio's level-from-current-reserve rule (M5) including
+      # the irreversible nivel 6 confirmation boundary. Mutation-tested: altering either the pifia
+      # vulgar con testigos formula or the discharge cap fails this harness; restoring it passes
+      # again. Runnable locally: node .github/scripts/test-paradox.mjs
+      - name: Prove the Paradoja ganancia table and contragolpe engine
+        run: node .github/scripts/test-paradox.mjs
+
+      # add-paradox-system tasks 3.1-3.7/5.3.4 — the Paradoja chat card itself: the "aplicar"
+      # button is idempotent, "contragolpe" is reachable ONLY by the Narrador (including a
+      # per-client `.paradox-gm-only` DOM removal, since `ChatMessage#content` is one string
+      # replicated to every client rather than re-rendered per-viewer), Silencio nivel 6 refuses
+      # to write without an explicit confirmation (irreversible: retires the character as an NPC
+      # Marauder), and a coincidental success posts NO card at all. `module/scripts/paradox-
+      # card.js` touches no Foundry global at import time, so this harness imports it for REAL and
+      # executes it against a minimal local shim — stronger than a source-text regex, which a
+      # reworded-but-still-broken guard would still pass. Everything that genuinely cannot run
+      # outside a live Foundry client (the hook's DOM wiring, the template's own `data-action`
+      # markup, i18n coverage in both `lang/*.json`, and the `getData()` async trap
+      # `test-casting-dots.mjs` already found once at a different call site) is checked by reading
+      # the source, this repo's own convention for exactly that situation. Mutation-tested: 10
+      # separate guards removed one at a time, each one caught, each restored.
+      # Runnable locally: node .github/scripts/test-paradox-card.mjs
+      - name: Prove the Paradoja chat card's idempotency, Narrador-gating and Silencio confirmation
+        run: node .github/scripts/test-paradox-card.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server

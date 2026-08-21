@@ -1,0 +1,120 @@
+<div class="wod20-roll paradox-card">
+    <div class="tray-title-area">{{localize "wod.paradox.card.title"}}</div>
+
+    <div class="tray-info-area">
+        <div class="tray-action-area">{{actorName}}</div>
+        <div class="tray-system-area">{{localize "wod.paradox.card.total"}}: <strong>{{gain.total}}</strong></div>
+    </div>
+
+    <div class="tray-system-area paradox-breakdown-heading">{{localize "wod.paradox.card.breakdownheading"}}</div>
+    <ul class="paradox-breakdown">
+        <li>{{localize "wod.paradox.card.effecttype"}}: {{vulgarLabel}}</li>
+        <li>{{localize "wod.paradox.card.witnesses"}}: {{witnessesLabel}}</li>
+        <li>{{localize "wod.paradox.card.highestsphere"}}: {{highestSphere}}</li>
+        <li>{{localize "wod.paradox.card.rollresult"}}: {{rollResultLabel}}</li>
+        {{#each gain.breakdown}}
+            <li>{{this.label}}</li>
+        {{/each}}
+        <li>{{localize "wod.paradox.card.rule"}}: {{gain.rule}}</li>
+    </ul>
+
+    {{#if vulgarForcedBy}}
+        <div class="tray-system-area danger">{{localize "wod.paradox.card.vulgarforcedbypractice"}}</div>
+    {{/if}}
+
+    <div class="tray-roll-area">
+        {{#if applied}}
+            <div class="tray-system-area">{{localize "wod.paradox.card.appliedmarker"}}</div>
+        {{else}}
+            <button type="button" data-action="paradox-apply">{{localize "wod.paradox.card.applybutton"}}</button>
+        {{/if}}
+
+        {{#unless backlash}}
+            <button type="button"
+                class="paradox-gm-only{{#if thresholds.offerBacklashButton}} danger highlight{{/if}}"
+                data-action="paradox-backlash">
+                {{localize "wod.paradox.card.backlashbutton"}}
+            </button>
+        {{/unless}}
+    </div>
+
+    {{#if thresholds.offerBacklashButton}}
+        <div class="tray-system-area danger">{{localize "wod.paradox.card.backlashhighlight"}}</div>
+    {{/if}}
+    {{#if thresholds.inevitableWarning}}
+        <div class="tray-system-area danger">{{localize "wod.paradox.card.reserveinevitable"}}</div>
+    {{/if}}
+    {{#if thresholds.criticalWarning}}
+        <div class="tray-system-area danger">{{localize "wod.paradox.card.reservecritical"}}</div>
+    {{/if}}
+
+    {{#if backlash}}
+        <div class="tray-title-area">{{localize "wod.paradox.card.backlashresultheading"}}</div>
+
+        {{#if backlash.botch}}
+            <div class="tray-system-area danger">{{localize "wod.paradox.card.backlashbotch"}}</div>
+        {{else if (eqAny backlash.row "none")}}
+            <div class="tray-system-area">{{localize "wod.paradox.card.backlashnoeffect"}}</div>
+        {{else}}
+            <ul class="paradox-breakdown">
+                <li>{{localize "wod.paradox.card.backlashdice"}}: {{backlash.diceRolled}}</li>
+                <li>{{localize "wod.paradox.card.backlashsuccesses"}}: {{backlash.netSuccesses}}</li>
+                <li>{{localize "wod.paradox.card.backlashdischarge"}}: {{backlash.discharge}} ({{backlash.remainingTemporary}} / {{backlash.remainingPermanent}})</li>
+                {{#if backlash.burnDice}}
+                    <li>{{localize "wod.paradox.card.backlashburn"}}: {{backlash.burnDice.count}} &times; {{backlash.burnTypeLabel}}</li>
+                {{/if}}
+                {{#unless backlash.defect.optional}}
+                    <li>{{localize "wod.paradox.card.defectmandatory"}}: {{backlash.defectDegreeLabel}}</li>
+                {{/unless}}
+                {{#if backlash.defect.amplified}}
+                    <li class="danger">{{localize "wod.paradox.card.defectamplified"}}</li>
+                {{/if}}
+            </ul>
+        {{/if}}
+
+        {{#if backlash.defect.optional}}
+            <div class="tray-system-area">{{localize "wod.paradox.card.optionsheading"}}</div>
+            <div class="tray-system-area">{{backlash.optionsNote}}</div>
+            <ul class="paradox-breakdown">
+                {{#each backlash.optionsDisplay}}
+                    <li>{{this.label}}</li>
+                {{/each}}
+            </ul>
+
+            {{! Silencio is only ever a real M8 option on rows 11+ — rows 1-10 never list it as a
+                possible outcome at all, so this section is nested inside the optional-row block
+                rather than gated on `silenceLevel` alone (which is always > 0 for almost any
+                reserve, whether or not this particular row could ever produce Silencio). }}
+            <div class="tray-system-area">
+                {{localize "wod.paradox.card.silenceheading"}}: {{backlash.silenceLevelText}}
+            </div>
+
+            {{#if backlash.silenceApplied}}
+                <div class="tray-system-area">{{backlash.silenceAppliedText}}</div>
+            {{else}}
+                {{#if backlash.silenceRequiresConfirmation}}
+                    <div class="tray-system-area danger">{{localize "wod.paradox.card.silence6warning"}}</div>
+                {{/if}}
+                <div class="tray-roll-area paradox-gm-only">
+                    <label>
+                        {{localize "wod.paradox.card.silencetype"}}
+                        <select class="paradox-silence-type">
+                            {{#each silenceTypeOptions}}
+                                <option value="{{this.value}}">{{this.label}}</option>
+                            {{/each}}
+                        </select>
+                    </label>
+                    {{#if backlash.silenceRequiresConfirmation}}
+                        <label class="paradox-silence-confirm-label">
+                            <input type="checkbox" class="paradox-silence-confirm" />
+                            {{localize "wod.paradox.card.silence6confirm"}}
+                        </label>
+                    {{/if}}
+                    <button type="button" data-action="paradox-backlash-silence">
+                        {{localize "wod.paradox.card.silenceconfirmbutton"}}
+                    </button>
+                </div>
+            {{/if}}
+        {{/if}}
+    {{/if}}
+</div>
