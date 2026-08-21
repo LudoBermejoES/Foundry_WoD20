@@ -39,7 +39,10 @@ const LIST_FIELDS = new Set([
 	"limited_practices",
 	"faction_specialty_ids",
 	"paradigmas_asociados",
-	"habilidades_asociadas",
+	// `associated_abilities`, no `habilidades_asociadas`: ese era uno de los CUATRO nombres con que
+	// esta lista vivia, y `add-formula-authoring` los unifico en uno. La entrada vieja quedo muerta
+	// aqui — nada la leia, asi que no rompio nada, pero declaraba un campo que ya no existe.
+	"associated_abilities",
 	"instrumentos_comunes"
 ]);
 
