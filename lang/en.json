@@ -205,6 +205,12 @@
 			"remove": "Remove language"
 		},
 		"types": {
+			"gadget": "Gadget",
+			"artifact": "Artifact",
+			"grimoire": "Grimoire",
+			"enchantment": "Enchantment",
+			"invention": "Invention",
+			"cato": "Cato",
 			"maneuver": "Combat Maneuver",
 			"paradigm": "Paradigm",
 			"practice": "Practice",
@@ -1427,6 +1433,14 @@
 			}
 		},
 		"gear": {
+			"gadget": "Gadget",
+			"artifact": "Artifact",
+			"grimoire": "Grimoire",
+			"enchantment": "Enchantment",
+			"invention": "Invention",
+			"cato": "Cato",
+			"fetish": "Fetish",
+			"relic": "Relic",
 			"headline": "Gear",
 			"money": "Money",
 			"moneycarried": "Carried",

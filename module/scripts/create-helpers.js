@@ -1333,6 +1333,12 @@ export default class CreateHelper {
 			periapt: { itemType: "Item", systemType: "wod.types.periapt", iscontainter: true },
 			matrix: { itemType: "Item", systemType: "wod.types.matrix", iscontainter: true },
 			trinket: { itemType: "Item", systemType: "wod.types.trinket", iscontainter: false },
+			gadget: { itemType: "Item", systemType: "wod.types.gadget", iscontainter: false },
+			artifact: { itemType: "Item", systemType: "wod.types.artifact", iscontainter: false },
+			grimoire: { itemType: "Item", systemType: "wod.types.grimoire", iscontainter: false },
+			enchantment: { itemType: "Item", systemType: "wod.types.enchantment", iscontainter: false },
+			invention: { itemType: "Item", systemType: "wod.types.invention", iscontainter: false },
+			cato: { itemType: "Item", systemType: "wod.types.cato", iscontainter: false },
 			fetish: { itemType: "Fetish", systemType: "wod.types.fetish", iscontainter: false, isrollable: true },
 			talen: { itemType: "Fetish", systemType: "wod.types.talen", iscontainter: false, isrollable: true },
 		};

@@ -152,7 +152,13 @@ export function getPowerDice1List(itemData) {
     list.push({ value: "faith", label: game.i18n.localize("wod.advantages.faith"), group: advGroup });
   }
 
-  if (type === "wod.types.device" || type === "wod.types.talisman" || type === "wod.types.trinket") {
+  // add-wonder-gear-types: `gadget` activa con su propia Iluminacion (los 39 registros del corpus
+  // la imprimen), y `artifact`/`invention` con el Arete DEL USUARIO -- "un Artefacto usa el Rasgo
+  // Arete del personaje que lo utiliza" (m20-libro-de-los-secretos:5629; :5807 para Invencion).
+  // NO se anaden: `enchantment` (un solo uso, "no requiere una tirada de Arete", :5744),
+  // `grimoire`/`cato` (no funcionan a voluntad, :5782) ni `fetish` (usa Gnosis, no Arete, :5764).
+  if (type === "wod.types.device" || type === "wod.types.talisman" || type === "wod.types.trinket"
+      || type === "wod.types.gadget" || type === "wod.types.artifact" || type === "wod.types.invention") {
     list.push({ value: "arete", label: game.i18n.localize("wod.advantages.arete"), group: advGroup });
   }
 

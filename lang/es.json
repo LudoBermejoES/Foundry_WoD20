@@ -202,6 +202,13 @@
 			"remove": "Eliminar idioma"
 		},
 		"types": {
+			"gadget": "Artilugio",
+			"artifact": "Artefacto",
+			"grimoire": "Grimorio",
+			"enchantment": "Encantamiento",
+			"invention": "Invención",
+			"cato": "Catón",
+			"relic": "Reliquia",
 			"maneuver": "Maniobra de combate",
 			"paradigm": "Paradigma",
 			"practice": "Práctica",
@@ -1423,6 +1430,14 @@
 			}
 		},
 		"gear": {
+			"gadget": "Artilugio",
+			"artifact": "Artefacto",
+			"grimoire": "Grimorio",
+			"enchantment": "Encantamiento",
+			"invention": "Invención",
+			"cato": "Catón",
+			"fetish": "Fetiche",
+			"relic": "Reliquia",
 			"headline": "Equipo",
 			"money": "Dinero",
 			"moneycarried": "En efectivo, encima",

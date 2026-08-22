@@ -372,7 +372,42 @@ export default class SelectHelper {
                 value: "wod.types.trinket", 
                 label: game.i18n.localize("wod.gear.trinket"), 
                 group: game.i18n.localize("wod.games.mage")
-            }];
+                          },
+              {
+                  value: "wod.types.gadget", 
+                  label: game.i18n.localize("wod.gear.gadget"), 
+                  group: game.i18n.localize("wod.games.mage")
+              },
+              {
+                  value: "wod.types.artifact", 
+                  label: game.i18n.localize("wod.gear.artifact"), 
+                  group: game.i18n.localize("wod.games.mage")
+              },
+              {
+                  value: "wod.types.grimoire", 
+                  label: game.i18n.localize("wod.gear.grimoire"), 
+                  group: game.i18n.localize("wod.games.mage")
+              },
+              {
+                  value: "wod.types.enchantment", 
+                  label: game.i18n.localize("wod.gear.enchantment"), 
+                  group: game.i18n.localize("wod.games.mage")
+              },
+              {
+                  value: "wod.types.invention", 
+                  label: game.i18n.localize("wod.gear.invention"), 
+                  group: game.i18n.localize("wod.games.mage")
+              },
+              {
+                  value: "wod.types.cato", 
+                  label: game.i18n.localize("wod.gear.cato"), 
+                  group: game.i18n.localize("wod.games.mage")
+              },
+              {
+                  value: "wod.types.fetish", 
+                  label: game.i18n.localize("wod.gear.fetish"), 
+                  group: game.i18n.localize("wod.games.mage")
+              }];
         }
 
         if (data.type == "Trait") {
