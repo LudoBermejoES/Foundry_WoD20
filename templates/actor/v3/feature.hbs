@@ -267,12 +267,13 @@
 					{{/if}}
 				</div>
 
-				{{!-- add-mage-resonance — design.md D4: always rendered for splat mage, deliberately
-				      OUTSIDE the `{{#unless prismActive}}...{{else}}...{{/unless}}` split just above
-				      (Resonancia is independent of Prism of Focus, on or off). --}}
-				<div class="v3-section v3-focusblock">
-					{{> "systems/worldofdarkness/templates/actor/parts/mage/resonance.hbs"}}
-				</div>
+				{{!-- reorganize-mage-sheet-v3 D4 — Resonancia y Sinergia used to render here, always,
+				      for splat mage (add-mage-resonance's original placement). It moved to the Stats
+				      tab instead, directly under Fuerza de Voluntad in the Areté/Willpower column
+				      (`stats_advantages.hbs`), so it renders exactly once on the sheet instead of
+				      here AND as a `simpledots` Poderes section. `context.resonanceMarks` is built
+				      by `addResonanceContext`, called from `prepareStatContext` now, not from this
+				      tab's preparer — nothing here reads that key any more. --}}
 			{{/if}}
 
 			{{#if graphicsettings.useLinkPlatform}}

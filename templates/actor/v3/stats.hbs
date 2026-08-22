@@ -145,11 +145,17 @@
 			{{/if}}
 
 			{{!-- Arete / Willpower / Quintessence / Renown / Virtues, the health track and the
-			      experience total, plus the Rote band. This partial is the densest float debt on the
-			      tab — a 33% and a 67% inline-width column, four nested `clearareaBox` clearfixes and
-			      three more inline styles — and NOT ONE CHARACTER of it is edited: it holds
+			      experience total. This partial is the densest float debt on the tab — a 33% and a
+			      67% inline-width column, four nested `clearareaBox` clearfixes and three more inline
+			      styles — and NOT ONE CHARACTER of the ORIGINAL markup is edited: it holds
 			      `{{{getGetStatArea_v2}}}`, i.e. a row renderer, so D5 forbids forking it and D4
-			      forbids out-specifying it. Its container is blockified in the stylesheet instead. --}}
+			      forbids out-specifying it. Its container is blockified in the stylesheet instead.
+
+			      reorganize-mage-sheet-v3 — the Rote band that used to live at the end of this
+			      partial is GONE (Rotes are back on the Poderes tab, D2). In its place, still inside
+			      this same partial, a mage sees "Resonancia y Sinergia" directly under Fuerza de
+			      Voluntad in the Arete/Willpower column (D4) — see `stats_advantages.hbs` itself for
+			      the mage-and-v3-only gate on that include. --}}
 			<div class="v3-section v3-advantages">
 				{{> "systems/worldofdarkness/templates/actor/parts/stats_advantages.hbs"}}
 			</div>

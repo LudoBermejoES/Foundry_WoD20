@@ -173,7 +173,7 @@
       "name": "Fuego de Prime",
       "section": "rotes",
       "system": { "type": "wod.types.rote", "isrollable": true, "forces": 2, "prime": 2, "difficulty": 6, "isvisible": true },
-      "why": "stats_rotes.hbs -- the Rote list moved from Powers to Stats and the preparer was not moved with it (7.5.44/7.5.48). This is that bug's fixture."
+      "why": "the `rotes` section on Poderes. reorganize-mage-sheet-v3 moved the list BACK from Stats (where 7.5.44/7.5.48 had put it, in the deleted stats_rotes.hbs) to the power-section registry. Still that bug's fixture: the failure it guards against is a list whose preparer did not move with it."
     },
 
     {
@@ -382,8 +382,8 @@
       "type": "Trait",
       "name": "Dinamica",
       "section": "resonances",
-      "system": { "type": "wod.types.resonance", "placement": "power", "value": 2, "isvisible": true },
-      "why": "the `simpledots` section template -- the only user of power_listpowerdots.hbs"
+      "system": { "type": "wod.types.resonance", "category": "temperamental-resonance", "placement": "power", "value": 2, "isvisible": true },
+      "why": "the Resonancia y Sinergia section under Fuerza de Voluntad on Stats (mage/resonance.hbs, via stats_advantages.hbs) -- category is required for isPlayerFacingResonanceMark to surface it"
     },
 
     {

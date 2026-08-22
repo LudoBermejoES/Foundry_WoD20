@@ -32,10 +32,9 @@ export const preloadHandlebarsTemplates = async function () {
 			"systems/worldofdarkness/templates/actor/parts/stats_renown.hbs",	
 			"systems/worldofdarkness/templates/actor/parts/stats_quintessence.hbs",
 			"systems/worldofdarkness/templates/actor/parts/stats_groupedadvantages.hbs",
-			// A partial only resolves at render time if it is listed HERE. Existing on disk is not
-			// enough, and `template-structure-check.py` only proves the file exists — it reported
-			// "partial includes resolve" while this line was missing and the sheet threw.
-			"systems/worldofdarkness/templates/actor/parts/stats_rotes.hbs",
+			// reorganize-mage-sheet-v3 — `stats_rotes.hbs` deleted (the Rote band moved back to the
+			// Poderes tab, D2) and its preload entry removed with it. A path listed here that no
+			// longer exists on disk is a console error on every world load, not a silent no-op.
 			"systems/worldofdarkness/templates/actor/parts/stats_features.hbs",
 			"systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs",
 		"systems/worldofdarkness/templates/actor/parts/powers.hbs",
@@ -84,6 +83,11 @@ export const preloadHandlebarsTemplates = async function () {
 		// PC and Legacy Actor Sheet Partials - .hbs files
 		"systems/worldofdarkness/templates/actor/parts/description.hbs",
 		"systems/worldofdarkness/templates/actor/parts/list_icons.hbs",
+		// reorganize-mage-sheet-v3 D3 — the gear row table, extracted out of `v3/gear.hbs` so
+		// `v3/powers.hbs`'s magical-item section can include the exact same markup. Included from
+		// two v3 parts, not one, which is why it lives beside the other shared partials rather than
+		// next to either caller.
+		"systems/worldofdarkness/templates/actor/parts/item_table.hbs",
 
 		
 

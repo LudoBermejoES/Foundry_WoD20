@@ -1283,7 +1283,7 @@
 		},
 		"power": {
 			"empty": {
-				"magic": "No Resonance is recorded yet. A mage's Spheres and Rotes live on the Core tab, beside the Abilities they are cast alongside; this tab holds Resonance.",
+				"magic": "No Rotes or magical items are recorded yet. A mage's Spheres live on the Core tab, beside the Abilities they are cast alongside, and Resonance lives there too, beneath Willpower; this tab holds Rotes, and any Wonders or Fetishes you carry. Use Add item above to create a Rote, or Add magical item to create a Wonder or Fetish.",
 				"discipline": "No Disciplines, Combination disciplines or Rituals are recorded yet. Use Add item above to create one.",
 				"gift": "No Gifts or Rites are recorded yet. Use Add item above to create one.",
 				"dreaming": "No Arts are recorded yet. Use Add item above to create one.",
@@ -1311,6 +1311,7 @@
 			"redes": "Redes",
 			"estigmas": "Stigmata",
 			"rites": "Rites",
+			"magicalitems": "Magical Items",
 			"activegift": "Active gifts",
 			"activerote": "Active rote",
 			"disciplines": "Disciplines",
@@ -1439,7 +1440,7 @@
 			"contains": "Contains",
 			"name": "Name",
 			"type": "Type",
-			"empty": "No gear yet. Treasures, relics, devices, talismans, periapts, matrices, trinkets, fetishes and talens appear here; use Add item to create one. Weapons and armour belong on the Combat tab."
+			"empty": "No gear yet. Mundane items dropped here from a compendium or another actor appear in this list. Treasures, relics, devices, talismans, periapts, matrices, trinkets, fetishes and talens are magical items; create and find them on the Powers tab instead. Weapons and armour belong on the Combat tab."
 		},
 		"effects": {
 			"origin": "Origin",
@@ -1904,6 +1905,7 @@
 				"numina": "Add numina",
 				"numinapower": "Add ritual/spell",
 				"item": "Add item",
+				"magicalitem": "Add magical item",
 				"horror": "Add horror",
 				"stain": "Add stain"
 			},

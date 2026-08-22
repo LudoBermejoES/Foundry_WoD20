@@ -1279,7 +1279,7 @@
 		},
 		"power": {
 			"empty": {
-				"magic": "Aún no hay Resonancia registrada. Las Esferas y las Fórmulas de un mago están en la pestaña Principal, junto a las Habilidades con las que se lanzan; esta pestaña guarda la Resonancia.",
+				"magic": "Todavía no hay Fórmulas ni objetos mágicos registrados. Las Esferas de un mago están en la pestaña Principal, junto a las Habilidades con las que se lanzan, y la Resonancia también vive allí, bajo Fuerza de Voluntad; esta pestaña guarda las Fórmulas y cualquier Maravilla o Fetiche que lleves. Usa Añadir objeto arriba para crear una Fórmula, o Añadir objeto mágico para crear una Maravilla o un Fetiche.",
 				"discipline": "Aún no hay Disciplinas, Disciplinas Combinadas ni Rituales registrados. Usa Añadir objeto arriba para crear uno.",
 				"gift": "Aún no hay Dones ni Ritos registrados. Usa Añadir objeto arriba para crear uno.",
 				"dreaming": "Aún no hay Artes registradas. Usa Añadir objeto arriba para crear una.",
@@ -1307,6 +1307,7 @@
 			"redes": "Redes",
 			"estigmas": "Estigmas",
 			"rites": "Ritos",
+			"magicalitems": "Objetos mágicos",
 			"activegift": "Don activo",
 			"activerote": "Fórmula activa",
 			"disciplines": "Disciplinas",
@@ -1435,7 +1436,7 @@
 			"contains": "Contiene",
 			"name": "Nombre",
 			"type": "Tipo",
-			"empty": "Todavía no hay equipo. Aquí aparecen tesoros, reliquias, dispositivos, talismanes, periaptos, matrices, baratijas, fetiches y talens; usa Añadir objeto para crear uno. Las armas y las armaduras van en la pestaña de Combate."
+			"empty": "Todavía no hay equipo. Aquí aparecen los objetos mundanos que sueltes desde un compendio o arrastres desde otro personaje. Los tesoros, reliquias, dispositivos, talismanes, periaptos, matrices, baratijas, fetiches y talens son objetos mágicos; créalos y consúltalos en la pestaña de Poderes. Las armas y las armaduras van en la pestaña de Combate."
 		},
 		"effects": {
 			"origin": "Orígen",
@@ -1896,6 +1897,7 @@
 				"numina": "Añadir Numen",
 				"numinapower": "Añadir Ritual/Hechizo",
 				"item": "Añadir objeto",
+				"magicalitem": "Añadir objeto mágico",
 				"horror": "Añadir Horror",
 				"stain": "Añadir Mácula"
 			},

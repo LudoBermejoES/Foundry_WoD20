@@ -34,7 +34,18 @@
 
       THE ELEVEN-BRANCH LADDER IS TEN HERE. `parts/gear.hbs:124-127` tests
       `wod.types.device` TWICE with identical bodies; the second branch is unreachable. Dropping it
-      changes nothing that can render, and takes the include count 13 -> 12. --}}
+      changes nothing that can render, and takes the include count 13 -> 12.
+
+      reorganize-mage-sheet-v3 D3 — MUNDANE ONLY. This tab used to list every `Item`/`Fetish`
+      document via `getItems`; Wonders (`system.ismagical === true`) and Fetishes now render on the
+      Poderes tab instead (right after Rotes), so this tab calls `getMundaneItems` at the two call
+      sites that used to call `getItems`: the `{{#if}}` gate and the list passed into the table. The
+      empty-state `{{else}}` branch does not call the helper again — it only renders when the
+      `{{#if}}` above already resolved falsy. `getItems` itself is untouched and still registered —
+      it is what keeps the v2 sheet, which still calls it, identical. The table markup itself moved
+      out to `parts/item_table.hbs`, shared with the new Poderes section — see that file's header.
+
+      D7 — the tab's own create control is GONE, not repointed: see the `v3-tabhead` comment below. --}}
 <section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}" data-drop-area="true">
 
 	<div class="v3-tabhead">
@@ -42,14 +53,14 @@
 		      thing below it nothing at all. One heading, in the content area. --}}
 		<h2 class="v3-tabtitle splatFont">{{localize "wod.tab.gear"}}</h2>
 
-		{{!-- Same two defects as the Effects tab: on v2 this is a 3x-scaled glyph floating in the
-		      corner carrying `aria-hidden="true"` ON THE INTERACTIVE ELEMENT, which removes a
-		      working control from the accessibility tree. `data-origin="gear"` is what selects the
-		      gear-flavoured create dialog, so it travels with the tab. --}}
-		<button type="button" class="v3-add" data-origin="gear" data-action="itemCreate">
-			<i class="fa-solid fa-square-plus" aria-hidden="true"></i>
-			<span>{{localize "wod.labels.add.item"}}</span>
-		</button>
+		{{!-- reorganize-mage-sheet-v3 D7 — NO CREATE CONTROL HERE ANY MORE. `CreateButtonsGear`
+		      (the dialog `data-origin="gear"` opened) stamps `ismagical: true` on all nine kinds it
+		      mints, unconditionally, and nothing in this system ever clears that flag — so every
+		      item this button produced rendered on the Poderes tab, never on this one. The control
+		      moved to `v3/powers.hbs`, beside the magical-item list it actually populates. Mundane
+		      items reach this tab only by compendium drop or drag from another actor; there is
+		      currently no in-sheet route that creates one, which is why the button is gone rather
+		      than repointed. --}}
 	</div>
 
 	{{!-- Two grid columns: content, and the macro rail. On v2 the rail is `float: right`, so the
@@ -118,130 +129,24 @@
 			<div class="v3-section">
 				<h3 class="v3-sectiontitle splatFont">{{localize "wod.gear.otheritems"}}</h3>
 
-				{{#if (getItems actor)}}
+				{{#if (getMundaneItems actor)}}
 					{{!-- A real table: five columns of homogeneous data with a header row, which is
 					      what v2 drew with `div.headlineRow` plus five fixed pixel widths. The
 					      table gives a screen reader the column association those divs never had,
-					      and gives a long Spanish type name somewhere to go. --}}
-					<table class="v3-table v3-geartable">
-						<caption class="v3-sr-only">{{localize "wod.gear.otheritems"}}</caption>
-						<thead>
-							<tr>
-								{{!-- The handle and the action cluster get no heading: neither column holds
-								      data, and there is no honest one-word label for "chat, edit, delete,
-								      view, menu". An empty `<th>` announces as blank, which is true. --}}
-								<th scope="col" class="v3-dragcol"></th>
-								<th scope="col">{{localize "wod.gear.name"}}</th>
-								<th scope="col">{{localize "wod.gear.type"}}</th>
-								<th scope="col">{{localize "wod.dialog.dicepool"}}</th>
-								<th scope="col" class="v3-num">{{localize "wod.combat.weapon.diff"}}</th>
-								<th scope="col" class="v3-actioncol"></th>
-							</tr>
-						</thead>
-						<tbody>
-							{{#each (getItems actor) as |item id|}}
-								<tr>
-									{{!-- The handle cell carries `data-itemid` because HandleDragDrop clones
-									      `.draggable`'s parentElement and reads the id off it. See the header. --}}
-									<td class="v3-dragcol" data-itemid="{{item._id}}">
-										<i class="icon fa-solid fa-grip-vertical draggable" aria-hidden="true"></i>
-									</td>
-
-									{{#if item.system.isrollable}}
-										<td class="vrollable pointer"
-											data-type="{{../actor.type}}"
-											data-object="{{item.type}}"
-											data-rollitem="true"
-											data-itemid="{{item._id}}"
-											title="{{item.name}}"
-											data-action="rollDice">{{item.name}}</td>
-									{{else}}
-										<td>{{item.name}}</td>
-									{{/if}}
-
-									<td>{{localize item.system.type}}</td>
-
-									{{#if item.system.isrollable}}
-										<td>
-											{{#if (eq item.type "Fetish")}}
-												{{#if ../actor.system.settings.hasgnosis}}
-													{{localize "wod.advantages.gnosis"}}
-												{{else}}
-													{{localize "wod.advantages.willpower"}}
-												{{/if}}
-											{{else}}
-												{{#if (ne item.system.dice1 "")}}{{localize (getAttributes item.system.dice1)}}{{/if}}
-												{{#if (ne item.system.dice2 "")}} + {{localize (getAbility item.system.dice2 ../actor)}}{{/if}}
-												{{#if (gt item.system.bonus 0)}} + {{item.system.bonus}}{{/if}}
-											{{/if}}
-										</td>
-										<td class="v3-num">
-											{{#if (eq item.system.difficulty "-1")}}
-												{{localize "wod.labels.varies"}}
-											{{else}}
-												{{item.system.difficulty}}
-											{{/if}}
-										</td>
-									{{else}}
-										<td></td>
-										<td class="v3-num"></td>
-									{{/if}}
-
-									<td class="v3-rowactions">
-										{{!-- Equipped. A `<button>` for the same reason as on the Effects tab: on
-										      v2 this is an `<i>`, which no keyboard can reach, and the duotone /
-										      solid pair carries the whole state with nothing to announce it.
-										      `data-itemid="{{item.id}}"` is v2's spelling on THIS control (every
-										      other one in the row uses `_id`); carried across unchanged rather
-										      than tidied, because they resolve to the same value and a silent
-										      change here is exactly what this migration must not make.
-
-										      The solid/duotone glyph pair is v2's and is kept as-is: it is the
-										      established equipped-vs-not language on this sheet, and `aria-pressed`
-										      is what adds the state a glyph alone never carried. --}}
-										<button type="button" class="v3-iconbtn item-active"
-											data-itemid="{{item.id}}" data-type="isactive" data-action="itemActive"
-											aria-pressed="{{#if (isChecked item.system.isactive)}}true{{else}}false{{/if}}"
-											title="{{localize 'wod.combat.armor.equip'}}">
-											{{#if (isChecked item.system.isactive)}}
-												<i class="icon fa-solid fa-shield" aria-hidden="true"></i>
-											{{else}}
-												<i class="icon fa-duotone fa-solid fa-shield" aria-hidden="true"></i>
-											{{/if}}
-											<span class="v3-sr-only">{{localize "wod.combat.armor.equip"}}</span>
-										</button>
-
-										{{#if (eq item.system.type "wod.types.treasure")}}
-											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.treasure" deletetitle="wod.labels.remove.treasure"}}
-										{{else if (eq item.system.type "wod.types.relic")}}
-											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.relic" deletetitle="wod.labels.remove.relic"}}
-										{{else if (eq item.system.type "wod.types.device")}}
-											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.device" deletetitle="wod.labels.remove.device"}}
-										{{else if (eq item.system.type "wod.types.talisman")}}
-											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.talisman" deletetitle="wod.labels.remove.talisman"}}
-										{{else if (eq item.system.type "wod.types.periapt")}}
-											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.periapt" deletetitle="wod.labels.remove.periapt"}}
-										{{else if (eq item.system.type "wod.types.matrix")}}
-											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.matrix" deletetitle="wod.labels.remove.matrix"}}
-										{{else if (eq item.system.type "wod.types.trinket")}}
-											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.trinket" deletetitle="wod.labels.remove.trinket"}}
-										{{else if (eq item.system.type "wod.types.fetish")}}
-											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.fetish" deletetitle="wod.labels.remove.fetish"}}
-										{{else if (eq item.system.type "wod.types.talen")}}
-											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.talen" deletetitle="wod.labels.remove.talen"}}
-										{{else}}
-											{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.headline" deletetitle="wod.labels.remove.headline"}}
-										{{/if}}
-									</td>
-								</tr>
-							{{/each}}
-						</tbody>
-					</table>
+					      and gives a long Spanish type name somewhere to go. Extracted to
+					      `item_table.hbs` (reorganize-mage-sheet-v3 D3) so the Poderes tab's
+					      magical-item list can share the exact same row markup. --}}
+					{{> "systems/worldofdarkness/templates/actor/parts/item_table.hbs"
+						items=(getMundaneItems actor) actor=actor locked=locked caption="wod.gear.otheritems"}}
 				{{else}}
 					{{!-- The empty state (D9). v2 drew the four column headers over nothing, which
 					      reads as broken rather than as empty. The tab is never hidden and the
 					      create control above never moves: it is the only in-sheet route to
-					      making this list non-empty. --}}
+					      making this list non-empty.
+
+					      reorganize-mage-sheet-v3 — keyed off `getMundaneItems`, not `getItems`: an
+					      actor holding only Wonders/Fetishes (which now render on Poderes) must see
+					      THIS empty state here, not a table with zero rows. --}}
 					<p class="v3-empty">{{localize "wod.gear.empty"}}</p>
 				{{/if}}
 			</div>

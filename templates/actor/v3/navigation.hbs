@@ -7,8 +7,19 @@
       SAME `tabs` collection: once for the five content tabs, once for the administrative one
       (Ajustes/Settings), so the second group can sit in its own visually-demoted cluster (§8.4) at
       the end of the rail. Nothing here is a row renderer — each `<div data-action="tab" …>` is
-      authored identically to v2's, same attributes, same classes off `tab.cssClass`, same wiki
-      link — it is layout ONLY, split into two containers instead of one.
+      authored identically to v2's, same attributes, same classes off `tab.cssClass` — it is layout
+      ONLY, split into two containers instead of one.
+
+      THE WIKI LINK (reorganize-mage-sheet-v3)
+      -----------------------------------------
+      Unlike the rest of this file, the wiki `<a>` at the bottom is DELIBERATELY NOT identical to
+      v2's any more: it points at this fork's own wiki
+      (`https://github.com/LudoBermejoES/Foundry_WoD20/wiki`), the repo this system is actually
+      deployed from, instead of upstream's (`github.com/JohanFalt/Foundry_WoD20`). This is the ONE
+      link repointed — `parts/navigation.hbs` (v2's rail), `module/ui/settings-sidebar.js`,
+      `module/migration.js` and `wod.js` all keep upstream's URL on purpose, because those deep-link
+      to specific pages (`Feature:-API`, `PC-Actor`, `Changelog#fix-of-v72`) that are not guaranteed
+      to exist on the fork's wiki — only the fork's own wiki ROOT is a safe target.
 
       WHERE EFFECTS WENT (§8.3)
       --------------------------
@@ -62,6 +73,6 @@
             {{/each}}
         </div>
 
-        <a href="https://github.com/JohanFalt/Foundry_WoD20/wiki" target="_blank" class="item" title="Wiki">{{> (dtSvgDie 'dice' actor.type actor.system.settings.variantsheet)}}</a>
+        <a href="https://github.com/LudoBermejoES/Foundry_WoD20/wiki" target="_blank" class="item" title="Wiki">{{> (dtSvgDie 'dice' actor.type actor.system.settings.variantsheet)}}</a>
     </nav>
 </div>

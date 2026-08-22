@@ -59,7 +59,7 @@ EMPTY_PREFIX = ("wod", "power", "empty")
 #: section id -> (splat it must not appear for, where it lives instead). A section listed
 #: here renders on another tab; reaching it through powertab.js means it renders twice.
 RENDERED_ELSEWHERE: dict[str, tuple[str, str]] = {
-    "rotes": ("mage", "templates/actor/parts/stats_rotes.hbs, via stats_advantages.hbs"),
+    "resonances": ("mage", "templates/actor/parts/mage/resonance.hbs, via stats_advantages.hbs"),
 }
 
 #: ids that are declared but have no definition in BuildPowerSections. Each is inert — the

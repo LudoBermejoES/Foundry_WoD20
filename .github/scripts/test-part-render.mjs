@@ -1468,8 +1468,18 @@ check(`every wod.types.* the preparers name has a fixture item (${askedSubKinds.
  * reader looking for a symbol that does not exist.
  */
 const PREPARER_NAME = (() => {
+	// reorganize-mage-sheet-v3 9.10 — widened to also match a BRACED `case 'x': { ... }` block whose
+	// first statement is `context = await f(...)` rather than a bare `return f(...)` right after the
+	// case label. `stats` moved to this shape (it now sets `context.isv3` after calling
+	// `prepareStatContext`, so it needs a block body to hold a second statement before its own
+	// `return context`), and dropped out of the old regex silently — a future missing-context
+	// failure on Stats would have named the generic `_preparePartContext()` instead of
+	// `prepareStatContext()`. The source shape is unchanged on purpose (task text: widen the regex,
+	// don't reshape `pc-actor-sheet.js` to suit it).
 	const map = {};
-	for (const m of preparerSource.matchAll(/case\s+'([a-z]+)':\s*\n\s*return\s+(\w+)\(/g)) map[m[1]] = m[2];
+	for (const m of preparerSource.matchAll(/case\s+'([a-z]+)':\s*\{?\s*\n\s*(?:return\s+(\w+)\(|context\s*=\s*await\s+(\w+)\()/g)) {
+		map[m[1]] = m[2] || m[3];
+	}
 	return map;
 })();
 

@@ -446,6 +446,18 @@
 	border-radius: 0;
 }
 
+/* reorganize-mage-sheet-v3 D7 — the magical-item section header carries its own `.v3-add` create
+   button (`data-origin="gear"`), a second control beside the Poderes section it populates. Without
+   this the button would just wrap inline after the centred/left-aligned heading text, per the base
+   `.sheet-banner` rule above. `[data-area="magicalitems"]` targets only this one header, matching
+   the name-left/control-right layout `.v3-tabhead` already uses. */
+.wod20.pc-actor-v3 .v3-tabmain .sheet-banner[data-area="magicalitems"] {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+}
+
 /* ── Labelled fields ────────────────────────────────────────────────────────────────────────
    Replaces `.floating-label-group`, which is pure CSS (wod.css:1001-1029) driven by `:valid` — it
    needed `required` on every input to work, and `required` on an optional field makes the form fail
@@ -494,7 +506,12 @@
    siblings, wod.css:1594-1690), which is what `css/responsive.css` then patches per language. The
    `<table>` replaces all of them, so nothing here restates a width; the two rules below only stop
    the two NON-DATA columns from claiming a share of it. `width: 1%` is the table idiom for "shrink
-   to content": a percentage below the content's minimum is clamped up to exactly that minimum. */
+   to content": a percentage below the content's minimum is clamped up to exactly that minimum.
+
+   reorganize-mage-sheet-v3 D3 — these two rules are NOT scoped to the Gear tab (the selector is
+   `.wod20.pc-actor-v3 .v3-geartable`, no `.v3-gear`/`.v3-tabmain` ancestor), so they already apply
+   verbatim to the magical-item table `item_table.hbs` renders on the Poderes tab. No second rule
+   set needed: the table is the same partial, the same two classes, in a different `.v3-section`. */
 .wod20.pc-actor-v3 .v3-geartable .v3-dragcol,
 .wod20.pc-actor-v3 .v3-geartable .v3-actioncol {
 	width: 1%;
@@ -799,10 +816,39 @@
 	line-height: 1.25;
 }
 
+/* reorganize-mage-sheet-v3 D4 — Resonancia moved out of the full-width Personaje focus block and
+   into `stats_advantages.hbs`'s 50%-wide Areté/Willpower column (`.v3-resonanceblock`, wrapping
+   the same `mage/resonance.hbs` partial). Every rule above this one was authored for the ~880px
+   `.v3-focusblock` gets on the Personaje tab; at half that width a row (a name like "Furioso
+   (Resonancia Temperamental)", five dots, the eye icon, the delete icon) no longer fits the single
+   `nowrap` line `.v3-resonancerow .v3-focuslabel` forces above. Scoped to
+   `.v3-advantages .v3-resonanceblock` only, so the Personaje instance of `.v3-focusitem` (which no
+   longer exists after this change, but nothing here should assume that) is never touched by these
+   two overrides. */
+.wod20.pc-actor-v3 .v3-advantages .v3-resonanceblock .v3-focusitem {
+	flex-wrap: wrap;
+	row-gap: 2px;
+}
+
+.wod20.pc-actor-v3 .v3-advantages .v3-resonanceblock .v3-resonancerow .v3-focuslabel {
+	white-space: normal;
+	flex: 1 1 100%;
+}
+
 /* The empty-state line ("Ninguno"/"None") a Focus block prints when its list has no picks yet —
    the same rhythm `.v3-linkline` above already uses for "no link set", not a field and not an
    error. */
 .wod20.pc-actor-v3 .v3-focusblock .information-area {
+	margin: 0;
+	font-size: 0.85rem;
+}
+
+/* reorganize-mage-sheet-v3 9.9 — `mage/resonance.hbs`'s own `{{else}}` branch prints the identical
+   "Ninguno" `<p class="information-area">`, but D8's `.v3-resonanceblock` wrapper (the Stats
+   advantages column, not the Personaje `.v3-focusblock`) never matched the rule above, so the
+   empty state lost its size and sat at the ambient paragraph size instead. Same rule, scoped to
+   the wrapper this block actually has. */
+.wod20.pc-actor-v3 .v3-resonanceblock .information-area {
 	margin: 0;
 	font-size: 0.85rem;
 }

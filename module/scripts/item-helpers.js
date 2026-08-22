@@ -884,6 +884,38 @@ export default class ItemHelper {
 	}
 
 
+	/**
+	 * reorganize-mage-sheet-v3 D3 — the single predicate that decides "magical", shared by both
+	 * derived lists below so the two can never disagree about a given item. This system has no
+	 * `Wonder` item type: `Item` documents that carry `system.ismagical === true` (relics, devices,
+	 * talismans, periapts, matrices, trinkets — see `create-helpers.js`'s mint routines) ARE Wonders
+	 * in every sense the tabletop rules mean, and `Fetish` is always magical by type.
+	 */
+	static IsMagicalItem(item) {
+		return item.type === "Fetish" || item.system?.ismagical === true;
+	}
+
+
+	/**
+	 * The magical half of `GetAllItems` — Wonders and Fetishes, for the Poderes tab. Same source
+	 * list, same sort, so ordering never diverges from what `GetAllItems` would have produced.
+	 */
+	static GetMagicalItems(actor) {
+		return ItemHelper.GetAllItems(actor).filter(item => ItemHelper.IsMagicalItem(item));
+	}
+
+
+	/**
+	 * The mundane half of `GetAllItems` — everything the Equipo tab still lists after Wonders and
+	 * Fetishes move to Poderes. `GetMagicalItems` and `GetMundaneItems` are a PARTITION of
+	 * `GetAllItems`'s result by construction: one predicate, negated once, so every item lands in
+	 * exactly one of the two lists and none is dropped.
+	 */
+	static GetMundaneItems(actor) {
+		return ItemHelper.GetAllItems(actor).filter(item => !ItemHelper.IsMagicalItem(item));
+	}
+
+
 	static GetAllNotes(actor) {
 		let items = actor.items.filter(item => item.type === "Feature" || (item.type == "Trait" && (item.system.type == "wod.types.othertraits") || (item.system.type == "wod.types.shapeform") || (item.system.type == "wod.types.aspect")));
 

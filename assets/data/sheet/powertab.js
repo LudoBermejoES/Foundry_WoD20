@@ -28,16 +28,27 @@ export const datapowertab = {
             primary: ["disciplines", "combinations", "rituals"],
         },
         mage: {
-            // "rotes" is deliberately absent: the Rote list lives on the Stats tab now, in the band
-            // under Arete and Health (`stats_rotes.hbs`), next to the Spheres.
+            // reorganize-mage-sheet-v3 D2 — "rotes" is back, and FIRST: the Rote list now renders as
+            // the first section of the Poderes tab, reverting the add-pc-sheet-v3-era move to the
+            // Stats tab (the `stats_advantages.hbs` band, deleted, and `stats_rotes.hbs` with it).
             //
-            // Removing it HERE IS NOT ENOUGH, and 7.5.44 shipped believing it was. `primary` only
-            // decides ORDER: `BuildPowerSections` walks it first, then walks `defaultOrder` and adds
-            // every id it has not already added (`item-helpers.js:1042-1048`). `defaultOrder` still
-            // listed "rotes", so the section came back at order 2 and every mage holding Rotes saw
-            // the list TWICE — once on Ficha, once on Poderes. To drop a section from a line you
-            // must remove it from this list AND from `defaultOrder` below.
-            primary: ["resonances"],
+            // Adding it HERE IS NOT ENOUGH on its own. `primary` only decides ORDER:
+            // `BuildPowerSections` walks it first, then walks `defaultOrder` and adds every id not
+            // already taken (`item-helpers.js:1042-1048`). 7.5.44 shipped a REMOVAL believing a
+            // one-list edit was enough and got the list rendering twice for the opposite reason this
+            // comment used to warn about; the fix then, and the rule now, is the same either
+            // direction: a section id must be added to (or removed from) `primary` AND
+            // `defaultOrder` together, never one alone. See the matching entry in `defaultOrder`
+            // below, which this change also restores.
+            //
+            // "resonances" is deliberately ABSENT (D4, same change): Resonancia y Sinergia now
+            // renders on the Stats tab, under Fuerza de Voluntad (`stats_advantages.hbs`), not as a
+            // `simpledots` Poderes section. Removed from `defaultOrder` too, for the same reason
+            // "rotes" had to be added to both lists above — one list only either double-renders or,
+            // in this direction, leaves an orphaned id nothing draws. `context.resonances` itself is
+            // still built in `preparePowersContext`: the Settings tab's power-ordering UI and
+            // `BuildPowerSections` both read it even though no section draws it any more.
+            primary: ["rotes"],
         },
         changeling: {
             primary: ["arts"],
@@ -72,11 +83,14 @@ export const datapowertab = {
             "rituals",
             "gifts",
             "rites",
-            // "rotes" removed: the Rote list renders on the Stats tab (`stats_rotes.hbs`). Leaving it
-            // here re-added the section at order 2 for every mage, because this loop adds every id
-            // NOT already taken from `primary` (`item-helpers.js:1042-1048`) — which is how 7.5.44
-            // shipped the list twice. Mage is the only line that had it.
-            "resonances",
+            // reorganize-mage-sheet-v3 D2 — "rotes" restored here alongside mage's own `primary`
+            // entry above. This entry only matters for splats that do NOT already claim "rotes" in
+            // their own `primary` list — mage does, so mage's order comes from `primary` and this
+            // entry is inert for mage. It exists so the id is never orphaned in one list only; the
+            // section's `condition` (`actor.system.settings.hasrotes`, item-helpers.js:1048) is what
+            // actually keeps it from appearing on non-mage sheets, exactly like `charms` reaching
+            // Mage Companions through this same fallback despite not being in mage's `primary`.
+            "rotes",
             "arts",
             "lores",
             "edges",

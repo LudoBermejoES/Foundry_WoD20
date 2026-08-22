@@ -107,8 +107,17 @@ export default class PCActorSheetV3 extends PCActorSheet {
 	 * `PCActorSheet#effectsInSettings` and `settings.hbs`'s `effectsinsettings` gate). `settings` is
 	 * UNCHANGED from the parent — still a real, independently-clickable tab; only the RAIL demotes
 	 * it visually (`v3/navigation.hbs`, `css/pc-actor-v3.css` "NAV RAIL"). `sheet-invariants.py`'s I5
-	 * checks `PARTS` keys against these tab ids, so removing a tab from one without the other is a
-	 * gate failure, not a silent gap.
+	 * checks `PARTS` keys against these tab ids AS SETS, so reordering the entries below is safe on
+	 * its own, and removing a tab from one without the other is still a gate failure, not a silent
+	 * gap.
+	 *
+	 * reorganize-mage-sheet-v3 — declaration order below IS rail order: `v3/navigation.hbs` renders
+	 * the rail by iterating this field with `{{#each tabs}}` (twice — once excluding `settings`,
+	 * once for it alone), so the object literal's key order is the one and only place the tab order
+	 * is decided. Order is `stats, feature, powers, combat, gear, settings` — Principal, Personaje,
+	 * Poderes, Combate, Equipo, then Ajustes demoted in its own cluster — the same for every splat;
+	 * no per-splat branch may reorder this. If the rail ever shows tabs out of this order, the bug
+	 * is here, not in `navigation.hbs`.
 	 */
 	tabs = {
 		stats: {
@@ -116,6 +125,14 @@ export default class PCActorSheetV3 extends PCActorSheet {
 			group: 'primary',
 			title: game.i18n.localize('wod.tab.core'),
 			icon: game.worldofdarkness.icons[getSplat(this.actor)].stats
+		},
+		// Was "Features"/`wod.tab.features`; now "Personaje"/`wod.tab.character`, since §8.2 folded
+		// the identity content that used to be the standalone Bio tab in here.
+		feature: {
+			id: 'feature',
+			group: 'primary',
+			title: game.i18n.localize('wod.tab.character'),
+			icon: game.worldofdarkness.icons[getSplat(this.actor)].note
 		},
 		powers: {
 			id: 'powers',
@@ -134,14 +151,6 @@ export default class PCActorSheetV3 extends PCActorSheet {
 			group: 'primary',
 			title: game.i18n.localize('wod.tab.gear'),
 			icon: game.worldofdarkness.icons[getSplat(this.actor)].gear
-		},
-		// Was "Features"/`wod.tab.features`; now "Personaje"/`wod.tab.character`, since §8.2 folded
-		// the identity content that used to be the standalone Bio tab in here.
-		feature: {
-			id: 'feature',
-			group: 'primary',
-			title: game.i18n.localize('wod.tab.character'),
-			icon: game.worldofdarkness.icons[getSplat(this.actor)].note
 		},
 		// RETIRED as its own tab, add-pc-sheet-v3 §8.3: `effects` no longer has an entry here or in
 		// `PARTS` below, or a rail icon of its own in `v3/navigation.hbs`. Its content now renders

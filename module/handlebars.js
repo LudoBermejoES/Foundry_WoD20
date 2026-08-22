@@ -1162,6 +1162,17 @@ export const registerHandlebarsHelpers = function () {
 		return ItemHelper.GetAllItems(actor);
 	});
 
+	// reorganize-mage-sheet-v3 D3 — the two derived lists behind the v3 Equipo/Poderes split.
+	// `getItems` above stays registered and unchanged, which is what keeps the v2 sheet, which
+	// still calls it, identical.
+	Handlebars.registerHelper("getMagicalItems", function (actor) {
+		return ItemHelper.GetMagicalItems(actor);
+	});
+
+	Handlebars.registerHelper("getMundaneItems", function (actor) {
+		return ItemHelper.GetMundaneItems(actor);
+	});
+
 	Handlebars.registerHelper("getItemType", function (actor, itemtype, itemcategory) {
 		return ItemHelper.GetItemType(actor, itemtype, itemcategory);
 	});

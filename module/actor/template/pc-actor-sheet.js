@@ -416,8 +416,21 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 		switch (partId) {
 			case 'bio':
 				return prepareBioContext(context, actor);
-			case 'stats':
-				return prepareStatContext(context, actor);
+			case 'stats': {
+				context = await prepareStatContext(context, actor);
+
+				// reorganize-mage-sheet-v3 D4 — `stats_advantages.hbs` is SHARED between v2's
+				// `parts/stats.hbs` and v3's `v3/stats.hbs`, and the Resonancia include it now
+				// carries must render on v3 only, never on v2 (v2's Personaje tab does not render
+				// resonanceMarks at all, and v2's Stats preparer builds no such context). This class
+				// has no per-instance "is this the v3 sheet" flag of its own, but `effectsInSettings`
+				// already IS exactly that signal — false on `PCActorSheet` (v2), true on
+				// `PCActorSheetV3` — reused here under a name the template reads generically rather
+				// than adding a second, differently-named boolean for the same fact.
+				context.isv3 = this.effectsInSettings;
+
+				return context;
+			}
 			case 'powers':
 				return preparePowersContext(context, actor);
 			case 'combat':
@@ -1929,14 +1942,39 @@ const addSphereContext = async function (context, actor) {
 }
 
 /**
- * `rotes` for whichever part renders them. Same reason as `addSphereContext` above, same trap: an
- * ApplicationV2 part only sees the context ITS OWN preparer built, so the Rote list moving from the
- * Powers tab to the Stats tab means the Stats preparer has to produce it. Kept as a named helper
- * rather than a second `ItemHelper.GetItemType` call so the two tabs can never diverge on what
- * counts as a Rote.
+ * `rotes` for the Poderes tab. reorganize-mage-sheet-v3 D2 moved the Rote list back OFF the Stats
+ * tab and onto Poderes (through the `powerSections` registry, `assets/data/sheet/powertab.js`), so
+ * this is now called only from `preparePowersContext` — `prepareStatContext` dropped its call, and
+ * with it any reason to build `context.rotes` there. Kept as a named helper rather than inlining a
+ * second `ItemHelper.GetItemType` call so a future mover of this block cannot fork what counts as a
+ * Rote from what the Poderes tab counts.
  */
 const addRoteContext = function (context, actor) {
 	context.rotes = ItemHelper.GetItemType(actor, "Rote");
+
+	return context;
+}
+
+/**
+ * `resonanceMarks` for the Stats tab's Areté/Fuerza de Voluntad column. reorganize-mage-sheet-v3
+ * D4 moved this OFF the Feature tab and onto Stats (directly under Fuerza de Voluntad, inside
+ * `stats_advantages.hbs`'s 50%-wide advantages column), so `prepareStatContext` calls this now
+ * instead of `prepareFeatureContext` — an ApplicationV2 part only ever sees the context ITS OWN
+ * preparer built. Extracted as a named helper (moved, not copied) rather than left inline so the
+ * seven-category filter cannot fork if this ever moves again.
+ *
+ * add-mage-resonance's original filter, unchanged: every `wod.types.resonance` Trait carrying one
+ * of the seven known flavor ids in `system.category` is a player-facing mark; the corrupted-
+ * Práctica resistance counter and a bare hand-made Jhor item never set `category` at all (see
+ * `prism-corrupted-helpers.js`'s own header) and are excluded by this same filter — see design.md
+ * D3 (add-mage-resonance) and D4 (reorganize-mage-sheet-v3). Built unconditionally, mage or not
+ * (same "safer default" convention `mageFocusParadigms`/etc. already establish in `addBioContext`)
+ * — empty for every other line.
+ */
+const addResonanceContext = function (context, actor) {
+	context.resonanceMarks = ItemHelper.GetItemType(actor, "Trait", "wod.types.resonance")
+		.filter(isPlayerFacingResonanceMark)
+		.map(item => ({ item, flavorLabelKey: RESONANCE_FLAVOR_LABEL_KEY[item.system.category] }));
 
 	return context;
 }
@@ -1949,9 +1987,11 @@ export const prepareStatContext = async function (context, actor) {
 	// and `stats.hbs` gates the include on `settings.hasspheres` anyway.
 	await addSphereContext(context, actor);
 
-	// Rotes render on THIS tab too now, in the band under Arete and Health. Same harmlessness for
-	// other splats: no Rote items means an empty list and `stats_advantages.hbs` renders no block.
-	addRoteContext(context, actor);
+	// reorganize-mage-sheet-v3 D4 — Resonancia y Sinergia renders on THIS tab now, under Fuerza de
+	// Voluntad in the advantages column. Harmless for every other splat: an empty `resonanceMarks`
+	// list, and `stats_advantages.hbs` gates the include on `splat === mage` as well as v3, so
+	// nothing new renders for a non-mage or on the v2 sheet.
+	addResonanceContext(context, actor);
 
 	// Owner-delegated addition to open-item-window-from-eye-icon: which attribute rows get an eye
 	// icon at all (see stats_attributes.hbs). Attributes are system fields, not Items - nothing is
@@ -2117,9 +2157,11 @@ export const preparePowersContext = async function (context, actor) {
 	context.rituals = ItemHelper.GetPowersByType(actor, "wod.types.ritual", true);
 	context.rites = ItemHelper.GetPowersByType(actor, "wod.types.rite", true);
 	
-	// Still prepared here even though the Rote LIST moved to the Stats tab: the Settings tab's
-	// power-ordering machinery and BuildPowerSections both read `context.rotes`, and the section it
-	// builds is simply no longer rendered (see powertab.js).
+	// reorganize-mage-sheet-v3 D2 — Rotes are back to being an actual Poderes-tab section: this call
+	// is what makes `v3/powers.hbs` draw them as the FIRST section, through `powerSections`
+	// (`assets/data/sheet/powertab.js`'s mage `primary` list, "rotes" first) rather than a
+	// hand-placed include. The Settings tab's power-ordering list reads the same `context.rotes` and
+	// the same section registry, so the two can never disagree on whether the section exists.
 	addRoteContext(context, actor);
 	context.resonances = actor.items.filter(item => item.type === "Trait" && item.system.type === "wod.types.resonance");
 	context.numinas = ItemHelper.GetPowersByType(actor, "wod.types.numina", true);
@@ -2202,16 +2244,30 @@ export const preparePowersContext = async function (context, actor) {
 	// out of `getPowertype` itself and asserts each has a key, because a derived key that is missing
 	// renders as the raw string and no literal-key gate can see it.
 	//
-	// `haspowercontent` is the EXACT disjunction of the five gates the template renders on, and it
-	// is computed here rather than in the template for one reason: "does any section have a true
+	// `haspowercontent` is the EXACT disjunction of the gates the template renders on, and it is
+	// computed here rather than in the template for one reason: "does any section have a true
 	// condition" cannot be expressed in Handlebars. Writing the flags out by hand in the shell would
 	// drift from the ladder silently the first time a section is added — the empty state would print
 	// UNDER a section that rendered. Reading it off `powerSections` cannot.
+	//
+	// reorganize-mage-sheet-v3 D5/D2/D4 — the disjunction still has to be recomputed by hand when a
+	// GATE moves in or out from OUTSIDE `powerSections`, and this change moves two:
+	//   - Rotes needed NO new clause here. `BuildPowerSections` only ever pushes a section whose
+	//     `condition` is already truthy (`buildPowerSection` returns `null` otherwise,
+	//     item-helpers.js:1091), so `powerSections.some(...)` below already picked up "rotes" the
+	//     moment D2 put it back in mage's `primary`/`defaultOrder` — same reason removing
+	//     "resonances" from both needed no clause DROPPED here either: its gate was always this same
+	//     `section.condition`, inside the ladder this line already covers.
+	//   - The magical-item list (D3) is NOT a `powerSections` entry at all — it is a plain
+	//     `getMagicalItems` call in the template, with no section registry behind it — so it is the
+	//     one genuinely NEW clause: `hasmagicalitems`, below.
 	context.powertype = getPowertype(actor);
+	context.hasmagicalitems = ItemHelper.GetMagicalItems(actor).length > 0;
 	context.haspowercontent =
 		!!actor.system.settings.hasshapes ||
 		!!actor.system.settings.hasrealms ||
 		context.powerSections.some(section => !!section?.condition) ||
+		context.hasmagicalitems ||
 		!!actor.system.settings.hasapocalypticforms ||
 		(context.powertraits.length > 0);
 
@@ -2448,15 +2504,10 @@ export const prepareFeatureContext = async function (context, actor) {
 	context.darkpassions 	= ItemHelper.GetItemType(actor, "Feature", "wod.types.darkpassion");
 	context.fetters 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.fetter");
 
-	// add-mage-resonance — every `wod.types.resonance` Trait carrying one of the seven known
-	// flavor ids in `system.category` is a player-facing mark; the corrupted-Práctica resistance
-	// counter and a bare hand-made Jhor item never set `category` at all (see
-	// `prism-corrupted-helpers.js`'s own header) and are excluded by this same filter — see
-	// design.md D3. Built unconditionally, mage or not (same "safer default" convention
-	// `mageFocusParadigms`/etc. already establish in `addBioContext`) — empty for every other line.
-	context.resonanceMarks = ItemHelper.GetItemType(actor, "Trait", "wod.types.resonance")
-		.filter(isPlayerFacingResonanceMark)
-		.map(item => ({ item, flavorLabelKey: RESONANCE_FLAVOR_LABEL_KEY[item.system.category] }));
+	// reorganize-mage-sheet-v3 D4 — `resonanceMarks` moved OFF this tab and onto Stats
+	// (`addResonanceContext`, called from `prepareStatContext`): Resonancia y Sinergia now renders
+	// under Fuerza de Voluntad in the Areté/Willpower column, not here. This tab no longer builds or
+	// reads that key.
 
 	prepareShadowAreaContext(context, actor);
 

@@ -7,10 +7,13 @@
       -------------------------------------------------------------------------------------------
       `mortal` is 25 actors, second only to mage, and `powertab.js:60` gives mortal `primary: []`.
       Its Powers tab is empty BY CONSTRUCTION — not because the character has bought nothing, but
-      because the system declares no axis for the line. `mage` is 29 and its Spheres and Rotes both
-      moved to the Stats tab, so a mage sees only Resonance here. So the EMPTY STATE is not a corner
-      case on this tab; it is the common case, and getting its wording right matters more than any
-      layout below it.
+      because the system declares no axis for the line. `mage` is 29; at the time this paragraph was
+      written its Spheres and Rotes had both moved to the Stats tab, so a mage saw only Resonance
+      here — reorganize-mage-sheet-v3 reversed the Rotes half of that (Rotes are back, first section
+      on this tab) and removed Resonance from it entirely (moved to the Stats advantages column, D4),
+      so a mage now sees Rotes, then any Wonders, and nothing else that this tab draws unless other
+      sections apply. So the EMPTY STATE is not a corner case on this tab; it is the common case for
+      several splats, and getting its wording right matters more than any layout below it.
 
       THE EMPTY STATE IS DERIVED, NOT TABULATED
       -----------------------------------------
@@ -115,7 +118,12 @@
 
 			{{!-- Spheres are NOT here: they render on the Stats tab, under Abilities (v3/stats.hbs).
 			      `preparePowersContext` still prepares their context via `addSphereContext`, because
-			      the Settings tab's sphere-ordering list reads the same items. --}}
+			      the Settings tab's sphere-ordering list reads the same items.
+
+			      Rotes ARE here (reorganize-mage-sheet-v3 D2) — reversing the earlier move to Stats.
+			      They render through the section ladder below like any other power axis: mage's
+			      `primary` list in `powertab.js` puts "rotes" FIRST, so the `template === "column"`
+			      branch draws it above every other section a mage's actor holds. --}}
 
 			{{#if actor.system.settings.hasrealms}}
 				<div class="v3-section">
@@ -179,7 +187,15 @@
 						</div>
 
 					{{else if (eq section.template "simpledots")}}
-						{{!-- SIMPLE WITH DOTS (Resonances) — the mage line's only Powers-tab section. --}}
+						{{!-- SIMPLE WITH DOTS. No section currently registers this template: Resonances
+						      was the only line ever to use it, and reorganize-mage-sheet-v3 D4 removed
+						      "resonances" from mage's `primary` AND `defaultOrder` (it renders on the
+						      Stats tab now, under Fuerza de Voluntad), so this branch is dead code kept
+						      on purpose — the `template === "simpledots"` case in
+						      `BuildPowerSections` (item-helpers.js) still exists and still builds a
+						      `resonances` definition (for the Settings tab's power-ordering UI), so
+						      this branch stays as the renderer that definition WOULD use if any
+						      section were ever put back on it. --}}
 						<div class="v3-section">
 							<div class="sheet-headline sheet-banner splatFont" data-area="{{section.id}}">
 								<span class="sheet-banner-text">{{localize section.localizeKey}}</span>
@@ -246,6 +262,49 @@
 				{{/if}}
 			{{/each}}
 
+			{{!-- reorganize-mage-sheet-v3 D3/D7 — Wonders and Fetishes, immediately after Rotes.
+			      "Wonder" is not a real item type in this system: it is an `Item` document with
+			      `system.ismagical === true` (relics, devices, talismans, periapts, matrices,
+			      trinkets), and `Fetish` is always magical by type — `ItemHelper.IsMagicalItem` is
+			      the one predicate both this list and Equipo's narrowed table are built from, so
+			      they are provably a partition of what `getItems` used to return: nothing is
+			      dropped and nothing renders twice.
+
+			      PLACEMENT: this sits OUTSIDE the `powerSections` loop above, not inside it, on
+			      purpose. Rotes is the FIRST entry in mage's `primary` list (`powertab.js`), so for
+			      an actor whose Poderes tab draws nothing else from that loop (every mage, absent an
+			      unusual cross-splat setup), this block is the very next thing on the page — "Rotes,
+			      then Wonders" without hand-coding a dependency on the Rotes iteration itself, which
+			      would wrongly hide Wonders for a mage holding none.
+
+			      Shares `item_table.hbs` with the Equipo tab (D3) — same row markup, same
+			      `data-*`, only the source list and caption differ.
+
+			      D7 — THE HEADER (AND ITS CREATE BUTTON) IS UNCONDITIONAL, UNLIKE BEFORE. Every kind
+			      `CreateButtonsGear` mints is stamped `ismagical: true`, so this is now the ONLY
+			      in-sheet route to creating one, and gating the whole block on already holding a
+			      magical item would make creating the FIRST one impossible from any sheet control.
+			      `data-origin="gear"` is unchanged — it still dispatches to `CreateButtonsGear`
+			      (`action-helpers.js` `OnItemCreate`) — this is a second, separately-labelled
+			      `itemCreate` control, not a merge into the `data-origin="power"` button above
+			      (that one is `CreateButtonsPowerv2`, which has no Wonder/Fetish branch). Only the
+			      TABLE itself stays conditional on actually holding one. --}}
+			<div class="v3-section">
+				<div class="sheet-headline sheet-banner splatFont" data-area="magicalitems">
+					<span class="sheet-banner-text">{{localize "wod.power.magicalitems"}}</span>
+					{{#unless locked}}
+						<button type="button" class="v3-add" data-origin="gear" data-action="itemCreate">
+							<i class="fa-solid fa-square-plus" aria-hidden="true"></i>
+							<span>{{localize "wod.labels.add.magicalitem"}}</span>
+						</button>
+					{{/unless}}
+				</div>
+				{{#if (getMagicalItems actor)}}
+					{{> "systems/worldofdarkness/templates/actor/parts/item_table.hbs"
+						items=(getMagicalItems actor) actor=actor locked=locked caption="wod.power.magicalitems"}}
+				{{/if}}
+			</div>
+
 			{{#if actor.system.settings.hasapocalypticforms}}
 				<div class="v3-section">
 					{{> "systems/worldofdarkness/templates/actor/parts/power_apocalypticforms.hbs" apocalypticforms=apocalypticforms actor=actor config=config}}
@@ -267,10 +326,13 @@
 				</div>
 			{{/if}}
 
-			{{!-- The empty state (D9). `haspowercontent` is the exact disjunction of the five gates
-			      above, computed in `preparePowersContext` — it has to be, because "does ANY section
-			      have a true condition" is not expressible in Handlebars and a hand-written `or` over
-			      the flags would silently drift from the ladder the moment a section is added.
+			{{!-- The empty state (D9). `haspowercontent` is the exact disjunction of every gate
+			      above — shapes, realms, the `powerSections` ladder (which is where Rotes' own gate
+			      lives, D2), the magical-item list (`hasmagicalitems`, D3), apocalyptic forms and
+			      power-placed Trait items — computed in `preparePowersContext` — it has to be,
+			      because "does ANY section have a true condition" is not expressible in Handlebars
+			      and a hand-written `or` over the flags would silently drift from the ladder the
+			      moment a section is added or removed.
 
 			      `not` rather than `unless` for consistency with the other six shells, and to keep the
 			      gate readable as one expression alongside them. --}}

@@ -16,11 +16,13 @@
 		&nbsp;
 	</div>
 
-	{{!-- Arete/Willpower and Health used to be two independent 33% columns. They are now wrapped in
-	      one 67% column so the Rote band underneath can span BOTH of them: with three siblings there
-	      was no element whose width was "the last two thirds" to hang it on. The Quintessence wheel
-	      keeps its own full-height 33% on the left, which is what leaves the empty space this band
-	      fills. Inner widths are 50% OF THE WRAPPER, i.e. the same third of the sheet each had. --}}
+	{{!-- Arete/Willpower and Health used to be two independent 33% columns. They were wrapped in one
+	      67% column so a since-removed Rote band could span both of them (that band is gone,
+	      reorganize-mage-sheet-v3 D2 — Rotes render on the Poderes tab now); the wrapper stays,
+	      because Areté/Willpower and Health are still two 50%-of-this-67% inner columns either way.
+	      The Quintessence wheel keeps its own full-height 33% on the left, which is what leaves the
+	      empty space this band fills. Inner widths are 50% OF THE WRAPPER, i.e. the same third of
+	      the sheet each had. --}}
 	<div class="pullLeft" style="width: 67%;">
 
 	<div class="clearareaBox">
@@ -58,10 +60,50 @@
 					{{/if}}
 				</div>
 			{{/if}}
+
+			{{!-- reorganize-mage-sheet-v3 D8 — CORRECTION to D4: Resonancia y Sinergia is anchored
+			      to the Fuerza de Voluntad CARD, not to "the end of the loop". `advantages` is
+			      sorted by `system.settings.order`, which is actor data a player can reorder from
+			      Ajustes — wodchar's imports give `arete order=0, willpower order=1` so "after the
+			      loop" happened to match, but the preflight fixture (and any reordered PC) puts
+			      Areté last and would have put Resonancia under ARETÉ instead. Emitting it here,
+			      immediately after the card whose `advantage.system.id === "willpower"`, makes the
+			      requirement true by construction for either ordering.
+
+			      `resonanceMarks` comes from `addResonanceContext`, called from `prepareStatContext`
+			      (`pc-actor-sheet.js`) — the same ApplicationV2 trap as everywhere else in this
+			      file: a part only ever sees the context ITS OWN preparer built. `mage/resonance.hbs`
+			      reads `resonanceMarks`/`config` as BARE names off whatever context it is handed, so
+			      the include must be given an explicit context here — inside `{{#each advantages}}`
+			      the bare `this` is `advantage`, not the top-level context, unlike the old
+			      OUTSIDE-the-loop position this replaces.
+
+			      GATED TWICE, and both halves matter because this partial is SHARED with v2
+			      (`parts/stats.hbs:29` and `v3/stats.hbs:154` both include it):
+			        - `splat === mage`, so no other line grows an empty heading in its own advantages
+			          column.
+			        - `isv3`, so v2 renders NOTHING new here — v2's Stats preparer never calls
+			          `addResonanceContext` and never will (out of scope for this change), so without
+			          this gate a v2 mage would hit an undefined `resonanceMarks` and either throw or
+			          render a broken block. `isv3` is `context.isv3`, set in `pc-actor-sheet.js`'s
+			          `stats` case from `this.effectsInSettings` — the one existing per-instance flag
+			          that already distinguishes `PCActorSheetV3` (true) from `PCActorSheet` (false).
+
+			      Every name that used to be bare at the top level — `isv3`, `actor`, `config`,
+			      `locked`, `resonanceMarks` — is one frame up inside this loop, hence `../` on all
+			      five. --}}
+			{{#if (eq advantage.system.id "willpower")}}
+				{{#if (and ../isv3 (eq ../actor.system.settings.splat ../config.splat.mage))}}
+					<div class="v3-resonanceblock">
+						{{> "systems/worldofdarkness/templates/actor/parts/mage/resonance.hbs"
+							resonanceMarks=../resonanceMarks actor=../actor locked=../locked config=../config}}
+					</div>
+				{{/if}}
+			{{/if}}
 		{{/each}}
-		
+
 	</div>
-	
+
 	<div class="healthBox" style="width: 50%; height: 100%; display: flex; flex-direction: column;">
 
 		{{> "systems/worldofdarkness/templates/actor/parts/stats_health.hbs"}}
@@ -74,16 +116,6 @@
 	</div>
 
 	</div>
-
-	{{!-- Rotes, spanning Arete + Health. Gated on the same setting the Powers tab gated its section
-	      on (`hasrotes`), plus a non-empty list, so a mage with no Rotes gets no empty banner and
-	      every other splat gets nothing at all. --}}
-	{{#if actor.system.settings.hasrotes}}
-		{{#if rotes.length}}
-			{{> "systems/worldofdarkness/templates/actor/parts/stats_rotes.hbs"
-				rotes=rotes actor=actor config=config locked=locked}}
-		{{/if}}
-	{{/if}}
 
 	</div>
 </div>
