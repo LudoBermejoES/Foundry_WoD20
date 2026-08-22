@@ -79,6 +79,12 @@ const MECH_BLOCK_RE = /<ul class=['"]wod-kb-mech['"]>([\s\S]*?)<\/ul>/;
 //                        1: <li> attributes   2: label, or legacy raw key   3: value
 const MECH_ROW_RE = /<li([^>]*)><strong>([^<]*?):<\/strong>\s*([\s\S]*?)<\/li>/g;
 const DATA_KEY_RE = /\bdata-key=['"]([^'"]*)['"]/;
+// The VALUE travels in `data-value` when the visible text is a READABLE rendering of it
+// (`make-mechanics-values-legible`). Same contract as `data-key`, and for the same reason: this
+// parser resolves Práctica from these rows, so a row whose text reads «Yoga» must still yield
+// `yoga`. The attribute is emitted ONLY where text and machine value differ, so its ABSENCE means
+// "the text IS the value" -- which is why the fallback below is correct and not a degradation.
+const DATA_VALUE_RE = /\bdata-value=['"]([^'"]*)['"]/;
 
 /**
  * Parses a resolved description's `wod-kb-mech` block into a plain object. Never throws: an absent
@@ -103,7 +109,11 @@ export function parseMechanicsBlock(descriptionHtml) {
 		const dataKey = DATA_KEY_RE.exec(rowMatch[1] || "");
 		const key = (dataKey ? dataKey[1] : rowMatch[2]).trim();
 		if (!key) continue;
-		const rawValue = rowMatch[3].replace(/<[^>]+>/g, "").trim();
+		// `data-value` first, the visible text second -- the same precedence `data-key` has, and for
+		// the same reason: the text is now a LABEL for the value, and a label does not identify a
+		// value. Its absence is the normal case (~16,000 of 16,884 rows) and means text == value.
+		const dataValue = DATA_VALUE_RE.exec(rowMatch[1] || "");
+		const rawValue = (dataValue ? dataValue[1] : rowMatch[3].replace(/<[^>]+>/g, "")).trim();
 
 		if (LIST_FIELDS.has(key)) {
 			result[key] = rawValue ? rawValue.split(",").map((v) => v.trim()).filter(Boolean) : [];
