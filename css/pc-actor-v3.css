@@ -816,6 +816,50 @@
 	line-height: 1.25;
 }
 
+/* polish-mage-sheet-v3-affordances D2 — a Práctica's five dots were WRAPPING 3 + 2 onto two lines
+   on a row with most of its width apparently unused. Measured in headless Chromium against these
+   same two stylesheets, at a 1000px sheet:
+
+     .v3-focuslabel     141px   flex 0 1 auto
+     .resource-value     57px   flex 0 1 auto   <- five 19px dots need ~95px
+     .pullRight (eye)     17px
+     .pointer (trash)     10px
+     .information-area  673px   flex 0 1 auto
+     ------------------------------------------
+     sum                898px   -> the flex line is FULL
+
+   So the row was never short of space: `css/wod.css:979` gives `.information-area` `width: 100%`,
+   which as a flex item makes its flex BASE the whole row. Every sibling is `flex-shrink: 1`, so the
+   dots were squeezed under their content width and wrapped internally. The empty space visible to
+   the right of the row is INSIDE `.information-area`, unavailable to anyone.
+
+   This is the third recorded instance of this exact failure on this sheet — `power_spheres.hbs`
+   ("the fifth dot wrapped onto its own line under every column") and `mage.css` (three Technocratic
+   labels wrapping in a 26px row) are the other two, both quoted in `css/wod.css`.
+
+   `flex: 0 0 auto` is the load-bearing half: it forbids the shrink that produces the wrap.
+   Re-measured after: dot lines 2 -> 1, `.resource-value` 57px -> 80px, at 1200/900/760.
+   `.v3-resonancerow` is included deliberately — same class pair, same latent defect — and it does
+   NOT fight reorganize-mage-sheet-v3's `.v3-resonanceblock .v3-focusitem { flex-wrap: wrap }`,
+   which wraps the ROW's children in the half-width column while leaving the dot line intact. */
+.wod20.pc-actor-v3 .v3-prism-practicerow > .resource-value,
+.wod20.pc-actor-v3 .v3-resonancerow > .resource-value {
+	flex: 0 0 auto;
+	white-space: nowrap;
+}
+
+/* The other half: undo `css/wod.css:979`'s `width: 100%` for THIS ROW ONLY, so the annotation takes
+   the space left after the name and the dots have theirs, instead of claiming the line first. The
+   shared rule is not touched: `.information-area` also carries the wound-penalty readout and other
+   secondary values, and a global edit would move rows nobody complained about. `min-width: 0` is
+   required — a flex item's automatic minimum would otherwise refuse to shrink below its longest
+   word. */
+.wod20.pc-actor-v3 .v3-prism-practicerow > .information-area {
+	flex: 1 1 auto;
+	width: auto;
+	min-width: 0;
+}
+
 /* reorganize-mage-sheet-v3 D4 — Resonancia moved out of the full-width Personaje focus block and
    into `stats_advantages.hbs`'s 50%-wide Areté/Willpower column (`.v3-resonanceblock`, wrapping
    the same `mage/resonance.hbs` partial). Every rule above this one was authored for the ~880px
@@ -1059,7 +1103,14 @@
    THE PSEUDO-ELEMENT IS NOT A CHILD. `.willpower > .resource-value > .resource-value-step` still
    matches, `SetupDotCounters_v2` still fills the same spans, and no `data-*` moved. That is the
    whole reason this route was taken over adding a `<span>`. */
-.wod20.pc-actor-v3 .v3-stats .resource-value[data-value]::before,
+/* polish-mage-sheet-v3-affordances D3 — `:not(.v3-resonancerow *)` excludes the Resonancia rows.
+   The measurement above (65 dot-bearing elements, 58 with `data-value`) was taken BEFORE
+   reorganize-mage-sheet-v3 moved the Resonancia block onto this tab, so those rows became the 66th
+   case and inherited a numeral they never had on the Personaje tab. Expressed as a `:not()` on this
+   one selector rather than a second rule setting `content: none`, so exactly one place decides
+   which dot rows carry a numeral. Areté and Fuerza de Voluntad keep theirs — that is the feature
+   this rule exists for. */
+.wod20.pc-actor-v3 .v3-stats .resource-value[data-value]:not(.v3-resonancerow *)::before,
 .wod20.pc-actor-v3 .v3-stats .resource-counter.tempSquareRow[data-value]::before {
 	content: attr(data-value);
 	display: inline-block;
@@ -1335,6 +1386,17 @@
    9 + 1 before this. */
 .wod20.pc-actor-v3 .v3-advantages > .clearareaBox > .pullLeft {
 	min-width: 0;
+}
+
+/* polish-mage-sheet-v3-affordances D4 — Areté, Fuerza de Voluntad and (for a mage) Resonancia y
+   Sinergia stacked flush against one another in this column: `.wod-pool` carried only a
+   `min-width`, and nothing set vertical rhythm. The gap goes on the COLUMN, not as a
+   `margin-bottom` per block, so a block added here later inherits the spacing without restating
+   it — which is exactly how Resonancia arrived with none. The column is already
+   `display: flex; flex-wrap: wrap` (`.item-row`), so `row-gap` is the native mechanism and adds no
+   trailing space after the last child the way a margin would. */
+.wod20.pc-actor-v3 .v3-advantages .sheet-boxcontainer.item-row {
+	row-gap: 10px;
 }
 
 /* One advantage pool: banner, ten permanent dots, ten temporary squares. 10 x 19px of dot + the

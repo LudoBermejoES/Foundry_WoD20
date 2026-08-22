@@ -36,7 +36,9 @@
 			{{/if}}
 
 			{{#if row.item.system.isremovable}}
-				<a class="pointer item-delete" title="{{localize 'wod.labels.remove.headline'}}" data-itemid="{{row.item._id}}" data-action="itemDelete"><i class="icon fa-solid fa-trash-can"></i></a>
+				{{#if (eq ../locked false)}}
+					<a class="pointer item-delete" title="{{localize 'wod.labels.remove.headline'}}" data-itemid="{{row.item._id}}" data-action="itemDelete"><i class="icon fa-solid fa-trash-can"></i></a>
+				{{/if}}
 			{{/if}}
 
 			<div class="information-area">

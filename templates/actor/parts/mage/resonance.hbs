@@ -14,7 +14,13 @@
 	      header's own add-a-mark affordance was invisible until this fix. The v3 tab's OWN
 	      "Añadir objeto" button proves the glyph itself is fine without `.icon` — same pattern
 	      here. --}}
-	<a class="pointer pullRight" data-action="addResonanceMark" title="{{localize 'wod.resonance.dialog.title'}}"><i class="fa-solid fa-square-plus" aria-hidden="true"></i></a>
+	{{!-- polish-mage-sheet-v3-affordances D1 — the add-a-mark control WRITES to the actor, so it is
+	      gated on edit mode like every other mutating affordance in this system
+	      (`list_icons.hbs:5` is the idiom). It previously had no gate at all, not even a partial
+	      one, so a locked sheet offered it. --}}
+	{{#if (eq locked false)}}
+		<a class="pointer pullRight" data-action="addResonanceMark" title="{{localize 'wod.resonance.dialog.title'}}"><i class="fa-solid fa-square-plus" aria-hidden="true"></i></a>
+	{{/if}}
 </h3>
 
 <div class="space dialog-area flex-columns" data-drop-area="features" data-droparea="features">
@@ -33,12 +39,18 @@
 				{{/numLoop}}
 			</div>
 
+			{{!-- DELIBERATELY NOT lock-gated (polish-mage-sheet-v3-affordances D1): the eye only
+			      opens the read-only description viewer. Hiding it on a locked sheet would remove
+			      information from a reader without protecting any data. Same for the Prácticas
+			      calculator and the Rituales dialog in the sibling partials. --}}
 			<i class="pullRight pointer icon collapsible button fa-solid fa-eye"
 				title="{{localize 'wod.labels.show.description'}}"
 				data-itemid="{{row.item._id}}"></i>
 
 			{{#if row.item.system.isremovable}}
-				<a class="pointer item-delete" title="{{localize 'wod.labels.remove.headline'}}" data-itemid="{{row.item._id}}" data-action="itemDelete"><i class="icon fa-solid fa-trash-can"></i></a>
+				{{#if (eq ../locked false)}}
+					<a class="pointer item-delete" title="{{localize 'wod.labels.remove.headline'}}" data-itemid="{{row.item._id}}" data-action="itemDelete"><i class="icon fa-solid fa-trash-can"></i></a>
+				{{/if}}
 			{{/if}}
 		</div>
 	{{else}}
