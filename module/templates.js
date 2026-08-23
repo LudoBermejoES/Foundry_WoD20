@@ -72,6 +72,9 @@ export const preloadHandlebarsTemplates = async function () {
 		"systems/worldofdarkness/templates/actor/v3/combat.hbs",
 		"systems/worldofdarkness/templates/actor/v3/bio.hbs",
 		"systems/worldofdarkness/templates/actor/v3/feature.hbs",
+		// add-allies-contacts-tab — the relationship roster's own tab, v3 only. See that file's
+		// header and `pc-actor-sheet-v3.js`'s `PARTS.connections` entry.
+		"systems/worldofdarkness/templates/actor/v3/connections.hbs",
 		// add-pc-sheet-v3 §8.3/§8.4/§8.6 — the rail, forked so it can group/demote Ajustes+Effects
 		// and print a count badge without touching v2's copy at all.
 		"systems/worldofdarkness/templates/actor/v3/navigation.hbs",

@@ -193,7 +193,8 @@
 			"link": "Enlace",
 			"nolink": "Sin enlace",
 			"relation": "Trasfondo",
-			"portrait": "Retrato"
+			"portrait": "Retrato",
+			"empty": "Todavía no hay aliados ni contactos. Se agrupan por el Trasfondo que nombra la relación (Contactos, Aliados, Mentor, ...); usa Añadir objeto para crear uno."
 		},
 		"languages": {
 			"heading": "Idiomas conocidos",
@@ -367,6 +368,7 @@
 			"gear": "Equipo",
 			"features": "Rasgos",
 			"character": "Personaje",
+			"connections": "Aliados y contactos",
 			"notes": "Notas",
 			"gifts": "Dones y Ritos",
 			"charms": "Encantamientos",

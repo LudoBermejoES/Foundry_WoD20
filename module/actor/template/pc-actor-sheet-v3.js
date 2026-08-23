@@ -1,4 +1,4 @@
-import PCActorSheet, { getPowertype, countFeatureTabItems, prepareEffectContext } from "./pc-actor-sheet.js";
+import PCActorSheet, { getPowertype, countFeatureTabItems, countConnectionsTabItems, prepareEffectContext } from "./pc-actor-sheet.js";
 import { ApplyPcSheetAccessibility } from "../../scripts/sheet-accessibility.js";
 import { getSplat } from "../../scripts/splat-helpers.js";
 
@@ -99,7 +99,9 @@ export default class PCActorSheetV3 extends PCActorSheet {
 	}
 
 	/*
-	 * add-pc-sheet-v3 §8.2/§8.3 — five content tabs plus Ajustes, not eight and not six. An
+	 * add-pc-sheet-v3 §8.2/§8.3 — five content tabs plus Ajustes, not eight and not six (later six
+	 * content tabs plus Ajustes once add-allies-contacts-tab split `connections` out of `feature`).
+	 * An
 	 * INSTANCE field (not static) SHADOWS the parent's the same way `PARTS` does below: this class
 	 * declares its own `tabs`, so the parent's copy (with `bio` AND `effects` in it) never runs for
 	 * a v3 instance. `bio` is gone (§8.1/§8.2, merged into `feature`, "Personaje" in Spanish);
@@ -114,10 +116,14 @@ export default class PCActorSheetV3 extends PCActorSheet {
 	 * reorganize-mage-sheet-v3 — declaration order below IS rail order: `v3/navigation.hbs` renders
 	 * the rail by iterating this field with `{{#each tabs}}` (twice — once excluding `settings`,
 	 * once for it alone), so the object literal's key order is the one and only place the tab order
-	 * is decided. Order is `stats, feature, powers, combat, gear, settings` — Principal, Personaje,
-	 * Poderes, Combate, Equipo, then Ajustes demoted in its own cluster — the same for every splat;
-	 * no per-splat branch may reorder this. If the rail ever shows tabs out of this order, the bug
-	 * is here, not in `navigation.hbs`.
+	 * is decided. Order is `stats, feature, connections, powers, combat, gear, settings` — Principal,
+	 * Personaje, Aliados y contactos, Poderes, Combate, Equipo, then Ajustes demoted in its own
+	 * cluster — the same for every splat; no per-splat branch may reorder this. If the rail ever
+	 * shows tabs out of this order, the bug is here, not in `navigation.hbs`.
+	 *
+	 * add-allies-contacts-tab D2 — `connections` sits right after `feature`, not beside Poderes,
+	 * Combate or Equipo: the roster is relationship/identity content, extracted FROM Personaje, and
+	 * this is the smallest move away from where it already lived.
 	 */
 	tabs = {
 		stats: {
@@ -133,6 +139,15 @@ export default class PCActorSheetV3 extends PCActorSheet {
 			group: 'primary',
 			title: game.i18n.localize('wod.tab.character'),
 			icon: game.worldofdarkness.icons[getSplat(this.actor)].note
+		},
+		// add-allies-contacts-tab — the relationship roster, extracted out of `feature` (Personaje)
+		// into its own tab. See `prepareConnectionsContext`/`countConnectionsTabItems` in
+		// `pc-actor-sheet.js` and this class's own `PARTS` entry below.
+		connections: {
+			id: 'connections',
+			group: 'primary',
+			title: game.i18n.localize('wod.tab.connections'),
+			icon: game.worldofdarkness.icons[getSplat(this.actor)].connections
 		},
 		powers: {
 			id: 'powers',
@@ -189,8 +204,9 @@ export default class PCActorSheetV3 extends PCActorSheet {
 
 	/*
 	 * A `static` class field SHADOWS the parent's, it does not merge with it, so this must list
-	 * every part v3 renders — SEVEN now, not the original nine: `bio` retired into `feature`
-	 * (§8.1/§8.2), `effects` retired into a Settings sub-tab (§8.3). Invariant I5
+	 * every part v3 renders — EIGHT now, not the original nine: `bio` retired into `feature`
+	 * (§8.1/§8.2), `effects` retired into a Settings sub-tab (§8.3), `connections` added as its own
+	 * part (add-allies-contacts-tab, split out of `feature`). Invariant I5
 	 * (`.github/scripts/sheet-invariants.py`) asserts these keys match the preparer cases AND this
 	 * class's own `tabs` field above, which is what stops a part being declared here with no
 	 * matching tab (or a tab with no matching part) and coming up blank — the failure this sheet has
@@ -241,6 +257,12 @@ export default class PCActorSheetV3 extends PCActorSheet {
 		feature: {
 			template: "systems/worldofdarkness/templates/actor/v3/feature.hbs"
 		},
+		// add-allies-contacts-tab — the relationship roster's own tab. No v2 equivalent: v2 has no
+		// rail to add a tab to, so its `parts/feature.hbs` keeps rendering the roster inline, and
+		// `PCActorSheet.PARTS` (the parent) has no `connections` key at all — this is v3-only.
+		connections: {
+			template: "systems/worldofdarkness/templates/actor/v3/connections.hbs"
+		},
 		// RETIRED, add-pc-sheet-v3 §8.3 — folded into `settings` below as a SUB-TAB, not a part of
 		// its own any more. `templates/actor/v3/effects.hbs` (the part this used to point at) stays
 		// on disk, unregistered from PARTS, as the reference for the standalone tab this once was;
@@ -279,6 +301,11 @@ export default class PCActorSheetV3 extends PCActorSheet {
 
 		if (data.tabs.feature) {
 			data.tabs.feature.count = countFeatureTabItems(actor);
+		}
+		// add-allies-contacts-tab — the roster's own badge, split out of the Personaje count above
+		// (see `countFeatureTabItems`'s own header for why the two must not both count it).
+		if (data.tabs.connections) {
+			data.tabs.connections.count = countConnectionsTabItems(actor);
 		}
 		if (data.tabs.settings) {
 			// `prepareEffectContext` reads `context.tabs.effects` on its very first line

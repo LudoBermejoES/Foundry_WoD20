@@ -366,64 +366,21 @@
 					</div>
 				{{/if}}
 
-				{{!-- The relationship roster: ONE sub-kind (`wod.types.connection`) grouped by
-				      `system.relation`, with each group's name and dots taken from the actor's own
-				      Background item. The reasoning is at `parts/feature.hbs:184-223`; what matters here
-				      is that the ENTRY is authored inline in both files because no partial exists for it.
-
-				      The portrait is NOT a picker and carries no `data-edit`, so it gets no `pointer`
-				      class — clicking it does nothing, and the sheet must not offer a hand cursor that
-				      says otherwise. The description is triple-stashed because it is already-enriched
-				      HTML off the sheet context. --}}
-				{{#if hasConnections}}
-					{{#each connections as |group|}}
-						<div class="headlineGroup splatFont">
-							{{group.label}}
-							{{#if group.rating}}{{#numLoop group.rating}}&#9679;{{/numLoop}}{{/if}}
-							({{group.count}})
-						</div>
-
-						<div class="feature-itemlistarea">
-							{{#each group.entries as |item id|}}
-								<div class="sheet-boxcontainer connection-entry">
-
-									<div class="shape-panel-image connection-portrait">
-										<img class="profile-img shape-image{{#unless item.hasPortrait}} shape-image-empty{{/unless}}"
-										     src="{{item.portraitSrc}}" title="{{item.name}}" alt="{{item.name}}" />
-									</div>
-
-									<div class="connection-body">
-
-										{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs"
-											actor=../../actor item=item locked=../../locked
-											edittitle="wod.labels.edit.connection"
-											deletetitle="wod.labels.remove.connection"
-											showtype=false}}
-
-										{{#if item.hasDescription}}
-											<div class="connection-description">{{{item.enrichedDescription}}}</div>
-										{{/if}}
-
-										{{#if (ne item.system.link "")}}
-											<a class="connection-link" href="{{item.system.link}}" target="_blank">{{localize 'wod.connections.link'}}</a>
-										{{else}}
-											<span class="information-area connection-link">{{localize 'wod.connections.nolink'}}</span>
-										{{/if}}
-
-									</div>
-
-								</div>
-							{{/each}}
-						</div>
-					{{/each}}
-				{{/if}}
+				{{!-- add-allies-contacts-tab — the relationship roster (ONE sub-kind,
+				      `wod.types.connection`, grouped by `system.relation`) used to render HERE.
+				      It now has its own tab, `templates/actor/v3/connections.hbs`; that file's own
+				      header carries the full reasoning. `prepareFeatureContext` no longer builds
+				      `connections`/`hasConnections` for THIS sheet (see the guard at its call site,
+				      `pc-actor-sheet.js`), so this template must not read either key any more —
+				      v2's `parts/feature.hbs` still does, unchanged, for its own inline copy. --}}
 
 				{{!-- add-pc-sheet-v3 §8.5 — Backgrounds/Merits/Flaws/Other Traits are NOT listed here
 				      any more; they render once, on the Stats tab, which is the only place their
 				      rating is editable. See this file's header for the measured reason. So the
 				      empty-state gate below no longer tests their length: from THIS tab's own point
-				      of view they are no longer content it owns. --}}
-				{{#if (and (not bloodbounds.length) (not boons.length) (not oaths.length) (not passions.length) (not fetters.length) (not hasConnections))}}
+				      of view they are no longer content it owns. Connections dropped out of this gate
+				      the same way, add-allies-contacts-tab — see the comment just above. --}}
+				{{#if (and (not bloodbounds.length) (not boons.length) (not oaths.length) (not passions.length) (not fetters.length))}}
 					<p class="v3-empty">{{localize "wod.notes.empty"}}</p>
 				{{/if}}
 

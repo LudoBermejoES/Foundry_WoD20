@@ -439,6 +439,10 @@ export default class PCActorSheet extends HandlebarsApplicationMixin(foundry.app
 				return prepareGearContext(context, actor);
 			case 'feature':
 				return prepareFeatureContext(context, actor);
+			// add-allies-contacts-tab — v3 only; v2's PARTS has no `connections` key, so this case
+			// never runs for it.
+			case 'connections':
+				return prepareConnectionsContext(context, actor);
 			case 'effects':
 				return prepareEffectContext(context, actor);
 			case 'settings': {
@@ -1789,13 +1793,16 @@ export const prepareAdvantageLists = function (context, actor) {
 /**
  * add-pc-sheet-v3 §8.6 — the Personaje/Features tab's rail badge, a plain item count.
  *
- * SYNCHRONOUS ON PURPOSE. `prepareFeatureContext` also counts `connections` (via
- * `buildConnectionGroups`, which enriches each entry's description) and the Shadow area's own
- * pools, but a nav badge needs none of that: it only needs how many rows would print. Calling the
- * full async preparer a second time from the root `_prepareContext` — once for the part, once for
- * the badge — would run every connection's HTML enrichment twice on every render. Counting
- * `wod.types.connection` items directly avoids the duplicate work; the number is identical either
- * way because `buildConnectionGroups` neither drops nor merges entries, it only groups them.
+ * SYNCHRONOUS ON PURPOSE. `prepareFeatureContext` also counts the Shadow area's own pools, but a
+ * nav badge needs none of that: it only needs how many rows would print. Calling the full async
+ * preparer a second time from the root `_prepareContext` — once for the part, once for the badge —
+ * would waste the work.
+ *
+ * add-allies-contacts-tab moved `wod.types.connection` OUT of this total: the roster it counted now
+ * renders on its own tab (`connections`, see `countConnectionsTabItems` below), and a badge that
+ * kept counting content another tab now owns would overcount relative to what this tab actually
+ * shows — the same "cannot disagree with the list under it" reasoning this docstring already states
+ * for the four shared kinds below.
  *
  * Reuses `prepareAdvantageLists` for the four kinds every line shares (Backgrounds/Merits/
  * Flaws/Other Traits — the SAME predicates the tab renders, so the badge cannot disagree with the
@@ -1816,9 +1823,21 @@ export const countFeatureTabItems = function (actor) {
 	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.passion").length;
 	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.darkpassion").length;
 	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.fetter").length;
-	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.connection").length;
 
 	return total;
+}
+
+/**
+ * add-allies-contacts-tab — the "Aliados y contactos" tab's rail badge. Split out of
+ * `countFeatureTabItems`, which used to count `wod.types.connection` as part of the Personaje
+ * total before the roster had a tab of its own. Same shape as that function's remaining lines: a
+ * plain, synchronous item count, cheap enough to run from the root `_prepareContext` on every
+ * render without duplicating `buildConnectionGroups`'s per-entry HTML enrichment.
+ * @param {Actor} actor The PC actor.
+ * @returns {number} How many `wod.types.connection` Features the roster would render.
+ */
+export const countConnectionsTabItems = function (actor) {
+	return ItemHelper.GetItemType(actor, "Feature", "wod.types.connection").length;
 }
 
 /**
@@ -2509,8 +2528,19 @@ export const prepareFeatureContext = async function (context, actor) {
 	// than only behind the eye (task 3.3). It goes through `resolveDescription` + `enrichHTML`, the same
 	// path `item-viewer.js` and `SendChat` use — which is also what makes an `@UUID[Actor.xxx]` reference
 	// clickable in the row itself.
-	context.connections = await buildConnectionGroups(actor);
-	context.hasConnections = context.connections.length > 0;
+	//
+	// add-allies-contacts-tab D1/D5 — v3 gave the roster its own tab ("Aliados y contactos",
+	// `prepareConnectionsContext` below), so building it again here on every v3 render would run
+	// `buildConnectionGroups`'s per-entry `enrichHTML` a second time for nothing: v3's own
+	// `v3/feature.hbs` no longer reads `context.connections`/`hasConnections` at all. `PCActorSheetV3`
+	// is the only sheet whose `tabs` field declares a `connections` entry, so its presence on
+	// `context.tabs` is a reliable "does a dedicated tab already own this" signal without this
+	// function needing to know which sheet subclass is asking. v2 has no such tab and keeps rendering
+	// the roster inline on its own Features tab exactly as it always has.
+	if (!context.tabs.connections) {
+		context.connections = await buildConnectionGroups(actor);
+		context.hasConnections = context.connections.length > 0;
+	}
 
 	context.passions 		= ItemHelper.GetItemType(actor, "Feature", "wod.types.passion");
 	context.darkpassions 	= ItemHelper.GetItemType(actor, "Feature", "wod.types.darkpassion");
@@ -2608,6 +2638,25 @@ export const prepareShadowAreaContext = function (context, actor) {
 							|| (context.thorns.length > 0)
 							|| ((context.darkpassions ?? []).length > 0)
 							|| (context.shadowadvantages.length > 0);
+
+	return context;
+}
+
+/**
+ * add-allies-contacts-tab — the v3-only "Aliados y contactos" tab. The data path is entirely
+ * `buildConnectionGroups` (unchanged, see its own header); this preparer only wires the tab pointer
+ * the way every other `prepare*Context` does. `prepareFeatureContext` builds the SAME two keys for
+ * v2, guarded so it skips them once this tab exists (see the comment there) — the two never run for
+ * the same sheet on the same render.
+ * @param {object} context
+ * @param {Actor} actor
+ * @returns {Promise<object>}
+ */
+export const prepareConnectionsContext = async function (context, actor) {
+	context.tab = context.tabs.connections;
+
+	context.connections = await buildConnectionGroups(actor);
+	context.hasConnections = context.connections.length > 0;
 
 	return context;
 }

@@ -1,0 +1,106 @@
+{{!-- v3 "Aliados y contactos" tab (add-allies-contacts-tab).
+
+      WHY THIS TAB EXISTS
+      --------------------
+      The relationship roster (portrait, name-and-dots-from-Background, relation text, external
+      link) is not new content: `add-contacts-allies-roster` (archived) built the whole data path
+      -- `buildConnectionGroups`, `pc-actor-sheet.js` -- and it rendered inside the "Personaje"
+      tab on BOTH sheets. This file is that same roster, moved to its own v3 tab so it no longer
+      shares Personaje with Bio, Backgrounds, Merits, Flaws, Bloodbonds, Boons, Oaths, Passions
+      and Fetters. v2 is untouched: `parts/feature.hbs` keeps rendering the roster inline, in its
+      own Features tab, exactly as it always has -- v2 has no rail to add a tab to.
+
+      THE MARKUP IS UNCHANGED, ONLY RELOCATED. Same partial call, same context keys
+      (`connections`/`hasConnections`, now built by `prepareConnectionsContext` instead of
+      `prepareFeatureContext` -- see that function's own guard), same nesting depth on `locked`
+      (`../../locked`, inside the doubly-nested `{{#each}}` below) -- this is exactly the value a
+      bare `locked` would NOT resolve to at this depth (Handlebars resolves a bare name against
+      the current `{{#each}}` element, not the root), which is why it is called out here rather
+      than re-derived. No CSS changes were needed: `.connection-entry`, `.feature-itemlistarea`,
+      `.headlineGroup` and the `.v3-section`/`.v3-tabmain` shell classes are all scoped generically
+      under `.wod20`/`.wod20.pc-actor-v3`, not under the Personaje tab specifically.
+--}}
+<section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}" data-drop-area="true">
+
+	<div class="v3-tabhead">
+		<h2 class="v3-tabtitle splatFont">{{localize "wod.tab.connections"}}</h2>
+
+		{{!-- Reuses the SAME create route the Personaje tab's own "+" button opens
+		      (`data-origin="feature"` -> `CreateHelper.CreateButtonsNotev2`), which already offers
+		      "Contacto/Aliado" (`buttons.connection`, create-helpers.js) alongside the other
+		      Feature sub-kinds. No new creation route is added by this tab. --}}
+		<button type="button" class="v3-add" data-origin="feature" data-action="itemCreate">
+			<i class="fa-solid fa-square-plus" aria-hidden="true"></i>
+			<span>{{localize "wod.labels.add.item"}}</span>
+		</button>
+	</div>
+
+	<div class="v3-tabbody">
+		<div class="v3-tabmain">
+
+			<div class="v3-section">
+
+				{{!-- The relationship roster: ONE sub-kind (`wod.types.connection`) grouped by
+				      `system.relation`, with each group's name and dots taken from the actor's own
+				      Background item. The reasoning is at `parts/feature.hbs:184-223`; what matters here
+				      is that the ENTRY is authored inline in both files because no partial exists for it.
+
+				      The portrait is NOT a picker and carries no `data-edit`, so it gets no `pointer`
+				      class -- clicking it does nothing, and the sheet must not offer a hand cursor that
+				      says otherwise. The description is triple-stashed because it is already-enriched
+				      HTML off the sheet context. --}}
+				{{#if hasConnections}}
+					{{#each connections as |group|}}
+						<div class="headlineGroup splatFont">
+							{{group.label}}
+							{{#if group.rating}}{{#numLoop group.rating}}&#9679;{{/numLoop}}{{/if}}
+							({{group.count}})
+						</div>
+
+						<div class="feature-itemlistarea">
+							{{#each group.entries as |item id|}}
+								<div class="sheet-boxcontainer connection-entry">
+
+									<div class="shape-panel-image connection-portrait">
+										<img class="profile-img shape-image{{#unless item.hasPortrait}} shape-image-empty{{/unless}}"
+										     src="{{item.portraitSrc}}" title="{{item.name}}" alt="{{item.name}}" />
+									</div>
+
+									<div class="connection-body">
+
+										{{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs"
+											actor=../../actor item=item locked=../../locked
+											edittitle="wod.labels.edit.connection"
+											deletetitle="wod.labels.remove.connection"
+											showtype=false}}
+
+										{{#if item.hasDescription}}
+											<div class="connection-description">{{{item.enrichedDescription}}}</div>
+										{{/if}}
+
+										{{#if (ne item.system.link "")}}
+											<a class="connection-link" href="{{item.system.link}}" target="_blank">{{localize 'wod.connections.link'}}</a>
+										{{else}}
+											<span class="information-area connection-link">{{localize 'wod.connections.nolink'}}</span>
+										{{/if}}
+
+									</div>
+
+								</div>
+							{{/each}}
+						</div>
+					{{/each}}
+				{{else}}
+					<p class="v3-empty">{{localize "wod.connections.empty"}}</p>
+				{{/if}}
+
+			</div>
+
+		</div>
+
+		<aside class="v3-macrorail">
+			{{> "systems/worldofdarkness/templates/actor/parts/macro_icons.hbs"}}
+		</aside>
+	</div>
+
+</section>

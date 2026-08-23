@@ -196,7 +196,8 @@
 			"link": "Link",
 			"nolink": "No link",
 			"relation": "Background",
-			"portrait": "Portrait"
+			"portrait": "Portrait",
+			"empty": "No allies or contacts yet. They are grouped by the Background that names the relationship (Contacts, Allies, Mentor, ...); use Add item to create one."
 		},
 		"languages": {
 			"heading": "Known languages",
@@ -370,6 +371,7 @@
 			"gear": "Gear",
 			"features": "Features",
 			"character": "Character",
+			"connections": "Allies & Contacts",
 			"notes": "Notes",
 			"gifts": "Gifts & Rites",
 			"charms": "Charms",
