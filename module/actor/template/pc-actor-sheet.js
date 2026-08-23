@@ -1651,12 +1651,19 @@ const WODCHAR_MODULE = "wod20-char";
  *   1. `system.type === "wod.types.thorn"` — the sub-kind this change introduces. What the create
  *      button writes, and what a GM can retype an item to on its own Feature sheet.
  *   2. the pack's own provenance flag, `flags["wod20-compendium-es"].source_type === "thorn"` —
- *      what the 24 documents in the shipped `wraith-thorns` pack actually carry. Every one of them
- *      is `type: "Feature"` with `system.type: "wod.types.othertraits"` (counted 2026-08-02), the
+ *      what the 24 documents in the shipped `wraith-thorns` pack carried when this was written:
+ *      `type: "Feature"` with `system.type: "wod.types.othertraits"` (counted 2026-08-02), the
  *      exporter's default for any Feature-mapped entity type. Re-typing those documents lives in
- *      `webgen/`, a different repo and a different owner, so the sheet reads what ships instead of
- *      waiting for it. A Thorn dragged straight from the compendium lands in the Shadow area with
+ *      `webgen/`, a different repo and a different owner, so the sheet read what shipped instead of
+ *      waiting for it. A Thorn dragged straight from the compendium landed in the Shadow area with
  *      nothing written to it.
+ *
+ *      UPDATED 2026-08-23 (`legalize-feature-system-types`, module 0.7.124): the exporter now writes
+ *      `wod.types.thorn`, so those 24 documents hit recogniser 1. This one STAYS — it is what every
+ *      Thorn already sitting on an actor from an older pack still matches, and re-typing a pack does
+ *      not re-type what was dragged out of it. Reading it also stopped these documents rendering
+ *      TWICE on a non-wraith, which they did until the retype: the Other Traits de-duplication below
+ *      is `isWraith`-gated while `hasshadowarea` is not.
  *   3. the CHARACTER GENERATOR's own flag, `flags["wod20-char"].category === "thorn"` — and this
  *      is the one that every wraith in the live world actually holds. Measured 2026-08-02 against
  *      the deployed v7.5.30 world: the only wraith PC (`G5sYPF5UzB5iJ6wF`, Rike Heinz) carries her
@@ -1745,12 +1752,17 @@ export const prepareAdvantageLists = function (context, actor) {
 	// separates a feature-tab other trait from the powers-tab one (see preparePowersContext).
 	//
 	// add-wraith-shadow-budget §3.2 — one exception, and it is narrow on purpose. A Thorn dragged
-	// from the `wraith-thorns` pack arrives as exactly this shape (`Feature` +
-	// `wod.types.othertraits` + `placement: "feature"`), because that is the exporter's default for
-	// every Feature-mapped entity type. On a WRAITH it now renders in the Shadow area instead, so
+	// from the `wraith-thorns` pack USED to arrive as exactly this shape (`Feature` +
+	// `wod.types.othertraits` + `placement: "feature"`), because that was the exporter's default for
+	// every Feature-mapped entity type. On a WRAITH it renders in the Shadow area instead, so
 	// leaving it here too would print every Thorn twice. `isThornFeature` recognises it by the
-	// pack's own provenance flag, which is why no migration and no re-typing of the catalog is
+	// pack's own provenance flag, which is why no migration and no re-typing of the catalog was
 	// needed for a Thorn to land in the right block.
+	//
+	// Since module 0.7.124 (`legalize-feature-system-types`) the pack ships `wod.types.thorn`, so a
+	// FRESHLY dragged Thorn no longer matches this filter's type test at all and the exception never
+	// fires for it. The exception is still load-bearing for every Thorn dragged out of an older pack
+	// and for anything `wod20-char` exported, both of which still carry `othertraits` + a flag.
 	//
 	// The `isWraith` guard is the whole safety of it: on any other line the Shadow area does not
 	// render, so removing the item here would hide it completely — the silent-loss failure mode this

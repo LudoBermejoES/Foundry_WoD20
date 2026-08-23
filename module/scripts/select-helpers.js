@@ -253,11 +253,16 @@ export default class SelectHelper {
              * as `type: "Feature"` (counted 2026-08-02), so a Power carrier could never have
              * received them however many sections were added for it.
              *
-             * Listing it here is what lets a GM retype a Thorn dragged in from that pack, which
-             * arrives as the exporter's default `wod.types.othertraits`. The sheet does not wait for
+             * Listing it here is what let a GM retype a Thorn dragged in from that pack, which
+             * arrived as the exporter's default `wod.types.othertraits`. The sheet did not wait for
              * that: `isThornFeature` (pc-actor-sheet.js) also recognises the pack's own
-             * `flags["wod20-compendium-es"].source_type === "thorn"`, so a dragged Thorn lands in
-             * the Shadow area untouched and this select is a convenience, not a requirement.
+             * `flags["wod20-compendium-es"].source_type === "thorn"`, so a dragged Thorn landed in
+             * the Shadow area untouched and this select was a convenience, not a requirement.
+             *
+             * Since module 0.7.124 (`legalize-feature-system-types`) the pack ships this value
+             * directly, so the entry has stopped being a convenience and become the thing that keeps
+             * those 24 documents' type alive across a GM's save. The flag recogniser stays for the
+             * Thorns already dragged out of older packs.
              */
             {
                 value: "wod.types.thorn",
@@ -291,6 +296,55 @@ export default class SelectHelper {
                 value: "wod.types.instrument",
                 label: game.i18n.localize("wod.types.instrument"),
                 group: game.i18n.localize("wod.games.mage")
+            },
+            /*
+             * legalize-feature-system-types §1 — Otros Rasgos, the generic Feature sub-kind.
+             *
+             * THE LARGEST POPULATION THIS LIST HAS EVER BEEN MISSING: 1,137 shipped
+             * `wod20-compendium-es` documents are `type: "Feature"` with
+             * `system.type: "wod.types.othertraits"` (measured 2026-08-23), because that value is
+             * the exporter's default for every Feature-mapped entity type without a mapping of its
+             * own — clans, kith, houses, totems, banes, derangements, legacies, sphere effects,
+             * rituals, tenets, sects, affiliations and fourteen more.
+             *
+             * The value was declared for `Trait` only (see the Trait branch below), and this branch's
+             * absence is the exact failure this file documents two entries up for Paradigm/Practice/
+             * Instrument: `feature-sheet.html` renders `<select name="system.type">` from this list,
+             * a value with no matching `<option>` shows "- select -", and the next save by an
+             * `itemAdministrator` writes it away. A GM opening any one of 1,137 documents destroys
+             * its type; a player never can, which is why it shipped this long unreported.
+             *
+             * THE RENDER HALF WAS ALREADY DONE, and is NOT a `GetItemType` predicate: a
+             * `Feature`/`othertraits`/`placement: "feature"` item is picked up by the direct filter
+             * in `prepareAdvantageLists` (pc-actor-sheet.js) and rendered in Other Traits on both the
+             * Attributes block and the Features tab. Adding a predicate + a section for it here would
+             * print every one of those documents TWICE. Verified before writing this, not assumed.
+             */
+            {
+                value: "wod.types.othertraits",
+                label: game.i18n.localize("wod.types.othertraits"),
+                group: game.i18n.localize("wod.labels.other")
+            },
+            /*
+             * legalize-feature-system-types §2 — Fetter (Grillete), and it is the MIRROR IMAGE of
+             * Thorn above.
+             *
+             * Thorn was offered here with no `GetItemType` predicate; Fetter has had the predicate
+             * since add-wraith-pc-splat (`context.fetters = ItemHelper.GetItemType(actor, "Feature",
+             * "wod.types.fetter")`, pc-actor-sheet.js) and was declared only in the `Trait` branch of
+             * this file. So the sheet asks for a Feature the dropdown could not offer.
+             *
+             * The plausible-looking fix — export Fetters as `item_type: "Trait"`, where the value IS
+             * already declared — was measured to be WRONG: the render predicate asks for `Feature`,
+             * so a Trait-carried Fetter would render in no section at all. The item type is decided
+             * by the PREDICATE and the missing dropdown entry is what gets added. The `Trait` entry
+             * stays where it is; nothing in this fork reads it, but removing it is a separate
+             * question about a value this project does not emit.
+             */
+            {
+                value: "wod.types.fetter",
+                label: game.i18n.localize("wod.types.fetter"),
+                group: game.i18n.localize("wod.games.wraith")
             }];
 
             listData.BoonTypes = [
