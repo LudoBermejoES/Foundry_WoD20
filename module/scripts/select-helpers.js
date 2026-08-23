@@ -345,6 +345,56 @@ export default class SelectHelper {
                 value: "wod.types.fetter",
                 label: game.i18n.localize("wod.types.fetter"),
                 group: game.i18n.localize("wod.games.wraith")
+            },
+            /*
+             * offer-what-the-system-can-create — the LAST three `Feature` sub-kinds this fork could
+             * create and render but not offer. Fetter above was the fourth; these were left out of
+             * that change on the criterion "they affect no document this project's exporter emits",
+             * which is TRUE and was still the wrong boundary.
+             *
+             * They are the three Feature sub-kinds that exist ONLY as CHARACTER data. Nothing in
+             * `wod20-compendium-es` carries them (measured 2026-08-23: zero documents for all
+             * three); they are minted here, by `CreateButtonsNotev2` — `passion`/`darkpassion` in
+             * the `["passion", "darkpassion", "fetter", "thorn"]` loop gated on
+             * `getSplat(actor) === wraith`, `connection` by its own always-offered button — and by
+             * `wod20-char`'s exporter (`FEATURE_TYPE_BY_TRAIT_CATEGORY`), which writes them onto a
+             * `type: "Feature"` item exactly as this dropdown must accept. A criterion phrased over
+             * SHIPPED DOCUMENTS is structurally blind to precisely this set.
+             *
+             * The damage is the one this file has now documented four times: `feature-sheet.html`
+             * renders `<select name="system.type">` from this list, a value with no matching
+             * `<option>` shows "- select -", and the next save by an `itemAdministrator` writes that
+             * emptiness. For `connection` it also takes the roster fields down with it — `relation`,
+             * `link` and `portrait` live behind
+             * `{{#if (eqAny data.system.type "wod.types.connection")}}` (feature-sheet.html:119), so
+             * losing the type loses the person's Background, their portrait and their link.
+             *
+             * NO RENDER PREDICATE IS ADDED, and that is measured rather than assumed — the opposite
+             * conclusion to the one `othertraits` needed. All three are already asked for by
+             * `pc-actor-sheet.js`: `connection` by `buildConnectionGroups` (plus the
+             * `GetItemType(actor, "Feature", "wod.types.connection")` count at line 1819),
+             * `passion`/`darkpassion` by `context.passions`/`context.darkpassions`. Adding a second
+             * path would print them TWICE, which is the error `legalize-feature-system-types`
+             * narrowly avoided with 1,137 documents. ONE half was missing here; only that half is
+             * added.
+             *
+             * Groups follow the creation gates: Passion and Dark Passion are minted only for a
+             * wraith, Connection for every line.
+             */
+            {
+                value: "wod.types.passion",
+                label: game.i18n.localize("wod.types.passion"),
+                group: game.i18n.localize("wod.games.wraith")
+            },
+            {
+                value: "wod.types.darkpassion",
+                label: game.i18n.localize("wod.types.darkpassion"),
+                group: game.i18n.localize("wod.games.wraith")
+            },
+            {
+                value: "wod.types.connection",
+                label: game.i18n.localize("wod.types.connection"),
+                group: game.i18n.localize("wod.labels.other")
             }];
 
             listData.BoonTypes = [
