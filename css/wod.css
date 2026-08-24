@@ -610,7 +610,16 @@
    At (0,4,0) the descendant form also outranks the competing (0,3,0) rule outright, so it no longer
    depends on source order. `pointer-events: none` goes further than the generic
    rule ever did: the JS binder in chantry-actor-sheet.js already stops ATTACHING the click handler
-   while locked, and this makes the dots inert at the CSS layer too, independent of that. */
+   while locked, and this makes the dots inert at the CSS layer too, independent of that.
+
+   rebuild-chantry-sheet-v2: `ChantryActorSheetV2` (the new default, appv1's `ChantryActorSheet`
+   above staying registered only as the per-actor rollback) has a DIFFERENT DOM shape but the SAME
+   split. ApplicationV2 IS the `<form>` for this sheet, and `wod20`/`wod-sheet`/`chantry` (plus
+   whatever the render hook adds) land on THAT root element - so `.locked` still cannot be folded
+   into a compound selector on it. `templates/actor/chantry-sheet-v2.hbs` puts `.locked` on its own
+   top-level wrapping `<div>` instead (a descendant of the appv2 root, never the root itself), for
+   the identical reason appv1's `<form>` carried it and not the `.app` root: this rule's descendant
+   form keeps matching either way, unmodified. */
 .wod20.chantry .locked .resource-value-step {
   cursor: default;
   pointer-events: none;

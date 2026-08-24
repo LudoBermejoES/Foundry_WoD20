@@ -80,6 +80,11 @@ export const preloadHandlebarsTemplates = async function () {
 		"systems/worldofdarkness/templates/actor/v3/navigation.hbs",
 		"systems/worldofdarkness/templates/actor/parts/stats_health.hbs",
 
+		// rebuild-chantry-sheet-v2 — ChantryActorSheetV2's own single PART. `navigation_lock.hbs`
+		// (above, in the shared PC-partial block) is the lock button it `{{>` includes; it is
+		// already registered so no second entry is needed for it.
+		"systems/worldofdarkness/templates/actor/chantry-sheet-v2.hbs",
+
 		// PC Actor Sheet Partials - .html files
 		//"systems/worldofdarkness/templates/actor/parts/power_listpower.html",
 

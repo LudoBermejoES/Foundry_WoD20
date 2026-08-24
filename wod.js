@@ -313,8 +313,20 @@ Hooks.once("init", async function() {
 		makeDefault: true
 	});
 
+	// rebuild-chantry-sheet-v2 task 0/D1 — STRAIGHT REPLACEMENT (see chantry-actor-sheet-v2.js's
+	// own docstring for why: no live actor count was available to measure, and D1's own stated
+	// default assumes a small, per-campaign population with no splat/variant/era matrix to
+	// regress across). The appv1 class stays registered as the rollback, `makeDefault: false`,
+	// following `PCActorSheet`/`PCActorSheetV3`'s own precedent exactly: a GM opts a specific
+	// Chantry actor back into it from that actor's own Sheet Configuration, no deploy required.
 	foundry.documents.collections.Actors.registerSheet("WoD", actorSheets.ChantryActorSheet, {
 		label: game.i18n.localize("wod.sheets.chantry"),
+		types: ["Chantry"],
+		makeDefault: false
+	});
+
+	foundry.documents.collections.Actors.registerSheet("WoD", actorSheets.ChantryActorSheetV2, {
+		label: game.i18n.localize("wod.sheets.chantryv2"),
 		types: ["Chantry"],
 		makeDefault: true
 	});

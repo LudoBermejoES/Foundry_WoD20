@@ -1,0 +1,169 @@
+{{!--
+  rebuild-chantry-sheet-v2 — the ApplicationV2 replacement for templates/actor/chantry-sheet.html.
+
+  This is the sheet's ONLY declared PART (task 1.4/D4 — single part, no tab machinery; see
+  chantry-actor-sheet-v2.js's own comment on that choice). ApplicationV2 IS the `<form>` for this
+  sheet (DocumentSheetV2's default `tag` is "form"), so `wod20`/`wod-sheet`/`chantry` (plus
+  whatever the render hook adds - `chantry-tradition`/`chantry-technocracy`/`noSplatFont`/
+  `wod-theme-dark`) all land on the SAME root element this part's content is inserted into.
+
+  `.locked` therefore MUST be placed on a DESCENDANT of that root, not folded into a compound
+  selector on it - `css/wod.css`'s `.wod20.chantry .locked .resource-value-step` rule (and its own
+  D3b guard against ever reintroducing `.wod20.chantry.locked` as one compound class) depends on
+  `.locked` living on an element BELOW the root, exactly as it did on the appv1 sheet's own
+  `<form class="{{cssClass}} ... {{#if locked}}locked{{/if}}">` (a child of the appv1 `.app` root
+  carrying the other three classes). The wrapping div below is that descendant.
+--}}
+<div class="chantry-body flexcol {{#if locked}}locked{{/if}}">
+
+	{{!-- Chantry / Construct Sheet Header --}}
+	<div class="sheet-character">
+
+		<header class="sheet-header"></header>
+
+		<section class="sheet-body">
+
+			<div class="navigation pullLeft">
+				{{#if (not actor.limited)}}
+					{{> "systems/worldofdarkness/templates/actor/parts/navigation_lock.hbs"}}
+				{{/if}}
+			</div>
+
+			<div class="centerText sheet-headline splatFont">
+				{{#if (eq actor.system.flavor "technocracy")}}
+					{{localize "wod.chantry.flavors.technocracy"}}
+				{{else}}
+					{{localize "wod.chantry.flavors.tradition"}}
+				{{/if}}
+			</div>
+
+			<div class="clearareaBox area-box chantry-top">
+
+				<div class="pullLeft chantry-imgbox">
+					<img class="profile-img pointer" src="{{actor.img}}" title="{{actor.name}}" data-edit="img" />
+				</div>
+
+				<div class="pullLeft chantry-namebox">
+					{{#if locked}}
+						<input class="sheet-infoValues" type="text" value="{{actor.name}}" autocomplete="off" disabled />
+					{{else}}
+						<input class="sheet-infoValues editable" name="name" type="text" value="{{actor.name}}" data-dtype="String" autocomplete="off" />
+					{{/if}}
+					<span class="floating-label">{{localize "wod.bio.name"}}</span>
+				</div>
+
+			</div>
+
+			<div class="clearareaBox area-box">
+
+				<div class="sheet-headline sheet-banner splatFont">
+					<span class="sheet-banner-text">{{localize "wod.chantry.headline"}}</span>
+				</div>
+
+				<div class="clearareaBox row">
+					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.flavor"}}</div>
+					{{!-- Locked: plain disabled text showing the localized label, not a disabled <select> --
+					      existing requirement, unchanged in behaviour from the appv1 sheet. --}}
+					{{#if locked}}
+						<input class="pullLeft inputdata chantry-locked-value" type="text"
+								value="{{localize (concat 'wod.chantry.flavors.' actor.system.flavor)}}" disabled />
+					{{else}}
+						<select class="pullLeft inputdata" name="system.flavor" data-source="flavor">
+							<option value="tradition" {{#if (eq actor.system.flavor "tradition")}}selected{{/if}}>{{localize "wod.chantry.flavors.tradition"}}</option>
+							<option value="technocracy" {{#if (eq actor.system.flavor "technocracy")}}selected{{/if}}>{{localize "wod.chantry.flavors.technocracy"}}</option>
+						</select>
+					{{/if}}
+				</div>
+
+				<div class="clearareaBox row">
+					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.rating"}}</div>
+					<div class="pullLeft resource-value chantry-rating" data-value="{{actor.system.rating}}" data-name="rating">
+						{{#numLoop 5}}
+							<span class="resource-value-step" data-index="{{this}}" {{#if (eq ../locked false)}}data-action="ratingDotChange"{{/if}}></span>
+						{{/numLoop}}
+					</div>
+				</div>
+
+				<div class="clearareaBox row">
+					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.tier"}}</div>
+					{{#if locked}}
+						<input class="pullLeft inputdata chantry-locked-value" type="text"
+								value="{{localize (concat 'wod.chantry.tiers.' actor.system.tier)}}" disabled />
+					{{else}}
+						<select class="pullLeft inputdata" name="system.tier" data-source="tier">
+							{{#each config.chantry.tiers as |tier|}}
+								<option value="{{tier}}" {{#if (eq ../actor.system.tier tier)}}selected{{/if}}>{{localize (concat "wod.chantry.tiers." tier)}}</option>
+							{{/each}}
+						</select>
+					{{/if}}
+				</div>
+
+				<div class="clearareaBox row">
+					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.pool"}}</div>
+
+					<div class="pullLeft chantry-pool-total">
+						{{localize "wod.chantry.pooltotal"}}:
+						<input class="inputdata resource-value-input" type="number" min="0" name="system.pool.total" data-source="pooltotal" value="{{pool.total}}" {{#if locked}}disabled{{/if}} />
+					</div>
+
+					<div class="pullLeft chantry-pool-spent">
+						{{localize "wod.chantry.poolspent"}}: <span>{{pool.spent}}</span>
+					</div>
+				</div>
+
+			</div>
+
+			<div class="clearareaBox area-box chantry-traits">
+
+				<div class="sheet-headline sheet-banner splatFont">
+					<span class="sheet-banner-text">{{localize "wod.chantry.traitsheadline"}}</span>
+				</div>
+
+				{{#each listData.traits as |trait|}}
+					<div class="clearareaBox row chantry-trait-row" data-key="{{trait.key}}">
+
+						<div class="pullLeft headlineNormal ability-headlineWidth {{#if trait.overcap}}item-warning{{/if}}">{{localize trait.label}}</div>
+
+						<div class="pullLeft resource-value chantry-trait-value" data-value="{{trait.value}}" data-key="{{trait.key}}">
+							{{#numLoop 10}}
+								<span class="resource-value-step" data-index="{{this}}" {{#if (eq ../../locked false)}}data-action="traitDotChange"{{/if}}></span>
+							{{/numLoop}}
+						</div>
+
+						<div class="pullLeft chantry-trait-cost">({{trait.cost}} {{localize "wod.chantry.costperdot"}})</div>
+
+						{{#if trait.overcap}}
+							<div class="pullLeft item-warning chantry-overcap-flag" title="{{localize 'wod.chantry.overcap'}}">
+								<i class="fa-solid fa-triangle-exclamation"></i>
+							</div>
+						{{/if}}
+
+						{{!-- Read-only: not gated on `locked` (existing requirement) and deliberately outside
+						      .chantry-trait-value, so this can never be mistaken for a dot click. Bound
+						      unconditionally in _onRender (chantry-actor-sheet-v2.js), not an `actions` entry. --}}
+						<i class="pullLeft pointer icon collapsible button fa-solid fa-eye chantry-trait-eye"
+								title="{{localize 'wod.labels.show.description'}}"
+								data-traitkey="{{trait.key}}"
+								data-labelkey="{{trait.label}}"
+								data-descriptionkey="{{trait.descriptionkey}}"></i>
+
+					</div>
+				{{/each}}
+
+			</div>
+
+			<div class="clearareaBox area-box chantry-notes">
+
+				<div class="sheet-headline sheet-banner splatFont">
+					<span class="sheet-banner-text">{{localize "wod.chantry.notes"}}</span>
+				</div>
+
+				{{editor notes target="system.notes" engine="prosemirror" button=false owner=owner editable=(not locked)}}
+
+			</div>
+
+		</section>
+
+	</div>
+
+</div>

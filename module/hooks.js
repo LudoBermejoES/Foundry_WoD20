@@ -263,6 +263,38 @@ export function registerHooks(constants, isTablet) {
 			}
 		}
 
+		/* rebuild-chantry-sheet-v2 (design.md D2) — ChantryActorSheetV2 extends ActorSheetV2, so
+		   Foundry fires THIS hook for it, not the legacy `renderActorSheet` below. That listener's
+		   own Chantry branch (a few hundred lines down) never fires for this sheet any more, so its
+		   splat-class/noSplatFont logic is ported here VERBATIM rather than left to go silently
+		   dead - a Chantry sheet whose base class changes must not silently stop being typeset or
+		   stop following dark mode. Guarded on the actor's own type (not on `splat`, which is
+		   always "" for a Chantry - see the appv1 listener's own comment: "the one Actor type with
+		   no `system.settings` at all") so it cannot fire for, or interfere with, any splat branch
+		   above.
+
+		   The `noSplatFont` check below ALSO checks the system-wide `useSplatFonts` setting, unlike
+		   the generic per-actor-only check a few lines down that every OTHER splat on this hook
+		   still relies on (a pre-existing gap in THIS hook, out of scope to fix for those splats -
+		   see design.md D2's second finding and proposal.md's Non-Goals). Porting only the
+		   per-actor half here would have carried that same gap into a sheet that never had it
+		   before: the appv1 sheet this replaces has always checked both. */
+		if (sheet.actor.type === "chantry") {
+			if (sheet.actor.system.flavor === "technocracy") {
+				sheet.classList.add("chantry-technocracy");
+			}
+			else {
+				sheet.classList.add("chantry-tradition");
+			}
+
+			if (game.settings.get('worldofdarkness', 'useSplatFonts') === false) {
+				sheet.classList.add("noSplatFont");
+			}
+			else if (sheet.actor.system.settings?.usesplatfont === false) {
+				sheet.classList.add("noSplatFont");
+			}
+		}
+
 		if (sheet.actor.system.settings?.usesplatfont === false) {
 			sheet.classList.add("noSplatFont");
 		}
