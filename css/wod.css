@@ -601,12 +601,17 @@
    family - `.wod20 .resource-value .resource-value-step { cursor: pointer }` (below, in this same
    file) is the SAME specificity (0,3,0) and loads LATER, so it wins. Fixing that shared rule is out
    of this change's file boundary (Chantry and its own styles only), so this is scoped to
-   `.chantry` instead of widened - `.chantry` and `.locked` land on the SAME `<form>` element
-   (`.chantry` from `cssClass`, `.locked` from the template's own `{{#if locked}}`), which is what
-   makes the compound selector below valid. `pointer-events: none` goes further than the generic
+   `.chantry` instead of widened. NOTE, measured 2026-08-24 against the live sheet: `.chantry` does
+   NOT land on the `<form>` - `{{cssClass}}` renders as `editable`, and `.wod20`/`.wod-sheet`/`.chantry`
+   all come from `defaultOptions.classes`, i.e. the `.app` ROOT. `.locked` is the only one of the four
+   on the form. So this MUST be a DESCENDANT selector, exactly as `pc-actor-v3.css`'s own
+   `.wod20.pc-actor-v3 .locked ...` cluster is; written as a compound (`.wod20.chantry.locked`) it
+   required all three classes on one element, matched NOTHING, and left the dots live while locked.
+   At (0,4,0) the descendant form also outranks the competing (0,3,0) rule outright, so it no longer
+   depends on source order. `pointer-events: none` goes further than the generic
    rule ever did: the JS binder in chantry-actor-sheet.js already stops ATTACHING the click handler
    while locked, and this makes the dots inert at the CSS layer too, independent of that. */
-.wod20.chantry.locked .resource-value-step {
+.wod20.chantry .locked .resource-value-step {
   cursor: default;
   pointer-events: none;
 }
