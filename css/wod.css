@@ -96,6 +96,16 @@
 }
 
 @font-face {
+  /* A Technocratic Construct has no face of its own in this system. Friz Quadrata - already
+     shipped and already loaded for exalted/hunter/demon - is the institutional serif the Union
+     presents itself as, and is the closest thing available. Declared under its own family name
+     rather than reusing "exalted_normal" at the point of use, so the next reader is not left
+     wondering why a Construct renders in Exalted's font. Same file, deliberately: no new asset. */
+  font-family: "technocracy";
+  src: url("../assets/fonts/exalted/frizquadratatt.ttf") format("truetype");
+}
+
+@font-face {
   font-family: "exalted";
   src: url("../assets/fonts/exalted/SevenSerifICG-Bold.ttf") format("truetype");
 }

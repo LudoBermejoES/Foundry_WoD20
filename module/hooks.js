@@ -256,7 +256,7 @@ export function registerHooks(constants, isTablet) {
 			}
 		}
 
-		if (!sheet.actor.system.settings.usesplatfont) {
+		if (sheet.actor.system.settings?.usesplatfont === false) {
 			sheet.classList.add("noSplatFont");
 		}
 
@@ -393,10 +393,29 @@ export function registerHooks(constants, isTablet) {
 			classList.add("exalted");
 		}
 
+		/* A Chantry/Construct takes NONE of the branches above, and it is the one Actor type with
+		   no `system.settings` at all - template.json's "Chantry" carries only
+		   flavor/locked/notes/pool/rating/tier/traits. That is why the useSplatFonts branch below
+		   reads it with `?.` and `=== false`: unguarded, it threw on every single render of this
+		   sheet, aborting the hook before the dark-mode class was ever applied.
+
+		   Its splat class comes from `system.flavor`, not from the actor type, because the two
+		   halves of this sheet are two different institutions - a Tradition Chantry and a
+		   Technocratic Construct - and read as such. The literal class names are spelled out
+		   rather than interpolated so a static reader can find them from the stylesheet. */
+		if (actorType == "chantry") {
+			if (sheet.object.system.flavor === "technocracy") {
+				classList.add("chantry-technocracy");
+			}
+			else {
+				classList.add("chantry-tradition");
+			}
+		}
+
 		if (game.settings.get('worldofdarkness', 'useSplatFonts') === false) {
 			classList.add("noSplatFont");
 		}
-		else if (!sheet.object.system.settings.usesplatfont) {
+		else if (sheet.object.system.settings?.usesplatfont === false) {
 			classList.add("noSplatFont");
 		}
 

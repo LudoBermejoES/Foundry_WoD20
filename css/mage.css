@@ -55,6 +55,20 @@
 	font-family: "mage", var(--main-font);
 }
 
+/* A Chantry (Tradition) and a Construct (Technocracy) are ONE sheet and two different
+   institutions, so they do not share a face: the sheet's `system.flavor` select decides. Before
+   this, neither did - no `.splatFont` rule anywhere matched the Chantry sheet's classes
+   (`wod20 wod-sheet chantry`), so all four of its splatFont spans fell through to the default
+   sans-serif. The class is added by the renderActorSheet hook, next to the other actor-type
+   classes. */
+.chantry-tradition:not(.noSplatFont) .splatFont {
+	font-family: "mage", var(--main-font);
+}
+
+.chantry-technocracy:not(.noSplatFont) .splatFont {
+	font-family: "technocracy", var(--main-font);
+}
+
 /* MAGE BEGINS */
 
 .wod-sheet.mage:not(.noSplatFont) .secondHeadlineTabs {
