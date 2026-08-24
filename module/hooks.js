@@ -96,6 +96,13 @@ function clearHTML(sheet) {
 	classList.remove("langSV");
 	classList.remove("langEN");
 	classList.remove("noSplatFont");
+
+	/* Both Chantry splat classes, because they are mutually exclusive and this hook only ADDS one.
+	   Without this, flipping a Chantry's type from Tradition to Technocracy leaves BOTH classes on
+	   the sheet, and the later rule in mage.css wins for good - so the switch would appear to work
+	   in one direction and be permanently stuck in the other. */
+	classList.remove("chantry-tradition");
+	classList.remove("chantry-technocracy");
 	classList.remove("wod-theme-dark");
 
 	classList.remove("mortal");

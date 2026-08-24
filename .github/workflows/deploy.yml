@@ -594,6 +594,17 @@ jobs:
       - name: Prove the Chantry Trait description eye is wired, read-only, and fully localised
         run: node .github/scripts/test-chantry-trait-eye.mjs
 
+      # polish-chantry-sheet: the fourteen construction Traits used to list in
+      # CONFIG.worldofdarkness.chantry.traitcost's insertion order, which is not alphabetical once
+      # a human reads the localized labels ("Aliados, Arcano, Refuerzos..."). getData() now sorts
+      # by each Trait's LOCALIZED label via localeCompare(..., CONFIG.language || undefined), so
+      # accented labels (Espías, Criados, Ancianos) sort the way the active language expects. This
+      # executes the REAL comparator (extracted from the real source, not re-implemented blind)
+      # against the real fourteen keys and real localized labels in both shipped languages.
+      # Runnable locally: node .github/scripts/test-chantry-trait-order.mjs
+      - name: Prove the Chantry Trait list sorts alphabetically by localized label
+        run: node .github/scripts/test-chantry-trait-order.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server

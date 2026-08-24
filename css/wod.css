@@ -596,6 +596,32 @@
   cursor: default;
 }
 
+/* Chantry (polish-chantry-sheet D3): the rule immediately above is DEAD for this sheet's own dots
+   for the same reason `pc-actor-v3.css`'s "THE LOCKED CURSOR" comment records for the whole v2
+   family - `.wod20 .resource-value .resource-value-step { cursor: pointer }` (below, in this same
+   file) is the SAME specificity (0,3,0) and loads LATER, so it wins. Fixing that shared rule is out
+   of this change's file boundary (Chantry and its own styles only), so this is scoped to
+   `.chantry` instead of widened - `.chantry` and `.locked` land on the SAME `<form>` element
+   (`.chantry` from `cssClass`, `.locked` from the template's own `{{#if locked}}`), which is what
+   makes the compound selector below valid. `pointer-events: none` goes further than the generic
+   rule ever did: the JS binder in chantry-actor-sheet.js already stops ATTACHING the click handler
+   while locked, and this makes the dots inert at the CSS layer too, independent of that. */
+.wod20.chantry.locked .resource-value-step {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Chantry (polish-chantry-sheet D2): Tipo/Nivel render as a disabled <input type="text"> instead
+   of a disabled <select> while locked (mirrors bio_mage_background.html's Secta/Afiliación idiom).
+   Neither `.inputdata` nor a bare `select`/`input` has an explicit width anywhere in this file, so
+   the swap needs one: a `<select>`'s width is intrinsic to its longest visible option ("Centro de
+   Poder (101+ puntos)"), which an `<input>` does not get for free. A generous fixed minimum reads
+   consistently across both fields rather than reflowing per value. */
+.wod20.chantry input.chantry-locked-value {
+  width: auto;
+  min-width: 220px;
+}
+
 /* END - handle lock design */
 
 /* START - General */

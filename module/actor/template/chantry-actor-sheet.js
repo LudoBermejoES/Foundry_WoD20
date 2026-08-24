@@ -1,4 +1,5 @@
 import ActionHelper from "../../scripts/action-helpers.js";
+import ItemViewer from "../../applications/item-viewer.js";
 
 /**
  * Sheet for the "Chantry" Actor type - a communal Chantry (Traditions) / Construct
@@ -77,6 +78,16 @@ export default class ChantryActorSheet extends foundry.appv1.sheets.ActorSheet {
 		data.actor.system.cap = cap;
 		data.actor.system.notes = await foundry.applications.ux.TextEditor.implementation.enrichHTML(data.actor.system.notes, { async: true });
 
+		// Alphabetical by LOCALIZED label, in the active language - not by the key traitcost
+		// enumerates them in (which reads "Aliados, Arcano, Refuerzos..." and is not alphabetical
+		// once a human reads the Spanish text on screen), and not a locale-naive `localeCompare()`
+		// (no locale argument), which misorders the accented labels in play (Espías, Criados,
+		// Ancianos). CONFIG.language is this system's own established reflection of the active
+		// Foundry language (module/hooks.js reads it the same way in every legacy sheet's render
+		// hook). Sorted here in getData(), not the template, per design.
+		traitlist.sort((a, b) =>
+			game.i18n.localize(a.label).localeCompare(game.i18n.localize(b.label), CONFIG.language || undefined));
+
 		data.listData = { traits: traitlist };
 
 		return data;
@@ -89,34 +100,34 @@ export default class ChantryActorSheet extends foundry.appv1.sheets.ActorSheet {
 		ActionHelper.SetupDotCounters(html);
 
 		// Read-only Trait-description eyes: bound BEFORE the editable early-return below,
-		// deliberately, so they still work on a locked or limited sheet (design.md D3). This
-		// sheet extends ActorSheet directly and inherits no collapsible binder from
-		// MortalActorSheet/PCActorSheet, so it is written here from scratch, mirroring
-		// mortal-actor-sheet.js's `.collapsible`/`.description[data-itemid]` mechanism but keyed
-		// on a Trait key (`data-traitkey`) rather than an Item id, since a construction Trait is
-		// a plain integer on the actor, not an Item (design.md D2).
-		const traitEyes = html[0].querySelectorAll(".collapsible[data-traitkey]");
+		// deliberately, so they still work on a locked or limited sheet (design.md D3 of
+		// add-chantry-trait-descriptions). This sheet extends ActorSheet directly and inherits no
+		// collapsible binder from MortalActorSheet/PCActorSheet, so it is written here from scratch.
+		//
+		// polish-chantry-sheet design.md D1: opens the SAME read-only ItemViewer window every other
+		// description eye in this system opens, instead of toggling an inline sibling div (the
+		// REVERSED previous design - see that design.md for why). A construction Trait is still
+		// neither an Item nor a compendium document, so there is nothing real to hand ItemViewer;
+		// it is handed a plain pseudo-document shaped like the three fields it actually reads
+		// (`uuid`, `name`, `system.description`) - `ItemViewer.open()`/`resolveDescription()` both
+		// degrade cleanly on an object with no `flags`, which is exactly this case. The uuid is
+		// namespaced under the OWNING ACTOR's own uuid (not just the trait key), because
+		// ItemViewer's open-viewer registry is one static Map for the whole session and two
+		// different Chantries' same-keyed Trait windows must not collide into one.
+		const traitEyes = html[0].querySelectorAll(".collapsible.button[data-traitkey]");
 
 		traitEyes.forEach(icon => {
 			icon.addEventListener("click", () => {
 				const traitkey = icon.dataset.traitkey;
-				const descriptionDiv = html[0].querySelector(`.description[data-traitkey="${traitkey}"]`);
-				if (!descriptionDiv) return;
+				const labelkey = icon.dataset.labelkey;
+				const descriptionkey = icon.dataset.descriptionkey;
+				if (!labelkey || !descriptionkey) return;
 
-				const isOpen = descriptionDiv.style.maxHeight && descriptionDiv.style.maxHeight !== "0px";
-
-				if (isOpen) {
-					descriptionDiv.style.maxHeight = "0";
-					icon.classList.remove("fa-eye-slash");
-					icon.classList.add("fa-eye");
-					descriptionDiv.classList.remove("collapsible-open");
-				}
-				else {
-					descriptionDiv.style.maxHeight = descriptionDiv.scrollHeight + "px";
-					descriptionDiv.classList.add("collapsible-open");
-					icon.classList.remove("fa-eye");
-					icon.classList.add("fa-eye-slash");
-				}
+				ItemViewer.open({
+					uuid: `${this.actor.uuid}.ChantryTrait.${traitkey}`,
+					name: game.i18n.localize(labelkey),
+					system: { description: game.i18n.localize(descriptionkey) }
+				});
 			});
 		});
 
@@ -130,13 +141,20 @@ export default class ChantryActorSheet extends foundry.appv1.sheets.ActorSheet {
 			.find(".inputdata")
 			.change(event => this._onsheetChange(event));
 
-		html
-			.find(".chantry-rating > .resource-value-step")
-			.click(this._onRatingDotChange.bind(this));
+		// polish-chantry-sheet design.md D3: a control that WRITES to the actor must not render as
+		// interactive on a locked sheet - the handlers below already refuse with a warning when
+		// `this.locked`, but that only fires AFTER a click has already landed. Not binding the
+		// click at all while locked means there is nothing to land: the in-handler checks stay, as
+		// defence in depth, in case some other future path calls them directly.
+		if (!this.locked) {
+			html
+				.find(".chantry-rating > .resource-value-step")
+				.click(this._onRatingDotChange.bind(this));
 
-		html
-			.find(".chantry-trait-value > .resource-value-step")
-			.click(this._onTraitDotChange.bind(this));
+			html
+				.find(".chantry-trait-value > .resource-value-step")
+				.click(this._onTraitDotChange.bind(this));
+		}
 	}
 
 	/* Lock / unlock the sheet - persisted on the actor (like ActionHelper.OnActorLock) so the

@@ -52,10 +52,19 @@
 
 				<div class="clearareaBox row">
 					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.flavor"}}</div>
-					<select class="pullLeft inputdata" name="system.flavor" data-source="flavor" {{#if locked}}disabled{{/if}}>
-						<option value="tradition" {{#if (eq actor.system.flavor "tradition")}}selected{{/if}}>{{localize "wod.chantry.flavors.tradition"}}</option>
-						<option value="technocracy" {{#if (eq actor.system.flavor "technocracy")}}selected{{/if}}>{{localize "wod.chantry.flavors.technocracy"}}</option>
-					</select>
+					{{!-- Locked: plain disabled text showing the localized label, not a disabled <select> --
+					      the same idiom bio_mage_background.html uses for Secta/Afiliación. Reuses the exact
+					      concat+localize pair the <option> below builds its own label from, so the two
+					      branches can never disagree about what a stored value means. --}}
+					{{#if locked}}
+						<input class="pullLeft inputdata chantry-locked-value" type="text"
+								value="{{localize (concat 'wod.chantry.flavors.' actor.system.flavor)}}" disabled />
+					{{else}}
+						<select class="pullLeft inputdata" name="system.flavor" data-source="flavor">
+							<option value="tradition" {{#if (eq actor.system.flavor "tradition")}}selected{{/if}}>{{localize "wod.chantry.flavors.tradition"}}</option>
+							<option value="technocracy" {{#if (eq actor.system.flavor "technocracy")}}selected{{/if}}>{{localize "wod.chantry.flavors.technocracy"}}</option>
+						</select>
+					{{/if}}
 				</div>
 
 				<div class="clearareaBox row">
@@ -69,11 +78,16 @@
 
 				<div class="clearareaBox row">
 					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.tier"}}</div>
-					<select class="pullLeft inputdata" name="system.tier" data-source="tier" {{#if locked}}disabled{{/if}}>
-						{{#each config.chantry.tiers as |tier|}}
-							<option value="{{tier}}" {{#if (eq ../actor.system.tier tier)}}selected{{/if}}>{{localize (concat "wod.chantry.tiers." tier)}}</option>
-						{{/each}}
-					</select>
+					{{#if locked}}
+						<input class="pullLeft inputdata chantry-locked-value" type="text"
+								value="{{localize (concat 'wod.chantry.tiers.' actor.system.tier)}}" disabled />
+					{{else}}
+						<select class="pullLeft inputdata" name="system.tier" data-source="tier">
+							{{#each config.chantry.tiers as |tier|}}
+								<option value="{{tier}}" {{#if (eq ../actor.system.tier tier)}}selected{{/if}}>{{localize (concat "wod.chantry.tiers." tier)}}</option>
+							{{/each}}
+						</select>
+					{{/if}}
 				</div>
 
 				<div class="clearareaBox row">
@@ -119,15 +133,18 @@
 						{{!-- Read-only: not gated on `locked` (D3) and deliberately outside
 						      .chantry-trait-value, so ActionHelper.SetupDotCounters's
 						      `.chantry-trait-value > .resource-value-step` selector can never
-						      reach it - clicking the eye must never change the Trait's dots. --}}
+						      reach it - clicking the eye must never change the Trait's dots.
+						      Opens the SAME ItemViewer window every other description eye in this
+						      system opens (polish-chantry-sheet design.md D1), not an inline
+						      toggle - `data-labelkey`/`data-descriptionkey` carry the i18n keys
+						      the binder localizes to build a plain pseudo-document, since a
+						      construction Trait is neither an Item nor a compendium document. --}}
 						<i class="pullLeft pointer icon collapsible button fa-solid fa-eye chantry-trait-eye"
 								title="{{localize 'wod.labels.show.description'}}"
-								data-traitkey="{{trait.key}}"></i>
+								data-traitkey="{{trait.key}}"
+								data-labelkey="{{trait.label}}"
+								data-descriptionkey="{{trait.descriptionkey}}"></i>
 
-					</div>
-
-					<div class="description" data-traitkey="{{trait.key}}">
-						{{localize trait.descriptionkey}}
 					</div>
 				{{/each}}
 
