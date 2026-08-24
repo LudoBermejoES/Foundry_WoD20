@@ -2604,10 +2604,21 @@ input.sheet-infoWidth {
   padding-top: 2px;
 }
 
-/* The roster portrait is a row avatar, not the 100px item-sheet panel image `.shape-image` sets. */
+/* The roster portrait is a row avatar, not the 100px item-sheet panel image `.shape-image` sets.
+   `object-fit: contain` OVERRIDES the `cover` that `.wod20 .shape-image` sets (line ~2540), and it
+   is deliberate rather than tidy-up: these portraits are full-body NPC art, and a 64x64 square crop
+   of a tall figure keeps the torso and throws away the FACE - which is the one part that identifies
+   the person the row is naming. Reported from a real sheet on 2026-08-24 (a police NPC rendered as
+   a uniform and a belt, no head). Letterboxing a tall image into the square leaves it small but
+   whole; cropping leaves it large and useless. The dimmed background makes the empty side bands
+   read as intentional, the same way the empty state just below already does.
+   Scoped to the roster on purpose: the 100px `.shape-image` panels on ITEM sheets are framed art
+   where filling the square is the point, and are left alone. */
 .wod20 .connection-entry .connection-portrait .shape-image {
   width: 64px;
   height: 64px;
+  object-fit: contain;
+  background: var(--main-dim-color, #ececec);
 }
 
 /* The empty state, which `.wod20.wod-item .shape-image.shape-image-empty` could never reach: that
