@@ -30,14 +30,22 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
  */
 export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foundry.applications.sheets.ActorSheetV2) {
 
-	constructor(actor, options) {
-		super(actor, options);
-
-		// Source of truth is the persisted system.locked field (defaults to false in
-		// template.json), kept in sync from _prepareContext on every render - unchanged in
-		// meaning from the appv1 sheet this replaces (design.md D3: "system.locked stays the
-		// source of truth").
-		this.locked = actor.system.locked ?? false;
+	/**
+	 * `system.locked` stays the source of truth (design.md D3), read DERIVED rather than cached on
+	 * the instance.
+	 *
+	 * This replaced a `constructor(actor, options)` that carried the appv1 signature verbatim into
+	 * an ApplicationV2 class and threw on every attempt to open the sheet: appv2 constructors take
+	 * ONE options object and the document arrives as `options.document`, so the first positional
+	 * argument is not an actor and `actor.system` is undefined. It failed in the constructor, which
+	 * means the sheet could not even be built - `get sheet` threw straight out of the actor
+	 * directory's click handler. Deployed in 7.5.128 and reported from a real world.
+	 *
+	 * A getter also removes the class of bug the cached flag invited: it cannot go stale between a
+	 * write and the next render, and it cannot be undefined before the first one.
+	 */
+	get locked() {
+		return this.actor?.system?.locked ?? false;
 	}
 
 	static DEFAULT_OPTIONS = {
@@ -103,10 +111,6 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	async _prepareContext(options) {
 		const data = await super._prepareContext(options);
 		const actor = this.actor;
-
-		// Keep the sheet-instance flag in sync with the persisted actor field on every render,
-		// exactly as the appv1 sheet's getData() did.
-		this.locked = actor.system.locked ?? false;
 
 		data.config = CONFIG.worldofdarkness;
 		data.locked = this.locked;

@@ -604,6 +604,8 @@ jobs:
       # Runnable locally: node .github/scripts/test-chantry-trait-order.mjs
       - name: Prove the Chantry Trait list sorts alphabetically by localized label
         run: node .github/scripts/test-chantry-trait-order.mjs
+      - name: Prove no ApplicationV2 constructor reads the document off its options argument
+        run: node .github/scripts/test-appv2-constructor-signature.mjs
 
   # ---------------------------------------------------------------------------
   deploy:
