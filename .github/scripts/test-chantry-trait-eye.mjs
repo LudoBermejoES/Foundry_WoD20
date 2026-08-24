@@ -195,8 +195,18 @@ check("D2 the in-handler `this.locked` warnings are still present in all three w
 
 const cssSrc = fs.readFileSync(path.join(ROOT, "css", "wod.css"), "utf8");
 
-check("D3 a CSS rule scoped to .chantry.locked removes pointer-events from the dots",
-	/\.wod20\.chantry\.locked\s+\.resource-value-step\s*\{[^}]*pointer-events:\s*none/.test(cssSrc));
+/* D3 pinned the COMPOUND form (`.wod20.chantry.locked`) until 2026-08-24, which is exactly the
+   selector that cannot match: measured on the live sheet, `{{cssClass}}` renders as `editable` and
+   `wod20`/`wod-sheet`/`chantry` all come from `defaultOptions.classes` (the `.app` ROOT), so `locked`
+   -- on the `<form>` -- is never on the same element as the other three. The rule matched nothing and
+   the dots stayed live while locked; this check asserted the broken shape, so nothing could see it.
+   Now it requires the DESCENDANT form and REJECTS the compound one outright, because a compound
+   `.chantry.locked` is provably dead here rather than merely unusual. */
+check("D3 a CSS rule scoped to .chantry + a descendant .locked removes pointer-events from the dots",
+	/\.wod20\.chantry\s+\.locked\s+\.resource-value-step\s*\{[^}]*pointer-events:\s*none/.test(cssSrc));
+
+check("D3b the dead COMPOUND form is not reintroduced (it can never match: locked is on the form, the rest on the app root)",
+	!/\.wod20\.chantry\.locked\s+\.resource-value-step/.test(cssSrc));
 
 console.log(results.join("\n"));
 console.log(failed ? `\n${failed} FAILURE(S)` : `\nall ${results.length} checks pass`);
