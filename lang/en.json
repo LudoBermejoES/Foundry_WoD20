@@ -1432,6 +1432,22 @@
 				"resources": "Resources",
 				"retainers": "Retainers",
 				"spies": "Spies"
+			},
+			"traitdescriptions": {
+				"allies": "A consort, Extraordinary Citizen, spirit, EDE, or other exceptional ally per dot.",
+				"arcane-cloaking": "Imposes penalties (-1 per dot) to the dice pools of anyone attempting to find or investigate the site.",
+				"backup": "Additional non-Awakened personnel the group can call on for help, following the normal guidelines for Backup (Mage 20 p. 306).",
+				"cult-sympathizers": "This is trained personnel capable of assisting with major undertakings, such as rituals or complex expressions of Enlightened Science. This works as described (and with the same limitations) as the Cult Background (Mage 20 p. 310).",
+				"enhancement": "The maximum level of Enhancement the facility can incorporate.",
+				"elders": "The power level and number of leaders of the Construct/Chantry (see p.xx).",
+				"integrated-effects": "Spells or effects anchored within the Construct/Chantry (see p.xx).",
+				"library": "This communal resource, accessible to all members of the Construct/Chantry, works as the Library Background (Mage 20 p. 318).",
+				"node": "The Background or leftover energy remaining each week after paying the Construct's or Chantry's upkeep costs. This Quintessence is accessible to members at the discretion of the Construct's or Chantry's leadership.",
+				"reality-zone": "The strength of the Reality Zone anchored to the Chantry/Construct (see p.xx). This Trait cannot exceed the Chantry/Construct's own rating.",
+				"requisitions": "The maximum level of Requisitions that can be processed on-site, locally, at a Union Construct. The immediate stockroom, so to speak. This does not limit a Technocrat's individual access to personal Requisitions, but if personal Requisitions exceed the Construct's availability, the agent must wait for the requested materials to arrive or collect them from a secure location.",
+				"resources": "The available money and accessible assets the Chantry/Construct can draw on. Individual members can request access to these funds from the leadership.",
+				"retainers": "These are the people who manage the Chantry/Construct's day-to-day operations, such as cooking, cleaning, laundry, and so on. They are not combatants, nor particularly useful beyond their basic function.",
+				"spies": "The Chantry/Construct has access to a network of informants as described under the Spies Background (Mage 20 p. 325)."
 			}
 		},
 		"gear": {

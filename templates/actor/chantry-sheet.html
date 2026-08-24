@@ -116,6 +116,18 @@
 							</div>
 						{{/if}}
 
+						{{!-- Read-only: not gated on `locked` (D3) and deliberately outside
+						      .chantry-trait-value, so ActionHelper.SetupDotCounters's
+						      `.chantry-trait-value > .resource-value-step` selector can never
+						      reach it - clicking the eye must never change the Trait's dots. --}}
+						<i class="pullLeft pointer icon collapsible button fa-solid fa-eye chantry-trait-eye"
+								title="{{localize 'wod.labels.show.description'}}"
+								data-traitkey="{{trait.key}}"></i>
+
+					</div>
+
+					<div class="description" data-traitkey="{{trait.key}}">
+						{{localize trait.descriptionkey}}
 					</div>
 				{{/each}}
 

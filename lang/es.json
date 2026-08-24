@@ -1429,6 +1429,22 @@
 				"resources": "Recursos",
 				"retainers": "Criados",
 				"spies": "Espías"
+			},
+			"traitdescriptions": {
+				"allies": "Un consorte, Ciudadano Extraordinario, espíritu, EDE, u otro aliado excepcional por punto.",
+				"arcane-cloaking": "Impone penalizaciones (-1 por punto) a las reservas de dados de quienes intenten encontrar o investigar el lugar.",
+				"backup": "Personal adicional no Despertado al que el grupo puede recurrir para pedir ayuda, siguiendo las directrices normales para Refuerzos (Mage 20 p. 306).",
+				"cult-sympathizers": "Se trata de personal entrenado y capaz de ayudar en grandes trabajos, como rituales o expresiones complejas de la ciencia Iluminada. Esto funciona como se describe (y con las mismas limitaciones) que el Trasfondo Culto (Mage 20 p. 310).",
+				"enhancement": "El nivel máximo de Mejora que la instalación puede incorporar.",
+				"elders": "El nivel de poder y el número de líderes del Constructo/Capilla (ver p.xx).",
+				"integrated-effects": "Hechizos o efectos anclados dentro del Constructo/Capilla (ver p.xx).",
+				"library": "Este recurso comunal, accesible a todos los miembros del Constructo/Capilla, funciona como el Trasfondo Biblioteca (Mage 20 p. 318).",
+				"node": "El Trasfondo o energía sobrante que queda cada semana tras pagar los costes de mantenimiento del Constructo o Capilla. Esta Quintaesencia es accesible a los miembros, a discreción de la dirección del Constructo o Capilla.",
+				"reality-zone": "La fuerza de la Zona de Realidad anclada a la Capilla/Constructo (ver p. xx). Este rasgo no puede ser superior a la puntuación de la Capilla/Constructo.",
+				"requisitions": "El nivel máximo de Requerimiento que puede procesarse en el sitio, localmente, en un Constructo de la Unión. El almacén inmediato, por así decirlo. Esto no limita el acceso individual de un Tecnócrata a Requerimientos personales, pero si los Requerimientos personales exceden la disponibilidad del Constructo, la agente debe esperar a que lleguen los materiales solicitados o recogerlos de un lugar seguro.",
+				"resources": "El dinero disponible y los activos accesibles que la Capilla/Constructo puede utilizar. Los miembros individuales pueden solicitar acceso a estos fondos a la dirección.",
+				"retainers": "Estas son las personas que gestionan las operaciones cotidianas de la Capilla/Constructo, como cocinar, limpiar, la colada, etc. No son combatientes, ni son particularmente útiles más allá de su función básica.",
+				"spies": "La Capilla/Constructo tiene acceso a una red de informantes según se describe en el Trasfondo Espías (Mage 20 p. 325)."
 			}
 		},
 		"gear": {

@@ -65,6 +65,7 @@ export default class ChantryActorSheet extends foundry.appv1.sheets.ActorSheet {
 			traitlist.push({
 				key: key,
 				label: `wod.chantry.traits.${key}`,
+				descriptionkey: `wod.chantry.traitdescriptions.${key}`,
 				value: value,
 				cost: cost,
 				overcap: (rating > 0) && (value > cap)
@@ -86,6 +87,38 @@ export default class ChantryActorSheet extends foundry.appv1.sheets.ActorSheet {
 		super.activateListeners(html);
 
 		ActionHelper.SetupDotCounters(html);
+
+		// Read-only Trait-description eyes: bound BEFORE the editable early-return below,
+		// deliberately, so they still work on a locked or limited sheet (design.md D3). This
+		// sheet extends ActorSheet directly and inherits no collapsible binder from
+		// MortalActorSheet/PCActorSheet, so it is written here from scratch, mirroring
+		// mortal-actor-sheet.js's `.collapsible`/`.description[data-itemid]` mechanism but keyed
+		// on a Trait key (`data-traitkey`) rather than an Item id, since a construction Trait is
+		// a plain integer on the actor, not an Item (design.md D2).
+		const traitEyes = html[0].querySelectorAll(".collapsible[data-traitkey]");
+
+		traitEyes.forEach(icon => {
+			icon.addEventListener("click", () => {
+				const traitkey = icon.dataset.traitkey;
+				const descriptionDiv = html[0].querySelector(`.description[data-traitkey="${traitkey}"]`);
+				if (!descriptionDiv) return;
+
+				const isOpen = descriptionDiv.style.maxHeight && descriptionDiv.style.maxHeight !== "0px";
+
+				if (isOpen) {
+					descriptionDiv.style.maxHeight = "0";
+					icon.classList.remove("fa-eye-slash");
+					icon.classList.add("fa-eye");
+					descriptionDiv.classList.remove("collapsible-open");
+				}
+				else {
+					descriptionDiv.style.maxHeight = descriptionDiv.scrollHeight + "px";
+					descriptionDiv.classList.add("collapsible-open");
+					icon.classList.remove("fa-eye");
+					icon.classList.add("fa-eye-slash");
+				}
+			});
+		});
 
 		if (!this.options.editable) return;
 

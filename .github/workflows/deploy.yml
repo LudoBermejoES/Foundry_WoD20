@@ -579,6 +579,21 @@ jobs:
       - name: Prove the Fórmula sheet's Atributo dropdown offers all nine M20 Atributos
         run: node .github/scripts/test-rote-attribute-picker.mjs
 
+      # add-chantry-trait-descriptions: `ChantryActorSheet` extends `ActorSheet` directly and
+      # inherited NO collapsible/eye binder at all, so the fourteen construction-Trait rows
+      # ("Aliados", "Nodo", "Zona de Realidad"...) had a cost and a row of dots but no way to read
+      # what any of them DOES without leaving the sheet for the book. Adds a read-only eye per row
+      # that reveals the Trait's effect description (sourced from m20-the-operative-dossier,
+      # keyed off CONFIG.worldofdarkness.chantry.traitcost so a Trait added later can't ship
+      # without one), bound BEFORE the sheet's editable early-return so it still works
+      # locked/limited, and proven to sit outside the dot-counter region so it can never be
+      # mistaken for a dot click. Mutation-tested: removing the binder, moving it after the
+      # early-return, moving the eye inside the dot region, or blanking one language key each
+      # fail a distinct check here.
+      # Runnable locally: node .github/scripts/test-chantry-trait-eye.mjs
+      - name: Prove the Chantry Trait description eye is wired, read-only, and fully localised
+        run: node .github/scripts/test-chantry-trait-eye.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server
