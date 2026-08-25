@@ -43,7 +43,13 @@
 					<img class="profile-img pointer" src="{{actor.img}}" title="{{actor.name}}" data-edit="img" />
 				</div>
 
-				<div class="pullLeft chantry-namebox">
+				{{!-- `floating-label-group` is the idiom every OTHER floating-label field in this system
+				      relies on (`css/wod.css`'s `.floating-label-group` block) for the label's
+				      absolute-position anchor and its focus/valid transition - this box never carried it,
+				      so the "Nombre" label floated relative to whatever ancestor happened to be
+				      positioned instead of this field. Purely additive class; the input/span pair and
+				      their own classes are unchanged. --}}
+				<div class="pullLeft chantry-namebox floating-label-group">
 					{{#if locked}}
 						<input class="sheet-infoValues" type="text" value="{{actor.name}}" autocomplete="off" disabled />
 					{{else}}
@@ -54,7 +60,11 @@
 
 			</div>
 
-			<div class="clearareaBox area-box">
+			{{!-- `chantry-info-box` - additive marker so the four rows below (Tipo/Puntuación/Nivel/
+			      Reserva) can be styled as one coherent card (css/wod.css, "Chantry v2 visual polish"),
+			      scoped through `.chantry-body` so it can never reach the appv1 sheet, which shares
+			      these same bare class names. --}}
+			<div class="clearareaBox area-box chantry-info-box">
 
 				<div class="sheet-headline sheet-banner splatFont">
 					<span class="sheet-banner-text">{{localize "wod.chantry.headline"}}</span>
@@ -68,7 +78,13 @@
 						<input class="pullLeft inputdata chantry-locked-value" type="text"
 								value="{{localize (concat 'wod.chantry.flavors.' actor.system.flavor)}}" disabled />
 					{{else}}
-						<select class="pullLeft inputdata" name="system.flavor" data-source="flavor">
+						{{!-- `.editable` is the SAME class `name`/other writable fields on this sheet already
+						      carry (`css/wod.css`'s `.wod20 select.editable`/`input.editable` idiom) - this
+						      select never had it, which is also why it painted as a plain unstyled browser
+						      `<select>` (system default white) in dark mode: nothing but `.locked select` /
+						      `select.editable` reaches a `<select>` in `css/darkmode.css`, and this one was
+						      neither. Purely additive; `data-source`/`name` and the option list are unchanged. --}}
+						<select class="pullLeft inputdata editable" name="system.flavor" data-source="flavor">
 							<option value="tradition" {{#if (eq actor.system.flavor "tradition")}}selected{{/if}}>{{localize "wod.chantry.flavors.tradition"}}</option>
 							<option value="technocracy" {{#if (eq actor.system.flavor "technocracy")}}selected{{/if}}>{{localize "wod.chantry.flavors.technocracy"}}</option>
 						</select>
@@ -90,7 +106,7 @@
 						<input class="pullLeft inputdata chantry-locked-value" type="text"
 								value="{{localize (concat 'wod.chantry.tiers.' actor.system.tier)}}" disabled />
 					{{else}}
-						<select class="pullLeft inputdata" name="system.tier" data-source="tier">
+						<select class="pullLeft inputdata editable" name="system.tier" data-source="tier">
 							{{#each config.chantry.tiers as |tier|}}
 								<option value="{{tier}}" {{#if (eq ../actor.system.tier tier)}}selected{{/if}}>{{localize (concat "wod.chantry.tiers." tier)}}</option>
 							{{/each}}

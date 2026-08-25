@@ -3152,6 +3152,213 @@ input.sheet-infoWidth {
 }
 /* END - Shadow area */
 
+/* START - Chantry v2 visual polish
+
+   `improve-chantry-sheet-v2-visuals` — the owner saw the rebuilt ApplicationV2 Chantry/Construct
+   sheet working and asked for it to look better, with three concrete complaints against a real
+   dark-theme screenshot: (1) the Tipo/Nivel selects and the Notes editor painted white-on-white
+   against the dark sheet, (2) the three section titles ("Capilla / Constructo", "Rasgos de
+   Construcción", "Notas") rendered as a centred grey pill with a button's affordance, and one of
+   them wrapped onto two lines, (3) the fourteen Trait rows were a dense, undifferentiated list.
+
+   EVERYTHING below is scoped through `.chantry-body` — the wrapping `<div>`
+   `templates/actor/chantry-sheet-v2.hbs` introduced for the `.locked` descendant requirement (see
+   that file's own header comment) and the ONE class that exists on this template and NOT on
+   `templates/actor/chantry-sheet.html` (appv1). Every other class this file restyles below
+   (`chantry-top`, `chantry-trait-row`, `sheet-headline`/`sheet-banner`, `clearareaBox`/`row`,
+   `ability-headlineWidth`...) is SHARED, byte-for-byte, with appv1's own markup — appv1 is the
+   sheet's own registered per-actor rollback and must go on looking exactly as it always has, so
+   `.chantry-body` as the outermost qualifier on every selector here is load-bearing, not
+   decorative. Dot GEOMETRY (`.resource-value-step`'s size/border) is deliberately untouched:
+   growing that widget has broken these very rows twice before (see this file's own comment on it,
+   above, in the "handle design of radio buttons" section) — only the SPACE around the dots
+   changes here, never the dots themselves. */
+
+/* ---- (1) cards: give the three area-boxes a visible boundary instead of none at all ----
+
+   Border only here, deliberately, in BOTH themes - the tinted FILL is added back for dark mode
+   only, in css/darkmode.css. Measured why: this sheet's `--sheet-background-color` is the plain
+   `#f5f5f5` (chantry never overrides it with a texture image the way most other splats do), so a
+   light-mode fill here would have been the SECOND translucent layer stacked under the Trait rows'
+   own zebra tint below - and it measurably dropped `.item-warning`'s already-verified light-theme
+   value (`css/wod.css`'s own `--wod-warn` comment: 6.22:1 on `#f5f5f5`) to 4.08:1, under the 4.5:1
+   AA bar, on the one label (an overcap flag) that most needs to stay legible. Border-only avoids
+   that stack entirely: the row's own single-layer tint composites to 5.01:1 (tradition) /
+   5.23:1 (technocracy) against `--wod-warn`, both measured with `--main-dim-color`'s existing
+   0.12 light-theme alpha, no new token. Dark mode has no such texture-background alternative (the
+   sheet area is flat `rgb(30,30,30)`), so it keeps the fill for the definition the pitch-black
+   void otherwise lacks entirely - the ORIGINAL "white box" complaint this whole section answers. */
+.chantry-body .area-box {
+  border: 1px solid var(--main-mid-color);
+  border-radius: 6px;
+  padding: 10px 12px 12px 12px;
+  margin-top: 12px;
+  box-sizing: border-box;
+}
+
+/* ---- (2) section titles: a left-aligned rule instead of a centred pill ----
+
+   Neither `.chantry`/`.chantry-tradition`/`.chantry-technocracy` has ever set `--main-wod-banner`
+   (confirmed by grep across css/*.css) — every OTHER splat's `.sheet-banner` reads as a banner
+   because there is artwork behind the pill; here there never was any, so the bare pill (a
+   background colour plus `border-radius: 33%`) read as a floating button. In dark mode
+   `css/darkmode.css`'s own `.wod-theme-dark.wod-sheet .sheet-banner .sheet-banner-text` rule also
+   forces `width: 25%`, which is what wrapped "Rasgos de Construcción" onto two lines — a value
+   set for OTHER splats' narrower banners, never designed for this sheet's plain-text title.
+
+   Specificity, not file order, is what makes this win in both themes: five classes (0,5,0) beats
+   the dark rule above it (four classes, 0,4,0) outright, so this needs no `.wod-theme-dark`
+   counterpart of its own. `.chantry` (present on the SAME appv2 root `.chantry-body` is a
+   descendant of — see this section's own header comment) is the extra class that buys the margin;
+   it costs nothing extra to require since every actor this sheet renders for already carries it. */
+.chantry .chantry-body .sheet-headline.sheet-banner {
+  background: none;
+  width: 100%;
+  text-align: left;
+  border-bottom: 2px solid var(--splat-line);
+  margin: 0 0 10px 0;
+  padding: 0 0 4px 0;
+}
+
+.chantry .chantry-body .sheet-headline.sheet-banner .sheet-banner-text {
+  background: none;
+  border-radius: 0;
+  display: inline-block;
+  width: auto;
+  max-width: none;
+  white-space: nowrap;
+  padding: 0;
+  font-size: var(--wod-font-lg);
+  font-weight: 600;
+  color: var(--splat-text);
+  letter-spacing: 0.02em;
+}
+
+/* The very first title ("Capilla / Constructo", `.centerText.sheet-headline`) is plain centred
+   text, not a `.sheet-banner` pill, so none of the above touches it — it only needed to sit closer
+   to the header card below it to stop reading as "descolgado" (disconnected) from the portrait/
+   name row the owner named explicitly. */
+.chantry-body > .sheet-character > .sheet-body > .centerText.sheet-headline {
+  margin-bottom: 4px;
+}
+
+/* ---- (4) header card: portrait + name, centred as one unit under the title ----
+
+   Floats (`.pullLeft`) compute to nothing on a flex item per spec, so turning this row into a flex
+   container is safe with ZERO markup change beyond what the .hbs edit already added
+   (`floating-label-group` on `.chantry-namebox`, purely for the floating label itself — see that
+   file's own comment). */
+.chantry-body .chantry-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.chantry-body .chantry-imgbox {
+  flex: 0 0 auto;
+}
+
+.chantry-body .chantry-imgbox .profile-img {
+  width: 84px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid var(--splat-line);
+  margin: 0;
+  padding: 0;
+  box-shadow: 0 0 0 3px var(--main-dim-color);
+}
+
+.chantry-body .chantry-namebox {
+  flex: 0 1 320px;
+  min-width: 180px;
+}
+
+.chantry-body .chantry-namebox .sheet-infoValues {
+  text-align: center;
+}
+
+/* ---- info card: Tipo / Puntuación / Nivel / Reserva rows ---- */
+.chantry-body .chantry-info-box .clearareaBox.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.chantry-body .chantry-info-box .clearareaBox.row + .clearareaBox.row {
+  border-top: 1px solid var(--main-mid-color);
+}
+
+.chantry-body .chantry-info-box .ability-headlineWidth {
+  width: auto;
+  flex: 0 0 40%;
+}
+
+.chantry-body .chantry-info-box select.inputdata,
+.chantry-body .chantry-info-box input.chantry-locked-value {
+  flex: 1 1 auto;
+}
+
+.chantry-body .chantry-pool-total,
+.chantry-body .chantry-pool-spent {
+  flex: 0 0 auto;
+}
+
+/* ---- (3) Trait rows: breathing room + a clear column for each part ---- */
+.chantry-body .chantry-trait-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 6px;
+  border-radius: 4px;
+}
+
+/* `:nth-of-type` counts by tag among ALL sibling `<div>`s, including `.chantry-traits`'s own
+   headline div before the first row — so this alternates consistently across the fourteen rows
+   even though the parity looks "off by one" against the trait list itself. That is fine: the goal
+   is a readable band pattern, not a specific row starting shaded. */
+.chantry-body .chantry-trait-row:nth-of-type(even) {
+  background: var(--main-dim-color);
+}
+
+.chantry-body .chantry-trait-row .ability-headlineWidth {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.chantry-body .chantry-trait-value {
+  flex: 0 0 auto;
+}
+
+.chantry-body .chantry-trait-cost {
+  flex: 0 0 auto;
+  min-width: 92px;
+  text-align: right;
+  font-size: var(--wod-font-xs);
+  opacity: 0.75;
+}
+
+.chantry-body .chantry-overcap-flag {
+  flex: 0 0 auto;
+}
+
+.chantry-body .chantry-trait-eye {
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+
+.chantry-body .chantry-trait-eye:hover,
+.chantry-body .chantry-trait-eye:focus {
+  opacity: 1;
+}
+
+/* END - Chantry v2 visual polish */
+
 /* START - Reduced motion */
 
 /* There are twelve `transition` declarations across css/ and there was no guard on any of them.

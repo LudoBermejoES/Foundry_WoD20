@@ -144,6 +144,29 @@
     color: var(--darkmode-textcolor-dark);
 }
 
+/* improve-chantry-sheet-v2-visuals — `lib/editor/editor.css` hard-codes every rich-text editor
+   `background: rgba(255,255,255,1); color: black` (its own `.wod20 .editor` rule, plus a
+   `.wod20 :not(locked) .editor` rule whose `:not()` argument is a bare type selector no element
+   named "locked" can ever match, so it is unconditional too) with NO dark counterpart anywhere —
+   confirmed by grep, the only existing dark rule touching `.editor` is the TinyMCE-era
+   `.tox-editor-container` line immediately above, which this system's `{{editor ... engine=
+   "prosemirror"}}` calls never render into. First noticed on the Chantry/Construct sheet's Notes
+   field (a plain white box on a dark sheet) but the underlying rule is system-wide, so every other
+   sheet's rich-text field (bio background/appearance, gear notes, item descriptions...) had the
+   exact same defect and gets fixed by the same rule, at no extra risk: nothing styled `.editor`/
+   `.editor-content`/`prose-mirror` for dark mode before this, so there is nothing here to conflict
+   with. Reuses the SAME already-proven pair every text `input`/`select.editable` in this file
+   already uses (rgb(90,90,90) / rgb(225,225,225)) rather than inventing a third — 5.27:1 against
+   each other, clearing 4.5:1 for body text. `prose-mirror` (a real HTML tag, Foundry v13+'s own
+   custom element for this widget) is targeted directly so this holds regardless of which internal
+   class Foundry happens to nest the content in. */
+.wod-theme-dark.wod20 .editor,
+.wod-theme-dark.wod20 .editor .editor-content,
+.wod-theme-dark.wod20 prose-mirror {
+    background: var(--darkmode-background-dark);
+    color: var(--darkmode-textcolor-dark);
+}
+
 .wod-theme-dark.wod20 button.disabled {
     color: var(--darkmode-textcolor-dark) !important;
     background: var(--darkmode-background-dark) !important;
@@ -461,6 +484,27 @@
     --splat-text: rgb(225, 126, 121);   /* 4.56 / 5.92 */
 }
 
+/* improve-chantry-sheet-v2-visuals — `chantry-tradition`/`chantry-technocracy` (css/mage.css) set
+   `--splat-line`/`--splat-text` DIRECTLY rather than through the `.mage`/`.mageItem` etc. selectors
+   this section keys on, so neither one has ever picked up a dark override, even though this same
+   file already carries a `.wod-theme-dark.chantry-technocracy` rule for `--main-dim-color` (see
+   css/mage.css's own comment on why that one exception lives there instead of here). Measured:
+   chantry-tradition's base (reused from mage) is 1.06:1 against the dark sheet area — the same
+   near-invisible mage purple this section exists to fix everywhere else — and
+   chantry-technocracy's own steel-grey is 1.75:1. Both are now load-bearing for the new banner
+   underline and portrait ring this change adds (css/wod.css, "Chantry v2 visual polish"), so
+   leaving them unfixed would have shipped a barely-visible accent in the one theme the live world
+   actually runs. */
+.wod-theme-dark.chantry-tradition {
+    --splat-line: rgb(181, 85, 192);   /* 3.07 / 3.99 (mage's own dark value, reused verbatim) */
+    --splat-text: rgb(199, 128, 208);   /* 4.53 / 5.90 (mage's own dark value, reused verbatim) */
+}
+
+.wod-theme-dark.chantry-technocracy {
+    --splat-line: rgb(108, 129, 147);   /* 3.17 / 4.13 */
+    --splat-text: rgb(144, 159, 173);   /* 4.73 / 6.15 */
+}
+
 /* END - Splat colour, dark theme */
 
 /* START - Dots, dark theme
@@ -537,4 +581,12 @@
     --health-cell: transparent;
     --health-edge: rgba(255, 255, 255, 0.55);
     --health-mark: rgb(232, 232, 232);
+}
+
+/* improve-chantry-sheet-v2-visuals — dark-mode-only card fill (see css/wod.css's own comment on
+   why this is NOT unconditional: a light-mode fill here measurably dropped `.item-warning`'s
+   verified 6.22:1 to 4.08:1). `.chantry-body` is a DESCENDANT of the root `.wod-theme-dark`
+   carries, never a compound with it — same requirement as this file's own D3 note on `.locked`. */
+.wod-theme-dark .chantry-body .area-box {
+    background: var(--main-dim-color);
 }
