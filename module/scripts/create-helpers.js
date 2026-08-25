@@ -2931,6 +2931,26 @@ export default class CreateHelper {
 					return;
 				}
 			},
+			// give-special-advantages-their-own-section (design D7) - matches the "merit" button
+			// above field-for-field: same "Feature" carrier, same level:1 placeholder rating. A GM
+			// could not previously create this sub-kind at all; it was reachable only via a
+			// compendium drag or the wodchar exporter.
+			specialadvantage: {
+				label: game.i18n.localize("wod.types.specialadvantage"),
+				callback: async () => {
+					let itemData = {
+						name: game.i18n.localize("wod.labels.new.specialadvantage"),
+						type: "Feature",
+						system: {
+							level: 1,
+							type: "wod.types.specialadvantage"
+						}
+					};
+
+					await this.CreateItem(actor, itemData);
+					return;
+				}
+			},
 			other: {
 				label: game.i18n.localize("wod.types.othertraits"),
 				callback: async () => {

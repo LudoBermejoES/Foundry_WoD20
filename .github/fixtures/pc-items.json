@@ -426,7 +426,7 @@
       "type": "Trait",
       "name": "Ventaja Especial",
       "system": { "type": "wod.types.specialadvantage", "placement": "feature", "level": "2", "isvisible": true },
-      "why": "KNOWN TO RENDER NOWHERE. Has a label in all seven language files and appears in zero predicates; it hid seven of Carl el Cuervo's eight extra traits (add-wraith-pc-splat 3.6). Kept so the orphan sweep counts it."
+      "why": "Renders in its own Special Advantages section (give-special-advantages-their-own-section), never in Other Traits. Previously rendered nowhere at all, then briefly shared the Other Traits collector -- kept so the orphan sweep and the F2 duplicate-block check both keep exercising this sub-kind."
     },
 
     {

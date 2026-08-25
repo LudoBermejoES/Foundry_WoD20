@@ -288,6 +288,24 @@
             </div>
         {{/if}}
 
+        {{!-- give-special-advantages-their-own-section — moved OUT of the Other Traits block above
+              (design D3, D4): rendered the same way Merits/Flaws are on this tab, point-costed
+              (`valuefallback=item.system.value`, no `valuefirst`), never dot-rated. This edit is
+              NOT separable from removing the type from prepareAdvantageLists' Other Traits
+              collector — dropping it there without adding it here would delete the kind from this
+              tab with no error. --}}
+        {{#if (gt specialadvantages.length 0)}}
+            <div class="feature-itemlistarea">
+
+                {{#each specialadvantages as |item id|}}
+
+                    {{> "systems/worldofdarkness/templates/actor/parts/feature_item.hbs" actor=../actor item=item locked=../locked edittitle="wod.labels.edit.specialadvantage" deletetitle="wod.labels.remove.specialadvantage" showtype=true valuefallback=item.system.value}}
+
+                {{/each}}
+
+            </div>
+        {{/if}}
+
     </div>
 
     {{!-- add-wraith-shadow-budget §2 — the Shadow's own area: Archetype, Angst, Dark Passions and

@@ -1821,6 +1821,63 @@ const orphanKinds = new Map();   // system.type -> Set(structure)
 	}
 }
 
+/* ---- F2. a sub-kind moved between two collectors renders in exactly one block ---- */
+
+console.log("\nF2. wod.types.specialadvantage renders in exactly one block per part");
+
+{
+	// give-special-advantages-their-own-section (design D8) — the failure mode the orphan sweep
+	// above CANNOT see: a sub-kind left in one collector while also feeding a new list renders
+	// TWICE on the same tab, and every row looks correct in isolation, so nothing above catches it.
+	// An item rendered nowhere is an orphan; an item rendered twice is not.
+	//
+	// The only offline evidence of a duplicate is the per-ROW wrapper element these two partials
+	// stamp with the item's own id — exactly once per render of that row. If the same id's wrapper
+	// appears more than once inside ONE part's html, that item was drawn by two separate `{{#each}}`
+	// loops in the same render.
+	//
+	// SCOPED to `wod.types.specialadvantage` on purpose, matching design D8 and tasks.md 6.1 exactly
+	// ("this sub-kind's fixture item"), not generalised to every kind on the fixture actor: a blind
+	// sweep over ALL kinds also trips on `wod.types.othertraits`, which renders twice inside
+	// `feature.hbs`'s "feature" part on most non-wraith structures — a REAL, PRE-EXISTING defect
+	// (confirmed present before this change touched anything, by running this same duplicate-wrapper
+	// logic against the unmodified HEAD templates), but a DIFFERENT one, out of scope for this change
+	// and not diagnosed here. Widening this gate to catch it too belongs to a change that investigates
+	// that defect on its own terms, not to a stray sweep that would fail this change's own preflight
+	// for a bug this change did not introduce and does not touch.
+	const ROW_WRAPPER_RE = /<div class="clearareaBox" data-itemid="([^"]+)">|<div class="dragrow headlineNormal feature-itemlist" data-itemid="([^"]+)">/g;
+	const WATCHED_KIND = "wod.types.specialadvantage";
+
+	let dupChecks = 0;
+	for (const structure of structures) {
+		const perPart = renderedByStructure.get(structure.id);
+		if (!perPart) continue;
+		const items = structureItems.get(structure.id) ?? [];
+		const watchedIds = new Set(items.filter((item) => item.system?.type === WATCHED_KIND).map((item) => item._id));
+		if (watchedIds.size === 0) continue;
+
+		for (const [partKey, html] of perPart) {
+			const counts = new Map();
+			for (const m of html.matchAll(ROW_WRAPPER_RE)) {
+				const id = m[1] ?? m[2];
+				if (watchedIds.has(id)) counts.set(id, (counts.get(id) ?? 0) + 1);
+			}
+			dupChecks++;
+			for (const [id, n] of counts) {
+				if (n <= 1) continue;
+				fail(`${structure.id} / ${partKey}: ${WATCHED_KIND} renders ${n} times`,
+					`item ${id} (${WATCHED_KIND}) has ${n} separate row wrappers inside ONE part's output — it is ` +
+					`being collected by more than one list feeding the same part. An item rendered twice is not an ` +
+					`orphan, so section F above cannot see this; only this check does.`);
+			}
+		}
+	}
+	if (!failures.some((f) => f.name.includes(`${WATCHED_KIND} renders`))) {
+		passed++;
+		console.log(`  ok   ${WATCHED_KIND}'s row wrapper appears at most once inside any single part, across ${dupChecks} (structure, part) pairs holding one`);
+	}
+}
+
 /* ---- the allowlists themselves ---- */
 
 console.log("\nG. the allowlists are all still earning their place");

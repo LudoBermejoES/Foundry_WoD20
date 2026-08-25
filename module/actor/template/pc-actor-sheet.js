@@ -1728,9 +1728,10 @@ export const featureRating = function (item) {
 }
 
 /**
- * Builds the four "advantage" lists - backgrounds, merits, flaws and other traits.
+ * Builds the five "advantage" lists - backgrounds, merits, flaws, other traits and special
+ * advantages.
  *
- * This is the ONLY place these four predicates live. `_preparePartContext` hands every sheet part
+ * This is the ONLY place these five predicates live. `_preparePartContext` hands every sheet part
  * its own context object, so the Attributes tab's Advantages block (stats_features.hbs, prepared by
  * prepareStatContext) and the Features tab (feature.hbs, prepared by prepareFeatureContext) each
  * need the lists built for them. Both call this helper so the two views can never disagree about
@@ -1738,7 +1739,8 @@ export const featureRating = function (item) {
  *
  * @param {object} context 	The part context to populate.
  * @param {Actor} actor 	The PC actor.
- * @returns {object} 		The same context, with backgrounds / merits / flaws / othertraits set.
+ * @returns {object} 		The same context, with backgrounds / merits / flaws / othertraits /
+ * 				specialadvantages set.
  */
 export const prepareAdvantageLists = function (context, actor) {
 	context.backgrounds = ItemHelper.GetItemType(actor, "Feature", "wod.types.background");
@@ -1774,19 +1776,29 @@ export const prepareAdvantageLists = function (context, actor) {
 	// Other Traits.
 	const isWraith = getSplat(actor) === CONFIG.worldofdarkness.splat.wraith;
 
-	// `wod.types.specialadvantage` is collected HERE, alongside `othertraits`, and that is the fix
-	// for the defect this very file already names twice (see `isThornFeature`'s comment and the
-	// sub-kind register below): the sub-kind has a label in every language file, appeared in ZERO
-	// predicates, and so rendered on no part of any sheet. It was measured on Carl el Cuervo, whose
-	// familiar sheet silently hid seven of his eight extra traits, and reported again from a live
-	// sheet on 2026-08-25 when four correctly-typed Special Advantages were invisible.
+	// `wod.types.specialadvantage` USED to be collected here too, alongside `othertraits` (see the
+	// history below) — give-special-advantages-their-own-section moved it OUT, into its own list
+	// below, and this constant stays single-valued rather than reverting to an equality test,
+	// because it is the seam any FUTURE sub-kind sharing this shape will use.
 	//
-	// Both sub-kinds share everything that matters here - `Feature`/`Trait` carrier,
-	// `placement: "feature"`, a numeric `value`, the same row partial - so Other Traits is where they
-	// belong until someone argues for a section of their own. Verified on the live actor: all four of
-	// Carl's advantages already carry `placement: "feature"`, so the type check was the ONLY thing
-	// excluding them.
-	const FEATURE_TRAIT_TYPES = ["wod.types.othertraits", "wod.types.specialadvantage"];
+	// The argument that used to be recorded here — "Other Traits is where they belong until someone
+	// argues for a section of their own" — was made and won on 2026-08-25, for two reasons neither
+	// of which is cosmetic:
+	//   1. A Special Advantage is a POINT COST, not a 1-5 rated trait (the same distinction that
+	//      already separates Merits/Flaws from Backgrounds/Other Traits), yet the shared row here
+	//      drew it as a five-dot control. `human-speech` exists only at rating 1 and
+	//      `spirit-vision` only at 3 — most of the circles offered a rating the book does not
+	//      define, and a click persisted it straight to `system.value` with no validation.
+	//   2. Categorically these are not Other Traits: *Gods & Monsters* publishes Special Advantages
+	//      as their own list, the currency a creature is built from.
+	// `wod.types.specialadvantage` therefore now feeds `context.specialadvantages` (below), never
+	// this collector — leaving it in both would print every advantage twice, on both tabs.
+	//
+	// (History: `wod.types.specialadvantage` had a label in every language file, appeared in ZERO
+	// predicates, and so rendered on no part of any sheet, until this collector was widened to catch
+	// it — measured on Carl el Cuervo, whose familiar sheet silently hid seven of his eight extra
+	// traits. That interim fix is what put it here in the first place.)
+	const FEATURE_TRAIT_TYPES = ["wod.types.othertraits"];
 
 	const allFeatureTraits = (actor?.items ?? []).filter(item =>
 										((item.type === "Trait") || (item.type === "Feature"))
@@ -1795,6 +1807,22 @@ export const prepareAdvantageLists = function (context, actor) {
 										&& !(isWraith && isThornFeature(item)));
 
 	context.othertraits = allFeatureTraits.sort((a, b) => {
+		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
+		const orderB = b.system.order !== undefined ? Number(b.system.order) : 999;
+		if (orderA !== orderB) return orderA - orderB;
+		return a.name.localeCompare(b.name);
+	});
+
+	// Special Advantages - same carrier/placement/sort logic as Other Traits above, moved into a
+	// list of its own (give-special-advantages-their-own-section, design D3). Kept as its own
+	// filter rather than folded back into FEATURE_TRAIT_TYPES so the two lists can never
+	// accidentally re-merge into one collector again.
+	const allSpecialAdvantages = (actor?.items ?? []).filter(item =>
+										((item.type === "Trait") || (item.type === "Feature"))
+										&& item.system.type === "wod.types.specialadvantage"
+										&& item.system.placement === "feature");
+
+	context.specialadvantages = allSpecialAdvantages.sort((a, b) => {
 		const orderA = a.system.order !== undefined ? Number(a.system.order) : 999;
 		const orderB = b.system.order !== undefined ? Number(b.system.order) : 999;
 		if (orderA !== orderB) return orderA - orderB;
@@ -1816,11 +1844,11 @@ export const prepareAdvantageLists = function (context, actor) {
  * renders on its own tab (`connections`, see `countConnectionsTabItems` below), and a badge that
  * kept counting content another tab now owns would overcount relative to what this tab actually
  * shows — the same "cannot disagree with the list under it" reasoning this docstring already states
- * for the four shared kinds below.
+ * for the five shared kinds below.
  *
- * Reuses `prepareAdvantageLists` for the four kinds every line shares (Backgrounds/Merits/
- * Flaws/Other Traits — the SAME predicates the tab renders, so the badge cannot disagree with the
- * list under it) and `ItemHelper.GetItemType` directly for the line-specific kinds
+ * Reuses `prepareAdvantageLists` for the five kinds every line shares (Backgrounds/Merits/
+ * Flaws/Other Traits/Special Advantages — the SAME predicates the tab renders, so the badge
+ * cannot disagree with the list under it) and `ItemHelper.GetItemType` directly for the line-specific kinds
  * `prepareFeatureContext` also lists, so a splat's Boon or a wraith's Fetter is counted the same
  * way it is rendered.
  *
@@ -1829,7 +1857,7 @@ export const prepareAdvantageLists = function (context, actor) {
  */
 export const countFeatureTabItems = function (actor) {
 	const lists = prepareAdvantageLists({}, actor);
-	let total = lists.backgrounds.length + lists.merits.length + lists.flaws.length + lists.othertraits.length;
+	let total = lists.backgrounds.length + lists.merits.length + lists.flaws.length + lists.othertraits.length + lists.specialadvantages.length;
 
 	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.bloodbound").length;
 	total += ItemHelper.GetItemType(actor, "Feature", "wod.types.boon").length;

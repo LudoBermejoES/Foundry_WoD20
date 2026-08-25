@@ -1,14 +1,19 @@
 {{!--
 	The classic Advantages block from the printed sheet: Backgrounds | Other Traits | Merits, with
-	Flaws stacked directly beneath Merits in the same third column. Three .pullLeft columns at 33%,
-	the same shape stats_advantages.hbs uses one area above this one.
+	Flaws and then Special Advantages stacked beneath Merits in that same third column. Three
+	.pullLeft columns at 33%, the same shape stats_advantages.hbs uses one area above this one.
 
 	This is the at-a-glance summary. The Features tab stays the editorial view (descriptions,
 	tooltips, activation toggles, rollable-pool columns, edit/delete/send-to-chat icons); both read
-	the same four lists from prepareAdvantageLists in pc-actor-sheet.js.
+	the same five lists from prepareAdvantageLists in pc-actor-sheet.js.
 
-	Backgrounds AND Other Traits pass useroll=true; Merits/Flaws do not, because they are point costs
-	rather than rated traits and there is nothing to roll.
+	Backgrounds AND Other Traits pass useroll=true; Merits/Flaws/Special Advantages do not, because
+	they are point costs rather than rated traits and there is nothing to roll
+	(give-special-advantages-their-own-section moved Special Advantages into this group: the
+	five-dot row it used to render offered ratings the book does not define — e.g. `human-speech`
+	exists only at 1, `spirit-vision` only at 3 — and a click persisted an illegal value with no
+	validation. See stats_feature_row.hbs's `usedots=false` doc for the point-cost rule this
+	section now uses).
 
 	Other Traits was deferred at first, and the reason was real: that column takes BOTH `Trait` and
 	`Feature` items (see prepareAdvantageLists' filter), and a Trait can carry its own dice1/dice2
@@ -22,9 +27,10 @@
 	pick would not degrade quietly.
 
 	The create icon is data-origin="feature" -> CreateHelper.CreateButtonsNotev2, which offers
-	Background / Merit / Flaw / Other Trait. The stats tab's own icon is data-origin="core", which
-	offers abilities only, so this block needs its own. It deliberately does NOT carry the
-	"createicon" class - that class is position:absolute and would land on top of the tab's icon.
+	Background / Merit / Flaw / Special Advantage / Other Trait. The stats tab's own icon is
+	data-origin="core", which offers abilities only, so this block needs its own. It deliberately
+	does NOT carry the "createicon" class - that class is position:absolute and would land on top
+	of the tab's icon.
 --}}
 <div class="clearareaBox area-box">
 
@@ -62,7 +68,7 @@
 		&nbsp;
 	</div>
 
-	<!-- Merits, then Flaws beneath them in the same column -->
+	<!-- Merits, then Flaws, then Special Advantages beneath them in the same column -->
 	<div class="pullLeft" style="width: 33%;">
 
 		{{#if (gt merits.length 0)}}
@@ -78,6 +84,14 @@
 
 			{{#each flaws as |item id|}}
 				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=false edittitle="wod.labels.edit.flaw" deletetitle="wod.labels.remove.flaw"}}
+			{{/each}}
+		{{/if}}
+
+		{{#if (gt specialadvantages.length 0)}}
+			<div class="headlineGroup splatFont centerText">{{localize "wod.labels.notes.specialadvantages"}}</div>
+
+			{{#each specialadvantages as |item id|}}
+				{{> "systems/worldofdarkness/templates/actor/parts/stats_feature_row.hbs" item=item locked=../locked config=../config actor=../actor usedots=false edittitle="wod.labels.edit.specialadvantage" deletetitle="wod.labels.remove.specialadvantage"}}
 			{{/each}}
 		{{/if}}
 
