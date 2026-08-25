@@ -51,6 +51,26 @@
  *         mechanism, not through an always-on imperative binder
  * C. Localisation completeness: unchanged from before the migration - reads `module/config.js` and
  *    `lang/*.json` directly, neither of which this change touches.
+ * F. (expand-chantry-trait-descriptions, design.md D7) No `traitdescriptions` value is a bare,
+ *    unresolved page-only redirect — the literal defect this change fixes: seven of the fourteen
+ *    Traits used to read as one short sentence ending in a redirect the popup never followed
+ *    ("ver p.xx", "see p.xx", a bare "pág.") instead of the explanation the corpus actually gives a
+ *    few paragraphs later in the same book. This can't be told apart from a LEGITIMATE citation
+ *    (e.g. "Mage 20 p. 306") by pattern alone — a real page number is not "xx" — so the gate is
+ *    deliberately narrow: it flags exactly the "ver p."/"p. xx"/"pág." placeholder shape, and only
+ *    when the WHOLE plain-text value is still short enough that nothing else could have been said.
+ *    The three pre-fix values that used this exact placeholder ran 67-231 characters; the fix kept
+ *    the placeholder-carrying sentence verbatim (design.md D2 - the short line stays first) but the
+ *    total value now runs well past 1,000 characters once the corpus's own explanation and per-dot
+ *    breakdown are appended, so a value can legitimately still CONTAIN "ver p.xx" (kept as the
+ *    original one-liner) without being caught, as long as it is not ALL the value has to say. 300
+ *    was chosen with headroom against both ends measured on this change's own data: the longest
+ *    pre-fix redirect-only value is 231 characters, the shortest post-fix expanded value (in either
+ *    language) is 873 characters. Run `node .github/scripts/test-chantry-trait-eye.mjs --selftest`
+ *    to see F fail on purpose: it re-runs check F against the real seven pre-fix strings (frozen
+ *    below, not re-read from `lang/`) and requires ALL SEVEN to be flagged - proof this gate can
+ *    fail at all, the same discipline `test-mech_block_parser_contract.py`'s own `--selftest`
+ *    established for its contract.
  * D. Locked dots are inert, not just warned-about:
  *    D1 - appv2 REPLACEMENT for "bindings sit inside an `if (!this.locked)` gate": the
  *         `data-action="ratingDotChange"`/`data-action="traitDotChange"` attributes are
@@ -85,6 +105,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const SELFTEST = process.argv.includes("--selftest");
 
 const results = [];
 let failed = 0;
@@ -92,6 +113,56 @@ const check = (name, ok, detail = "") => {
 	results.push(`${ok ? "  ok  " : "  FAIL"} ${name}${detail ? "   " + detail : ""}`);
 	if (!ok) failed++;
 };
+
+/* ---- F. bare, unresolved page-only redirect (expand-chantry-trait-descriptions design.md D7) ---- */
+
+/** Strips HTML tags to plain text for the length/marker check below. Not a sanitizer - only used
+ *  to measure "how much did this value actually say" and to look for the three literal markers. */
+function stripHtmlToPlainText(html) {
+	return html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim();
+}
+
+/** The three literal placeholder patterns named in design.md D7. Deliberately NOT matching a real
+ *  page citation ("Mage 20 p. 306") - "p. xx" requires the literal placeholder letters "xx", which
+ *  a resolved page number never contains. */
+const BARE_REDIRECT_MARKER = /(ver\s*p\.|p\.\s*xx|pág\.)/i;
+
+/** A value has NOT been fixed if it still both (a) carries one of the three placeholder markers,
+ *  and (b) is short enough that the marker could plausibly be all it says - see the F header
+ *  comment above for how 300 was chosen against this change's own before/after data. */
+const BARE_REDIRECT_MIN_LENGTH = 300;
+
+function isBareRedirectValue(value) {
+	const plain = stripHtmlToPlainText(value);
+	return BARE_REDIRECT_MARKER.test(plain) && plain.length < BARE_REDIRECT_MIN_LENGTH;
+}
+
+if (SELFTEST) {
+	// Frozen verbatim from git history (HEAD before expand-chantry-trait-descriptions), NOT re-read
+	// from lang/ - the whole point is to prove this check would have caught the real defect, so it
+	// must exercise the real pre-fix strings even after lang/ has moved on.
+	const PRE_FIX_VALUES = {
+		"es.elders": "El nivel de poder y el número de líderes del Constructo/Capilla (ver p.xx).",
+		"es.integrated-effects": "Hechizos o efectos anclados dentro del Constructo/Capilla (ver p.xx).",
+		"es.reality-zone": "La fuerza de la Zona de Realidad anclada a la Capilla/Constructo (ver p. xx). Este rasgo no puede ser superior a la puntuación de la Capilla/Constructo.",
+		"en.elders": "The power level and number of leaders of the Construct/Chantry (see p.xx).",
+		"en.integrated-effects": "Spells or effects anchored within the Construct/Chantry (see p.xx).",
+		"en.reality-zone": "The strength of the Reality Zone anchored to the Chantry/Construct (see p.xx). This Trait cannot exceed the Chantry/Construct's own rating.",
+	};
+
+	let selftestFailed = 0;
+	for (const [name, value] of Object.entries(PRE_FIX_VALUES)) {
+		const flagged = isBareRedirectValue(value);
+		results.push(`${flagged ? "  ok  " : "  FAIL"} selftest: F flags the real pre-fix ${name} (${value.length} chars)`);
+		if (!flagged) selftestFailed++;
+	}
+
+	console.log(results.join("\n"));
+	console.log(selftestFailed
+		? `\n${selftestFailed} pre-fix value(s) NOT flagged - the F check is broken, it would not have caught the defect it exists for`
+		: `\nall ${Object.keys(PRE_FIX_VALUES).length} real pre-fix value(s) correctly flagged - F can fail, and does`);
+	process.exit(selftestFailed ? 1 : 0);
+}
 
 /* ---- A. template wiring ---- */
 
@@ -187,6 +258,13 @@ for (const lang of ["es", "en"]) {
 		const value = descriptions[key];
 		check(`C ${lang}: wod.chantry.traitdescriptions.${key} is present and non-empty`,
 			typeof value === "string" && value.trim().length > 0);
+
+		if (typeof value === "string" && value.trim().length > 0) {
+			const bare = isBareRedirectValue(value);
+			check(`F ${lang}: wod.chantry.traitdescriptions.${key} is not a bare, unresolved page-only redirect`,
+				!bare,
+				bare ? "(short plain text carrying 'ver p.'/'p. xx'/'pág.' with nothing else said)" : "");
+		}
 	}
 }
 
