@@ -1,4 +1,3 @@
-import { OnActorLock } from "../../scripts/action-helpers.js";
 import ActionHelper from "../../scripts/action-helpers.js";
 import ItemViewer from "../../applications/item-viewer.js";
 
@@ -31,22 +30,21 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foundry.applications.sheets.ActorSheetV2) {
 
 	/**
-	 * `system.locked` stays the source of truth (design.md D3), read DERIVED rather than cached on
-	 * the instance.
+	 * The sheet OPENS LOCKED, every time, and the lock is TRANSIENT - a class field, so it resets
+	 * on each construction exactly like `PCActorSheet`'s own `this.locked = true` (pc-actor-sheet.js:63)
+	 * and its `_handlingLock` toggle.
 	 *
-	 * This replaced a `constructor(actor, options)` that carried the appv1 signature verbatim into
-	 * an ApplicationV2 class and threw on every attempt to open the sheet: appv2 constructors take
-	 * ONE options object and the document arrives as `options.document`, so the first positional
-	 * argument is not an actor and `actor.system` is undefined. It failed in the constructor, which
-	 * means the sheet could not even be built - `get sheet` threw straight out of the actor
-	 * directory's click handler. Deployed in 7.5.128 and reported from a real world.
+	 * This REVERSES `rebuild-chantry-sheet-v2`'s D3 ("system.locked stays the source of truth"),
+	 * which itself carried the appv1 sheet's persisted lock across. Recorded rather than quietly
+	 * dropped: the owner asked for the sheet to open locked, and the persisted flag cannot give that
+	 * - a Chantry left unlocked reopens unlocked, which is precisely what was reported. Matching the
+	 * PC sheet also means one idiom for "the lock control" across this system instead of two.
 	 *
-	 * A getter also removes the class of bug the cached flag invited: it cannot go stale between a
-	 * write and the next render, and it cannot be undefined before the first one.
+	 * `system.locked` stays in `template.json` and is no longer read by this sheet. The appv1 sheet,
+	 * still registered as the rollback, DOES read it, so the field is not vestigial system-wide.
 	 */
-	get locked() {
-		return this.actor?.system?.locked ?? false;
-	}
+	locked = true;
+
 
 	static DEFAULT_OPTIONS = {
 		classes: ["wod20", "wod-sheet", "chantry"],
@@ -65,20 +63,15 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			handler: ChantryActorSheetV2.onSubmitActorForm
 		},
 		actions: {
-			// Reuses the EXISTING `ActionHelper.OnActorLock` export verbatim - it was already
-			// written to do exactly what this sheet's own lock toggle needs (persist
-			// `system.locked` on the actor via `this.actor.update(...)`, `this` bound to the
-			// sheet instance by Foundry's action-dispatch), and until now nothing in this system
-			// called it (`chantry-actor-sheet.js`'s own comment on `_onToggleLocked` already
-			// named it as the model: "persisted on the actor (like ActionHelper.OnActorLock)").
-			// `PCActorSheet`'s own `actorLock` action delegates to a TRANSIENT, in-memory
-			// `this.locked` flip (`_handlingLock`) because PC's lock is not itself persisted the
-			// same way here - reusing that shape verbatim would have silently changed what
-			// locking a Chantry means. Same action NAME (`actorLock`), matching this system's one
-			// established idiom for "the lock/unlock control"; a different underlying
-			// implementation because this sheet's own persisted-lock semantics were never the
-			// same as PC's to begin with.
-			actorLock: OnActorLock,
+			// The lock is TRANSIENT here (see the `locked` class field above), so this flips the
+			// flag and re-renders rather than persisting to the actor. It used to call
+			// `ActionHelper.OnActorLock`, which writes `system.locked` - correct while the lock was
+			// persisted, wrong once the sheet must OPEN locked every time.
+			actorLock: function (event, target) {
+				if (this && typeof this._handlingLock === "function") {
+					this._handlingLock();
+				}
+			},
 			ratingDotChange: ChantryActorSheetV2.onRatingDotChange,
 			traitDotChange: ChantryActorSheetV2.onTraitDotChange
 			// Deliberately NO action entry for the Trait-description eye - it is read-only and
@@ -108,6 +101,12 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	};
 
 	/** @override */
+	/* Same shape as `PCActorSheet._handlingLock` - flip the transient flag and re-render. */
+	async _handlingLock() {
+		this.locked = !this.locked;
+		await this.render(false);
+	}
+
 	async _prepareContext(options) {
 		const data = await super._prepareContext(options);
 		const actor = this.actor;
