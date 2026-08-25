@@ -226,8 +226,12 @@ const UNEVALUABLE_EXPRESSIONS = {
  *     this harness renders the section for a fixture actor holding one. That fix is measured here.
  */
 const RENDERS_NOWHERE = {
-	"wod.types.sliver": "changeling `inanimae` Slivers — no section definition (D9b, task 9.2, pc-actor-sheet.js:1399)",
-	"wod.types.specialadvantage": "labelled in all seven language files, in zero predicates (add-wraith-pc-splat 3.6)"
+	"wod.types.sliver": "changeling `inanimae` Slivers — no section definition (D9b, task 9.2, pc-actor-sheet.js:1399)"
+	/* `wod.types.specialadvantage` was here, and this harness is what proved it fixed: it now renders
+	   on 173/173 structures, so the harness FAILED on the stale entry and made deleting it mandatory
+	   rather than optional. Fixed 2026-08-25 by widening the Other Traits collector to a two-value
+	   type list; reported from a live sheet where four of Carl el Cuervo's Special Advantages were
+	   invisible. The register earning its keep in the other direction. */
 };
 
 /* ============================================================================================ *

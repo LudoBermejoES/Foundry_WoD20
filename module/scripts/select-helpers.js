@@ -326,6 +326,24 @@ export default class SelectHelper {
                 group: game.i18n.localize("wod.labels.other")
             },
             /*
+             * `wod.types.specialadvantage`, offered in the SAME commit that gave it a render path
+             * (the widened type list in `prepareOtherTraitsContext`). The two halves must ship together:
+             * a value the sheet renders but the dropdown does not offer shows as "- select -" the moment a
+             * GM opens the item, and the next save writes that empty over it - the exact destruction
+             * `legalize-feature-system-types` was written to stop.
+             *
+             * Its own history is the other half of that lesson: it had a label in all seven language files
+             * and appeared in ZERO predicates, so it rendered nowhere at all. Measured on Carl el Cuervo,
+             * a familiar whose four Special Advantages were invisible on a live sheet (2026-08-25), and
+             * already named twice in `pc-actor-sheet.js` as the canonical example of "an i18n key proves
+             * nothing renders".
+             */
+            {
+                value: "wod.types.specialadvantage",
+                label: game.i18n.localize("wod.types.specialadvantage"),
+                group: game.i18n.localize("wod.labels.other")
+            },
+            /*
              * legalize-feature-system-types §2 — Fetter (Grillete), and it is the MIRROR IMAGE of
              * Thorn above.
              *

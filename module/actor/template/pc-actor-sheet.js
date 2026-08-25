@@ -1774,9 +1774,23 @@ export const prepareAdvantageLists = function (context, actor) {
 	// Other Traits.
 	const isWraith = getSplat(actor) === CONFIG.worldofdarkness.splat.wraith;
 
+	// `wod.types.specialadvantage` is collected HERE, alongside `othertraits`, and that is the fix
+	// for the defect this very file already names twice (see `isThornFeature`'s comment and the
+	// sub-kind register below): the sub-kind has a label in every language file, appeared in ZERO
+	// predicates, and so rendered on no part of any sheet. It was measured on Carl el Cuervo, whose
+	// familiar sheet silently hid seven of his eight extra traits, and reported again from a live
+	// sheet on 2026-08-25 when four correctly-typed Special Advantages were invisible.
+	//
+	// Both sub-kinds share everything that matters here - `Feature`/`Trait` carrier,
+	// `placement: "feature"`, a numeric `value`, the same row partial - so Other Traits is where they
+	// belong until someone argues for a section of their own. Verified on the live actor: all four of
+	// Carl's advantages already carry `placement: "feature"`, so the type check was the ONLY thing
+	// excluding them.
+	const FEATURE_TRAIT_TYPES = ["wod.types.othertraits", "wod.types.specialadvantage"];
+
 	const allFeatureTraits = (actor?.items ?? []).filter(item =>
 										((item.type === "Trait") || (item.type === "Feature"))
-										&& item.system.type === "wod.types.othertraits"
+										&& FEATURE_TRAIT_TYPES.includes(item.system.type)
 										&& item.system.placement === "feature"
 										&& !(isWraith && isThornFeature(item)));
 
