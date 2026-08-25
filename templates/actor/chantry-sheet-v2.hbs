@@ -114,7 +114,10 @@
 					{{/if}}
 				</div>
 
-				<div class="clearareaBox row">
+				{{!-- `chantry-pool-row` exists only so css/wod.css can free THIS row from the fixed
+				      23px `.wod20 .row` height: it is the one row holding a number input, which
+				      renders 32px and was being clipped. Additive class, no structural change. --}}
+				<div class="clearareaBox row chantry-pool-row">
 					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.pool"}}</div>
 
 					<div class="pullLeft chantry-pool-total">

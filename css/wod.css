@@ -3188,6 +3188,22 @@ input.sheet-infoWidth {
    0.12 light-theme alpha, no new token. Dark mode has no such texture-background alternative (the
    sheet area is flat `rgb(30,30,30)`), so it keeps the fill for the definition the pitch-black
    void otherwise lacks entirely - the ORIGINAL "white box" complaint this whole section answers. */
+/* The Point Pool row holds an `<input type="number">`, and `.wod20 .row` is a FIXED 23px with
+   `overflow: hidden`. Measured on the live sheet: row 23px, input 32px starting 8px lower, so 17px
+   of it - the digits included - were clipped away. Reported as "the points are getting too low".
+
+   Only THIS row is freed, and only under `.chantry-body`: `.wod20 .row`'s fixed height is shared by
+   every sheet in the system and the dot rows rely on it, so widening it globally would move layout
+   everywhere. `align-items: center` puts the label and the taller control on one line instead of
+   letting the input hang below it. */
+.wod20 .chantry-body .chantry-pool-row {
+  height: auto;
+  min-height: 23px;
+  overflow: visible;
+  align-items: center;
+  padding-block: 3px;
+}
+
 .chantry-body .area-box {
   border: 1px solid var(--main-mid-color);
   border-radius: 6px;

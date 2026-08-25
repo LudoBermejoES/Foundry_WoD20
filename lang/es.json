@@ -2097,7 +2097,9 @@
 			"send": "Enviar al chat",
 			"menu": "Menú",
 			"placement": "Colocación",
-			"soakoverrideinfo": "Con esta opción puedes anular la configuración del personaje sobre cuándo se permite absorber."
+			"soakoverrideinfo": "Con esta opción puedes anular la configuración del personaje sobre cuándo se permite absorber.",
+			"locksheet": "Ficha bloqueada. Pulsa para desbloquear y poder editarla.",
+			"unlocksheet": "Ficha desbloqueada: se puede editar. Pulsa para bloquearla."
 		},
 		"info": {
 			"spendexp": "Si gastaste Experiencia o no",

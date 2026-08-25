@@ -1,6 +1,11 @@
 {{#if isOwner}}
     <div class="profile-img-zone" data-area="unlock">
-        <button type="button" class="lock-btn pointer fullSplatColor" data-action="actorLock">
+        {{!-- The icon shows the STATE, not the action: a CLOSED padlock means the sheet is locked
+     right now. Read as an action button it says the opposite of what it means, which is
+     exactly how it was misread on a real sheet - so the tooltip spells out both halves:
+     what the state is, and what clicking will do. --}}
+        <button type="button" class="lock-btn pointer fullSplatColor" data-action="actorLock"
+                title="{{#if locked}}{{localize 'wod.labels.locksheet'}}{{else}}{{localize 'wod.labels.unlocksheet'}}{{/if}}">
             {{#if locked}}
                 <i class="lock-icon fa fa-lock"></i>
             {{else}}

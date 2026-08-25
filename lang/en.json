@@ -2109,7 +2109,9 @@
 			"send": "Send to chat",
 			"menu": "Menu",
 			"placement": "Placement",
-			"soakoverrideinfo": "With this setting you can override the actor's setting for when soak is allowed."
+			"soakoverrideinfo": "With this setting you can override the actor's setting for when soak is allowed.",
+			"locksheet": "Sheet is locked. Click to unlock it for editing.",
+			"unlocksheet": "Sheet is unlocked and editable. Click to lock it."
 		},
 		"info": {
 			"spendexp": "If you have spent the experience or not",
