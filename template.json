@@ -1515,9 +1515,16 @@
 				"requisitions": 0,
 				"resources": 0,
 				"retainers": 0,
-				"spies": 0
+				"spies": 0,
+				"familiar": 0,
+				"influence": 0,
+				"wonder": 0,
+				"mentor": 0,
+				"patron": 0
 			},
-			"notes": ""
+			"notes": "",
+			"integratedEffects": [],
+			"traitRosters": {}
 		}
 	},
 	"Item": {

@@ -1,0 +1,82 @@
+{{!-- add-chantry-inventory-effects-and-roster (task 3.6) — one construction Trait's ROSTER.
+
+      `traits.allies ●●` says there are two allies and does not say WHO. This is where the who goes:
+      per-entry name, note and the points that entry consumes, summed against the Trait's own
+      circles.
+
+      VALIDATED BY POINTS, NOT BY ROW COUNT (design.md D5). "Aliados — 2 puntos por punto — Un
+      consorte, Ciudadano Extraordinario, espíritu, EDE, u otro aliado excepcional POR PUNTO" reads
+      one-to-one for Aliados, but Biblioteca and Nodo do not count heads and Ancianos has grades of
+      power. So each entry declares the points it consumes (1 by default, 0 allowed) and the rule is
+      Σ points ≤ circles. Aliados ●● therefore takes two one-point allies OR one exceptional
+      two-point ally, and Biblioteca ●●● takes five descriptive 0-point entries without breaking.
+
+      Only the EIGHT Traits that are collections get one (`ROSTER_TRAIT_KEYS` in
+      `module/scripts/chantry-effects.js`). The rest are magnitudes: `resources` is money,
+      `arcane-cloaking` is a penalty, `reality-zone`/`enhancement`/`requisitions` are ceilings, and
+      `integrated-effects` has its own point table on its own tab.
+
+      WHEN THIS RENDERS AT ALL: `roster.show`, computed in `_prepareContext`, is true when the roster
+      HAS entries or the sheet is unlocked. A locked sheet with an empty roster renders nothing here,
+      which is what keeps the spec's promise that "an empty roster SHALL NOT change how an existing
+      sheet reads" literally true, while an unlocked sheet still offers the way to add the first one.
+
+      CONTEXT DEPTH. `locked` is passed in as a hash argument, so inside the `{{#each}}` below it is
+      `../locked` — one level up from the array element, exactly as `item_table.hbs` does it. This is
+      the trap that has already shipped twice on this system's mage partials (a bare `locked` inside
+      an `{{#each}}` resolves against the ARRAY ELEMENT, so `(eq locked false)` is false and the
+      control never renders, not even unlocked), and the depth used here was established by PROBING
+      THE RENDERED HTML — `.github/scripts/test-chantry-sheet-render.mjs` renders this partial in
+      both lock states and counts the write controls, and fails if the locked count is not zero or
+      the unlocked count is not more than zero.
+
+      ARGUMENTS (all required from the caller):
+        - `roster`   — `{ show, entries, used, allowed, over }` for ONE Trait
+        - `traitkey` — that Trait's key, carried on every control so the handler knows what to write
+        - `locked`   — the sheet's lock state --}}
+<div class="chantry-roster" data-key="{{traitkey}}">
+
+	<div class="chantry-roster-head">
+		<span class="chantry-roster-total {{#if roster.over}}item-warning{{/if}}"
+				title="{{#if roster.over}}{{localize 'wod.chantry.roster.over'}}{{else}}{{localize 'wod.chantry.roster.points'}}{{/if}}">
+			{{localize "wod.chantry.roster.points"}}: {{roster.used}} / {{roster.allowed}}
+		</span>
+
+		{{#if (eq locked false)}}
+			<button type="button" class="v3-iconbtn chantry-roster-add" data-action="rosterAdd" data-key="{{traitkey}}"
+					title="{{localize 'wod.chantry.roster.add'}}">
+				<i class="icon fa-solid fa-plus" aria-hidden="true"></i>
+				<span class="v3-sr-only">{{localize "wod.chantry.roster.add"}}</span>
+			</button>
+		{{/if}}
+	</div>
+
+	{{#each roster.entries as |entry index|}}
+		<div class="chantry-roster-row" data-key="{{../traitkey}}" data-index="{{index}}">
+
+			{{#if (eq ../locked false)}}
+				<input class="inputdata editable chantry-roster-name" type="text" value="{{entry.name}}"
+						data-source="roster" data-field="name" data-key="{{../traitkey}}" data-index="{{index}}"
+						placeholder="{{localize 'wod.chantry.roster.name'}}" autocomplete="off" />
+				<input class="inputdata editable chantry-roster-note" type="text" value="{{entry.note}}"
+						data-source="roster" data-field="note" data-key="{{../traitkey}}" data-index="{{index}}"
+						placeholder="{{localize 'wod.chantry.roster.note'}}" autocomplete="off" />
+				<input class="inputdata editable chantry-roster-points" type="number" min="0" value="{{entry.points}}"
+						data-source="roster" data-field="points" data-key="{{../traitkey}}" data-index="{{index}}"
+						title="{{localize 'wod.chantry.roster.entrypoints'}}" />
+				<a class="pointer item-delete chantry-roster-delete" data-action="rosterDelete"
+						data-key="{{../traitkey}}" data-index="{{index}}"
+						title="{{localize 'wod.chantry.roster.remove'}}"><i class="icon fa-solid fa-trash-can" aria-hidden="true"></i></a>
+			{{else}}
+				{{!-- Locked: plain text, never a disabled control — the same choice the Tipo/Nivel
+				      rows on the Rasgos tab already make (existing requirement, "SHALL render as
+				      text, not a disabled control, when locked"). --}}
+				<span class="chantry-roster-name">{{entry.name}}</span>
+				<span class="chantry-roster-note">{{entry.note}}</span>
+				<span class="chantry-roster-points">{{entry.points}}</span>
+			{{/if}}
+
+		</div>
+	{{/each}}
+
+</div>

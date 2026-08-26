@@ -1,0 +1,196 @@
+{{!-- add-chantry-inventory-effects-and-roster (task 3.5) — the Integrated Effects tab.
+
+      `traits['integrated-effects'] ●●●` used to say there were fifteen points of Effects and not
+      say WHICH. This tab is the which, plus every figure the book makes checkable.
+
+      TWO POOLS, AND CONFUSING THEM WOULD BE THE EASY MISTAKE (design.md D2). The CONSTRUCTION pool
+      (`system.pool`, on the Rasgos tab) pays for the circles of this Trait at 2 points each. Each
+      circle then grants its own EFFECT pool, and that one is not linear: 4, 8, 15, 20, 25, 35, 45,
+      55, 70, 90 for 1…10 circles, straight out of `m20-the-operative-dossier`'s own table. It is
+      held as a TABLE in `module/scripts/chantry-effects.js` and never interpolated; above ten
+      circles the sheet says the pool is off the table rather than inventing one.
+
+      EVERY NUMBER BELOW IS DERIVED, none is stored. `evaluateEffects()` computes the cost of each
+      effect (the sum of its Sphere levels — "un efecto de Mente 2 … costaría 2 puntos", "Fuerzas 3
+      / Cardinal 2 / Vida 1 / Materia 1 / Tiempo 4 … costaría 11"), the total spent, the remainder,
+      the weekly Quintessence upkeep (one per effect) against the Node, and which Spheres exceed the
+      cap. A stored `cost` on the data is discarded on read, so the two can never drift.
+
+      THE THREE RULES THIS TAB SURFACES, and the difference between them matters:
+        * a Sphere level above the Chantry's own rating is ILLEGAL — the Chantry's rating IS the
+          Areté these effects cast with — so the row and the offending Sphere are both marked;
+        * spending more than the pool is ILLEGAL, so the total is marked;
+        * Zona de Realidad 0 makes the effects VULGAR, not illegal. That is a notice, never a block:
+          the book conditions coincidence, not existence.
+      Nothing here refuses to render because of any of the three. A sheet that hides a GM's own data
+      because it disagrees with it is worse than one that shows it and says so.
+
+      NOTHING IS SPENT AUTOMATICALLY. The upkeep is shown and compared against Nodo; no
+      Quintessence is deducted anywhere (proposal.md "Qué NO").
+
+      CONTEXT DEPTH — the trap this system has already shipped twice. Inside `{{#each integrated.rows}}`
+      a bare `locked` resolves against the ROW, not the sheet, so `(eq locked false)` would be false
+      forever and the delete control would never render, not even unlocked. It is `../locked` one
+      loop deep and `../../locked` inside the Sphere loop, and those depths were established by
+      PROBING THE RENDERED HTML (`.github/scripts/test-chantry-sheet-render.mjs` renders this part in
+      both lock states and counts write controls), not by counting braces. --}}
+<section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+
+	<div class="chantry-body flexcol {{#if locked}}locked{{/if}}">
+
+		<div class="clearareaBox area-box chantry-effects-summary">
+
+			<div class="sheet-headline sheet-banner splatFont">
+				<span class="sheet-banner-text">{{localize "wod.chantry.effects.headline"}}</span>
+			</div>
+
+			<div class="clearareaBox row">
+				<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.effects.pool"}}</div>
+				<div class="pullLeft chantry-effects-figures">
+					{{#if integrated.pooloverflow}}
+						{{!-- Above the ten circles the Dossier tabulates. Said out loud rather than
+						      extrapolated — see this file's header and design.md D2. --}}
+						<span class="item-warning">{{localize "wod.chantry.effects.pooloverflow"}}</span>
+					{{else}}
+						<span class="chantry-effects-pool">{{integrated.pool}}</span>
+						&nbsp;&mdash;&nbsp;
+						{{localize "wod.chantry.effects.spent"}}:
+						<span class="chantry-effects-spent {{#if integrated.overspent}}item-warning{{/if}}">{{integrated.spent}}</span>
+						&nbsp;&mdash;&nbsp;
+						{{localize "wod.chantry.effects.remaining"}}:
+						<span class="chantry-effects-remaining {{#if integrated.overspent}}item-warning{{/if}}">{{integrated.remaining}}</span>
+					{{/if}}
+				</div>
+			</div>
+
+			<div class="clearareaBox row">
+				<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.effects.spherecap"}}</div>
+				<div class="pullLeft chantry-effects-figures">{{integrated.spherecap}}</div>
+			</div>
+
+			<div class="clearareaBox row">
+				<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.effects.upkeep"}}</div>
+				<div class="pullLeft chantry-effects-figures">
+					<span class="chantry-effects-upkeep {{#if integrated.upkeepshortfall}}item-warning{{/if}}">{{integrated.upkeep}}</span>
+					&nbsp;/&nbsp;
+					{{localize "wod.chantry.traits.node"}}: <span class="chantry-effects-node">{{integrated.node}}</span>
+					{{#if integrated.upkeepshortfall}}
+						<span class="item-warning chantry-effects-shortfall" title="{{localize 'wod.chantry.effects.shortfall'}}">
+							<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+							{{localize "wod.chantry.effects.shortfall"}}
+						</span>
+					{{/if}}
+				</div>
+			</div>
+
+			{{#if integrated.vulgar}}
+				<div class="clearareaBox row chantry-effects-vulgar">
+					<div class="pullLeft item-warning" title="{{localize 'wod.chantry.effects.vulgar'}}">
+						<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+						{{localize "wod.chantry.effects.vulgar"}}
+					</div>
+				</div>
+			{{/if}}
+
+		</div>
+
+		<div class="clearareaBox area-box chantry-effects-list">
+
+			<div class="sheet-headline sheet-banner splatFont">
+				<span class="sheet-banner-text">{{localize "wod.chantry.effects.list"}}</span>
+
+				{{#if (eq locked false)}}
+					<button type="button" class="v3-iconbtn chantry-effect-add" data-action="effectCreate"
+							title="{{localize 'wod.chantry.effects.add'}}">
+						<i class="icon fa-solid fa-plus" aria-hidden="true"></i>
+						<span class="v3-sr-only">{{localize "wod.chantry.effects.add"}}</span>
+					</button>
+				{{/if}}
+			</div>
+
+			{{#if integrated.rows}}
+				{{#each integrated.rows as |row|}}
+					<div class="chantry-effect-row {{#if row.overcap}}chantry-effect-overcap{{/if}}" data-index="{{row.index}}">
+
+						<div class="chantry-effect-head">
+							{{#if (eq ../locked false)}}
+								<input class="inputdata editable chantry-effect-name" type="text" value="{{row.name}}"
+										data-source="effect" data-field="name" data-index="{{row.index}}"
+										placeholder="{{localize 'wod.chantry.effects.name'}}" autocomplete="off" />
+							{{else}}
+								<span class="chantry-effect-name">{{row.name}}</span>
+							{{/if}}
+
+							<span class="chantry-effect-cost {{#if row.overcap}}item-warning{{/if}}"
+									title="{{localize 'wod.chantry.effects.cost'}}">{{row.cost}}</span>
+
+							{{#if row.overcap}}
+								<span class="item-warning chantry-effect-overcap-flag" title="{{localize 'wod.chantry.effects.overcap'}}">
+									<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+								</span>
+							{{/if}}
+
+							{{#if (eq ../locked false)}}
+								<button type="button" class="v3-iconbtn chantry-effect-spheread" data-action="effectSphereAdd"
+										data-index="{{row.index}}" title="{{localize 'wod.chantry.effects.addsphere'}}">
+									<i class="icon fa-solid fa-circle-plus" aria-hidden="true"></i>
+									<span class="v3-sr-only">{{localize "wod.chantry.effects.addsphere"}}</span>
+								</button>
+								<a class="pointer item-delete chantry-effect-delete" data-action="effectDelete"
+										data-index="{{row.index}}" title="{{localize 'wod.chantry.effects.remove'}}"><i class="icon fa-solid fa-trash-can" aria-hidden="true"></i></a>
+							{{/if}}
+						</div>
+
+						<div class="chantry-effect-spheres">
+							{{#each row.spheres as |sphere sphereindex|}}
+								<span class="chantry-effect-sphere {{#if sphere.overcap}}item-warning{{/if}}">
+									{{#if (eq ../../locked false)}}
+										{{!-- The option list is BUILT IN JS (`sphere.options`, each entry
+										      carrying its own `selected`) rather than iterated out of
+										      CONFIG here. Two reasons, both learned the hard way in this
+										      file: iterating a config list from inside two nested
+										      `{{#each}}`es needs a `../../../` that nobody can verify by
+										      reading, and comparing the option against the current value
+										      needs another. Neither depth exists any more. --}}
+										<select class="inputdata editable chantry-effect-sphere-key"
+												data-source="effectsphere" data-field="sphere"
+												data-index="{{sphere.index}}" data-sphereindex="{{sphereindex}}">
+											{{#each sphere.options as |option|}}
+												<option value="{{option.key}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
+											{{/each}}
+										</select>
+										<input class="inputdata editable chantry-effect-sphere-level" type="number" min="0" max="10"
+												value="{{sphere.level}}"
+												data-source="effectsphere" data-field="level"
+												data-index="{{sphere.index}}" data-sphereindex="{{sphereindex}}" />
+										<a class="pointer item-delete chantry-effect-sphere-delete" data-action="effectSphereDelete"
+												data-index="{{sphere.index}}" data-sphereindex="{{sphereindex}}"
+												title="{{localize 'wod.chantry.effects.removesphere'}}"><i class="icon fa-solid fa-circle-minus" aria-hidden="true"></i></a>
+									{{else}}
+										{{localize sphere.labelkey}} {{sphere.level}}
+									{{/if}}
+								</span>
+							{{/each}}
+						</div>
+
+						<div class="chantry-effect-description">
+							{{#if (eq ../locked false)}}
+								<input class="inputdata editable" type="text" value="{{row.description}}"
+										data-source="effect" data-field="description" data-index="{{row.index}}"
+										placeholder="{{localize 'wod.chantry.effects.description'}}" autocomplete="off" />
+							{{else}}
+								{{row.description}}
+							{{/if}}
+						</div>
+
+					</div>
+				{{/each}}
+			{{else}}
+				<p class="v3-empty">{{localize "wod.chantry.effects.empty"}}</p>
+			{{/if}}
+
+		</div>
+
+	</div>
+
+</section>

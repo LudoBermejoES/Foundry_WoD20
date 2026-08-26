@@ -45,7 +45,35 @@
       it is what keeps the v2 sheet, which still calls it, identical. The table markup itself moved
       out to `parts/item_table.hbs`, shared with the new Poderes section — see that file's header.
 
-      D7 — the tab's own create control is GONE, not repointed: see the `v3-tabhead` comment below. --}}
+      D7 — the tab's own create control is GONE, not repointed: see the `v3-tabhead` comment below.
+
+      A SECOND SHEET RENDERS THIS FILE (add-chantry-inventory-effects-and-roster, task 3.3)
+      ------------------------------------------------------------------------------------
+      `ChantryActorSheetV2` declares this same template as its `gear` PART. The spec requires it —
+      "SHALL reuse `templates/actor/v3/gear.hbs` rather than a Chantry-only copy of it, so that a
+      change to how gear reads happens once" — and it explicitly forbids getting the markup by
+      inheriting `PCActorSheet`/`PCActorSheetV3`, so the sharing has to happen at the FILE, which is
+      what this is.
+
+      One flag decides which sheet is rendering: `vault`, set by `prepareItemLists`
+      (`module/scripts/gear-lists.js`) for BOTH sheets — `false` on the PC, `true` on a Chantry. It
+      is never `undefined`, on purpose: a template reading a key its preparer never built is the one
+      defect `test-part-render.mjs` exists to catch, so the flag is always present and the PC's
+      branch is the `{{#unless}}` one, i.e. absent-and-falsy could never silently strip the PC's own
+      content.
+
+      What `vault` turns OFF is the three blocks a Chantry has no data for — carried/banked money
+      and the gear notes prose box (`system.gear.*`, which `template.json`'s "Chantry" simply does
+      not have: writing to it would persist junk under a key nothing reads) and the macro rail
+      (`macro_icons.hbs` reads the actor's own macro list). What it turns ON is the three extra
+      lists a vault needs and a PC does not, because on the PC they live on other tabs: weapons and
+      armour (Combate) and Wonders/Fetishes (Poderes). A Chantry has neither of those tabs, so its
+      one Equipo tab is where its whole inventory reads.
+
+      THE ITEM LISTS COME OFF THE CONTEXT NOW, not from `(getMundaneItems actor)` inline. Same
+      `ItemHelper` calls, same results, one reason: an inline helper call is invisible to
+      `test-part-render.mjs`'s missing-context-key check, and a list read off the context is not.
+      See `module/scripts/gear-lists.js`'s own header. --}}
 <section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}" data-drop-area="true">
 
 	<div class="v3-tabhead">
@@ -71,6 +99,12 @@
 	<div class="v3-tabbody">
 		<div class="v3-tabmain">
 
+			{{!-- PC-ONLY, both of them: a Chantry/Construct actor has no `system.gear` at all
+			      (`template.json`'s "Chantry" carries locked/flavor/rating/tier/pool/traits/notes
+			      and nothing else), so the money fields would write to a key nothing reads and the
+			      prose box would target `system.gear.notes` on a document with no such field. The
+			      Chantry's own notes live on its Rasgos tab, where they always have. --}}
+			{{#unless vault}}
 			<div class="v3-section">
 				{{!-- `proseheadline` is passed. It was the ONE omission among description.hbs's
 				      eleven callers, which rendered the notes heading as an empty emphasised div
@@ -125,11 +159,12 @@
 					</label>
 				</div>
 			</div>
+			{{/unless}}
 
 			<div class="v3-section">
 				<h3 class="v3-sectiontitle splatFont">{{localize "wod.gear.otheritems"}}</h3>
 
-				{{#if (getMundaneItems actor)}}
+				{{#if mundaneitems}}
 					{{!-- A real table: five columns of homogeneous data with a header row, which is
 					      what v2 drew with `div.headlineRow` plus five fixed pixel widths. The
 					      table gives a screen reader the column association those divs never had,
@@ -137,7 +172,7 @@
 					      `item_table.hbs` (reorganize-mage-sheet-v3 D3) so the Poderes tab's
 					      magical-item list can share the exact same row markup. --}}
 					{{> "systems/worldofdarkness/templates/actor/parts/item_table.hbs"
-						items=(getMundaneItems actor) actor=actor locked=locked caption="wod.gear.otheritems"}}
+						items=mundaneitems actor=actor locked=locked caption="wod.gear.otheritems"}}
 				{{else}}
 					{{!-- The empty state (D9). v2 drew the four column headers over nothing, which
 					      reads as broken rather than as empty. The tab is never hidden and the
@@ -151,11 +186,52 @@
 				{{/if}}
 			</div>
 
+			{{!-- VAULT ONLY — the three lists a Chantry/Construct needs and the PC does not, because
+			      on the PC each of them already renders on a tab a Chantry has no equivalent of:
+			      weapons and armour on Combate (`parts/combat_melee.hbs` and siblings, which compute
+			      an attack pool from Atributos a Chantry does not have), Wonders and Fetishes on
+			      Poderes (`v3/powers.hbs`, reorganize-mage-sheet-v3 D3). A Chantry has ONE inventory
+			      tab, so its whole vault reads here, in the four groups the spec names.
+
+			      Each is gated on having content rather than drawing an empty table: the mundane
+			      section above already carries this tab's empty state, and four empty tables would
+			      say the same nothing four times. Same `item_table.hbs`, same row markup, same
+			      `list_icons.hbs` per row — no second copy of any of it. --}}
+			{{#if vault}}
+				{{#if weapons}}
+					<div class="v3-section">
+						<h3 class="v3-sectiontitle splatFont">{{localize "wod.chantry.vault.weapons"}}</h3>
+						{{> "systems/worldofdarkness/templates/actor/parts/item_table.hbs"
+							items=weapons actor=actor locked=locked caption="wod.chantry.vault.weapons"}}
+					</div>
+				{{/if}}
+
+				{{#if armoritems}}
+					<div class="v3-section">
+						<h3 class="v3-sectiontitle splatFont">{{localize "wod.labels.combat.armor"}}</h3>
+						{{> "systems/worldofdarkness/templates/actor/parts/item_table.hbs"
+							items=armoritems actor=actor locked=locked caption="wod.labels.combat.armor"}}
+					</div>
+				{{/if}}
+
+				{{#if magicalitems}}
+					<div class="v3-section">
+						<h3 class="v3-sectiontitle splatFont">{{localize "wod.power.magicalitems"}}</h3>
+						{{> "systems/worldofdarkness/templates/actor/parts/item_table.hbs"
+							items=magicalitems actor=actor locked=locked caption="wod.power.magicalitems"}}
+					</div>
+				{{/if}}
+			{{/if}}
+
 		</div>
 
+		{{!-- PC-only: `macro_icons.hbs` renders the actor's own macro rail, and a Chantry has no
+		      macros, no dice pool and nothing to roll. --}}
+		{{#unless vault}}
 		<aside class="v3-macrorail">
 			{{> "systems/worldofdarkness/templates/actor/parts/macro_icons.hbs"}}
 		</aside>
+		{{/unless}}
 	</div>
 
 </section>

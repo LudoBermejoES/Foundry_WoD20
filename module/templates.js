@@ -80,10 +80,17 @@ export const preloadHandlebarsTemplates = async function () {
 		"systems/worldofdarkness/templates/actor/v3/navigation.hbs",
 		"systems/worldofdarkness/templates/actor/parts/stats_health.hbs",
 
-		// rebuild-chantry-sheet-v2 — ChantryActorSheetV2's own single PART. `navigation_lock.hbs`
-		// (above, in the shared PC-partial block) is the lock button it `{{>` includes; it is
-		// already registered so no second entry is needed for it.
+		// rebuild-chantry-sheet-v2 — ChantryActorSheetV2's parts. `navigation_lock.hbs` and
+		// `v3/navigation.hbs` (above, in the shared PC-partial block) are the lock button and the
+		// nav rail it reuses; both are already registered, so no second entry is needed for either.
+		// add-chantry-inventory-effects-and-roster — `chantry-sheet-v2.hbs` is now the RASGOS tab
+		// rather than the whole sheet; Efectos is its own part and Equipo renders the SHARED
+		// `v3/gear.hbs` (already registered above). A path listed here that does not exist on disk
+		// is a console error on every world load; a partial NOT listed here is worse — Foundry
+		// throws "The partial ... could not be found" and takes the whole part down (7.5.44).
 		"systems/worldofdarkness/templates/actor/chantry-sheet-v2.hbs",
+			"systems/worldofdarkness/templates/actor/parts/chantry_roster.hbs",
+		"systems/worldofdarkness/templates/actor/chantry-effects-v2.hbs",
 
 		// PC Actor Sheet Partials - .html files
 		//"systems/worldofdarkness/templates/actor/parts/power_listpower.html",

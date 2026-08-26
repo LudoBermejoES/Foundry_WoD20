@@ -1,19 +1,34 @@
 {{!--
   rebuild-chantry-sheet-v2 — the ApplicationV2 replacement for templates/actor/chantry-sheet.html.
 
-  This is the sheet's ONLY declared PART (task 1.4/D4 — single part, no tab machinery; see
-  chantry-actor-sheet-v2.js's own comment on that choice). ApplicationV2 IS the `<form>` for this
-  sheet (DocumentSheetV2's default `tag` is "form"), so `wod20`/`wod-sheet`/`chantry` (plus
-  whatever the render hook adds - `chantry-tradition`/`chantry-technocracy`/`noSplatFont`/
-  `wod-theme-dark`) all land on the SAME root element this part's content is inserted into.
+  THIS IS THE `traits` PART, not the whole sheet any more (add-chantry-inventory-effects-and-roster,
+  task 3.1). `ChantryActorSheetV2` grew three tabs — Rasgos (this file), Efectos
+  (`chantry-effects-v2.hbs`) and Equipo (the SHARED `v3/gear.hbs`) — plus the rail
+  (`v3/navigation.hbs`). The file KEEPS ITS NAME on purpose: it is the sheet's home tab and its
+  content is unchanged bar the roster include, and two preflight gates
+  (`test-chantry-trait-eye.mjs`, `test-chantry-trait-order.mjs`) read this path by name. Renaming it
+  would have been churn with a gate-shaped cost and no benefit.
+
+  ApplicationV2 IS the `<form>` for this sheet (DocumentSheetV2's default `tag` is "form"), so
+  `wod20`/`wod-sheet`/`chantry` (plus whatever the render hook adds -
+  `chantry-tradition`/`chantry-technocracy`/`noSplatFont`/`wod-theme-dark`) all land on the SAME
+  root element every part's content is inserted into.
 
   `.locked` therefore MUST be placed on a DESCENDANT of that root, not folded into a compound
   selector on it - `css/wod.css`'s `.wod20.chantry .locked .resource-value-step` rule (and its own
   D3b guard against ever reintroducing `.wod20.chantry.locked` as one compound class) depends on
   `.locked` living on an element BELOW the root, exactly as it did on the appv1 sheet's own
   `<form class="{{cssClass}} ... {{#if locked}}locked{{/if}}">` (a child of the appv1 `.app` root
-  carrying the other three classes). The wrapping div below is that descendant.
+  carrying the other three classes). The wrapping div below is still that descendant, and it stays
+  even though `tab.cssClass` now also carries `locked` — the dots rule depends on THIS div, and
+  making it depend on the tab machinery instead would be a silent change to a verified selector.
+
+  THE LOCK CONTROL MOVED, it was not dropped: `navigation_lock.hbs` is now included once by the nav
+  rail (`v3/navigation.hbs:46`), the same place the PC sheet has always kept it. Including it here
+  as well would render two padlocks on one sheet.
 --}}
+<section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+
 <div class="chantry-body flexcol {{#if locked}}locked{{/if}}">
 
 	{{!-- Chantry / Construct Sheet Header --}}
@@ -22,12 +37,6 @@
 		<header class="sheet-header"></header>
 
 		<section class="sheet-body">
-
-			<div class="navigation pullLeft">
-				{{#if (not actor.limited)}}
-					{{> "systems/worldofdarkness/templates/actor/parts/navigation_lock.hbs"}}
-				{{/if}}
-			</div>
 
 			<div class="centerText sheet-headline splatFont">
 				{{#if (eq actor.system.flavor "technocracy")}}
@@ -138,7 +147,15 @@
 					<span class="sheet-banner-text">{{localize "wod.chantry.traitsheadline"}}</span>
 				</div>
 
+				{{!-- add-chantry-inventory-effects-and-roster task 3.6 — each Trait is now a BLOCK
+				      (the row, plus the roster for the eight Traits that are collections) rather
+				      than a bare row. The zebra rule in `css/wod.css` moved with it, from
+				      `.chantry-trait-row:nth-of-type(even)` to the block, because `:nth-of-type`
+				      counts sibling `<div>`s and interleaving roster divs between rows would have
+				      turned a regular band pattern into an irregular one. The row's own markup
+				      below is byte-for-byte what it was. --}}
 				{{#each listData.traits as |trait|}}
+					<div class="chantry-trait-block">
 					<div class="clearareaBox row chantry-trait-row" data-key="{{trait.key}}">
 
 						<div class="pullLeft headlineNormal ability-headlineWidth {{#if trait.overcap}}item-warning{{/if}}">{{localize trait.label}}</div>
@@ -151,8 +168,12 @@
 
 						<div class="pullLeft chantry-trait-cost">({{trait.cost}} {{localize "wod.chantry.costperdot"}})</div>
 
+						{{!-- The message is a per-Trait KEY (`trait.overcapkey`), not the one literal
+						      it used to be: Zona de Realidad caps at the rating ONCE and every other
+						      Trait at twice it (design.md D7), so a single "supera el doble" sentence
+						      was wrong for exactly the Trait whose cap the book states explicitly. --}}
 						{{#if trait.overcap}}
-							<div class="pullLeft item-warning chantry-overcap-flag" title="{{localize 'wod.chantry.overcap'}}">
+							<div class="pullLeft item-warning chantry-overcap-flag" title="{{localize trait.overcapkey}}">
 								<i class="fa-solid fa-triangle-exclamation"></i>
 							</div>
 						{{/if}}
@@ -166,6 +187,18 @@
 								data-labelkey="{{trait.label}}"
 								data-descriptionkey="{{trait.descriptionkey}}"></i>
 
+					</div>
+
+					{{!-- The census, for the eight Traits that are collections of people or holdings.
+					      `trait.roster.show` is false for the other six and for a locked sheet with no
+					      entries, so an existing sheet reads exactly as it did.
+
+					      `locked=../locked`, NOT `locked`: one `{{#each}}` deep, a bare `locked`
+					      resolves against the TRAIT, which is the failure this system has shipped
+					      twice. Probed, not counted — see the partial's own header. --}}
+					{{#if trait.roster.show}}
+						{{> "systems/worldofdarkness/templates/actor/parts/chantry_roster.hbs" roster=trait.roster traitkey=trait.key locked=../locked}}
+					{{/if}}
 					</div>
 				{{/each}}
 
@@ -186,3 +219,5 @@
 	</div>
 
 </div>
+
+</section>

@@ -34,6 +34,7 @@ import { calculateTotals } from "../../scripts/totals.js";
 import { buildTraitCompendiumUuidMap } from "../../scripts/trait-enrichment.js";
 import { resolveDescription } from "../../scripts/compendium-description.js";
 import { getSplat } from "../../scripts/splat-helpers.js";
+import { prepareItemLists } from "../../scripts/gear-lists.js";
 import ItemViewer from "../../applications/item-viewer.js";
 import PrismHelper from "../../scripts/prism-helpers.js";
 import DialogPrismRitual from "../../dialogs/dialog-prism-ritual.js";
@@ -2388,6 +2389,15 @@ export const prepareGearContext = async function (context, actor) {
 
 	context.gear = actor.system.gear.notes;
 	context.enrichedGear = await foundry.applications.ux.TextEditor.implementation.enrichHTML(actor.system.gear.notes, {async: true});
+
+	/* add-chantry-inventory-effects-and-roster task 3.2 — the four item lists `v3/gear.hbs` renders
+	   are prepared by a SHARED helper, because `ChantryActorSheetV2` renders that same template and
+	   design.md D1 forbids it obtaining the markup by inheriting this class. `vault: false` is what
+	   keeps this sheet's Equipo tab exactly as it was: the money block, the notes prose box and the
+	   macro rail all render, and only `mundaneitems` of the four lists is read. The other three are
+	   built anyway (three `ItemHelper` filters over one already-materialised collection) so that the
+	   flag stays the ONLY difference between the two callers. */
+	prepareItemLists(context, actor, { vault: false });
 
   	return context;
 }

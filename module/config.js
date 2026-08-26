@@ -19,8 +19,11 @@ wod.sheettype = {
 
 /*
  * Chantry/Construct construction Traits - Power Pool Cost per dot.
- * Source: m20-the-operative-dossier, "Estatus y el Constructo" table; cap rule (no single
- * Trait may exceed 2x the Chantry/Construct's rating) is enforced by the sheet, not here.
+ * Sources, and they are TWO: the first fourteen come from m20-the-operative-dossier's "Estatus y
+ * el Constructo" table; the last five are the Backgrounds M20 core p.308 permits on a Chantry but
+ * that table never prices, so their cost is this project's (see the comment on them below).
+ * The cap rule (no single Trait may exceed 2x the Chantry/Construct's rating, Zona de Realidad
+ * excepted at 1x) is enforced by the sheet, not here.
  */
 wod.chantry = {
     traitcost: {
@@ -37,7 +40,16 @@ wod.chantry = {
         "requisitions": 4,
         "resources": 3,
         "retainers": 2,
-        "spies": 2
+        "spies": 2,
+        // M20 core p.308's Backgrounds, which the Dossier's costed table omits: priced at 2, the cost
+        // every Trait of their class carries in that same table. THAT FIGURE IS THIS PROJECT'S, not
+        // the book's (add-chantry-inventory-effects-and-roster design.md D4) - the reference entities
+        // carry `cost_source: "project"` so a Storyteller can see where the number came from.
+        "familiar": 2,
+        "influence": 2,
+        "wonder": 2,
+        "mentor": 2,
+        "patron": 2
     },
     flavors: [
         "tradition",

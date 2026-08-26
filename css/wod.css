@@ -3336,8 +3336,15 @@ input.sheet-infoWidth {
 /* `:nth-of-type` counts by tag among ALL sibling `<div>`s, including `.chantry-traits`'s own
    headline div before the first row — so this alternates consistently across the fourteen rows
    even though the parity looks "off by one" against the trait list itself. That is fine: the goal
-   is a readable band pattern, not a specific row starting shaded. */
-.chantry-body .chantry-trait-row:nth-of-type(even) {
+   is a readable band pattern, not a specific row starting shaded.
+
+   add-chantry-inventory-effects-and-roster — the SELECTOR MOVED from the row to its block, and the
+   reason is exactly what the paragraph above describes: each Trait is now `.chantry-trait-block`
+   (the row, plus a roster for the eight Traits that are collections), so counting `.chantry-trait-
+   row`s among their siblings would have counted a roster `<div>` in between and turned a regular
+   band into an irregular one. Counting blocks restores the alternation the rows used to have, and
+   the tint lands on the row itself so a roster hanging under it is not shaded twice. */
+.chantry-body .chantry-trait-block:nth-of-type(even) > .chantry-trait-row {
   background: var(--main-dim-color);
 }
 
@@ -3371,6 +3378,144 @@ input.sheet-infoWidth {
 .chantry-body .chantry-trait-eye:hover,
 .chantry-body .chantry-trait-eye:focus {
   opacity: 1;
+}
+
+/* ---- (5) THE ROSTER, under the eight Traits that are collections ----
+   add-chantry-inventory-effects-and-roster task 3.6. Everything stays inside `.chantry-body`, for
+   the reason this section's own header gives: every other class here is shared byte-for-byte with
+   the appv1 sheet, which is the registered per-actor rollback and must go on looking exactly as it
+   always has.
+
+   No literal colour anywhere below: `--main-mid-color`/`--main-dim-color`/`--splat-line` are the
+   tokens `.chantry-tradition`/`.chantry-technocracy` (css/mage.css) already declare for both faces,
+   and `--wod-warn` is the one this file already verified for `item-warning` on this very sheet. That
+   is what makes these rules work in the light theme, in the dark theme and in both institutions
+   without a single duplicated rule. */
+.chantry-body .chantry-roster {
+  margin: 0 0 6px 22px;
+  padding: 4px 8px;
+  border-left: 2px solid var(--main-mid-color);
+  font-size: var(--wod-font-xs);
+}
+
+.chantry-body .chantry-roster-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.chantry-body .chantry-roster-total {
+  opacity: 0.8;
+}
+
+.chantry-body .chantry-roster-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+/* The name takes the slack and the note takes what is left, because a roster entry is "who" first
+   and "why" second. `min-width: 0` is what lets either shrink inside a flex row instead of forcing
+   the row wider than the card (the same fix the Trait label above needed). */
+.chantry-body .chantry-roster-name {
+  flex: 1 1 40%;
+  min-width: 0;
+}
+
+.chantry-body .chantry-roster-note {
+  flex: 1 1 60%;
+  min-width: 0;
+}
+
+.chantry-body .chantry-roster-points {
+  flex: 0 0 48px;
+  text-align: right;
+}
+
+/* ---- (6) THE INTEGRATED EFFECTS TAB ----
+   task 3.5. One summary card (pool / cap / upkeep) and one list of effects, each with its Sphere
+   row. The cards themselves need no new rule: they are `.area-box` inside `.chantry-body`, which
+   this section already gave a border, a radius and dark-mode fill. */
+.chantry-body .chantry-effects-figures {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.chantry-body .chantry-effect-row {
+  padding: 6px 6px;
+  border-radius: 4px;
+}
+
+.chantry-body .chantry-effect-row:nth-of-type(even) {
+  background: var(--main-dim-color);
+}
+
+/* An effect over the Sphere cap gets a left edge in the warning colour as well as the row's own
+   flag icon: the icon says WHICH rule, the edge makes the row findable in a list of ten. */
+.chantry-body .chantry-effect-overcap {
+  border-left: 3px solid var(--wod-warn);
+  padding-left: 5px;
+}
+
+.chantry-body .chantry-effect-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chantry-body .chantry-effect-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The cost is the number a GM checks against the pool, so it reads as a figure rather than as prose
+   and it never moves as the name grows. */
+.chantry-body .chantry-effect-cost {
+  flex: 0 0 auto;
+  min-width: 28px;
+  text-align: right;
+  font-weight: 600;
+}
+
+.chantry-body .chantry-effect-spheres {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 2px 0 0 0;
+}
+
+.chantry-body .chantry-effect-sphere {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--wod-font-xs);
+}
+
+/* A Sphere level is one or two digits; the shared `.inputdata` width is sized for names. */
+.chantry-body .chantry-effect-sphere-level {
+  width: 46px;
+  text-align: center;
+}
+
+.chantry-body .chantry-effect-description {
+  padding-top: 2px;
+  font-size: var(--wod-font-xs);
+  opacity: 0.85;
+}
+
+/* The banner on the Efectos list holds the create control, so it stops being a plain text line and
+   becomes a row with the button pushed to the end. Scoped to THIS banner (the one inside
+   `.chantry-effects-list`) so the Rasgos tab's three banners are untouched. */
+.chantry-body .chantry-effects-list .sheet-headline.sheet-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 /* END - Chantry v2 visual polish */

@@ -514,6 +514,30 @@ Handlebars.registerHelper("localize", (value, options) => {
 });
 Handlebars.registerHelper("lookup", (obj, field) => (obj === null || obj === undefined) ? undefined : obj[field]);
 /**
+ * Foundry's `{{editor}}`. Added when this harness grew section H: the Chantry sheet's Rasgos tab is
+ * the ONLY `.hbs` in the tree that uses it (every other caller is a legacy appv1 `.html`), so until
+ * then no render here had ever reached it — and an unimplemented helper THROWS, which is the
+ * property that makes this harness honest.
+ *
+ * Faithful to the SHAPE Foundry emits, which is all any assertion here looks at: a `.editor`
+ * wrapper, an `.editor-content` carrying `data-edit` with the target path, and the (already
+ * enriched) content. The real helper also emits a ProseMirror toolbar and, when `button` is true, a
+ * launch button; `button=false` at every call site in this tree, so that branch is not reproduced.
+ * `editable` decides whether the content is an editing surface, and this reflects it as an
+ * attribute rather than inventing markup for it.
+ */
+Handlebars.registerHelper("editor", (value, options) => {
+	const hash = options?.hash ?? {};
+	const target = escapeHTML(hash.target ?? "");
+	const editable = hash.editable === undefined ? true : !!hash.editable;
+	const content = (value === null || value === undefined) ? "" : String(value);
+
+	return new SafeString(
+		`<div class="editor">` +
+		`<div class="editor-content" data-edit="${target}"${editable ? "" : " data-locked=\"true\""}>${content}</div>` +
+		`</div>`);
+});
+/**
  * Foundry's `selectOptions`. Only the shape bio_splatfields.hbs uses is implemented (a choices
  * object or array, `selected` and `localize` in the hash); an unrecognised choices value throws
  * rather than emitting nothing, so a listData shape change cannot pass as "the select is empty".
@@ -1919,6 +1943,519 @@ console.log("\nG. the allowlists are all still earning their place");
 	for (const [site, n] of byS) {
 		warnings.push(`::warning::UNEVALUABLE: ${site} threw in real Handlebars ${n}x and was skipped — ${UNEVALUABLE_EXPRESSIONS[site].note}`);
 	}
+}
+
+/* ============================================================================================ *
+ * H. THE CHANTRY/CONSTRUCT SHEET — every part, in BOTH lock states
+ *
+ * WHY THIS SECTION EXISTS, and it is the same reason as the rest of this file with a sharper edge:
+ * 7.5.128 shipped a Chantry sheet that COULD NOT BE OPENED AT ALL, and all 31 preflight gates passed
+ * it, because not one of them constructs a sheet or renders one of its parts. `test-appv2-
+ * constructor-signature.mjs` was written that day to catch the specific dereference that did it;
+ * this section catches the general class — a part that throws, a part that renders nothing, a
+ * template reading a context key its preparer never built, and (the reason it runs TWICE) a write
+ * control that renders on a locked sheet or fails to render on an unlocked one.
+ *
+ * THE LOCK AXIS IS THE POINT. Inside an `{{#each}}` a bare `locked` resolves against the ARRAY
+ * ELEMENT, not the sheet, so `{{#if (eq locked false)}}` is false forever and the control never
+ * renders — not even unlocked. This system has shipped that defect twice on its mage partials
+ * (`reorganize-mage-sheet-v3` task 9.7, then `polish-mage-sheet-v3-affordances`), each time found by
+ * a human noticing a missing trash can. Counting the write controls in both states is what makes the
+ * depth a MEASUREMENT instead of a brace count: a wrong `../` shows up as zero controls unlocked,
+ * and a missing gate as more than zero locked.
+ *
+ * It is deliberately NOT folded into the 173-structure matrix above: a Chantry has no splat, no
+ * variant and no era, so it is one fixture and two states, and the matrix's structure ids would be
+ * meaningless for it.
+ *
+ * MUTATION-TESTED WHEN WRITTEN, because a section that passes on its first run has proved nothing
+ * yet. Three deliberate breaks, each reverted after being confirmed caught (2026-08-26):
+ *   1. `../locked` -> `locked` in `chantry_roster.hbs` (the exact context-depth trap) — caught by
+ *      "the unlocked sheet DOES offer its writing controls" and by the per-row delete count.
+ *   2. `traitCap()` reduced to `rating * 2` for every Trait (the D7 regression) — caught by the
+ *      per-Trait cap check.
+ *   3. the lock gate removed from one effect control — caught by "no writing control renders while
+ *      locked" on the effects part.
+ *   4. the Equipo tab's empty state deleted — caught by "an EMPTY vault renders the Equipo tab".
+ * ============================================================================================ */
+
+console.log("\nH. the Chantry/Construct sheet renders every part, locked and unlocked");
+
+{
+	const ChantrySheetClass = (await import(M("actor", "template", "chantry-actor-sheet-v2.js"))).default;
+
+	/** `system` for a Chantry, DERIVED from template.json rather than written down here. */
+	function chantrySystemDefaults() {
+		return structuredClone(template.Actor.Chantry);
+	}
+
+	/**
+	 * One item per list the vault renders, so no branch of `v3/gear.hbs`'s vault half is left
+	 * unexercised: a mundane Item, a magical one (`ismagical`), a Fetish (magical by type), a melee
+	 * weapon and a suit of armour.
+	 *
+	 * TWO weapons on purpose. `ItemHelper.GetItemType`'s comparator is
+	 * `a.system.type.localeCompare(...)`, and `Melee Weapon`/`Ranged Weapon`/`Armor` have no
+	 * `system.type` at all in template.json — so that helper throws as soon as an actor holds two of
+	 * them, which is exactly why `gear-lists.js` sorts those two lists itself. One weapon would never
+	 * invoke a comparator and would leave that regression free to come back.
+	 */
+	function buildChantryItems() {
+		const specs = [
+			{ type: "Item", name: "Caja de herramientas", system: { type: "wod.types.trinket", ismagical: false } },
+			{ type: "Item", name: "El Bioroide Eva", system: { type: "wod.types.device", ismagical: true } },
+			{ type: "Fetish", name: "Fetiche del umbral", system: { type: "wod.types.fetish" } },
+			{ type: "Melee Weapon", name: "Bastón ritual", system: {} },
+			{ type: "Ranged Weapon", name: "Rifle de la cámara", system: {} },
+			{ type: "Armor", name: "Chaleco del vestíbulo", system: {} }
+		];
+
+		return specs.map((spec) => {
+			const _id = nextId();
+			return {
+				_id, id: _id, name: spec.name, type: spec.type,
+				system: deepMerge(itemSystemDefaults(spec.type), spec.system),
+				flags: {},
+				img: "icons/svg/item-bag.svg",
+				toObject() { return { _id: this._id, name: this.name, type: this.type, system: structuredClone(this.system) }; }
+			};
+		});
+	}
+
+	/**
+	 * A Chantry with something in every branch: an over-cap Trait of BOTH kinds (reality-zone 4 on
+	 * rating 3, which is over its 1x cap; library 4, which is NOT over its 2x cap), a roster with
+	 * entries, and two Integrated Effects — one of them the book's own fireball, whose Tiempo 4
+	 * exceeds the rating-3 Sphere cap.
+	 *
+	 * `wonder` 2 and `mentor` 7 are the `foundry-chantry-sheet` spec's own two scenarios for the
+	 * five Backgrounds M20 core p.308 permits on a Chantry (§4.3b): one renders its dots, the other
+	 * is over the GENERIC 2x cap on a rating-3 Chantry. Neither is a rostered Trait, so the roster
+	 * counts below are unaffected.
+	 */
+	function buildChantryActor() {
+		const system = chantrySystemDefaults();
+		system.rating = 3;
+		system.flavor = "tradition";
+		system.pool = { total: 40, spent: 0 };
+		Object.assign(system.traits, {
+			"allies": 2,
+			"library": 4,
+			"node": 2,
+			"reality-zone": 4,
+			"integrated-effects": 3,
+			"wonder": 2,
+			"mentor": 7
+		});
+		system.notes = "<p>Notas de la capilla.</p>";
+		system.integratedEffects = [
+			{ name: "Umbral sereno", description: "Calma a quien entra.", spheres: [{ sphere: "mind", level: 2 }] },
+			{
+				name: "Bola de fuego", description: "Se dispara si entra un vampiro.",
+				spheres: [
+					{ sphere: "forces", level: 3 }, { sphere: "prime", level: 2 },
+					{ sphere: "life", level: 1 }, { sphere: "matter", level: 1 },
+					{ sphere: "time", level: 4 }
+				]
+			}
+		];
+		system.traitRosters = {
+			allies: [{ name: "Nadia", note: "contacto en el puerto", points: 1 }],
+			library: [{ name: "Copia del Codex", note: "", points: 0 }]
+		};
+
+		const items = buildChantryItems();
+
+		return {
+			_id: "fixturechantry1", id: "fixturechantry1",
+			name: "Capilla de prueba",
+			img: "icons/svg/mystery-man.svg",
+			type: "Chantry",
+			uuid: "Actor.fixturechantry1",
+			system,
+			items,
+			flags: {},
+			isOwner: true, limited: false, permission: 3,
+			getEmbeddedDocument(_type, id) { return items.find((i) => i._id === id) ?? null; },
+			toObject() { return { _id: this._id, name: this.name, type: this.type, system: structuredClone(this.system) }; }
+		};
+	}
+
+	/**
+	 * The actions that WRITE. Everything else a control can carry is a read and must survive a lock:
+	 *   `tab`       switches tab                       `actorLock`  is the lock control itself
+	 *   `sendChat`  posts an item to chat              `rollDice`   opens a roll dialog
+	 *   `useMacro`  opens a roll dialog
+	 * Derived, not hand-listed: every `data-action` this sheet registers, minus that read set. So a
+	 * new writing action added to the sheet is covered here the day it lands, with no edit.
+	 */
+	const READ_ONLY_ACTIONS = new Set(["tab", "actorLock", "sendChat", "rollDice", "useMacro"]);
+
+	/**
+	 * ONE ADMITTED EXCEPTION, named so it cannot grow silently.
+	 *
+	 * `parts/item_table.hbs` renders its equip toggle (`data-action="itemActive"`) with NO lock gate,
+	 * for the PC sheet as much as for this one — it predates this change and gating it would alter
+	 * how the PC's Equipo and Poderes tabs behave, which is out of this change's scope. It is not one
+	 * of the controls the spec's requirement names ("creates, edits or deletes an Item, an Integrated
+	 * Effect or a roster entry"), and the Chantry's own handler refuses while locked
+	 * (`ChantryActorSheetV2.onItemActive` warns and returns), so a locked click cannot write. It is
+	 * COUNTED rather than ignored: if a second ungated write action ever appears, the census below
+	 * fails.
+	 */
+	const LOCKED_WRITE_ACTIONS_OK = new Map([
+		["itemActive", "parts/item_table.hbs's equip toggle is ungated for BOTH sheets (pre-existing, out of scope); the Chantry handler still refuses while locked"]
+	]);
+
+	const registeredActions = new Set(Object.keys(ChantrySheetClass.DEFAULT_OPTIONS.actions ?? {}));
+	const writeActions = [...registeredActions].filter((a) => !READ_ONLY_ACTIONS.has(a));
+
+	/** Every `data-action="…"` in the html, as a list of names. */
+	function actionsIn(html) {
+		return [...html.matchAll(/data-action="([^"]+)"/g)].map((m) => m[1]);
+	}
+
+	/** Editable form controls: an `<input>`/`<select>`/`<textarea>` that is neither disabled nor readonly. */
+	function editableControlsIn(html) {
+		return [...html.matchAll(/<(input|select|textarea)\b[^>]*>/g)]
+			.map((m) => m[0])
+			.filter((tag) => !/\bdisabled\b/.test(tag) && !/\breadonly\b/.test(tag));
+	}
+
+	const chantryPartIds = Object.keys(ChantrySheetClass.PARTS);
+	const rendered = new Map();          // `${locked}|${partId}` -> html
+	const chantryFindings = { missingKeys: [], partialOutput: [], unevaluable: [] };
+
+	check(`the Chantry sheet declares tabs and one part per tab plus the rail (${chantryPartIds.length} parts)`, () => {
+		const inst = new ChantrySheetClass({ document: buildChantryActor() });
+		const tabIds = Object.keys(inst.tabs);
+		const extra = chantryPartIds.filter((p) => !tabIds.includes(p));
+
+		if (extra.length !== 1) {
+			throw new Error(`expected exactly one non-tab part (the rail); got ${JSON.stringify(extra)}`);
+		}
+		for (const id of tabIds) {
+			if (!chantryPartIds.includes(id)) throw new Error(`tab "${id}" has no part`);
+		}
+	});
+
+	for (const locked of [true, false]) {
+		const state = locked ? "locked" : "unlocked";
+		let sheet, base;
+
+		try {
+			const actor = buildChantryActor();
+			sheet = new ChantrySheetClass({ document: actor });
+			// The sheet OPENS locked (its own class field). The unlocked pass flips the same transient
+			// flag the lock control flips, which is the only difference between the two renders.
+			sheet.locked = locked;
+			base = await sheet._prepareContext({});
+		}
+		catch (err) {
+			fail(`chantry (${state}) — the sheet could not even be prepared`,
+				`${err.message}\nThis is the 7.5.128 failure class: the sheet does not open at all.`);
+			continue;
+		}
+
+		check(`chantry (${state}) — _prepareContext reports the lock it was given`, () => {
+			if (base.locked !== locked) throw new Error(`context.locked is ${base.locked}`);
+		});
+
+		for (const partId of chantryPartIds) {
+			const templatePath = templateFile(ChantrySheetClass.PARTS[partId].template);
+
+			if (!templatePath) {
+				fail(`chantry (${state}) / ${partId}`,
+					`PARTS names "${ChantrySheetClass.PARTS[partId].template}", which does not exist in this checkout`);
+				continue;
+			}
+
+			let context;
+			try { context = await sheet._preparePartContext(partId, { ...base }, {}); }
+			catch (err) { fail(`chantry (${state}) / ${partId} — preparer`, err.message); continue; }
+
+			Object.defineProperty(context, ROOTISH, { value: true, enumerable: false });
+
+			const renderer = new Renderer(`chantry:${partId}`, `chantry-${state}`, chantryFindings);
+			renderer.rootContext = context;
+
+			let html;
+			try { html = renderer.renderProgram(compile(templatePath), new Frame(context)); }
+			catch (err) { fail(`chantry (${state}) / ${partId} — render`, err.message); continue; }
+
+			rendered.set(`${state}|${partId}`, html);
+
+			check(`chantry (${state}) / ${partId} produced a rooted, non-empty part`, () => {
+				const elements = countElements(html);
+				if (elements === 0) throw new Error(`the part rendered ${html.length} characters and ZERO elements`);
+
+				if (partId === "tabs") {
+					if (!/<nav\b/.test(html)) throw new Error(`the navigation part emitted no <nav> (${elements} elements)`);
+					return;
+				}
+
+				const m = /<section\b[^>]*data-tab="([^"]*)"/.exec(html);
+				if (!m) throw new Error(`no <section data-tab="…"> in the output (${elements} elements)`);
+				if (m[1] !== partId) throw new Error(`the section says data-tab="${m[1]}" but PARTS calls this part "${partId}"`);
+			});
+		}
+	}
+
+	/* ---- the lock census: the whole reason this renders twice ---- */
+
+	for (const partId of chantryPartIds) {
+		const lockedHtml = rendered.get(`locked|${partId}`);
+		const unlockedHtml = rendered.get(`unlocked|${partId}`);
+		if (lockedHtml === undefined || unlockedHtml === undefined) continue;   // already failed above
+
+		check(`chantry / ${partId}: no writing control renders while locked`, () => {
+			const found = actionsIn(lockedHtml).filter((a) => writeActions.includes(a));
+			const unadmitted = found.filter((a) => !LOCKED_WRITE_ACTIONS_OK.has(a));
+
+			if (unadmitted.length) {
+				throw new Error(
+					`these writing actions render on a LOCKED sheet: ${[...new Set(unadmitted)].join(", ")}. ` +
+					`Either gate them with {{#if (eq locked false)}} at the right context depth, or admit ` +
+					`them in LOCKED_WRITE_ACTIONS_OK with a reason.`);
+			}
+
+			const editable = editableControlsIn(lockedHtml);
+			if (editable.length) {
+				throw new Error(
+					`${editable.length} editable form control(s) render on a LOCKED sheet, e.g. ` +
+					`${editable[0].slice(0, 120)}`);
+			}
+		});
+	}
+
+	check("chantry: the unlocked sheet DOES offer its writing controls (the ../locked depth is right)", () => {
+		const seen = new Set();
+		for (const partId of chantryPartIds) {
+			const html = rendered.get(`unlocked|${partId}`);
+			if (html === undefined) continue;
+			for (const a of actionsIn(html)) if (writeActions.includes(a)) seen.add(a);
+		}
+
+		/* The four this asserts by name are the four that live INSIDE an `{{#each}}`, i.e. the four a
+		   wrong context depth would silently remove: the Trait dots, the effect delete, the Sphere
+		   delete and the roster delete. A brace-counting error shows up here as an absence. */
+		for (const action of ["traitDotChange", "ratingDotChange", "effectCreate", "effectDelete",
+			"effectSphereAdd", "effectSphereDelete", "rosterAdd", "rosterDelete", "itemDelete", "itemEdit"]) {
+			if (!seen.has(action)) {
+				throw new Error(
+					`"${action}" renders NOWHERE on the unlocked sheet. If it sits inside an {{#each}}, ` +
+					`this is the context-depth trap: a bare \`locked\` resolves against the array element, ` +
+					`so \`(eq locked false)\` is false even unlocked.`);
+			}
+		}
+	});
+
+	check("chantry: every roster and effect row offers exactly one delete, and the unlocked inputs are editable", () => {
+		const traits = rendered.get("unlocked|traits") ?? "";
+		const effects = rendered.get("unlocked|effects") ?? "";
+
+		// Two rosters with entries on the fixture (allies x1, library x1) -> two delete controls.
+		const rosterDeletes = (traits.match(/data-action="rosterDelete"/g) ?? []).length;
+		if (rosterDeletes !== 2) throw new Error(`expected 2 roster deletes for the fixture's 2 entries, got ${rosterDeletes}`);
+
+		// Two effects, with 1 and 5 Spheres -> two effect deletes and six Sphere deletes.
+		const effectDeletes = (effects.match(/data-action="effectDelete"/g) ?? []).length;
+		const sphereDeletes = (effects.match(/data-action="effectSphereDelete"/g) ?? []).length;
+		if (effectDeletes !== 2) throw new Error(`expected 2 effect deletes, got ${effectDeletes}`);
+		if (sphereDeletes !== 6) throw new Error(`expected 6 Sphere deletes (1 + 5), got ${sphereDeletes}`);
+
+		if (editableControlsIn(traits).length === 0) throw new Error("the unlocked Rasgos tab has no editable control at all");
+		if (editableControlsIn(effects).length === 0) throw new Error("the unlocked Efectos tab has no editable control at all");
+	});
+
+	check("chantry: an empty roster leaves the LOCKED Trait rows exactly as they were", () => {
+		const locked = rendered.get("locked|traits") ?? "";
+
+		// The fixture rosters `allies` and `library`; the other six rostered Traits have no entries,
+		// so a locked sheet must render no roster block for them at all — the spec's "an empty roster
+		// SHALL NOT change how an existing sheet reads".
+		const blocks = (locked.match(/class="chantry-roster"/g) ?? []).length;
+		if (blocks !== 2) throw new Error(`expected 2 roster blocks (the two with entries), got ${blocks}`);
+
+		/* And EVERY declared construction Trait row is still there. The count is DERIVED from
+		   template.json, not the literal `14` this line used to carry: §4.3b adds the five
+		   Backgrounds M20 core p.308 permits on a Chantry (familiar, influence, wonder, mentor,
+		   patron), and a hard-coded 14 would have made this gate assert the very gap that task
+		   closes — the "el test afirmaba el defecto" class this project has hit repeatedly. Two
+		   independent sources meet here: the rows are RENDERED from
+		   `CONFIG.worldofdarkness.chantry.traitcost`, and the count comes from the ACTOR TYPE's own
+		   `system.traits`, so a Trait declared on the actor but never priced (or the reverse) shows
+		   up as a mismatch instead of rendering nowhere. */
+		const declared = Object.keys(template.Actor.Chantry.traits);
+		const rows = (locked.match(/class="clearareaBox row chantry-trait-row"/g) ?? []).length;
+		if (rows !== declared.length) {
+			throw new Error(`expected one row per declared construction Trait (${declared.length}), got ${rows}`);
+		}
+	});
+
+	/* THE DECLARATION DRIFT ITSELF (§4.3b / design.md D13). wodchar declared 19 Traits while this
+	   system declared 14 for long enough to ship; the five extra would have reached an actor whose
+	   type had no declaration for them, rendering nowhere and droppable on the next save. Nothing
+	   compared the two halves, so nothing said so. */
+	check("chantry: every declared Trait is priced and every priced Trait is declared", () => {
+		const declared = new Set(Object.keys(template.Actor.Chantry.traits));
+		const priced = new Set(Object.keys(CONFIG.worldofdarkness.chantry.traitcost));
+
+		const unpriced = [...declared].filter((k) => !priced.has(k));
+		const undeclared = [...priced].filter((k) => !declared.has(k));
+
+		if (unpriced.length) {
+			throw new Error(
+				`template.json declares ${unpriced.join(", ")} on Actor.Chantry.traits, but ` +
+				`CONFIG.worldofdarkness.chantry.traitcost does not price them, so the sheet's loop ` +
+				`never renders them: the value is stored and invisible.`);
+		}
+		if (undeclared.length) {
+			throw new Error(
+				`CONFIG prices ${undeclared.join(", ")} but template.json does not declare them on ` +
+				`Actor.Chantry.traits: the row renders, and the actor has nowhere to keep the value.`);
+		}
+	});
+
+	/* AWAITED OUTSIDE `check`, deliberately. `check` is synchronous (`try { fn() }`), so a function
+	   that RETURNS a promise would have its rejection swallowed as an unhandled rejection and the
+	   check would pass whatever happened — a gate that cannot fail. The async work is done here and
+	   only the assertions go inside. */
+	const capContext = await new ChantrySheetClass({ document: buildChantryActor() })._prepareContext({});
+
+	check("chantry: the per-Trait cap marks reality-zone 4 over cap and library 4 not (design.md D7)", () => {
+		const byKey = new Map(capContext.listData.traits.map((t) => [t.key, t]));
+
+		if (byKey.get("reality-zone").overcap !== true) {
+			throw new Error("reality-zone 4 on a rating-3 Chantry is NOT marked over cap; the 1x exception is gone");
+		}
+		if (byKey.get("library").overcap !== false) {
+			throw new Error("library 4 on a rating-3 Chantry IS marked over cap; the 2x rule is wrong");
+		}
+		if (byKey.get("reality-zone").overcapkey === byKey.get("library").overcapkey) {
+			throw new Error("both Traits share one over-cap message; one of the two sentences must be false");
+		}
+	});
+
+	/* THE FIVE p.308 BACKGROUNDS, by the spec's own two scenarios (`foundry-chantry-sheet`: "The
+	   five Traits render" / "They obey the same cap"). The fixture carries wonder 2 and mentor 7 on
+	   a rating-3 Chantry, so this asserts against RENDERED markup and the REAL cap rule, not
+	   against the declaration it would be circular to re-read. */
+	check("chantry: the five p.308 Backgrounds render with the same dot allocator and cap rule", () => {
+		const locked = rendered.get("locked|traits") ?? "";
+		const byKey = new Map(capContext.listData.traits.map((t) => [t.key, t]));
+
+		for (const key of ["familiar", "influence", "wonder", "mentor", "patron"]) {
+			if (!byKey.has(key)) throw new Error(`"${key}" is absent from the prepared Trait list`);
+			if (!locked.includes(`class="clearareaBox row chantry-trait-row" data-key="${key}"`)) {
+				throw new Error(`"${key}" declares no rendered Trait row`);
+			}
+			// The same allocator: ten steps in one .chantry-trait-value carrying the stored value.
+			const value = new RegExp(
+				`class="pullLeft resource-value chantry-trait-value" data-value="(\\d+)" data-key="${key}"`
+			).exec(locked);
+			if (!value) throw new Error(`"${key}" renders no .chantry-trait-value dot allocator`);
+		}
+
+		// Scenario 1: wonder at 2 renders two filled dots — i.e. the allocator is handed the 2.
+		if (!locked.includes('chantry-trait-value" data-value="2" data-key="wonder"')) {
+			throw new Error("wonder 2 does not reach the dot allocator as 2");
+		}
+		// Scenario 2: mentor 7 on a rating-3 Chantry is over the GENERIC 2x cap (6), and says so
+		// with the 2x sentence, not Zona de Realidad's 1x one.
+		if (byKey.get("mentor").cap !== 6) {
+			throw new Error(`mentor's cap on a rating-3 Chantry is ${byKey.get("mentor").cap}, not the generic 2x = 6`);
+		}
+		if (byKey.get("mentor").overcap !== true) throw new Error("mentor 7 on a rating-3 Chantry is NOT marked over cap");
+		if (byKey.get("mentor").overcapkey !== "wod.chantry.overcap") {
+			throw new Error(`mentor uses the over-cap message "${byKey.get("mentor").overcapkey}"; the 2x Traits use wod.chantry.overcap`);
+		}
+		if (!locked.includes('class="pullLeft item-warning chantry-overcap-flag"')) {
+			throw new Error("no over-cap flag renders at all, so mentor's cannot have");
+		}
+	});
+
+	check("chantry: the vault renders all four item groups", () => {
+		const gear = rendered.get("locked|gear") ?? "";
+
+		for (const name of ["Caja de herramientas", "El Bioroide Eva", "Fetiche del umbral",
+			"Bastón ritual", "Rifle de la cámara", "Chaleco del vestíbulo"]) {
+			if (!gear.includes(name)) throw new Error(`"${name}" renders nowhere on the vault's Equipo tab`);
+		}
+
+		// And none of the three PC-only blocks reached it.
+		if (gear.includes("system.gear.money")) throw new Error("the PC's money fields rendered on a Chantry");
+		if (gear.includes("v3-macrorail")) throw new Error("the PC's macro rail rendered on a Chantry");
+	});
+
+	/* THE EMPTY VAULT — the spec's own second scenario for the gear tab ("A Chantry with no Items
+	   renders its gear tab … THEN the gear tab SHALL render and SHALL NOT raise"). A separate fixture
+	   because the one above deliberately holds an item of every kind, and "renders with six items"
+	   says nothing about "renders with none": the empty state is a different branch, and an empty
+	   `actor.items` is also what every NEW Chantry has. */
+	{
+		const emptyActor = buildChantryActor();
+		emptyActor.items = [];
+
+		const emptySheet = new ChantrySheetClass({ document: emptyActor });
+		emptySheet.locked = true;
+
+		let emptyHtml = null;
+		let emptyError = null;
+
+		try {
+			const emptyBase = await emptySheet._prepareContext({});
+			const emptyContext = await emptySheet._preparePartContext("gear", { ...emptyBase }, {});
+			Object.defineProperty(emptyContext, ROOTISH, { value: true, enumerable: false });
+
+			const emptyRenderer = new Renderer("chantry:gear", "chantry-empty", chantryFindings);
+			emptyRenderer.rootContext = emptyContext;
+			emptyHtml = emptyRenderer.renderProgram(
+				compile(templateFile(ChantrySheetClass.PARTS.gear.template)), new Frame(emptyContext));
+		}
+		catch (err) { emptyError = err; }
+
+		check("chantry: an EMPTY vault renders the Equipo tab and does not raise", () => {
+			if (emptyError) throw new Error(`the gear part raised for an item-less Chantry: ${emptyError.message}`);
+			if (countElements(emptyHtml) === 0) throw new Error("the gear part rendered zero elements");
+			if (!/<section\b[^>]*data-tab="gear"/.test(emptyHtml)) throw new Error("no <section data-tab=\"gear\">");
+			if (!/class="v3-empty"/.test(emptyHtml)) throw new Error("the empty state did not render");
+			if (/<table\b/.test(emptyHtml)) throw new Error("an item table rendered for a Chantry with no items");
+		});
+	}
+
+	check("chantry: no template read a context key its preparer never built", () => {
+		if (chantryFindings.missingKeys.length === 0) return;
+
+		const grouped = new Map();
+		for (const f of chantryFindings.missingKeys) {
+			grouped.set(`${f.part} ${f.file}:${f.line} ${f.key}`, f);
+		}
+		throw new Error(
+			`${grouped.size} absent key(s) read while rendering the Chantry sheet — the silent-empty-` +
+			`block failure:\n  ` + [...grouped.keys()].join("\n  "));
+	});
+
+	check("chantry: every partial the parts included produced at least one node", () => {
+		const empties = chantryFindings.partialOutput.filter((p) => p.elements === 0);
+		if (empties.length === 0) return;
+
+		throw new Error(`${empties.length} empty partial render(s): ` +
+			[...new Set(empties.map((e) => `${e.partial} (from ${e.from}:${e.line})`))].join(", "));
+	});
+
+	for (const [action, reason] of LOCKED_WRITE_ACTIONS_OK) {
+		const fired = chantryPartIds.some((partId) =>
+			actionsIn(rendered.get(`locked|${partId}`) ?? "").includes(action));
+
+		if (fired) warnings.push(`::warning::LOCKED_WRITE_ACTIONS_OK: ${action} — ${reason}`);
+		else fail("stale LOCKED_WRITE_ACTIONS_OK entry",
+			`"${action}" no longer renders on a locked Chantry sheet — the gate landed; delete the entry.`);
+	}
+
+	console.log(`     ${chantryPartIds.length} parts x 2 lock states, ` +
+		`${chantryFindings.partialOutput.length} partial renders, ` +
+		`${writeActions.length} writing actions censused`);
 }
 
 /* ---- report ---- */
