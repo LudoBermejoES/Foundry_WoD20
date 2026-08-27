@@ -44,19 +44,31 @@
  *         opens ItemViewer
  *    B4 - the pseudo-document's uuid is namespaced under `this.actor.uuid`
  *    B5 - no leftover inline-toggle logic (`fa-eye-slash`/`collapsible-open`) remains
- *    B7 - (the CENSUS icon, add-chantry-roster-discoverability) the roster's own entry point is
- *         wired the same way: a binder over `.collapsible.button[data-rosterkey]`, called from
- *         `_onRender` with no lock/editable guard anywhere before it, opening `ItemViewer` on a
- *         pseudo-document namespaced `ChantryRoster` under the actor's uuid — a DIFFERENT namespace
- *         from the description eye's `ChantryTrait`, or the two windows would collide into one for
- *         the same Trait. The two binders must also select on DISJOINT attributes: both stamp
- *         `dataset.collapseBound`, so an icon carrying both keys is claimed by whichever ran first
- *         and opens the wrong window (the render side of that is asserted in
- *         `test-part-render.mjs`; this side asserts the selectors stay disjoint).
- *    B8 - the census popup's body ESCAPES what it interpolates. Roster entry names and notes are
- *         typed by a GM, stored verbatim, and `ItemViewer` runs its description through
- *         `enrichHTML` — this is the only place in this sheet that builds HTML out of
- *         actor-authored strings.
+ *    B7 - (el ICONO DEL CENSO) su punto de entrada sigue cableado igual —un binder sobre
+ *         `.collapsible.button[data-rosterkey]`, llamado desde `_onRender` sin ninguna guarda de
+ *         bloqueo delante— pero lo que HACE cambió con `add-chantry-roster-tab`: NAVEGA a la pestaña
+ *         Censo y enfoca el grupo del Rasgo, en vez de abrir un `ItemViewer` de solo lectura. El censo
+ *         tiene ahora su propia pestaña, y ofrecerlo también en un popup serían dos puertas al mismo
+ *         contenido — justo lo que el cambio anterior evitó a propósito.
+ *
+ *         B7c/B7e/B8/B8b AFIRMABAN EL POPUP y se han REESCRITO contra la regla nueva, no ajustadas
+ *         hasta que pasaran: el defecto más repetido de este proyecto es un test que afirma el
+ *         defecto, y el simétrico —el de aquí— es uno que afirma un comportamiento retirado. Lo que
+ *         afirman ahora:
+ *           B7c  el click NO abre ningún `ItemViewer`, y sí cambia de pestaña (`_activateCensusTab`)
+ *           B7e  la navegación no depende de datos de render: enfoca por `.census-group`, y el
+ *                selector es ESTÁTICO (el filtro por clave va en JS), porque un selector interpolado
+ *                no lo puede comprobar `binder-selector-check.py`
+ *           B8   el constructor de HTML del popup (`_rosterDescription`) y su escapador se han ido con
+ *                el popup — la fila la pinta Handlebars, que escapa `{{ }}` por su cuenta — y este
+ *                gate exige que NO vuelva, porque su prueba de escapado se fue con él
+ *           B8b  las cuatro piezas del portador viejo (`onRosterAdd`, `onRosterDelete`,
+ *                `_writeRoster`, `_rostersForWrite`) tampoco siguen ahí: un handler registrado sobre
+ *                datos que ya no existen es un control que no hace nada
+ *
+ *         Las dos ligaduras siguen teniendo que seleccionar por atributos DISJUNTOS: las dos estampan
+ *         `dataset.collapseBound`, así que un icono con las dos claves lo reclama la que corra primero
+ *         y abre lo que no toca (el lado del render lo afirma `test-part-render.mjs`).
  *    B6 - appv2 REPLACEMENT for "bound after the editable early-return": the three WRITING actions
  *         (`actorLock`, `ratingDotChange`, `traitDotChange`) are declared in
  *         `DEFAULT_OPTIONS.actions`, and `form.handler` points at the sheet's own
@@ -267,33 +279,45 @@ check("B7b it is called from _onRender with no lock/editable guard before it (a 
 	rosterBindCallIdx !== -1 &&
 	!/if\s*\([^)]*(locked|editable)[^)]*\)/.test(onRenderBody.slice(0, rosterBindCallIdx)));
 
-check("B7c the census popup is namespaced ChantryRoster under this.actor.uuid (no collision with the description window, no cross-actor collision)",
-	/uuid:\s*`\$\{this\.actor\.uuid\}\.ChantryRoster\.\$\{key\}`/.test(sheetJsSrc));
+const rosterBinderBody = (sheetJsSrc.match(/_bindTraitRosterButtons\(root\)\s*\{[\s\S]*?\n\t\}/) ?? [""])[0];
+
+check("B7c el click del icono NAVEGA a la pestaña Censo y no abre ningún ItemViewer",
+	rosterBinderBody !== "" &&
+	/_activateCensusTab\(\)/.test(rosterBinderBody) &&
+	/_focusCensusGroup\(/.test(rosterBinderBody) &&
+	!/ItemViewer/.test(rosterBinderBody),
+	rosterBinderBody === "" ? "(_bindTraitRosterButtons no encontrado)" : "");
+
+check("B7c2 no queda ningún ItemViewer namespaced ChantryRoster (el popup se retiró, no se dejó junto a la pestaña)",
+	!/ChantryRoster/.test(sheetJsSrc.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "")));
 
 check("B7d the two binders select on DISJOINT attributes (both stamp collapseBound; an icon carrying both keys opens the wrong window)",
 	traitBinderIdx !== -1 && rosterBinderMatch !== null &&
 	!/\[data-traitkey\]\[data-rosterkey\]|\[data-rosterkey\]\[data-traitkey\]/.test(sheetJsSrc));
 
-check("B7e the census popup reads its figures LIVE from evaluateRosters, not from a copy carried into the render context",
-	/_bindTraitRosterButtons\(root\)\s*\{[\s\S]{0,1200}evaluateRosters\(this\.actor\.system\.traitRosters/.test(sheetJsSrc));
+check("B7e enfoca el grupo con un selector ESTÁTICO y filtra por clave en JS (un selector interpolado no lo puede comprobar ningún gate)",
+	/querySelectorAll\??\.?\(["']\.census-group["']\)/.test(sheetJsSrc) &&
+	/dataset\?\.censusgroup === key|dataset\.censusgroup === key/.test(sheetJsSrc) &&
+	!/querySelector[^(]*\(`[^`]*\$\{/.test(sheetJsSrc));
 
-const rosterDescMatch = sheetJsSrc.match(/_rosterDescription\(roster\)\s*\{[\s\S]*?\n\t\}/);
-const rosterDesc = rosterDescMatch ? rosterDescMatch[0] : "";
+check("B7f la pestaña se activa con la API de ApplicationV2 y con respaldo (ningún otro sitio de este sistema llama a changeTab)",
+	/typeof this\.changeTab === "function"/.test(sheetJsSrc) &&
+	/this\.tabGroups\.primary = "census"/.test(sheetJsSrc));
 
-check("B8 the census popup's body escapes what it interpolates (GM-typed names/notes reach enrichHTML)",
-	rosterDesc !== "" &&
-	/replace\(\/&\/g,\s*"&amp;"\)/.test(rosterDesc) &&
-	/replace\(\/<\/g,\s*"&lt;"\)/.test(rosterDesc),
-	rosterDesc === "" ? "(_rosterDescription not found)" : "");
+/* ---- B8. el constructor de HTML del popup se fue, y no puede volver sin su prueba ---- */
 
-/* Narrowed on purpose after the first draft flagged `${name}` — a local that had ALREADY been
-   escaped one line up. What matters is not the shape of the interpolation but its SOURCE: the
-   actor-authored values live on `entry.*` (name, note, points) and `roster.*`, and none of those may
-   reach a template literal without passing through `esc()`. `${escapedLocal}` is fine and readable;
-   `${entry.name}` is the defect. */
-check("B8b no actor-authored value is interpolated raw (every entry./roster. reference goes through the escaper)",
-	rosterDesc !== "" && !/\$\{\s*(entry|roster)\./.test(rosterDesc),
-	rosterDesc === "" ? "(_rosterDescription not found)" : "");
+check("B8 el constructor de HTML del censo (_rosterDescription) ya no existe",
+	!/_rosterDescription\s*\(/.test(sheetJsSrc),
+	"volvió a construirse HTML a partir de cadenas escritas por un DJ, y la prueba de escapado se fue con el popup");
+
+check("B8b las cuatro piezas del portador viejo (`system.traitRosters`) tampoco siguen en la hoja",
+	["onRosterAdd", "onRosterDelete", "_writeRoster", "_rostersForWrite"]
+		.every((name) => !new RegExp(`${name}\\s*[(=:]`).test(sheetJsSrc)));
+
+check("B8c la hoja lee el censo de los ITEMS, no de system.traitRosters",
+	/isConnectionEntry/.test(sheetJsSrc) &&
+	/evaluateItemRosters\(/.test(sheetJsSrc) &&
+	!/system\.traitRosters/.test(sheetJsSrc.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "")));
 
 /* ---- C. localisation completeness, key list from the real CONFIG ---- */
 

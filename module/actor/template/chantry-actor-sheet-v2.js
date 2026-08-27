@@ -5,13 +5,17 @@ import {
 	SPHERE_KEYS,
 	ROSTER_TRAIT_KEYS,
 	evaluateEffects,
-	evaluateRosters,
+	evaluateItemRosters,
 	normaliseEffects,
-	normaliseRosters,
 	traitCap,
 	isSingleRatingCapTrait,
 	hasRoster
 } from "../../scripts/chantry-effects.js";
+/* add-chantry-roster-tab — el censo se pinta con el MISMO constructor y la MISMA plantilla que el
+   censo del PJ. Los dos ficheros están en `scripts/`, no en `PCActorSheet`, precisamente para que
+   esta clase pueda usarlos sin heredar nada (D1 sigue en pie; el precedente es `gear-lists.js`). */
+import { buildConnectionGroups, isConnectionEntry } from "../../scripts/connection-groups.js";
+import { censusOptions, decorateCensusGroups, censusItemData } from "../../scripts/chantry-census.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -195,8 +199,24 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			effectDelete: ChantryActorSheetV2.onEffectDelete,
 			effectSphereAdd: ChantryActorSheetV2.onEffectSphereAdd,
 			effectSphereDelete: ChantryActorSheetV2.onEffectSphereDelete,
-			rosterAdd: ChantryActorSheetV2.onRosterAdd,
-			rosterDelete: ChantryActorSheetV2.onRosterDelete
+
+			/* EL CENSO (add-chantry-roster-tab, tarea 5.2). `itemCreate` es el MISMO nombre de acción
+			   que el PJ registra, porque la plantilla es compartida y `sheet-invariants.py` I1
+			   comprueba cada `data-action` contra el mapa de CADA hoja que renderiza la plantilla —
+			   no contra la unión. Lo que cambia es el handler, y esto es el TERCER caso de la misma
+			   familia en esta hoja:
+
+			     `OnItemCreate` (action-helpers.js:1122) hace
+			         this.actor.system.settings.variantsheet === "" ? this.actor.system.settings.splat…
+			     SIN `?.`, y la Capilla es el único tipo de Actor de este sistema sin
+			     `system.settings` (medido en `template.json`: locked, flavor, rating, tier, pool,
+			     traits, notes, integratedEffects, traitRosters). O sea TypeError en el primer clic.
+			     `OnItemDelete` y `OnItemActive` ya se sustituyeron por lo mismo, y está dicho arriba.
+
+			   Y además el diálogo del PJ (`CreateButtonsNotev2`) ofrece Trasfondo, Mérito y Defecto,
+			   que una Capilla no puede tener: ofrecerle crear un Defecto es peor que no ofrecer nada
+			   (D2.3). El handler de abajo no abre diálogo: crea la entrada y le estampa el Rasgo. */
+			itemCreate: ChantryActorSheetV2.onCensusCreate
 			// Deliberately NO action entry for the Trait-description eye - it is read-only and
 			// stays a manually-bound `_onRender` listener (design.md D3, task 1.3/3.1), the same
 			// idiom `PCActorSheet._bindTraitDescriptionButtons` already uses for Attributes/
@@ -245,6 +265,19 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			title: game.i18n.localize("wod.chantry.traitsheadline"),
 			icon: game.worldofdarkness.icons.chantry.stats
 		},
+		/* EL CENSO (add-chantry-roster-tab, tarea 4.1). El orden de DECLARACIÓN es el orden del riel
+		   (`v3/navigation.hbs` itera este objeto), así que ir aquí es ir «entre Rasgos y Efectos».
+		   Cero glifos nuevos: `IconHelper.GetIconlist` (module/ui/icons.js:115) declara `connections`
+		   para toda raza y `getSplat()` responde `chantry` para este tipo de actor — es el mismo icono
+		   que el PJ v3 usa para su propia pestaña de relaciones.
+		   Título `wod.chantry.roster.headline` («Censo»), NUNCA `wod.tab.connections`: «Aliados y
+		   contactos» es falso para Biblioteca y Nodo. */
+		census: {
+			id: "census",
+			group: "primary",
+			title: game.i18n.localize("wod.chantry.roster.headline"),
+			icon: game.worldofdarkness.icons.chantry.connections
+		},
 		effects: {
 			id: "effects",
 			group: "primary",
@@ -277,6 +310,13 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		},
 		traits: {
 			template: "systems/worldofdarkness/templates/actor/chantry-sheet-v2.hbs"
+		},
+		/* LA MISMA PLANTILLA QUE EL PJ, no una copia (tarea 4.4 y el requisito de la spec: «SHALL
+		   reuse the PC roster's markup rather than a Chantry-only copy»). El interruptor es
+		   `context.chantry`, igual que `vault` en `v3/gear.hbs`; el `data-tab` sale de `tab.id`, así
+		   que el mismo fichero sirve para la pestaña `connections` del PJ y para `census` aquí. */
+		census: {
+			template: "systems/worldofdarkness/templates/actor/v3/connections.hbs"
 		},
 		effects: {
 			template: "systems/worldofdarkness/templates/actor/chantry-effects-v2.hbs"
@@ -332,7 +372,17 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		const traits = actor.system.traits ?? {};
 		const rating = parseInt(actor.system.rating) || 0;
 		const traitcost = CONFIG.worldofdarkness.chantry.traitcost;
-		const rosters = evaluateRosters(actor.system.traitRosters, traits);
+
+		/* EL CENSO SE LEE DE LOS ITEMS, no de `system.traitRosters` (add-chantry-roster-tab, D1). El
+		   mapa sigue declarado en `template.json` para que un mundo sin migrar no explote, y la
+		   migración (`module/scripts/chantry-roster-migration.js`) lo vacía en cuanto corre; esta hoja
+		   ya no lo lee en ninguna parte.
+		   Las cifras de la fila del Rasgo (el tooltip del icono) y las de la pestaña salen de la MISMA
+		   llamada, así que no pueden discrepar. */
+		const censusEntries = actor.items?.filter?.(isConnectionEntry) ?? [];
+		const rosters = evaluateItemRosters(
+			censusEntries.map((item) => ({ relation: item.system?.relation, points: item.system?.points })),
+			traits).groups;
 
 		let spent = 0;
 		const traitlist = [];
@@ -367,7 +417,7 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 				overcapkey: isSingleRatingCapTrait(key)
 					? "wod.chantry.overcapsingle"
 					: "wod.chantry.overcap",
-				/* The census (task 3.6). `show` is what keeps the spec's promise that "an empty
+				/* The census. `show` is what keeps the spec's promise that "an empty
 				   roster SHALL NOT change how an existing sheet reads": the magnitude Traits never
 				   get one, and the eight that do render no BLOCK at all while the sheet is locked
 				   and empty. Unlocked, the head renders so there is a way to add the first entry.
@@ -381,9 +431,7 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 				   carries instead is one icon, rendered precisely when the block is NOT (see
 				   `chantry-sheet-v2.hbs`, and `_bindTraitRosterButtons` below). `used`/`allowed`
 				   ride along on the same object the icon's tooltip prints. */
-				roster: hasRoster(key)
-					? { ...rosters[key], show: (rosters[key].entries.length > 0) || !this.locked }
-					: null
+				roster: hasRoster(key) ? { ...rosters[key] } : null
 			});
 		}
 
@@ -403,6 +451,24 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			total: actor.system.pool?.total ?? 0,
 			spent: spent
 		};
+
+		/* LA INSIGNIA DE LA PESTAÑA CENSO (tarea 4.5): un `.length` y nada más — ninguna descripción
+		   se enriquece para contar, que es exactamente por qué el PJ tiene un
+		   `countConnectionsTabItems` separado de su preparador.
+		   Cuenta TODAS las entradas de censo, incluidas las de un `relation` mal tecleado: la
+		   insignia dice cuántas entradas hay, y esconder las descolocadas volvería a hacerlas
+		   invisibles.
+
+		   Y ES UNA CADENA, no un número, POR UN DEFECTO MEDIDO DEL RIEL COMPARTIDO. `v3/navigation.hbs`
+		   pinta la insignia con `{{#if tab.count}}`, y 0 es falso en Handlebars: un cero NUMÉRICO no
+		   renderiza insignia ninguna. El requisito de este cambio es justo el contrario — una Capilla
+		   recién creada tiene que ver «Censo» con un 0 al lado, porque el estado por defecto es el
+		   único con el que empieza un lector (D10). `String(0)` es "0", que sí es verdadero, así que la
+		   insignia sale sin tocar el riel: cambiar la condición del partial le pondría un «0» a cada
+		   pestaña vacía de CADA hoja de PJ, y el requisito «the PC roster does not move» lo prohíbe. */
+		if (data.tabs.census) {
+			data.tabs.census.count = String(censusEntries.length);
+		}
 
 		data.notes = await foundry.applications.ux.TextEditor.implementation.enrichHTML(actor.system.notes, { async: true });
 
@@ -427,6 +493,29 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			case "traits":
 				context.tab = context.tabs.traits;
 				return context;
+
+			/* SIN ESTE `case` LA PESTAÑA SALE EN BLANCO Y SIN ERROR: un part sin preparador se
+			   renderiza solo con el contexto compartido, así que `connections`/`hasConnections` serían
+			   undefined y no habría ni estado vacío. `sheet-invariants.py` I5 lo exige por eso. */
+			case "census": {
+				context.tab = context.tabs.census;
+
+				/* EL INTERRUPTOR de la plantilla compartida, igual que `vault` en `v3/gear.hbs`. El PJ
+				   no lo pone nunca, así que su render no cambia. */
+				context.chantry = true;
+
+				const traits = this.actor.system.traits ?? {};
+
+				context.connections = decorateCensusGroups(
+					await buildConnectionGroups(this.actor, censusOptions(traits, {
+						locked: this.locked,
+						locale: CONFIG.language
+					})),
+					traits);
+				context.hasConnections = context.connections.length > 0;
+
+				return context;
+			}
 
 			case "effects": {
 				context.tab = context.tabs.effects;
@@ -577,20 +666,38 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	}
 
 	/**
-	 * The CENSUS icon: opens the same read-only `ItemViewer` popup the description eyes open, with
-	 * this Trait's roster in it — the points line, the entries, and (when there are none) what a
-	 * census is and how to add the first entry.
+	 * EL ICONO DEL CENSO de la fila de un Rasgo: ACTIVA LA PESTAÑA CENSO y enfoca el grupo de ese
+	 * Rasgo. No abre nada.
 	 *
-	 * WHY A SEPARATE BINDER FROM THE EYE ABOVE, rather than one binder over both attributes: the two
-	 * must be able to tell each other apart, because `dataset.collapseBound` is a one-shot stamp and
-	 * whichever binder saw an icon first would own it. They are therefore keyed on DISJOINT
-	 * attributes — `[data-traitkey]` for the description, `[data-rosterkey]` for the census — and
-	 * `test-part-render.mjs` asserts no rendered element carries both.
+	 * ESTO REVIERTE 7.5.137 A PROPÓSITO, y la razón está en D7 de `add-chantry-roster-tab`. Ese icono
+	 * se añadió porque el censo vivía dentro de la pestaña de Rasgos y, con la hoja abriendo bloqueada
+	 * y el censo vacío, no tenía NINGUNA puerta: 0 bloques, 0 controles y 0 caracteres de markup en 19
+	 * filas de Rasgo. La visibilidad la resuelve ahora la pestaña, que el riel pinta siempre, así que
+	 * el popup de solo lectura sobraría — y dos puertas al mismo contenido es justo lo que el cambio
+	 * anterior evitó a propósito («nunca se ofrece desde dos sitios a la vez»).
 	 *
-	 * WHY THE CONTENT IS BUILT HERE AND NOT IN THE TEMPLATE: the figures are LIVE. Read at click
-	 * time from `evaluateRosters`, this window cannot print a stale count if an entry was added from
-	 * elsewhere (wodchar's API writes the same `system.traitRosters`), and no second copy of the
-	 * entries has to be carried into the render context for eight Traits that mostly have none.
+	 * Lo que el icono sigue aportando y la pestaña no: el puntero POR RASGO.
+	 *
+	 * TRES COSAS QUE NO CAMBIAN, y las tres son requisitos:
+	 *   * sigue siendo de SOLO LECTURA — navegar no escribe — así que se liga sin condición de bloqueo
+	 *     en cada render, igual que las dos eyes de arriba;
+	 *   * sigue renderizándose sin condicionar a la puntuación del Rasgo ni a que su censo tenga
+	 *     entradas («una affordance cuya PRESENCIA depende del dato es la clase de defecto que esto
+	 *     arregla»);
+	 *   * sigue keyada en `[data-rosterkey]`, DISJUNTA de `[data-traitkey]`: las dos ligaduras
+	 *     estampan `dataset.collapseBound` y la primera que viera un icono con las dos claves se
+	 *     quedaría con él y abriría lo que no toca.
+	 *
+	 * `changeTab` es la API de ApplicationV2 y es la correcta, pero NADA MÁS EN ESTE SISTEMA la llama,
+	 * así que se prueba y hay respaldo — el mismo trato que `_confirm` le da a `DialogV2`, y por el
+	 * mismo motivo: un camino que solo existe tras un clic no lo alcanza ninguna puerta offline, y una
+	 * sorpresa de firma se vería como «el icono no hace nada» en una sesión real. El respaldo escribe
+	 * el grupo de pestañas a mano y re-renderiza, que es lo que `_handlingLock` ya hace.
+	 *
+	 * EL SELECTOR DEL GRUPO ES ESTÁTICO Y EL FILTRO VA EN JS, no `[data-censusgroup="${key}"]`:
+	 * `binder-selector-check.py` comprueba que cada selector que este sistema teclea sea producible
+	 * por la plantilla de la hoja, y un selector construido con una plantilla de cadena no se puede
+	 * comprobar — un fallo tipográfico ahí no daría error, solo dejaría de enfocar.
 	 * @param {HTMLElement} root
 	 */
 	_bindTraitRosterButtons(root) {
@@ -601,73 +708,58 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			if (icon.dataset.collapseBound) return;
 			icon.dataset.collapseBound = "true";
 
-			icon.addEventListener("click", () => {
+			icon.addEventListener("click", async () => {
 				const key = icon.dataset.rosterkey;
-				const labelkey = icon.dataset.labelkey;
 
-				// The same guard every roster handler applies: a key outside the eight is not a
-				// roster, and `evaluateRosters` would have nothing to answer with.
+				// Un Rasgo que no admite censo no tiene grupo al que ir.
 				if (!ROSTER_TRAIT_KEYS.includes(key)) return;
 
-				const roster = evaluateRosters(this.actor.system.traitRosters, this.actor.system.traits ?? {})[key];
-				const label = game.i18n.localize(labelkey || `wod.chantry.traits.${key}`);
-
-				ItemViewer.open({
-					uuid: `${this.actor.uuid}.ChantryRoster.${key}`,
-					name: `${game.i18n.localize("wod.chantry.roster.headline")}: ${label}`,
-					system: { description: this._rosterDescription(roster) }
-				});
+				await this._activateCensusTab();
+				this._focusCensusGroup(key);
 			});
 		});
 	}
 
 	/**
-	 * The census popup's body, as HTML.
-	 *
-	 * EVERY INTERPOLATED VALUE IS ESCAPED. A roster entry's name and note are typed by a GM and are
-	 * stored verbatim, and `ItemViewer` runs its description through `enrichHTML` — so an unescaped
-	 * `<` here would be markup, not text. This is the only place in this sheet that builds HTML from
-	 * actor-authored strings, which is exactly why the escaping lives next to the interpolation
-	 * instead of being assumed of the caller.
-	 * @param {{entries: object[], used: number, allowed: number, over: boolean}} roster
-	 * @returns {string}
+	 * Activa la pestaña Censo. Devuelve el control cuando la pestaña ya está activa, para que quien
+	 * llame pueda enfocar dentro de ella.
 	 */
-	_rosterDescription(roster) {
-		/* THE QUOTE IS REPLACED WITH `replaceAll('"')`, NOT WITH A `/"/g` REGEX, and that is not a
-		   style preference: `.github/scripts/sheet-invariants.py`'s `js_block()` brace matcher is
-		   string-aware but NOT regex-aware, so a double quote inside a regex literal opens a phantom
-		   string, desynchronises the brace count and makes the gate lose this class's whole
-		   `DEFAULT_OPTIONS.actions` map. It then reports nine "data-action registered by no sheet"
-		   findings across three Chantry templates — a message that points everywhere except here.
-		   Measured while writing this method. A single-quoted `'"'` is consumed correctly by that
-		   same scanner. */
-		const esc = (value) => String(value ?? "")
-			.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replaceAll('"', "&quot;");
+	async _activateCensusTab() {
+		if (this.tabGroups?.primary === "census") return;
 
-		const L = (key) => esc(game.i18n.localize(key));
-		const parts = [];
-
-		parts.push(`<p><strong>${L("wod.chantry.roster.points")}: ${esc(roster.used)} / ${esc(roster.allowed)}</strong></p>`);
-
-		if (roster.over) {
-			parts.push(`<p class="item-warning">${L("wod.chantry.roster.over")}</p>`);
+		if (typeof this.changeTab === "function") {
+			try {
+				this.changeTab("census", "primary");
+				return;
+			}
+			catch (err) {
+				console.warn("WoD | changeTab no disponible en esta versión; se cambia la pestaña a mano.", err);
+			}
 		}
 
-		if (roster.entries.length) {
-			const rows = roster.entries.map((entry) => {
-				const name = esc(entry.name) || L("wod.chantry.roster.name");
-				const note = entry.note ? ` &mdash; ${esc(entry.note)}` : "";
-				return `<li>${name}${note} (${esc(entry.points)})</li>`;
-			});
+		this.tabGroups.primary = "census";
+		await this.render(false);
+	}
 
-			parts.push(`<ul>${rows.join("")}</ul>`);
-		}
-		else {
-			// The whole point of the icon: an empty census must say what it is and how to fill it.
-			parts.push(`<p>${L("wod.chantry.roster.empty")}</p>`);
-		}
+	/**
+	 * Trae a la vista el grupo de un Rasgo dentro de la pestaña Censo.
+	 *
+	 * `focus()` además de `scrollIntoView()` porque el segundo no dice NADA a un lector de pantalla:
+	 * el envoltorio del grupo lleva `tabindex="-1"` justo para poder recibir el foco sin entrar en el
+	 * orden de tabulación. Y si el grupo no está (Rasgo sin entradas en una hoja bloqueada, que es
+	 * cuando la pestaña muestra su estado vacío) no pasa nada: la pestaña ya está activa y el estado
+	 * vacío explica cómo añadir la primera entrada.
+	 * @param {string} key
+	 */
+	_focusCensusGroup(key) {
+		const groups = this.element?.querySelectorAll?.(".census-group");
+		if (!groups?.length) return;
 
-		return parts.join("");
+		const target = Array.from(groups).find((el) => el.dataset?.censusgroup === key);
+		if (!target) return;
+
+		target.scrollIntoView?.({ block: "start", behavior: "smooth" });
+		target.focus?.({ preventScroll: true });
 	}
 
 	/**
@@ -758,38 +850,9 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 			await this._writeEffects(effects);
 		}
-		else if (source === "roster") {
-			const key = dataset.key;
-			const index = Number(dataset.index);
-			const field = dataset.field;
-
-			if (!ROSTER_TRAIT_KEYS.includes(key)) return;
-
-			const rosters = this._rostersForWrite();
-			const entries = rosters[key] ?? [];
-
-			if (!Number.isInteger(index) || index < 0 || index >= entries.length) return;
-
-			if ((field === "name") || (field === "note")) {
-				entries[index][field] = target.value;
-			}
-			else if (field === "points") {
-				let points = parseInt(target.value);
-
-				// 0 is legal and load-bearing (design.md D5: a Biblioteca entry that describes a
-				// holding rather than consuming a circle), so this floors at 0, not at 1.
-				if (isNaN(points) || points < 0) {
-					points = 0;
-				}
-
-				entries[index].points = points;
-			}
-			else {
-				return;
-			}
-
-			await this._writeRoster(key, entries);
-		}
+		/* Ya no hay rama `roster`: una entrada del censo es un Item con su propia hoja
+		   (add-chantry-roster-tab, D1), así que su nombre, su descripción y sus puntos se editan ahí y
+		   no en tres `<input>` dentro de la fila del Rasgo. */
 	}
 
 	/* Alter the Chantry/Construct's own rating dot (1-5). `data-action="ratingDotChange"` is only
@@ -1117,19 +1180,36 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	}
 
 	/* ==========================================================================================
-	 * THE ROSTERS (task 3.6) — one list per rostered Trait, under `system.traitRosters`
+	 * EL CENSO (add-chantry-roster-tab) — Items `Feature` `wod.types.connection`, no datos del actor
+	 *
+	 * El portador viejo (`system.traitRosters`, un array de objetos planos dentro del actor) se ha ido
+	 * con sus cuatro handlers: `onRosterAdd`, `onRosterDelete`, `_rostersForWrite` y `_writeRoster`,
+	 * más la rama `roster` del submit y `_rosterDescription`. Lo que los sustituye es UN handler de
+	 * creación y nada más, porque todo lo demás lo dan los Items gratis: la hoja propia (`itemEdit`,
+	 * ya registrado), el borrado (`itemDelete`, el propio de esta hoja, ya registrado), el ojo, el
+	 * arrastre entre actores, el retrato y la descripción enriquecida.
+	 *
+	 * `normaliseRosters` NO se ha borrado de `chantry-effects.js`: es lo que lee la migración.
 	 * ========================================================================================== */
 
-	/** The current rosters, canonicalised: any key that is not one of the eight is dropped (D5). */
-	_rostersForWrite() {
-		return normaliseRosters(this.actor.system.traitRosters);
-	}
-
-	async _writeRoster(key, entries) {
-		await this.actor.update({ [`system.traitRosters.${key}`]: entries });
-	}
-
-	static async onRosterAdd(event, target) {
+	/**
+	 * Crea una entrada de censo EN EL GRUPO desde el que se pulsó, estampándole su Rasgo.
+	 *
+	 * `system.relation` no se teclea nunca en el caso normal, y eso es una defensa, no una comodidad:
+	 * en el PJ un error de tecleo solo cambia el título de un grupo, pero en la Capilla saca la entrada
+	 * de la contabilidad de puntos sin decir nada — la forma recurrente «un valor aceptado que
+	 * silenciosamente no hace nada» (D2.5). La otra mitad de esa defensa está en la pestaña: un
+	 * `relation` que no es ninguna de las ocho claves se pinta en un grupo visible con aviso, en vez de
+	 * desaparecer.
+	 *
+	 * NO ABRE DIÁLOGO. `CreateButtonsNotev2` ofrece Trasfondo, Mérito, Defecto… y una Capilla no puede
+	 * tener ninguno de los tres.
+	 *
+	 * Y NO REUTILIZA `OnItemCreate`: ése desreferencia `this.actor.system.settings.variantsheet` sin
+	 * `?.` (action-helpers.js:1122) y la Capilla es el único Actor de este sistema sin
+	 * `system.settings`. Ver la nota del mapa `actions`.
+	 */
+	static async onCensusCreate(event, target) {
 		event.preventDefault();
 
 		if (this.locked) {
@@ -1137,44 +1217,16 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			return;
 		}
 
-		const key = target.dataset.key;
-		if (!ROSTER_TRAIT_KEYS.includes(key)) return;
+		const key = target?.dataset?.key;
 
-		const rosters = this._rostersForWrite();
-		const entries = rosters[key] ?? [];
-
-		entries.push({ name: "", note: "", points: 1 });
-
-		await this._writeRoster(key, entries);
-	}
-
-	static async onRosterDelete(event, target) {
-		event.preventDefault();
-		event.stopPropagation();
-
-		if (this.locked) {
-			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+		// El botón solo se renderiza dentro de un grupo de los ocho, así que esto no debería poder
+		// fallar; se comprueba igual, porque el precio de equivocarse es una entrada que no cuenta
+		// para nada y nadie ve.
+		if (!ROSTER_TRAIT_KEYS.includes(key)) {
+			ui.notifications.warn(game.i18n.localize("wod.chantry.roster.unassigned"));
 			return;
 		}
 
-		const key = target.dataset.key;
-		const index = Number(target.dataset.index);
-
-		if (!ROSTER_TRAIT_KEYS.includes(key)) return;
-
-		const rosters = this._rostersForWrite();
-		const entries = rosters[key] ?? [];
-
-		if (!Number.isInteger(index) || index < 0 || index >= entries.length) return;
-
-		const confirmed = await this._confirm(
-			game.i18n.localize("wod.chantry.roster.remove"),
-			`${game.i18n.localize("wod.labels.remove.removing")} ${entries[index].name}`);
-
-		if (!confirmed) return;
-
-		entries.splice(index, 1);
-
-		await this._writeRoster(key, entries);
+		await this.actor.createEmbeddedDocuments("Item", [censusItemData(key)]);
 	}
 }

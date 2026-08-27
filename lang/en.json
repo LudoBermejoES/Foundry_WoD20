@@ -198,7 +198,8 @@
 			"nolink": "No link",
 			"relation": "Background",
 			"portrait": "Portrait",
-			"empty": "No allies or contacts yet. They are grouped by the Background that names the relationship (Contacts, Allies, Mentor, ...); use Add item to create one."
+			"empty": "No allies or contacts yet. They are grouped by the Background that names the relationship (Contacts, Allies, Mentor, ...); use Add item to create one.",
+			"points": "Points"
 		},
 		"languages": {
 			"heading": "Known languages",
@@ -1468,15 +1469,17 @@
 			},
 			"roster": {
 				"headline": "Roster",
-				"show": "Show this Trait's roster",
-				"empty": "This Trait takes a roster: the list of who or what makes it up, entry by entry. There are none yet. To add the first one, unlock the sheet with the padlock in the header and press the + button that appears next to the Trait. Each entry consumes the points you give it (1 by default, and 0 is for something described without taking up a circle), and the total should not exceed the Trait's own points.",
+				"show": "Go to this Trait's census",
+				"empty": "The Chantry's census is the list of who or what makes up each Trait: allies, retainers, spies, backup, elders, cult sympathizers, the library and the node. There are no entries yet. To add the first one, unlock the sheet with the padlock in the header: a + button appears on each Trait's heading on this tab. Each entry consumes the points you give it (1 by default, and 0 is for something described without taking up a circle), and the total should not exceed the Trait's own points.",
 				"points": "Points",
 				"over": "This roster consumes more points than the Trait has.",
 				"add": "Add entry",
 				"remove": "Remove entry",
 				"name": "Name",
 				"note": "Note",
-				"entrypoints": "Points this entry consumes"
+				"entrypoints": "Points this entry consumes",
+				"unassigned": "No Trait assigned",
+				"unassignedhint": "These entries carry a Trait that does not exist: fix their “Background” field on the entry's own sheet so they count again."
 			},
 			"effects": {
 				"headline": "Integrated Effects",

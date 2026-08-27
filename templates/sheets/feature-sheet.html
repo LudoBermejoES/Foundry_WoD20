@@ -129,6 +129,28 @@
 						<input class="sheet-infoValues editable" name="system.portrait" type="text" value="{{data.system.portrait}}" data-dtype="String" autocomplete="off" />
 						<span class="floating-label">{{localize "wod.connections.portrait"}}</span>
 					</div>
+					{{!--
+						add-chantry-roster-tab — `points`: cuántos puntos del Rasgo consume esta entrada.
+						Es lo único que el censo de la Capilla tiene y el del PJ no, y se conserva porque
+						perderlo sería regresión: la regla es Σ puntos ≤ círculos del Rasgo.
+
+						CAMPO PROPIO, y NO se reutiliza `level` ni `value` (D2.4): `feature_item.hbs` los
+						pinta como CÍRCULOS y `featureRating` los lee, así que un «2» de puntos saldría en
+						la fila como una puntuación de 2. Mismo razonamiento que rechazó colgar el enlace
+						de `worldanvil`: no mentir con el nombre de un campo.
+
+						Sale solo para `wod.types.connection` porque solo ahí significa algo — y sí sale en
+						una relación de un PJ, donde no se cuenta contra nada: el campo vive en
+						`Item.Feature`, no en un tipo de actor, y esconderlo según quién sea el dueño
+						exigiría que la hoja del objeto supiera a quién pertenece.
+
+						0 ES LEGAL Y LOAD-BEARING (una entrada de Biblioteca que describe un grimorio sin
+						ocupar círculo), así que `min="0"`, nunca 1.
+					--}}
+					<div class="infobox bioInformationArea floating-label-group">
+						<input class="sheet-infoValues editable" name="system.points" type="number" min="0" value="{{data.system.points}}" data-dtype="Number" autocomplete="off" />
+						<span class="floating-label">{{localize "wod.connections.points"}}</span>
+					</div>
 				{{/if}}
 
 				{{!--

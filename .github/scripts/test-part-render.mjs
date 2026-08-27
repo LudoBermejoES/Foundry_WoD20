@@ -1578,7 +1578,23 @@ if (eraGates.cosmetic.length) {
 
 console.log("\nC. every part renders for every structure");
 
-const PART_IDS = Object.keys(PCActorSheet.PARTS);
+/*
+ * add-chantry-roster-tab — LA UNIÓN de los parts de las dos hojas, no solo los de `PCActorSheet`.
+ *
+ * ESTA LÍNEA ERA UNA VENTANA CIEGA MEDIDA. `PART_IDS` salía de `PCActorSheet.PARTS`, o sea de la hoja
+ * v2, y `connections` es un part que SOLO declara `PCActorSheetV3` — así que la pestaña «Aliados y
+ * contactos» del PJ (`templates/actor/v3/connections.hbs`, 106 líneas con su resolución de retrato y
+ * su bloque de enlace) NO se renderizaba aquí ni una vez, en ninguna de las 173 estructuras. El
+ * comentario de arriba ya avisaba de esta clase de fallo con otras palabras: «una puerta que no puede
+ * ver la clase que debe cubrir es decoración».
+ *
+ * Se descubrió porque este cambio necesita justo lo contrario: comparar los BYTES de esa pestaña antes
+ * y después de compartir el fichero con la hoja de Capilla («the PC roster does not move»), y no había
+ * dónde medirlo.
+ *
+ * La unión conserva el orden de la v2 primero, para que la salida de esta sección no se reordene.
+ */
+const PART_IDS = [...new Set(SHEETS.flatMap(({ cls }) => Object.keys(cls.PARTS ?? {})))];
 
 /*
  * partId -> every distinct template any sheet in the family declares for it.
@@ -2007,7 +2023,23 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			{ type: "Fetish", name: "Fetiche del umbral", system: { type: "wod.types.fetish" } },
 			{ type: "Melee Weapon", name: "Bastón ritual", system: {} },
 			{ type: "Ranged Weapon", name: "Rifle de la cámara", system: {} },
-			{ type: "Armor", name: "Chaleco del vestíbulo", system: {} }
+			{ type: "Armor", name: "Chaleco del vestíbulo", system: {} },
+
+			/* EL CENSO (add-chantry-roster-tab): seis entradas escogidas para que ninguna rama de la
+			   pestaña quede sin ejercitar, y las cifras están calculadas contra los Rasgos de la
+			   fixture (allies 2, library 4, spies 0):
+			     allies   1 + 1 = 2 / 2   -> dentro de presupuesto, dos entradas en un grupo
+			     library  0 + 0 = 0 / 4   -> el 0 EXPLÍCITO, que es legal y load-bearing
+			     spies    3     = 3 / 0   -> SOBRECOSTE, que es la rama del aviso
+			     "alies"  1               -> un `relation` mal tecleado: grupo «Sin Rasgo asignado»
+			   Y una lleva markup tecleado en el nombre, porque `enrichHTML` corre sobre la
+			   descripción de la fila y un `<` sin escapar sería markup y no texto. */
+			{ type: "Feature", name: "Nadia", system: { type: "wod.types.connection", relation: "allies", points: 1, description: "Contacto en el puerto." } },
+			{ type: "Feature", name: "<img src=x onerror=\"alert(1)\">", system: { type: "wod.types.connection", relation: "allies", points: 1 } },
+			{ type: "Feature", name: "Copia del Codex", system: { type: "wod.types.connection", relation: "library", points: 0 } },
+			{ type: "Feature", name: "Grimorio de la Orden", system: { type: "wod.types.connection", relation: "library", points: 0, portrait: "wod20-portraits/grimorio.webp" } },
+			{ type: "Feature", name: "Rata del muelle", system: { type: "wod.types.connection", relation: "spies", points: 3 } },
+			{ type: "Feature", name: "Perdido", system: { type: "wod.types.connection", relation: "alies", points: 1 } }
 		];
 
 		return specs.map((spec) => {
@@ -2236,11 +2268,15 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			for (const a of actionsIn(html)) if (writeActions.includes(a)) seen.add(a);
 		}
 
-		/* The four this asserts by name are the four that live INSIDE an `{{#each}}`, i.e. the four a
-		   wrong context depth would silently remove: the Trait dots, the effect delete, the Sphere
-		   delete and the roster delete. A brace-counting error shows up here as an absence. */
+		/* Las que esta comprobación nombra viven INSIDE un `{{#each}}`, o sea son las que una
+		   profundidad de contexto equivocada quitaría en silencio: los puntos del Rasgo, el borrado de
+		   Efecto, el borrado de Esfera y —desde add-chantry-roster-tab— el `+` POR GRUPO de la pestaña
+		   Censo (`itemCreate`), que va dentro de `{{#each connections}}` y por tanto con `../locked`.
+		   `rosterAdd`/`rosterDelete` ya no existen: el censo dejó de ser datos del actor y sus dos
+		   controles son ahora el `itemCreate` del grupo y el `itemDelete` de la fila del Item. Un error
+		   contando llaves aparece aquí como una ausencia. */
 		for (const action of ["traitDotChange", "ratingDotChange", "effectCreate", "effectDelete",
-			"effectSphereAdd", "effectSphereDelete", "rosterAdd", "rosterDelete", "itemDelete", "itemEdit"]) {
+			"effectSphereAdd", "effectSphereDelete", "itemCreate", "itemDelete", "itemEdit"]) {
 			if (!seen.has(action)) {
 				throw new Error(
 					`"${action}" renders NOWHERE on the unlocked sheet. If it sits inside an {{#each}}, ` +
@@ -2250,13 +2286,19 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		}
 	});
 
-	check("chantry: every roster and effect row offers exactly one delete, and the unlocked inputs are editable", () => {
-		const traits = rendered.get("unlocked|traits") ?? "";
+	check("chantry: every census and effect row offers exactly one delete, and the unlocked inputs are editable", () => {
+		const census = rendered.get("unlocked|census") ?? "";
 		const effects = rendered.get("unlocked|effects") ?? "";
 
-		// Two rosters with entries on the fixture (allies x1, library x1) -> two delete controls.
-		const rosterDeletes = (traits.match(/data-action="rosterDelete"/g) ?? []).length;
-		if (rosterDeletes !== 2) throw new Error(`expected 2 roster deletes for the fixture's 2 entries, got ${rosterDeletes}`);
+		/* Un borrado por ENTRADA del censo, contado en la pestaña Censo y derivado de la fixture, no
+		   escrito a mano: si alguien añade una entrada a la fixture y este número no la sigue, el
+		   número es lo que está mal. El control es `itemDelete` porque una entrada es un Item. */
+		const censusEntries = buildChantryActor().items.filter(
+			(i) => i.type === "Feature" && i.system?.type === "wod.types.connection").length;
+		const censusDeletes = (census.match(/data-action="itemDelete"/g) ?? []).length;
+		if (censusDeletes !== censusEntries) {
+			throw new Error(`expected ${censusEntries} census deletes for the fixture's ${censusEntries} entries, got ${censusDeletes}`);
+		}
 
 		// Two effects, with 1 and 5 Spheres -> two effect deletes and six Sphere deletes.
 		const effectDeletes = (effects.match(/data-action="effectDelete"/g) ?? []).length;
@@ -2264,18 +2306,38 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		if (effectDeletes !== 2) throw new Error(`expected 2 effect deletes, got ${effectDeletes}`);
 		if (sphereDeletes !== 6) throw new Error(`expected 6 Sphere deletes (1 + 5), got ${sphereDeletes}`);
 
-		if (editableControlsIn(traits).length === 0) throw new Error("the unlocked Rasgos tab has no editable control at all");
+		if (editableControlsIn(rendered.get("unlocked|traits") ?? "").length === 0) throw new Error("the unlocked Rasgos tab has no editable control at all");
 		if (editableControlsIn(effects).length === 0) throw new Error("the unlocked Efectos tab has no editable control at all");
 	});
 
-	check("chantry: an empty roster leaves the LOCKED Trait rows exactly as they were", () => {
-		const locked = rendered.get("locked|traits") ?? "";
+	/* EL CENSO SALIÓ DE LA PESTAÑA DE RASGOS (add-chantry-roster-tab, tarea 4.6). Esta comprobación
+	   codificaba el invariante VIEJO — «2 bloques de censo bloqueada, 8 desbloqueada» — y se ha
+	   reescrito contra la regla nueva en vez de ajustarse hasta que pasara: el censo tiene su propia
+	   pestaña, así que la pestaña de Rasgos no pinta NI UN bloque, en ningún estado de bloqueo y con
+	   datos o sin ellos. Lo único que queda del censo en una fila es el icono que navega.
 
-		// The fixture rosters `allies` and `library`; the other six rostered Traits have no entries,
-		// so a locked sheet must render no roster block for them at all — the spec's "an empty roster
-		// SHALL NOT change how an existing sheet reads".
-		const blocks = (locked.match(/class="chantry-roster"/g) ?? []).length;
-		if (blocks !== 2) throw new Error(`expected 2 roster blocks (the two with entries), got ${blocks}`);
+	   La fixture lleva `system.traitRosters` con dos entradas A PROPÓSITO (es lo que hay en un mundo
+	   sin migrar todavía), así que esto también prueba que la hoja dejó de leer el portador viejo: si
+	   alguien reintrodujera el `{{> chantry_roster.hbs}}`, ese mapa lo volvería a pintar y esto se
+	   pondría rojo. */
+	check("chantry: la pestaña de Rasgos ya no pinta el censo, y las filas siguen enteras", () => {
+		for (const state of ["locked", "unlocked"]) {
+			const html = rendered.get(`${state}|traits`) ?? "";
+
+			const found = (html.match(/class="chantry-roster"/g) ?? []).length;
+			if (found !== 0) {
+				throw new Error(`${found} bloque(s) de censo en la pestaña de Rasgos (${state}); el censo ` +
+					`vive ahora en su propia pestaña y la fila solo lleva el icono que navega hasta ella`);
+			}
+			for (const action of ["rosterAdd", "rosterDelete"]) {
+				if (html.includes(`data-action="${action}"`)) {
+					throw new Error(`la pestaña de Rasgos (${state}) todavía renderiza data-action="${action}", ` +
+						`que esta hoja ya no registra: el control existiría y no haría NADA`);
+				}
+			}
+		}
+
+		const locked = rendered.get("locked|traits") ?? "";
 
 		/* And EVERY declared construction Trait row is still there. The count is DERIVED from
 		   template.json, not the literal `14` this line used to carry: §4.3b adds the five
@@ -2294,135 +2356,399 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 	});
 
 	/* ============================================================================================
-	   THE CENSUS'S DOOR IN THE DEFAULT STATE — a BRAND-NEW Chantry, no roster entries anywhere.
+	   LA PESTAÑA CENSO EN LOS DOS ESTADOS DE BLOQUEO, Y EL ESTADO POR DEFECTO PRIMERO
+	   (add-chantry-roster-tab, tarea 8.1 — la puerta que `polish-mage-sheet-v3-affordances` dijo que
+	   debía existir y no existía)
 
-	   THIS IS THE STATE NO CHECK ABOVE LOOKS AT, and it is the state the sheet OPENS in and the one
-	   every newly created Chantry is in: the fixture above deliberately carries roster entries, so
-	   "2 blocks locked / 8 unlocked" says nothing at all about a Chantry that has never used a
-	   census. Measured on this very harness before the fix, with `traitRosters = {}`:
+	   POR QUÉ EL ESTADO POR DEFECTO ES EL CRITERIO DE ACEPTACIÓN Y NO UN CASO DE BORDE. El censo
+	   anterior se entregó COMPLETO Y INVISIBLE: renderizaba con `entries.length > 0 || !locked`, y
+	   esta hoja ABRE BLOQUEADA con el censo vacío, así que una Capilla recién creada mostraba, medido
+	   en esta misma armadura, 0 bloques / 0 botones / 0 caracteres de markup de censo sobre 19 filas
+	   de Rasgo, frente a 8/8/32 desbloqueada. Nadie probó el único estado con el que empieza un
+	   lector. Así que aquí el orden es: BLOQUEADA Y VACÍA es la comprobación principal, y desbloqueada
+	   y con datos la segunda.
 
-	     locked   -> 0 roster blocks, 0 add buttons, 0 characters of roster markup
-	     unlocked -> 8 roster blocks, 8 add buttons
+	   Y LOS DOS ESTADOS SE AFIRMAN, no solo uno, porque tiran en direcciones opuestas: bloqueada no
+	   puede haber NI UN control de escritura, y desbloqueada tienen que estar TODOS. Una puerta de un
+	   solo lado pasaría con un `{{#if}}` mal anidado — que es exactamente el fallo de profundidad de
+	   contexto que este sistema ya ha embarcado tres veces: dentro de un `{{#each}}` un `locked`
+	   desnudo resuelve contra el ELEMENTO del array, así que `(eq locked false)` es falso incluso
+	   desbloqueada y el control no aparece NUNCA. La pestaña Censo tiene dos `{{#each}}` anidados, y
+	   contar los controles en los dos estados es lo que convierte la profundidad en una MEDIDA en vez
+	   de en un recuento de llaves.
 
-	   and since the sheet opens LOCKED by its own requirement, the whole feature had no door in its
-	   default state. It was reported as "no veo el icono del censo", i.e. read as never built.
-
-	   The fix is the roster's EMPTY STATE rendered as one icon in the row's own icon strip, and the
-	   two halves are gated against each other here because they pull in opposite directions: the
-	   icon has to be VISIBLE while locked (discoverability) and the BLOCK still has to be absent
-	   (the spec's "an empty roster SHALL NOT change how an existing sheet reads"). A fix that
-	   satisfied either one alone would pass a one-sided gate.
+	   MUTADA AL ESCRIBIRLA, porque una puerta que pasa a la primera no ha demostrado nada. Cuatro
+	   roturas deliberadas, cada una revertida tras confirmar que la caza (2026-08-27):
+	     1. `{{#if (eq ../locked false)}}` -> `{{#if (eq locked false)}}` en el `+` por grupo (la
+	        trampa de profundidad exacta) — cazada por «desbloqueada ofrece los ocho `+`»: 0 de 8.
+	     2. quitado el gate de bloqueo del `+` por grupo — cazada por «bloqueada no renderiza ni un
+	        control de escritura».
+	     3. `alwaysGroups` forzado a los ocho también bloqueada — cazada por «bloqueada y vacía cae al
+	        estado vacío», que dejaba de encontrar el párrafo.
+	     4. `String(...)` quitado de la insignia (o sea, un 0 numérico) — cazada por «la insignia lee
+	        0», porque `{{#if tab.count}}` esconde un cero numérico.
 	   ============================================================================================ */
 	{
 		const { ROSTER_TRAIT_KEYS } = await import(M("scripts", "chantry-effects.js"));
-		const emptyRoster = new Map();
-		let emptyRosterError = null;
+		const { CENSUS_PERSON_PLACEHOLDER, CENSUS_HOLDING_PLACEHOLDER, NON_PERSON_ROSTER_TRAITS } =
+			await import(M("scripts", "chantry-census.js"));
 
-		for (const locked of [true, false]) {
-			try {
-				const actor = buildChantryActor();
-				actor.system.traitRosters = {};      // never used a census — the default state
-				const sheet = new ChantrySheetClass({ document: actor });
-				sheet.locked = locked;
+		/** Renderiza UN part de una Capilla, en el estado de bloqueo pedido. */
+		async function renderChantry(partId, locked, mutate, tag) {
+			const actor = buildChantryActor();
+			if (mutate) mutate(actor);
 
-				const base = await sheet._prepareContext({});
-				const context = await sheet._preparePartContext("traits", { ...base }, {});
-				Object.defineProperty(context, ROOTISH, { value: true, enumerable: false });
+			const sheet = new ChantrySheetClass({ document: actor });
+			sheet.locked = locked;
 
-				const renderer = new Renderer("chantry:traits", `chantry-emptyroster-${locked}`, chantryFindings);
-				renderer.rootContext = context;
-				emptyRoster.set(locked, renderer.renderProgram(
-					compile(templateFile(ChantrySheetClass.PARTS.traits.template)), new Frame(context)));
-			}
-			catch (err) { emptyRosterError = err; }
+			const base = await sheet._prepareContext({});
+			const context = await sheet._preparePartContext(partId, { ...base }, {});
+			Object.defineProperty(context, ROOTISH, { value: true, enumerable: false });
+
+			const renderer = new Renderer(`chantry:${partId}`, `chantry-${tag}-${locked}`, chantryFindings);
+			renderer.rootContext = context;
+
+			return renderer.renderProgram(
+				compile(templateFile(ChantrySheetClass.PARTS[partId].template)), new Frame(context));
 		}
 
-		/** Icons that open the census popup — the imperative binder's own attribute. */
-		const doors = (html) => (html.match(/data-rosterkey="/g) ?? []).length;
-		/** Roster BLOCKS — the thing an unused sheet must not grow. */
-		const blocks = (html) => (html.match(/class="chantry-roster"/g) ?? []).length;
+		/** Una Capilla RECIÉN CREADA: ni censo viejo, ni entradas, ni nada. */
+		const stripCensus = (actor) => {
+			actor.system.traitRosters = {};
+			actor.items = actor.items.filter(
+				(i) => !(i.type === "Feature" && i.system?.type === "wod.types.connection"));
+		};
 
-		check(`chantry: a census-less Chantry shows WHERE a census lives while LOCKED (${ROSTER_TRAIT_KEYS.length} rostered Traits)`, () => {
-			if (emptyRosterError) throw new Error(`the Rasgos tab raised for a census-less Chantry: ${emptyRosterError.message}`);
+		const count = (html, re) => (html.match(re) ?? []).length;
+		const groups = (html) => count(html, /class="census-group"/g);
+		const adds = (html) => count(html, /data-action="itemCreate"/g);
+		const deletes = (html) => count(html, /data-action="itemDelete"/g);
+		/** Los iconos que navegan al censo desde la fila del Rasgo. */
+		const doors = (html) => count(html, /data-rosterkey="/g);
 
-			const html = emptyRoster.get(true) ?? "";
-			const found = doors(html);
+		let empty = { locked: "", unlocked: "" };
+		let rail = { locked: "", unlocked: "" };
+		let emptyTraits = { locked: "", unlocked: "" };
+		let emptyError = null;
 
-			if (found !== ROSTER_TRAIT_KEYS.length) {
-				throw new Error(
-					`${found} census entry point(s) render on a LOCKED, census-less Chantry; expected one ` +
-					`per rostered Trait (${ROSTER_TRAIT_KEYS.length}). Zero is the reported defect: the sheet ` +
-					`opens locked, so a Chantry that has never used a census would show nothing about the ` +
-					`feature at all and it reads as never built.`);
+		try {
+			empty.locked = await renderChantry("census", true, stripCensus, "emptycensus");
+			empty.unlocked = await renderChantry("census", false, stripCensus, "emptycensus");
+			rail.locked = await renderChantry("tabs", true, stripCensus, "emptycensus");
+			rail.unlocked = await renderChantry("tabs", false, stripCensus, "emptycensus");
+			emptyTraits.locked = await renderChantry("traits", true, stripCensus, "emptycensus");
+			emptyTraits.unlocked = await renderChantry("traits", false, stripCensus, "emptycensus");
+		}
+		catch (err) { emptyError = err; }
+
+		/* ---- 1. BLOQUEADA Y VACÍA: el único estado con el que empieza un lector ---- */
+
+		check("chantry/censo: una Capilla recién creada encuentra la pestaña — riel, título e insignia 0, BLOQUEADA", () => {
+			if (emptyError) throw new Error(`la pestaña Censo revienta en una Capilla sin censo: ${emptyError.message}`);
+
+			const nav = rail.locked;
+			const tab = /<div class="[^"]*"[^>]*data-tab="census"[^>]*>[\s\S]*?<\/div>\s*<\/div>/.exec(nav)
+				?? /data-tab="census"[^>]*>[\s\S]{0,400}/.exec(nav);
+			if (!tab) throw new Error(`el riel no lleva la pestaña census: ${nav.slice(0, 400)}`);
+
+			/* SE AFIRMA LA CLAVE, no «Censo»: esta armadura no carga ningún fichero de idioma (su
+			   `game.i18n.localize` devuelve la clave), así que comprobar la traducción aquí sería
+			   tautológico. Que el VALOR diga «Censo» y no «Aliados y contactos» lo comprueba
+			   `tests/chantry-census.test.mjs`, que sí carga `lang/es.json`. Lo que se mide aquí es que
+			   la pestaña saca su título de la clave correcta. */
+			if (!/data-tab="census"[^>]*title="wod\.chantry\.roster\.headline"/.test(nav)) {
+				throw new Error(`la pestaña del censo no toma su título de wod.chantry.roster.headline: ${nav.slice(0, 400)}`);
+			}
+			if (/data-tab="census"[^>]*title="wod\.tab\.connections"/.test(nav)) {
+				throw new Error("la pestaña del censo se titula con la del PJ, que es falsa para Biblioteca y Nodo");
+			}
+
+			/* LA INSIGNIA TIENE QUE LEER 0, y `{{#if tab.count}}` esconde un cero NUMÉRICO — por eso la
+			   hoja pasa una cadena. Sin insignia, una Capilla nueva no distingue «pestaña vacía» de
+			   «pestaña que no existe», que es el defecto entero del censo anterior. */
+			const badge = /<span class="v3-navbadge"[^>]*>([^<]*)<\/span>/g;
+			const badges = [...nav.matchAll(badge)].map((m) => m[1].trim());
+			if (!badges.includes("0")) {
+				throw new Error(`ninguna insignia del riel lee "0" en una Capilla sin censo (leídas: ` +
+					`${JSON.stringify(badges)}). Un 0 numérico es falso en Handlebars y no renderiza nada.`);
 			}
 		});
 
-		check("chantry: …and a census-less Chantry still grows NO roster block while locked (the empty-roster promise)", () => {
-			const html = emptyRoster.get(true) ?? "";
-			if (blocks(html) !== 0) {
-				throw new Error(
-					`${blocks(html)} roster block(s) render on a LOCKED, census-less Chantry. The door must be ` +
-					`the row's icon, not eight "Puntos: 0 / N" heads — that is the reading the ` +
-					`\`roster.show\` gate exists to protect.`);
+		check("chantry/censo: bloqueada y vacía, el estado vacío explica cómo añadir la primera entrada", () => {
+			const html = empty.locked;
+
+			if (!/data-tab="census"/.test(html)) throw new Error("la pestaña no renderizó su sección");
+			if (countElements(html) === 0) throw new Error("la pestaña renderizó cero elementos");
+
+			if (!/class="v3-empty"/.test(html)) throw new Error("no hay estado vacío en la pestaña");
+			/* La CLAVE, por lo mismo de arriba: que el valor explique cómo añadir la primera entrada lo
+			   mide `tests/chantry-census.test.mjs` contra `lang/es.json` de verdad. Aquí lo que importa
+			   es que NO sea el estado vacío del PJ, que manda a «Añadir objeto» y habla de Trasfondos —
+			   una Capilla no tiene ni el botón ni los Trasfondos. */
+			if (!html.includes("wod.chantry.roster.empty")) {
+				throw new Error(`el estado vacío no sale de wod.chantry.roster.empty: ${html.slice(0, 400)}`);
+			}
+			if (html.includes("wod.connections.empty")) {
+				throw new Error("la pestaña muestra el estado vacío del PJ, no el del censo de la Capilla");
+			}
+			if (groups(html) !== 0) throw new Error(`${groups(html)} grupo(s) en una Capilla sin censo y bloqueada`);
+		});
+
+		check("chantry/censo: bloqueada NO renderiza ni un control de escritura del censo", () => {
+			for (const [state, html] of [["vacía", empty.locked], ["con datos", rendered.get("locked|census") ?? ""]]) {
+				if (adds(html) !== 0) throw new Error(`${adds(html)} control(es) de crear en la pestaña bloqueada (${state})`);
+				if (deletes(html) !== 0) throw new Error(`${deletes(html)} control(es) de borrar en la pestaña bloqueada (${state})`);
+				if (/data-action="itemEdit"/.test(html)) throw new Error(`la pestaña bloqueada (${state}) ofrece editar`);
+				if (editableControlsIn(html).length !== 0) {
+					throw new Error(`${editableControlsIn(html).length} control(es) de formulario editable(s) en la pestaña bloqueada (${state})`);
+				}
 			}
 		});
 
-		check("chantry: unlocked, the block takes over and the icon steps aside (never two doors)", () => {
-			const html = emptyRoster.get(false) ?? "";
+		/* ---- 2. DESBLOQUEADA: la segunda comprobación, y la que mide la profundidad ---- */
 
-			if (blocks(html) !== ROSTER_TRAIT_KEYS.length) {
-				throw new Error(`expected ${ROSTER_TRAIT_KEYS.length} roster blocks unlocked, got ${blocks(html)}`);
-			}
-			if (doors(html) !== 0) {
-				throw new Error(
-					`${doors(html)} census icon(s) render UNLOCKED, where the block with its own + button ` +
-					`already renders — the census would be offered from two places at once.`);
-			}
+		check(`chantry/censo: desbloqueada ofrece un + por cada uno de los ${ROSTER_TRAIT_KEYS.length} Rasgos con censo`, () => {
+			const html = empty.unlocked;
 
-			// And on the fixture WITH entries: the two Traits that have entries show the block even
-			// locked, so exactly the other six may show an icon. This is the same rule read from the
-			// other end, and it is what proves the icon is the block's `{{else}}` rather than a
-			// second, independent control.
-			const withEntriesLocked = rendered.get("locked|traits") ?? "";
-			const withEntriesUnlocked = rendered.get("unlocked|traits") ?? "";
-
-			if (doors(withEntriesLocked) !== ROSTER_TRAIT_KEYS.length - 2) {
-				throw new Error(
-					`the fixture has entries for 2 of the ${ROSTER_TRAIT_KEYS.length} rostered Traits, so ` +
-					`${ROSTER_TRAIT_KEYS.length - 2} icons should render locked; got ${doors(withEntriesLocked)}`);
+			if (groups(html) !== ROSTER_TRAIT_KEYS.length) {
+				throw new Error(`${groups(html)} grupo(s) desbloqueada y vacía; se esperan ${ROSTER_TRAIT_KEYS.length}, ` +
+					`uno por Rasgo con censo, para que cada uno tenga su ruta de creación`);
 			}
-			if (doors(withEntriesUnlocked) !== 0) {
-				throw new Error(`${doors(withEntriesUnlocked)} census icon(s) render on the unlocked fixture`);
+			if (adds(html) !== ROSTER_TRAIT_KEYS.length) {
+				throw new Error(`${adds(html)} control(es) de crear desbloqueada; se esperan ` +
+					`${ROSTER_TRAIT_KEYS.length}. Cero es la trampa de profundidad: dentro de ` +
+					`{{#each connections}} un \`locked\` desnudo resuelve contra el GRUPO, así que ` +
+					`\`(eq locked false)\` es falso incluso desbloqueada`);
+			}
+			/* Y CADA + ESTAMPA SU RASGO: es lo que hace que nadie teclee `system.relation`, que en la
+			   Capilla saca la entrada de la contabilidad de puntos sin decir nada. */
+			const stamped = [...html.matchAll(/data-action="itemCreate"[^>]*data-key="([^"]*)"/g)].map((m) => m[1]);
+			const missing = ROSTER_TRAIT_KEYS.filter((k) => !stamped.includes(k));
+			if (missing.length) {
+				throw new Error(`estos + no estampan su Rasgo: ${missing.join(", ")} (leídos: ${stamped.join(", ") || "ninguno"})`);
+			}
+			if (deletes(html) !== 0) throw new Error(`${deletes(html)} borrado(s) en una Capilla sin ni una entrada`);
+		});
+
+		check("chantry/censo: desbloqueada y con datos, cada entrada ofrece su borrado", () => {
+			const html = rendered.get("unlocked|census") ?? "";
+			const entries = buildChantryActor().items.filter(
+				(i) => i.type === "Feature" && i.system?.type === "wod.types.connection").length;
+
+			if (deletes(html) !== entries) throw new Error(`${deletes(html)} borrado(s) para ${entries} entrada(s)`);
+			// Ocho `+`: el grupo «Sin Rasgo asignado» NO lleva uno, porque crear ahí no significa nada.
+			if (adds(html) !== ROSTER_TRAIT_KEYS.length) {
+				throw new Error(`${adds(html)} control(es) de crear con datos; se esperan ${ROSTER_TRAIT_KEYS.length} ` +
+					`(el grupo sin Rasgo asignado no ofrece crear)`);
 			}
 		});
 
-		check("chantry: the census icon is bindable, and never collides with the description eye", () => {
-			const html = emptyRoster.get(true) ?? "";
+		/* ---- 3. EL CONTENIDO: lo que la pestaña dice de cada grupo y de cada entrada ---- */
+
+		check("chantry/censo: cada grupo dice sus puntos, y el sobrecoste sale avisado", () => {
+			const html = rendered.get("locked|census") ?? "";
+
+			// allies 1+1 sobre un Rasgo de 2 -> «Puntos: 2 / 2», dentro de presupuesto.
+			if (!html.includes("2 / 2")) throw new Error(`no se lee «2 / 2» para allies: ${html.slice(0, 400)}`);
+			// library 0+0 sobre 4 -> el 0 EXPLÍCITO no consume círculo.
+			if (!html.includes("0 / 4")) throw new Error("no se lee «0 / 4» para library (el 0 explícito debe sobrevivir como 0)");
+			// spies 3 sobre 0 -> sobrecoste avisado, y las entradas se siguen pintando.
+			if (!html.includes("3 / 0")) throw new Error("no se lee «3 / 0» para spies");
+			if (count(html, /class="item-warning census-over"/g) !== 1) {
+				throw new Error(`se esperaba 1 aviso de sobrecoste, hay ${count(html, /class="item-warning census-over"/g)}`);
+			}
+			if (!html.includes("Rata del muelle")) throw new Error("una entrada en sobrecoste dejó de renderizarse");
+
+			// Las cifras salen de la MISMA función que el tooltip de la fila del Rasgo.
+			const traits = rendered.get("locked|traits") ?? "";
+			if (!/title="[^"]*\(2 \/ 2\)"/.test(traits)) {
+				throw new Error("el tooltip de la fila de allies no lee 2 / 2: la pestaña y la fila discrepan");
+			}
+		});
+
+		check("chantry/censo: un relation mal tecleado se VE, en su propio grupo, y no cuenta contra nada", () => {
+			const html = rendered.get("locked|census") ?? "";
+
+			if (!html.includes("Perdido")) throw new Error("la entrada con `relation` mal tecleado desapareció de la pestaña");
+			if (!/class="item-warning census-unassigned"/.test(html)) throw new Error("el grupo sin Rasgo asignado no lleva aviso");
+			if (!html.includes("wod.chantry.roster.unassigned")) {
+				throw new Error("el grupo sin Rasgo asignado no toma su etiqueta de wod.chantry.roster.unassigned");
+			}
+			// Ni lectura de puntos ni `+`: no consume de ningún Rasgo.
+			if (count(html, /class="information-area census-points"/g) !== 3) {
+				throw new Error(`se esperan 3 lecturas de puntos (allies, library, spies), hay ` +
+					`${count(html, /class="information-area census-points"/g)}: el grupo sin Rasgo no debe llevar una`);
+			}
+		});
+
+		check("chantry/censo: los puntos de cada entrada se leen como TEXTO, también cuando son 0", () => {
+			const html = rendered.get("locked|census") ?? "";
+			const entries = buildChantryActor().items.filter(
+				(i) => i.type === "Feature" && i.system?.type === "wod.types.connection").length;
+
+			const readouts = count(html, /class="information-area census-entrypoints"/g);
+			if (readouts !== entries) throw new Error(`${readouts} lectura(s) de puntos por entrada para ${entries} entrada(s)`);
+			if (!/census-entrypoints[^>]*>[^<]*:\s*0</.test(html)) {
+				throw new Error("una entrada de 0 puntos no imprime su 0; `pointValue` lo esconde y aquí no puede esconderse");
+			}
+		});
+
+		check("chantry/censo: un nombre con markup tecleado llega como TEXTO", () => {
+			const html = rendered.get("locked|census") ?? "";
+			if (/<img src=x/.test(html)) throw new Error("markup tecleado por un DJ sobrevivió sin escapar hasta la pestaña");
+			if (!/&lt;img/.test(html)) throw new Error("el nombre con markup no aparece escapado: ¿se perdió la entrada?");
+		});
+
+		check("chantry/censo: Biblioteca y Nodo NO salen con silueta humana", () => {
+			const html = rendered.get("locked|census") ?? "";
+
+			/* EL ASSET SE COMPRUEBA EN DISCO, no se supone: el requisito pide «a path verified to exist
+			   before it ships», y una ruta inventada renderiza un hueco roto sin error ninguno. */
+			const rel = CENSUS_HOLDING_PLACEHOLDER.replace(/^systems\/worldofdarkness\//, "");
+			if (!fs.existsSync(path.join(REPO, rel))) {
+				throw new Error(`el marcador de los Rasgos que no son gente no existe en este checkout: ${rel}`);
+			}
+			if (NON_PERSON_ROSTER_TRAITS.length === 0) throw new Error("ningún Rasgo declarado como no-persona");
+
+			/* «Copia del Codex» es de `library` y no tiene retrato: su <img> tiene que ser el marcador
+			   que NO es una silueta. */
+			const codex = /<img[^>]*src="([^"]*)"[^>]*title="Copia del Codex"/.exec(html);
+			if (!codex) throw new Error("no se encuentra el <img> de la entrada de Biblioteca sin retrato");
+			if (codex[1] === CENSUS_PERSON_PLACEHOLDER) {
+				throw new Error(`una entrada de Biblioteca sale con la silueta humana (${codex[1]})`);
+			}
+			if (codex[1] !== CENSUS_HOLDING_PLACEHOLDER) {
+				throw new Error(`el marcador de Biblioteca no es el declarado: ${codex[1]}`);
+			}
+
+			// Y una entrada de un Rasgo que SÍ es gente conserva la silueta, igual que en el PJ.
+			const nadia = /<img[^>]*src="([^"]*)"[^>]*title="Nadia"/.exec(html);
+			if (!nadia) throw new Error("no se encuentra el <img> de la entrada de Aliados sin retrato");
+			if (nadia[1] !== CENSUS_PERSON_PLACEHOLDER) {
+				throw new Error(`una entrada de Aliados sin retrato no lleva el marcador de persona: ${nadia[1]}`);
+			}
+
+			// Un retrato propio manda sobre cualquiera de los dos marcadores.
+			if (!html.includes("wod20-portraits/grimorio.webp")) {
+				throw new Error("el retrato propio de una entrada no llegó a su <img>");
+			}
+		});
+
+		/* EL ORDEN ALFABÉTICO NO SE COMPRUEBA AQUÍ, y no por descuido: el `localize` de esta armadura
+		   devuelve la clave, así que las cabeceras leen «wod.chantry.traits.allies» y ordenarlas
+		   demostraría que las CLAVES están ordenadas — que no es el requisito y además se cumpliría con
+		   el comparador roto. Vive en `tests/chantry-census.test.mjs`, que carga `lang/es.json` y
+		   comprueba lo que de verdad importa: «Ancianos» antes de «Arcano». */
+
+		/* ---- 4. LA PUERTA DESDE LA FILA DEL RASGO, reapuntada ---- */
+
+		check(`chantry/censo: el icono de la fila renderiza para los ${ROSTER_TRAIT_KEYS.length} Rasgos con censo en LOS DOS estados y sin datos`, () => {
+			/* ESTA COMPROBACIÓN CODIFICABA EL INVARIANTE VIEJO y se ha reescrito, no relajado: antes
+			   exigía que el icono DESAPARECIERA desbloqueada (donde el bloque, ya retirado, tomaba el
+			   relevo) y que solo saliera para los Rasgos sin entradas. La regla nueva es más simple y
+			   más fuerte: navegar no escribe y no depende del dato, así que el icono está siempre, para
+			   los ocho, con o sin entradas, bloqueada o no. */
+			for (const [tag, html] of [
+				["sin censo, bloqueada", emptyTraits.locked],
+				["sin censo, desbloqueada", emptyTraits.unlocked],
+				["con datos, bloqueada", rendered.get("locked|traits") ?? ""],
+				["con datos, desbloqueada", rendered.get("unlocked|traits") ?? ""]
+			]) {
+				if (doors(html) !== ROSTER_TRAIT_KEYS.length) {
+					throw new Error(`${doors(html)} puerta(s) al censo (${tag}); se espera una por Rasgo con ` +
+						`censo (${ROSTER_TRAIT_KEYS.length}). Una affordance cuya PRESENCIA depende del dato o ` +
+						`del candado es la clase de defecto que esto arregla`);
+				}
+			}
+		});
+
+		check("chantry/censo: el icono es ligable y nunca choca con la eye de la descripción", () => {
+			const html = rendered.get("locked|traits") ?? "";
 			const icons = [...html.matchAll(/<i\b[^>]*data-rosterkey="[^"]*"[^>]*>/g)].map((m) => m[0]);
 
 			if (icons.length === 0) throw new Error("no census icon to inspect");
 
 			for (const icon of icons) {
-				/* The binder is `querySelectorAll(".collapsible.button[data-rosterkey]")` — an
-				   imperative binder, so `sheet-invariants.py` I1 (which reads `data-action`) cannot
-				   see it and a class typo would render a live-looking icon that does nothing. */
+				/* El binder es `querySelectorAll(".collapsible.button[data-rosterkey]")` — imperativo,
+				   así que `sheet-invariants.py` I1 (que lee `data-action`) no lo ve y un error en las
+				   clases renderizaría un icono con pinta de vivo que no hace nada. */
 				if (!/\bcollapsible\b/.test(icon) || !/\bbutton\b/.test(icon)) {
 					throw new Error(`a census icon does not carry the collapsible+button classes its binder ` +
 						`selects on, so it would render and do nothing: ${icon.slice(0, 160)}`);
 				}
-				/* THE COLLISION. `_bindTraitDescriptionButtons` binds `[data-traitkey]` and STAMPS
-				   `dataset.collapseBound`, so an element carrying both attributes is claimed by
-				   whichever binder ran first and opens the wrong window. Disjoint by attribute. */
+				/* LA COLISIÓN. `_bindTraitDescriptionButtons` liga `[data-traitkey]` y ESTAMPA
+				   `dataset.collapseBound`, así que un elemento con los dos atributos lo reclama la
+				   ligadura que corra primero y abre lo que no toca. Disjuntas por atributo. */
 				if (/data-traitkey=/.test(icon)) {
 					throw new Error(`a census icon also carries data-traitkey, so the description binder would ` +
 						`claim it first and open the description popup instead: ${icon.slice(0, 160)}`);
 				}
 				if (!/data-labelkey="/.test(icon)) {
-					throw new Error(`a census icon carries no data-labelkey, so its popup cannot be titled: ${icon.slice(0, 160)}`);
+					throw new Error(`a census icon carries no data-labelkey, so its target group cannot be named: ${icon.slice(0, 160)}`);
 				}
 			}
 		});
+
+		check("chantry/censo: el grupo que el icono enfoca es producible por la plantilla", () => {
+			/* `binder-selector-check.py` cubre solo la familia `PCActorSheet` (medido: «2 sheet(s) in
+			   the PCActorSheet family»), así que el selector que teclea ESTA hoja —
+			   `.census-group`, que `_focusCensusGroup` busca — no lo comprueba nadie más. Si la clase
+			   del envoltorio cambiara, el icono cambiaría de pestaña y no enfocaría nada, sin error. */
+			const html = rendered.get("unlocked|census") ?? "";
+			const wrappers = [...html.matchAll(/<div class="census-group" data-censusgroup="([^"]*)"([^>]*)>/g)];
+
+			if (wrappers.length === 0) throw new Error("ningún envoltorio .census-group[data-censusgroup] en la pestaña");
+			for (const w of wrappers) {
+				if (!/tabindex="-1"/.test(w[2])) {
+					throw new Error(`el grupo "${w[1]}" no lleva tabindex="-1", así que focus() no lo alcanza`);
+				}
+			}
+			const keys = wrappers.map((w) => w[1]);
+			const missing = ROSTER_TRAIT_KEYS.filter((k) => !keys.includes(k));
+			if (missing.length) throw new Error(`estos Rasgos no tienen grupo enfocable: ${missing.join(", ")}`);
+		});
 	}
+
+	/* ============================================================================================
+	   LA COMPARTICIÓN NO SE FILTRA AL PJ (add-chantry-roster-tab)
+
+	   `v3/connections.hbs` lo renderizan ahora las DOS hojas, y el requisito es que la pestaña del PJ
+	   NO SE MUEVA. Eso se midió BYTE A BYTE al escribir este cambio, con un método que no cabe dentro
+	   de una puerta (hay que renderizar dos versiones del fichero): se volcaron los 173 renders de la
+	   parte `connections` del PJ con la plantilla anterior y con la nueva, y los dos ficheros salieron
+	   IDÉNTICOS — 1.597.045 bytes, `cmp` sin diferencias. Eso es posible porque las llaves de cada
+	   bloque nuevo van pegadas al final de la línea anterior y no se añadió ningún comentario en su
+	   propia línea (ver la cabecera de la plantilla).
+
+	   Lo que SÍ cabe aquí es el invariante duradero: ninguna marca del censo de la Capilla puede
+	   aparecer en el render del PJ. Si mañana alguien saca un bloque de su `{{#if chantry}}`, esto se
+	   pone rojo aunque los bytes ya no se estén comparando a mano.
+	   ============================================================================================ */
+	check("el censo de la Capilla no se filtra al render del PJ (la plantilla es compartida)", () => {
+		const pcCensusMarks = ["census-group", "census-points", "census-entrypoints", "census-add",
+			"census-over", "census-unassigned", "wod.chantry.roster"];
+
+		for (const [structureId, parts] of renderedByStructure) {
+			const html = parts.get("connections") ?? "";
+			if (html === "") continue;
+
+			for (const mark of pcCensusMarks) {
+				if (html.includes(mark)) {
+					throw new Error(`la pestaña de relaciones del PJ (${structureId}) emite "${mark}", que es ` +
+						`marca del censo de la Capilla: algún bloque se ha salido de su {{#if chantry}}`);
+				}
+			}
+			// Y el `+` de la cabecera del PJ sigue estando, que es la otra mitad: gatearlo por
+			// `{{#unless chantry}}` no puede haberlo quitado del PJ.
+			if (!html.includes('data-action="itemCreate"')) {
+				throw new Error(`la pestaña de relaciones del PJ (${structureId}) perdió su botón de crear`);
+			}
+			// El carril de macros del PJ tampoco.
+			if (!html.includes("v3-macrorail")) {
+				throw new Error(`la pestaña de relaciones del PJ (${structureId}) perdió su carril de macros`);
+			}
+		}
+	});
 
 	/* THE DECLARATION DRIFT ITSELF (§4.3b / design.md D13). wodchar declared 19 Traits while this
 	   system declared 14 for long enough to ship; the five extra would have reached an actor whose
