@@ -44,6 +44,19 @@
  *         opens ItemViewer
  *    B4 - the pseudo-document's uuid is namespaced under `this.actor.uuid`
  *    B5 - no leftover inline-toggle logic (`fa-eye-slash`/`collapsible-open`) remains
+ *    B7 - (the CENSUS icon, add-chantry-roster-discoverability) the roster's own entry point is
+ *         wired the same way: a binder over `.collapsible.button[data-rosterkey]`, called from
+ *         `_onRender` with no lock/editable guard anywhere before it, opening `ItemViewer` on a
+ *         pseudo-document namespaced `ChantryRoster` under the actor's uuid — a DIFFERENT namespace
+ *         from the description eye's `ChantryTrait`, or the two windows would collide into one for
+ *         the same Trait. The two binders must also select on DISJOINT attributes: both stamp
+ *         `dataset.collapseBound`, so an icon carrying both keys is claimed by whichever ran first
+ *         and opens the wrong window (the render side of that is asserted in
+ *         `test-part-render.mjs`; this side asserts the selectors stay disjoint).
+ *    B8 - the census popup's body ESCAPES what it interpolates. Roster entry names and notes are
+ *         typed by a GM, stored verbatim, and `ItemViewer` runs its description through
+ *         `enrichHTML` — this is the only place in this sheet that builds HTML out of
+ *         actor-authored strings.
  *    B6 - appv2 REPLACEMENT for "bound after the editable early-return": the three WRITING actions
  *         (`actorLock`, `ratingDotChange`, `traitDotChange`) are declared in
  *         `DEFAULT_OPTIONS.actions`, and `form.handler` points at the sheet's own
@@ -242,6 +255,46 @@ check("B6 the three WRITING actions (actorLock/ratingDotChange/traitDotChange) a
 	/traitDotChange:/.test(actionsBlock) &&
 	/handler:\s*ChantryActorSheetV2\.onSubmitActorForm/.test(sheetJsSrc));
 
+/* ---- B7/B8. the CENSUS icon's binder (add-chantry-roster-discoverability) ---- */
+
+const rosterBinderMatch = sheetJsSrc.match(/querySelectorAll\??\.?\(["']\.collapsible\.button\[data-rosterkey\]["']\)/);
+const rosterBindCallIdx = onRenderBody.indexOf("_bindTraitRosterButtons(element)");
+
+check("B7 a binder over .collapsible.button[data-rosterkey] is present (the census icon's own idiom)",
+	rosterBinderMatch !== null);
+
+check("B7b it is called from _onRender with no lock/editable guard before it (a read control is bound on EVERY render)",
+	rosterBindCallIdx !== -1 &&
+	!/if\s*\([^)]*(locked|editable)[^)]*\)/.test(onRenderBody.slice(0, rosterBindCallIdx)));
+
+check("B7c the census popup is namespaced ChantryRoster under this.actor.uuid (no collision with the description window, no cross-actor collision)",
+	/uuid:\s*`\$\{this\.actor\.uuid\}\.ChantryRoster\.\$\{key\}`/.test(sheetJsSrc));
+
+check("B7d the two binders select on DISJOINT attributes (both stamp collapseBound; an icon carrying both keys opens the wrong window)",
+	traitBinderIdx !== -1 && rosterBinderMatch !== null &&
+	!/\[data-traitkey\]\[data-rosterkey\]|\[data-rosterkey\]\[data-traitkey\]/.test(sheetJsSrc));
+
+check("B7e the census popup reads its figures LIVE from evaluateRosters, not from a copy carried into the render context",
+	/_bindTraitRosterButtons\(root\)\s*\{[\s\S]{0,1200}evaluateRosters\(this\.actor\.system\.traitRosters/.test(sheetJsSrc));
+
+const rosterDescMatch = sheetJsSrc.match(/_rosterDescription\(roster\)\s*\{[\s\S]*?\n\t\}/);
+const rosterDesc = rosterDescMatch ? rosterDescMatch[0] : "";
+
+check("B8 the census popup's body escapes what it interpolates (GM-typed names/notes reach enrichHTML)",
+	rosterDesc !== "" &&
+	/replace\(\/&\/g,\s*"&amp;"\)/.test(rosterDesc) &&
+	/replace\(\/<\/g,\s*"&lt;"\)/.test(rosterDesc),
+	rosterDesc === "" ? "(_rosterDescription not found)" : "");
+
+/* Narrowed on purpose after the first draft flagged `${name}` — a local that had ALREADY been
+   escaped one line up. What matters is not the shape of the interpolation but its SOURCE: the
+   actor-authored values live on `entry.*` (name, note, points) and `roster.*`, and none of those may
+   reach a template literal without passing through `esc()`. `${escapedLocal}` is fine and readable;
+   `${entry.name}` is the defect. */
+check("B8b no actor-authored value is interpolated raw (every entry./roster. reference goes through the escaper)",
+	rosterDesc !== "" && !/\$\{\s*(entry|roster)\./.test(rosterDesc),
+	rosterDesc === "" ? "(_rosterDescription not found)" : "");
+
 /* ---- C. localisation completeness, key list from the real CONFIG ---- */
 
 const { wod } = await import(pathToFileURL(path.join(ROOT, "module", "config.js")).href);
@@ -253,6 +306,20 @@ check("C0 CONFIG.worldofdarkness.chantry.traitcost enumerates at least one Trait
 for (const lang of ["es", "en"]) {
 	const langJson = JSON.parse(fs.readFileSync(path.join(ROOT, "lang", `${lang}.json`), "utf8"));
 	const descriptions = langJson?.wod?.chantry?.traitdescriptions ?? {};
+	const roster = langJson?.wod?.chantry?.roster ?? {};
+
+	/* The census icon's own three strings. `empty` is the one that carries the whole point of the
+	   icon — it is where an empty census says what it is and how to add the first entry — so it is
+	   length-checked, not just presence-checked: a one-word translation would render an icon that
+	   opens a window saying nothing, which is the defect again one click further in. */
+	for (const key of ["headline", "show", "empty"]) {
+		const value = roster[key];
+		check(`C ${lang}: wod.chantry.roster.${key} is present and non-empty`,
+			typeof value === "string" && value.trim().length > 0);
+	}
+	check(`C ${lang}: wod.chantry.roster.empty actually explains how to add the first entry`,
+		typeof roster.empty === "string" && roster.empty.trim().length >= 120,
+		typeof roster.empty === "string" ? `(${roster.empty.trim().length} chars)` : "");
 
 	for (const key of traitKeys) {
 		const value = descriptions[key];

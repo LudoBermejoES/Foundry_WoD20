@@ -1215,7 +1215,8 @@
 				"soakbashing": "Absorción de Cont.",
 				"soaklethal": "Absorción de Letal",
 				"soakaggravated": "Absorción de Agravado",
-				"penalty": "Penalización a Destreza"
+				"penalty": "Penalización a Destreza",
+				"shieldbonus": "Bonificación de Escudo"
 			},
 			"mode": {
 				"mode": "Modo",
@@ -1459,9 +1460,13 @@
 			},
 			"overcapsingle": "Este Rasgo supera la puntuación de la Capilla/Constructo.",
 			"vault": {
-				"weapons": "Armas"
+				"weapons": "Armas",
+				"empty": "Todavía no hay nada en la cámara. Arrastra aquí cualquier objeto desde un compendio o desde otro personaje y quedará guardado en esta Capilla/Constructo. Aquí cabe todo: los objetos mundanos en esta lista, y las armas, las armaduras y los objetos mágicos (Maravillas, Fetiches, Talismanes…) en sus propias listas, que aparecen debajo en cuanto haya algo en ellas."
 			},
 			"roster": {
+				"headline": "Censo",
+				"show": "Ver el censo de este Rasgo",
+				"empty": "Este Rasgo admite un censo: la lista de quién o de qué lo compone, entrada por entrada. Todavía no hay ninguna. Para añadir la primera, desbloquea la hoja con el candado de la cabecera y pulsa el botón + que aparece junto al Rasgo. Cada entrada consume los puntos que le asignes (1 por omisión, y 0 vale para lo que se describe sin ocupar un círculo), y la suma no debería pasar de los puntos del Rasgo.",
 				"points": "Puntos",
 				"over": "Este censo consume más puntos que los que tiene el Rasgo.",
 				"add": "Añadir entrada",

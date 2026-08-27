@@ -108,6 +108,30 @@
 					<span class="floating-label">{{localize "wod.combat.armor.penalty"}}</span>
 				</div>
 
+				{{!-- Shield melee-difficulty bonus (apply-armor-dexterity-penalty, design.md D5).
+				      READ-ONLY, and deliberately so: the value is reference data owned by the compendium
+				      document, so an editable field would invite a per-actor divergence from the book that
+				      no gate could notice. Rendered as TEXT, not as a `readonly`/`disabled` <input> and
+				      with no `name`, so the field is not part of the submitted form at all - a `readonly`
+				      input still submits its value.
+				      The row only exists when the value is non-zero, which is what keeps the 35 non-shield
+				      armors rendering exactly as they do today; `mechanics.is_shield` is the discriminator
+				      upstream, never a heuristic on the name.
+				      NOTHING in this system consumes the number, on purpose: the +1/+2 modifies the
+				      ATTACKER's difficulty ("el escudo proporciona un modificador de Dificultad al
+				      atacante", sdr/0.8.es.md:2211), and the only place in this project that knows who is
+				      attacking whom is the separate `wod20-combat-foundryvtt` module.
+				      CONTEXT DEPTH: no `../` prefix, because this template has no enclosing `{{#each}}` -
+				      established by rendering the file under real Handlebars 4.7.7 and reading the output,
+				      not by counting braces (a bare name inside an `{{#each}}` resolves against the array
+				      ELEMENT, which has silently deleted a control three times in this repo). --}}
+				{{#if data.system.shieldbonus}}
+					<div class="infobox clearareaBox">
+						<div class="pullLeft headlineNormal" style="margin-right: 10px;">{{localize "wod.combat.armor.shieldbonus"}}</div>
+						<div class="pullLeft headlineNormal">{{data.system.shieldbonus}}</div>
+					</div>
+				{{/if}}
+
 				{{#if iswerewolf}}
 					<!-- Shapes -->
 					<div class="infobox">

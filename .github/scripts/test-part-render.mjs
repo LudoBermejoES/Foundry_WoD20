@@ -2293,6 +2293,137 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		}
 	});
 
+	/* ============================================================================================
+	   THE CENSUS'S DOOR IN THE DEFAULT STATE — a BRAND-NEW Chantry, no roster entries anywhere.
+
+	   THIS IS THE STATE NO CHECK ABOVE LOOKS AT, and it is the state the sheet OPENS in and the one
+	   every newly created Chantry is in: the fixture above deliberately carries roster entries, so
+	   "2 blocks locked / 8 unlocked" says nothing at all about a Chantry that has never used a
+	   census. Measured on this very harness before the fix, with `traitRosters = {}`:
+
+	     locked   -> 0 roster blocks, 0 add buttons, 0 characters of roster markup
+	     unlocked -> 8 roster blocks, 8 add buttons
+
+	   and since the sheet opens LOCKED by its own requirement, the whole feature had no door in its
+	   default state. It was reported as "no veo el icono del censo", i.e. read as never built.
+
+	   The fix is the roster's EMPTY STATE rendered as one icon in the row's own icon strip, and the
+	   two halves are gated against each other here because they pull in opposite directions: the
+	   icon has to be VISIBLE while locked (discoverability) and the BLOCK still has to be absent
+	   (the spec's "an empty roster SHALL NOT change how an existing sheet reads"). A fix that
+	   satisfied either one alone would pass a one-sided gate.
+	   ============================================================================================ */
+	{
+		const { ROSTER_TRAIT_KEYS } = await import(M("scripts", "chantry-effects.js"));
+		const emptyRoster = new Map();
+		let emptyRosterError = null;
+
+		for (const locked of [true, false]) {
+			try {
+				const actor = buildChantryActor();
+				actor.system.traitRosters = {};      // never used a census — the default state
+				const sheet = new ChantrySheetClass({ document: actor });
+				sheet.locked = locked;
+
+				const base = await sheet._prepareContext({});
+				const context = await sheet._preparePartContext("traits", { ...base }, {});
+				Object.defineProperty(context, ROOTISH, { value: true, enumerable: false });
+
+				const renderer = new Renderer("chantry:traits", `chantry-emptyroster-${locked}`, chantryFindings);
+				renderer.rootContext = context;
+				emptyRoster.set(locked, renderer.renderProgram(
+					compile(templateFile(ChantrySheetClass.PARTS.traits.template)), new Frame(context)));
+			}
+			catch (err) { emptyRosterError = err; }
+		}
+
+		/** Icons that open the census popup — the imperative binder's own attribute. */
+		const doors = (html) => (html.match(/data-rosterkey="/g) ?? []).length;
+		/** Roster BLOCKS — the thing an unused sheet must not grow. */
+		const blocks = (html) => (html.match(/class="chantry-roster"/g) ?? []).length;
+
+		check(`chantry: a census-less Chantry shows WHERE a census lives while LOCKED (${ROSTER_TRAIT_KEYS.length} rostered Traits)`, () => {
+			if (emptyRosterError) throw new Error(`the Rasgos tab raised for a census-less Chantry: ${emptyRosterError.message}`);
+
+			const html = emptyRoster.get(true) ?? "";
+			const found = doors(html);
+
+			if (found !== ROSTER_TRAIT_KEYS.length) {
+				throw new Error(
+					`${found} census entry point(s) render on a LOCKED, census-less Chantry; expected one ` +
+					`per rostered Trait (${ROSTER_TRAIT_KEYS.length}). Zero is the reported defect: the sheet ` +
+					`opens locked, so a Chantry that has never used a census would show nothing about the ` +
+					`feature at all and it reads as never built.`);
+			}
+		});
+
+		check("chantry: …and a census-less Chantry still grows NO roster block while locked (the empty-roster promise)", () => {
+			const html = emptyRoster.get(true) ?? "";
+			if (blocks(html) !== 0) {
+				throw new Error(
+					`${blocks(html)} roster block(s) render on a LOCKED, census-less Chantry. The door must be ` +
+					`the row's icon, not eight "Puntos: 0 / N" heads — that is the reading the ` +
+					`\`roster.show\` gate exists to protect.`);
+			}
+		});
+
+		check("chantry: unlocked, the block takes over and the icon steps aside (never two doors)", () => {
+			const html = emptyRoster.get(false) ?? "";
+
+			if (blocks(html) !== ROSTER_TRAIT_KEYS.length) {
+				throw new Error(`expected ${ROSTER_TRAIT_KEYS.length} roster blocks unlocked, got ${blocks(html)}`);
+			}
+			if (doors(html) !== 0) {
+				throw new Error(
+					`${doors(html)} census icon(s) render UNLOCKED, where the block with its own + button ` +
+					`already renders — the census would be offered from two places at once.`);
+			}
+
+			// And on the fixture WITH entries: the two Traits that have entries show the block even
+			// locked, so exactly the other six may show an icon. This is the same rule read from the
+			// other end, and it is what proves the icon is the block's `{{else}}` rather than a
+			// second, independent control.
+			const withEntriesLocked = rendered.get("locked|traits") ?? "";
+			const withEntriesUnlocked = rendered.get("unlocked|traits") ?? "";
+
+			if (doors(withEntriesLocked) !== ROSTER_TRAIT_KEYS.length - 2) {
+				throw new Error(
+					`the fixture has entries for 2 of the ${ROSTER_TRAIT_KEYS.length} rostered Traits, so ` +
+					`${ROSTER_TRAIT_KEYS.length - 2} icons should render locked; got ${doors(withEntriesLocked)}`);
+			}
+			if (doors(withEntriesUnlocked) !== 0) {
+				throw new Error(`${doors(withEntriesUnlocked)} census icon(s) render on the unlocked fixture`);
+			}
+		});
+
+		check("chantry: the census icon is bindable, and never collides with the description eye", () => {
+			const html = emptyRoster.get(true) ?? "";
+			const icons = [...html.matchAll(/<i\b[^>]*data-rosterkey="[^"]*"[^>]*>/g)].map((m) => m[0]);
+
+			if (icons.length === 0) throw new Error("no census icon to inspect");
+
+			for (const icon of icons) {
+				/* The binder is `querySelectorAll(".collapsible.button[data-rosterkey]")` — an
+				   imperative binder, so `sheet-invariants.py` I1 (which reads `data-action`) cannot
+				   see it and a class typo would render a live-looking icon that does nothing. */
+				if (!/\bcollapsible\b/.test(icon) || !/\bbutton\b/.test(icon)) {
+					throw new Error(`a census icon does not carry the collapsible+button classes its binder ` +
+						`selects on, so it would render and do nothing: ${icon.slice(0, 160)}`);
+				}
+				/* THE COLLISION. `_bindTraitDescriptionButtons` binds `[data-traitkey]` and STAMPS
+				   `dataset.collapseBound`, so an element carrying both attributes is claimed by
+				   whichever binder ran first and opens the wrong window. Disjoint by attribute. */
+				if (/data-traitkey=/.test(icon)) {
+					throw new Error(`a census icon also carries data-traitkey, so the description binder would ` +
+						`claim it first and open the description popup instead: ${icon.slice(0, 160)}`);
+				}
+				if (!/data-labelkey="/.test(icon)) {
+					throw new Error(`a census icon carries no data-labelkey, so its popup cannot be titled: ${icon.slice(0, 160)}`);
+				}
+			}
+		});
+	}
+
 	/* THE DECLARATION DRIFT ITSELF (§4.3b / design.md D13). wodchar declared 19 Traits while this
 	   system declared 14 for long enough to ship; the five extra would have reached an actor whose
 	   type had no declaration for them, rendering nowhere and droppable on the next save. Nothing
@@ -2421,6 +2552,80 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			if (!/<section\b[^>]*data-tab="gear"/.test(emptyHtml)) throw new Error("no <section data-tab=\"gear\">");
 			if (!/class="v3-empty"/.test(emptyHtml)) throw new Error("the empty state did not render");
 			if (/<table\b/.test(emptyHtml)) throw new Error("an item table rendered for a Chantry with no items");
+
+			/* AND IT IS THE VAULT'S OWN TEXT, not the PC's. `wod.gear.empty` sends the reader to the
+			   Poderes and Combate tabs for magical items and weapons; a Chantry has neither tab, and
+			   `vault: true` is exactly the flag that brings both onto THIS one. An empty state that
+			   names a tab this sheet does not have is a door onto nothing — the same failure class as
+			   a control that renders nowhere, one step further along. */
+			if (emptyHtml.includes("wod.gear.empty")) {
+				throw new Error(
+					"the empty vault renders the PC's own gear text (wod.gear.empty), which points at the " +
+					"Poderes and Combate tabs — a Chantry has neither, and its weapons, armour and magical " +
+					"items all render on this very tab");
+			}
+			if (!emptyHtml.includes("wod.chantry.vault.empty")) {
+				throw new Error("the empty vault renders neither empty text");
+			}
+		});
+	}
+
+	/* THE EFFECTS LEDGER'S OWN DEFAULT STATE — the census's sibling, checked because it is the same
+	   question and the answer happens to be different.
+
+	   The census's door was missing while locked; Integrated Effects were audited for the same gap at
+	   the same time and DO have one, so this pins it: on a Chantry with no effects at all, LOCKED, the
+	   Efectos tab still renders its pool/cap/upkeep figures and the explanatory empty state that says
+	   what the feature is and where the points come from. That is what the census now has too, in the
+	   only form a per-Trait feature could take it. Nothing asserted it before, so nothing would have
+	   noticed it going the way the roster's did. */
+	{
+		const emptyEffects = new Map();
+		let emptyEffectsError = null;
+
+		for (const locked of [true, false]) {
+			try {
+				const actor = buildChantryActor();
+				actor.system.integratedEffects = [];
+				const sheet = new ChantrySheetClass({ document: actor });
+				sheet.locked = locked;
+
+				const base = await sheet._prepareContext({});
+				const context = await sheet._preparePartContext("effects", { ...base }, {});
+				Object.defineProperty(context, ROOTISH, { value: true, enumerable: false });
+
+				const renderer = new Renderer("chantry:effects", `chantry-emptyeffects-${locked}`, chantryFindings);
+				renderer.rootContext = context;
+				emptyEffects.set(locked, renderer.renderProgram(
+					compile(templateFile(ChantrySheetClass.PARTS.effects.template)), new Frame(context)));
+			}
+			catch (err) { emptyEffectsError = err; }
+		}
+
+		check("chantry: an effect-less Chantry still explains Integrated Effects while LOCKED", () => {
+			if (emptyEffectsError) throw new Error(`the Efectos tab raised with no effects: ${emptyEffectsError.message}`);
+
+			const html = emptyEffects.get(true) ?? "";
+
+			if (!html.includes("wod.chantry.effects.empty")) {
+				throw new Error(
+					"the locked, effect-less Efectos tab renders no empty state — the feature would have no " +
+					"door in the state the sheet OPENS in, which is the defect the census icon exists to fix");
+			}
+			for (const key of ["wod.chantry.effects.pool", "wod.chantry.effects.spherecap"]) {
+				if (!html.includes(key)) throw new Error(`the locked, effect-less Efectos tab does not print ${key}`);
+			}
+			// And the create button is still absent while locked — the two halves, same as the census.
+			if (/data-action="effectCreate"/.test(html)) {
+				throw new Error("the add-effect button renders on a locked sheet");
+			}
+		});
+
+		check("chantry: unlocked, the effect-less tab offers the way to create the first one", () => {
+			const html = emptyEffects.get(false) ?? "";
+			if (!/data-action="effectCreate"/.test(html)) {
+				throw new Error("no effectCreate control renders on an unlocked, effect-less Chantry");
+			}
 		});
 	}
 

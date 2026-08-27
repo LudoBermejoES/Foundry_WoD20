@@ -1,5 +1,5 @@
 import * as migration from "./module/migration.js";
-import { enrichAllActorsAbilities, refreshAllActorsStaleDescriptions } from "./module/migrations.js";
+import { enrichAllActorsAbilities, refreshAllActorsStaleDescriptions, correctPositiveArmorDexPenalties } from "./module/migrations.js";
 import { warmDescriptionCache } from "./module/scripts/compendium-description.js";
 
 import { wod } from "./module/config.js";
@@ -667,6 +667,20 @@ Hooks.once("ready", async function () {
 		await refreshAllActorsStaleDescriptions();
 	} catch (err) {
 		console.error("WoD | Stale-description refresh migration failed:", err);
+	}
+
+	// apply-armor-dexterity-penalty: an equipped Armor whose `dexpenalty` is POSITIVE is added, not
+	// subtracted, by totals.js:208 - so eleven shipped documents grant Dexterity and Initiative
+	// instead of costing them. Fixing the compendium fixes every future drag and no Item already
+	// dragged (Foundry copies the document onto the actor), so the already-copied ones need this.
+	// UNFLAGGED, and that is the design: the predicate `type == "Armor" && dexpenalty > 0` cannot
+	// match a legitimate document after this change, so it is idempotent by construction and costs
+	// an in-memory filter per ready once the world is clean. See module/scripts/armor-dexpenalty.js.
+	// Also never allowed to block load.
+	try {
+		await correctPositiveArmorDexPenalties();
+	} catch (err) {
+		console.error("WoD | Armor dexpenalty correction migration failed:", err);
 	}
 
 	// read-descriptions-from-compendium: warms the description resolver's synchronous cache (see

@@ -1656,6 +1656,7 @@
 				}
 			},	
 			"dexpenalty": 0,
+			"shieldbonus": 0,
 			"forms": {
 				"hashomid": true,
 				"hasglabro": false,

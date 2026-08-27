@@ -187,6 +187,53 @@
 								data-labelkey="{{trait.label}}"
 								data-descriptionkey="{{trait.descriptionkey}}"></i>
 
+						{{!-- THE CENSUS'S DOOR — the roster's own EMPTY STATE, written in the row's icon
+						      language instead of as a block.
+
+						      WHY IT EXISTS, measured rather than argued (`test-part-render.mjs` section H
+						      prints both figures and now gates them): `trait.roster.show` below renders the
+						      census block when the roster HAS entries or the sheet is UNLOCKED — and this
+						      sheet OPENS LOCKED every time, by its own requirement. So on a Chantry that
+						      has never used a census, which is every newly created one, the locked Rasgos
+						      tab rendered 0 roster blocks, 0 controls and 0 characters of roster markup,
+						      against 8 blocks and 8 add buttons unlocked. A feature with no door in its
+						      default state reads as a feature that was never built, and that is exactly how
+						      it was reported ("no veo el icono del censo").
+
+						      WHY AN ICON AND NOT THE BLOCK. The other half of the requirement still holds:
+						      "an empty roster SHALL NOT change how an existing sheet reads". Eight
+						      "Puntos: 0 / 2" heads hanging under eight of the nineteen rows WOULD change
+						      it — that is the reading the `show` gate was written to protect and it is
+						      still protected. One icon inside the strip the row already carries (dots,
+						      cost, over-cap flag, eye) is the smallest thing that can be SEEN, and it is
+						      the eye's exact idiom: `collapsible button`, an imperative binder in
+						      `_onRender`, and the read-only `ItemViewer` popup every other description eye
+						      in this system opens. No new mechanism, and the popup is where the census can
+						      afford to explain itself at length — including how to add the first entry,
+						      which is the half a tooltip could not carry.
+
+						      RENDERED ONLY WHEN THE BLOCK IS NOT (`{{#unless trait.roster.show}}`), so the
+						      census is never offered from two places at once and a sheet that already uses
+						      censuses reads byte-for-byte as it did before this change.
+
+						      NOT GATED ON THE TRAIT'S VALUE, deliberately: a brand-new Chantry has all
+						      nineteen Traits at zero, and an affordance whose PRESENCE depends on the data
+						      is the very class of defect this fixes. `0 / 0` in the tooltip is a true and
+						      useful reading.
+
+						      NO `data-traitkey` HERE, and it is load-bearing rather than tidy:
+						      `_bindTraitDescriptionButtons` binds `.collapsible.button[data-traitkey]` and
+						      STAMPS what it binds (`dataset.collapseBound`), so an icon carrying both keys
+						      would be claimed by whichever binder ran first and would open the wrong
+						      window. The two binders are kept disjoint by attribute, and
+						      `test-part-render.mjs` asserts no element carries both. --}}
+						{{#if trait.roster}}{{#unless trait.roster.show}}
+							<i class="pullLeft pointer icon collapsible button fa-solid fa-list-ul chantry-trait-roster-eye"
+									title="{{localize 'wod.chantry.roster.show'}} ({{trait.roster.used}} / {{trait.roster.allowed}})"
+									data-rosterkey="{{trait.key}}"
+									data-labelkey="{{trait.label}}"></i>
+						{{/unless}}{{/if}}
+
 					</div>
 
 					{{!-- The census, for the eight Traits that are collections of people or holdings.

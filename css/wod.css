@@ -3380,6 +3380,20 @@ input.sheet-infoWidth {
   opacity: 1;
 }
 
+/* The CENSUS icon, in the same row strip and deliberately the same weight as the eye beside it: it
+   is the roster's empty state (see `chantry-sheet-v2.hbs`), not a second-class control. Two rules
+   rather than one shared selector list, because these two icons have different lives — the eye is on
+   every row, this one only where the block is absent — and a shared list would hide that. */
+.chantry-body .chantry-trait-roster-eye {
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+
+.chantry-body .chantry-trait-roster-eye:hover,
+.chantry-body .chantry-trait-roster-eye:focus {
+  opacity: 1;
+}
+
 /* ---- (5) THE ROSTER, under the eight Traits that are collections ----
    add-chantry-inventory-effects-and-roster task 3.6. Everything stays inside `.chantry-body`, for
    the reason this section's own header gives: every other class here is shared byte-for-byte with

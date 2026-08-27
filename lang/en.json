@@ -1218,7 +1218,8 @@
 				"soakbashing": "Soak Bashing",
 				"soaklethal": "Soak Lethal",
 				"soakaggravated": "Soak Aggravated",
-				"penalty": "Dexterity Penalty"
+				"penalty": "Dexterity Penalty",
+				"shieldbonus": "Shield Bonus"
 			},
 			"mode": {
 				"mode": "Mode",
@@ -1462,9 +1463,13 @@
 			},
 			"overcapsingle": "This Trait exceeds the Chantry/Construct's rating.",
 			"vault": {
-				"weapons": "Weapons"
+				"weapons": "Weapons",
+				"empty": "The vault is empty. Drag any item here from a compendium or from another actor and it is stored on this Chantry/Construct. Everything belongs here: mundane items in this list, and weapons, armour and magical items (Wonders, Fetishes, Talismans…) in their own lists, which appear below as soon as there is something in them."
 			},
 			"roster": {
+				"headline": "Roster",
+				"show": "Show this Trait's roster",
+				"empty": "This Trait takes a roster: the list of who or what makes it up, entry by entry. There are none yet. To add the first one, unlock the sheet with the padlock in the header and press the + button that appears next to the Trait. Each entry consumes the points you give it (1 by default, and 0 is for something described without taking up a circle), and the total should not exceed the Trait's own points.",
 				"points": "Points",
 				"over": "This roster consumes more points than the Trait has.",
 				"add": "Add entry",

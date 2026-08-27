@@ -13,6 +13,7 @@
 
 import { findAbilityCompendiumMatch, compendiumProvenanceOf, isEnrichableAbility } from "./scripts/ability-enrichment.js";
 import { resyncActorTraits } from "./scripts/stale-description-refresh.js";
+import { planActorDexPenaltyCorrections, applyDexPenaltyCorrections } from "./scripts/armor-dexpenalty.js";
 
 const FLAG_SCOPE = "worldofdarkness";
 const FLAG_KEY = "abilitiesEnriched";
@@ -237,4 +238,79 @@ export async function refreshAllActorsStaleDescriptions() {
 	}
 
 	console.log(`WoD | Trait re-sync complete: ${pending.length} actor(s) processed, ${totalBonusFixed} bonuslist(s) restored, ${totalNotFound} unmatched, ${errored} actor(s) errored.`);
+}
+
+// --- Armor `dexpenalty` sign correction (apply-armor-dexterity-penalty) -----------------------------
+//
+// A THIRD migration, and the FIRST one in this file with NO FLAG. The full rationale, the accepted
+// risk and the reason `totals.js` is deliberately NOT clamped all live in
+// `module/scripts/armor-dexpenalty.js`, which holds the pure rules; this function is only the walk.
+//
+// In one line: eleven shipped armor documents carried `dexpenalty` as an unsigned MAGNITUDE, and
+// `totals.js:208` does `+=`, so an equipped "Traje de antidisturbios" GRANTS +3 Dexterity and +3
+// Initiative today. Fixing the compendium fixes every future drag and no Item already dragged,
+// because Foundry copies the document onto the actor.
+//
+// NO FLAG, on purpose: the predicate (`type == "Armor" && system.dexpenalty > 0`) IS the flag. After
+// this change a positive `dexpenalty` cannot exist legitimately, a corrected Item stops matching, and
+// so a second pass writes zero documents. That also means this costs a cheap in-memory filter per
+// ready and nothing else in the steady state - no pack reads, no `setFlag` write, and no future
+// version bump that turns a system deploy into a mass write over ~88 production actors (which is
+// exactly what the FLAG_KEY comment above warns about).
+
+/**
+ * Corrects every owned `Armor` Item whose `system.dexpenalty` is positive, negating it.
+ *
+ * NOT limited to `type === "PC"`, and NOT limited to `game.actors`: the unlinked-token walk is the
+ * lesson `refreshAllActorsStaleDescriptions` learned the hard way (a token with `actorLink: false`
+ * carries its own synthetic actor in the scene's ActorDelta, so a walk over the directory alone fixes
+ * a copy nobody opens - Otto Von Grugger's token is exactly that). Armor dragged onto such a token
+ * carries the same defect, so it gets the same walk.
+ *
+ * Error-isolated twice over - per Item inside `applyDexPenaltyCorrections`, and per actor here - so
+ * one broken actor or one refused update cannot abort the batch or block `game.ready()`.
+ * @returns {Promise<{scanned: number, corrected: number, failed: number}>}
+ */
+export async function correctPositiveArmorDexPenalties() {
+	const candidates = [...game.actors];
+	for (const scene of game.scenes ?? []) {
+		for (const token of scene.tokens ?? []) {
+			if (token.actorLink) continue;          // linked tokens ARE the directory actor
+			const synthetic = token.actor;
+			if (synthetic && !candidates.includes(synthetic)) candidates.push(synthetic);
+		}
+	}
+
+	const totals = { scanned: candidates.length, corrected: 0, failed: 0 };
+
+	for (const actor of candidates) {
+		try {
+			// Only skip when the answer is explicitly "no": a synthetic token actor may not
+			// implement `canUserModify` at all, and defaulting to "skip" would silently do nothing.
+			if (actor.canUserModify?.(game.user, "update") === false) continue;
+
+			const plan = planActorDexPenaltyCorrections(actor);
+			if (!plan.length) continue;
+
+			const stats = await applyDexPenaltyCorrections(plan);
+			totals.corrected += stats.corrected;
+			totals.failed += stats.failed;
+
+			for (const { item, from, to } of plan) {
+				console.log(`WoD | "${actor.name}": armor "${item.name}" dexpenalty ${from} -> ${to}.`);
+			}
+		}
+		catch (err) {
+			// One broken actor (no update permission for this user, a malformed item collection, ...)
+			// must not stop the rest.
+			totals.failed++;
+			console.error(`WoD | Armor dexpenalty correction failed for actor "${actor.name}":`, err);
+		}
+	}
+
+	if (totals.corrected || totals.failed) {
+		console.log(`WoD | Armor dexpenalty correction: ${totals.corrected} Item(s) corrected, ${totals.failed} failure(s), over ${totals.scanned} actor(s) incl. unlinked tokens.`);
+	}
+
+	return totals;
 }

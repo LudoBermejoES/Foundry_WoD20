@@ -368,10 +368,19 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 					? "wod.chantry.overcapsingle"
 					: "wod.chantry.overcap",
 				/* The census (task 3.6). `show` is what keeps the spec's promise that "an empty
-				   roster SHALL NOT change how an existing sheet reads": six of the fourteen Traits
-				   are magnitudes and never get one, and the eight that do render nothing at all
-				   while the sheet is locked and empty. Unlocked, the head renders so there is a way
-				   to add the first entry. */
+				   roster SHALL NOT change how an existing sheet reads": the magnitude Traits never
+				   get one, and the eight that do render no BLOCK at all while the sheet is locked
+				   and empty. Unlocked, the head renders so there is a way to add the first entry.
+
+				   THE OTHER HALF OF THAT PROMISE WAS MISSING, and it was reported: this sheet OPENS
+				   LOCKED every time (its own requirement), so on a Chantry with no census entries —
+				   every newly created one — `show` was false for all eight and the feature had NO
+				   door at all. Measured on the rendered Rasgos tab: 0 roster blocks, 0 controls, 0
+				   characters of roster markup locked, against 8 and 8 unlocked. `show` stays exactly
+				   as it was, because the block is what would have added the noise; what the row now
+				   carries instead is one icon, rendered precisely when the block is NOT (see
+				   `chantry-sheet-v2.hbs`, and `_bindTraitRosterButtons` below). `used`/`allowed`
+				   ride along on the same object the icon's tooltip prints. */
 				roster: hasRoster(key)
 					? { ...rosters[key], show: (rosters[key].entries.length > 0) || !this.locked }
 					: null
@@ -491,6 +500,13 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		   in it; nothing here introduces one, and the order makes that visibly true. */
 		this._bindItemDescriptionButtons(element);
 
+		/* The CENSUS icon (`chantry-sheet-v2.hbs`'s own note). Read-only like the two binders above
+		   it, so it is bound unconditionally on every render and lives outside the declarative
+		   `actions` map for the same reason they do. Kept LAST of the three: `test-chantry-trait-
+		   eye.mjs`'s B2 reads the slice of this method UP TO the Trait binder call and requires no
+		   lock/editable condition in it, and appending here cannot disturb that. */
+		this._bindTraitRosterButtons(element);
+
 		this.#dragDrop.forEach((d) => d.bind(element));
 	}
 
@@ -558,6 +574,100 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 				});
 			});
 		});
+	}
+
+	/**
+	 * The CENSUS icon: opens the same read-only `ItemViewer` popup the description eyes open, with
+	 * this Trait's roster in it — the points line, the entries, and (when there are none) what a
+	 * census is and how to add the first entry.
+	 *
+	 * WHY A SEPARATE BINDER FROM THE EYE ABOVE, rather than one binder over both attributes: the two
+	 * must be able to tell each other apart, because `dataset.collapseBound` is a one-shot stamp and
+	 * whichever binder saw an icon first would own it. They are therefore keyed on DISJOINT
+	 * attributes — `[data-traitkey]` for the description, `[data-rosterkey]` for the census — and
+	 * `test-part-render.mjs` asserts no rendered element carries both.
+	 *
+	 * WHY THE CONTENT IS BUILT HERE AND NOT IN THE TEMPLATE: the figures are LIVE. Read at click
+	 * time from `evaluateRosters`, this window cannot print a stale count if an entry was added from
+	 * elsewhere (wodchar's API writes the same `system.traitRosters`), and no second copy of the
+	 * entries has to be carried into the render context for eight Traits that mostly have none.
+	 * @param {HTMLElement} root
+	 */
+	_bindTraitRosterButtons(root) {
+		const icons = root.querySelectorAll?.(".collapsible.button[data-rosterkey]");
+		if (!icons?.length) return;
+
+		icons.forEach(icon => {
+			if (icon.dataset.collapseBound) return;
+			icon.dataset.collapseBound = "true";
+
+			icon.addEventListener("click", () => {
+				const key = icon.dataset.rosterkey;
+				const labelkey = icon.dataset.labelkey;
+
+				// The same guard every roster handler applies: a key outside the eight is not a
+				// roster, and `evaluateRosters` would have nothing to answer with.
+				if (!ROSTER_TRAIT_KEYS.includes(key)) return;
+
+				const roster = evaluateRosters(this.actor.system.traitRosters, this.actor.system.traits ?? {})[key];
+				const label = game.i18n.localize(labelkey || `wod.chantry.traits.${key}`);
+
+				ItemViewer.open({
+					uuid: `${this.actor.uuid}.ChantryRoster.${key}`,
+					name: `${game.i18n.localize("wod.chantry.roster.headline")}: ${label}`,
+					system: { description: this._rosterDescription(roster) }
+				});
+			});
+		});
+	}
+
+	/**
+	 * The census popup's body, as HTML.
+	 *
+	 * EVERY INTERPOLATED VALUE IS ESCAPED. A roster entry's name and note are typed by a GM and are
+	 * stored verbatim, and `ItemViewer` runs its description through `enrichHTML` — so an unescaped
+	 * `<` here would be markup, not text. This is the only place in this sheet that builds HTML from
+	 * actor-authored strings, which is exactly why the escaping lives next to the interpolation
+	 * instead of being assumed of the caller.
+	 * @param {{entries: object[], used: number, allowed: number, over: boolean}} roster
+	 * @returns {string}
+	 */
+	_rosterDescription(roster) {
+		/* THE QUOTE IS REPLACED WITH `replaceAll('"')`, NOT WITH A `/"/g` REGEX, and that is not a
+		   style preference: `.github/scripts/sheet-invariants.py`'s `js_block()` brace matcher is
+		   string-aware but NOT regex-aware, so a double quote inside a regex literal opens a phantom
+		   string, desynchronises the brace count and makes the gate lose this class's whole
+		   `DEFAULT_OPTIONS.actions` map. It then reports nine "data-action registered by no sheet"
+		   findings across three Chantry templates — a message that points everywhere except here.
+		   Measured while writing this method. A single-quoted `'"'` is consumed correctly by that
+		   same scanner. */
+		const esc = (value) => String(value ?? "")
+			.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replaceAll('"', "&quot;");
+
+		const L = (key) => esc(game.i18n.localize(key));
+		const parts = [];
+
+		parts.push(`<p><strong>${L("wod.chantry.roster.points")}: ${esc(roster.used)} / ${esc(roster.allowed)}</strong></p>`);
+
+		if (roster.over) {
+			parts.push(`<p class="item-warning">${L("wod.chantry.roster.over")}</p>`);
+		}
+
+		if (roster.entries.length) {
+			const rows = roster.entries.map((entry) => {
+				const name = esc(entry.name) || L("wod.chantry.roster.name");
+				const note = entry.note ? ` &mdash; ${esc(entry.note)}` : "";
+				return `<li>${name}${note} (${esc(entry.points)})</li>`;
+			});
+
+			parts.push(`<ul>${rows.join("")}</ul>`);
+		}
+		else {
+			// The whole point of the icon: an empty census must say what it is and how to fill it.
+			parts.push(`<p>${L("wod.chantry.roster.empty")}</p>`);
+		}
+
+		return parts.join("");
 	}
 
 	/**

@@ -181,8 +181,23 @@
 
 					      reorganize-mage-sheet-v3 — keyed off `getMundaneItems`, not `getItems`: an
 					      actor holding only Wonders/Fetishes (which now render on Poderes) must see
-					      THIS empty state here, not a table with zero rows. --}}
-					<p class="v3-empty">{{localize "wod.gear.empty"}}</p>
+					      THIS empty state here, not a table with zero rows.
+
+					      TWO TEXTS, because the PC's one is FALSE on a vault. `wod.gear.empty` ends
+					      "…créalos y consúltalos en la pestaña de Poderes. Las armas y las armaduras
+					      van en la pestaña de Combate", and a Chantry HAS NEITHER TAB: `vault: true`
+					      is precisely the flag that brings weapons, armour and magical items onto
+					      THIS tab (see the block below). So the empty state was sending a GM to two
+					      places that do not exist, on the one sheet where everything already lives
+					      here — the same class of defect as an affordance that renders nowhere, one
+					      step further along: a door that opens onto nothing. One `{{#if vault}}` and
+					      a second string, rather than softening the PC's text into something vague
+					      enough to be true for both. --}}
+					{{#if vault}}
+						<p class="v3-empty">{{localize "wod.chantry.vault.empty"}}</p>
+					{{else}}
+						<p class="v3-empty">{{localize "wod.gear.empty"}}</p>
+					{{/if}}
 				{{/if}}
 			</div>
 
