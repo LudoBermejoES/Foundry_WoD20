@@ -417,7 +417,29 @@ export async function migrateChantryRostersToItems() {
 
 			// 4. Vaciar el mapa. Necesario: dos portadores para un dato divergen. La clave sigue
 			//    declarada en template.json, así que vaciarla no la borra del esquema.
-			await actor.update({ "system.traitRosters": {} });
+			// SE VACIA CON LA SINTAXIS DE BORRADO, no asignando `{}`. `Actor#update` fusiona
+			// de forma recursiva, asi que `{"system.traitRosters": {}}` mezcla un objeto vacio
+			// con el existente y NO borra ninguna clave: el mapa se quedaba entero. Medido en
+			// una Capilla desechable con 7.5.141: la pasada 1 reportaba `migrated: 1` y
+			// `mapaVacio: false`, y la pasada 2 duplicaba porque el predicado seguia casando.
+			// `-=<clave>` es la forma de Foundry para borrar una clave de verdad.
+			const borrado = {};
+			for (const key of Object.keys(rawRosters ?? {})) {
+				borrado[`system.traitRosters.-=${key}`] = null;
+			}
+			if (Object.keys(borrado).length > 0) await actor.update(borrado);
+
+			// Y se LEE DE VUELTA: un `update` que no borra nada tampoco lanza, asi que sin esta
+			// comprobacion el exito seria una afirmacion sin medir — que es exactamente como se
+			// escapo la primera vez.
+			const quedan = Object.keys(actor.system?.traitRosters ?? {}).length;
+			if (quedan > 0) {
+				totals.failed++;
+				console.error(`WoD | El censo de "${actor.name}" se migro pero el mapa NO se vacio `+
+					`(${quedan} Rasgo(s) siguen en system.traitRosters). El dato esta en los dos `+
+					`portadores; NO se reintentara, la marca de intento se conserva.`);
+				continue;
+			}
 			// Migrado y verificado: la marca de intento ya no dice nada util y se retira, para
 			// que un `flags` limpio signifique «esta Capilla esta bien» y no «no se intento».
 			await actor.unsetFlag(MIGRATION_FLAG_SCOPE, ATTEMPT_FLAG_KEY);

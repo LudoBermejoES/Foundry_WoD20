@@ -122,8 +122,15 @@ function syntheticChantry(rosters) {
 		},
 		async update(changes) {
 			for (const [k, v] of Object.entries(changes)) {
-				if (k === "system.traitRosters") actor.system.traitRosters = structuredClone(v);
-				else throw new Error(`la migración escribe una clave inesperada: ${k}`);
+				// EL DOBLE SE COMPORTA COMO FOUNDRY, y esto es lo que faltaba: `Actor#update`
+				// FUSIONA de forma recursiva. Asignar `{"system.traitRosters": {}}` mezcla un
+				// objeto vacio con el existente y no borra nada — el mapa se quedaba entero en
+				// produccion mientras este doble decia que se vaciaba. Solo `-=<clave>` borra.
+				if (k === "system.traitRosters") {
+					Object.assign(actor.system.traitRosters ??= {}, structuredClone(v));
+				} else if (k.startsWith("system.traitRosters.-=")) {
+					delete actor.system.traitRosters?.[k.slice("system.traitRosters.-=".length)];
+				} else throw new Error(`la migración escribe una clave inesperada: ${k}`);
 			}
 		}
 	};
@@ -150,7 +157,11 @@ async function migrateOne(actor) {
 	const result = verifyCensusMigration(before, after);
 
 	if (result.ok) {
-		await actor.update({ "system.traitRosters": {} });
+		const borrado = {};
+		for (const key of Object.keys(actor.system.traitRosters ?? {})) {
+			borrado[`system.traitRosters.-=${key}`] = null;
+		}
+		if (Object.keys(borrado).length > 0) await actor.update(borrado);
 		await actor.unsetFlag(MIGRATION_FLAG_SCOPE, ATTEMPT_FLAG_KEY);
 	}
 
@@ -437,6 +448,19 @@ await test("el paseo real de migrations.js hace las cuatro escrituras en el orde
 		"el paseo debe LEER la marca de intento antes de volver a migrar un actor");
 	assert.match(src, /setFlag\([^)]*ATTEMPT_FLAG_KEY[^)]*true/,
 		"y debe ESCRIBIRLA antes de tocar nada, no despues");
+	// EL VACIADO SE HACE CON LA SINTAXIS DE BORRADO. `Actor#update` fusiona de forma
+	// recursiva, asi que `{"system.traitRosters": {}}` mezcla un objeto vacio con el
+	// existente y NO borra nada: el mapa se quedaba entero, el predicado seguia casando y
+	// la pasada siguiente duplicaba. Medido en una Capilla desechable con 7.5.141, donde la
+	// pasada 1 reportaba `migrated: 1` y el mapa intacto.
+	assert.match(src, /system\.traitRosters\.-=/,
+		"el paseo debe vaciar el mapa con `system.traitRosters.-=<clave>`, no asignando {}");
+	assert.ok(!/update\(\{\s*"system\.traitRosters":\s*\{\}\s*\}\)/.test(src),
+		"asignar un objeto vacio a system.traitRosters es un no-op: Actor#update fusiona");
+	assert.match(src, /actor\.system\?\.traitRosters \?\? \{\}\)\.length/,
+		"y el paseo debe LEER DE VUELTA que el mapa quedo vacio: un update que no borra nada "
+		+ "tampoco lanza, asi que sin leer de vuelta el exito seria una afirmacion sin medir");
+
 	const iSet = src.indexOf("ATTEMPT_FLAG_KEY, true");
 	const iCreate = src.indexOf("createEmbeddedDocuments");
 	assert.ok(iSet !== -1 && iCreate !== -1 && iSet < iCreate,
