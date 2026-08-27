@@ -1765,7 +1765,8 @@
 			"isrollable": false,
 			"relation": "",
 			"link": "",
-			"portrait": ""
+			"portrait": "",
+			"points": 1
 		},		
 		"Bonus": {
 			"templates": [

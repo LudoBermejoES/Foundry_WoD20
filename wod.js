@@ -1,5 +1,5 @@
 import * as migration from "./module/migration.js";
-import { enrichAllActorsAbilities, refreshAllActorsStaleDescriptions, correctPositiveArmorDexPenalties } from "./module/migrations.js";
+import { enrichAllActorsAbilities, refreshAllActorsStaleDescriptions, correctPositiveArmorDexPenalties, migrateChantryRostersToItems } from "./module/migrations.js";
 import { warmDescriptionCache } from "./module/scripts/compendium-description.js";
 
 import { wod } from "./module/config.js";
@@ -681,6 +681,20 @@ Hooks.once("ready", async function () {
 		await correctPositiveArmorDexPenalties();
 	} catch (err) {
 		console.error("WoD | Armor dexpenalty correction migration failed:", err);
+	}
+
+	// add-chantry-roster-tab: el censo de la Capilla deja de ser un array de objetos dentro del actor
+	// (`system.traitRosters`) y pasa a ser Items `wod.types.connection`, que es lo que le da retrato,
+	// descripción enriquecida, enlace, hoja propia, ojo y arrastre. Sin bandera, igual que la de arriba:
+	// el predicado (una Capilla con `traitRosters` no vacío) no puede casar legítimamente después de
+	// este cambio, así que es idempotente por construcción. Copia el mapa a
+	// `flags.worldofdarkness.migration.traitRosters` antes de vaciarlo, VERIFICA POR CONTEO nombre a
+	// nombre y solo vacía si cuadra. Nunca puede bloquear la carga del sistema.
+	// Ver module/scripts/chantry-roster-migration.js.
+	try {
+		await migrateChantryRostersToItems();
+	} catch (err) {
+		console.error("WoD | Chantry census migration failed:", err);
 	}
 
 	// read-descriptions-from-compendium: warms the description resolver's synchronous cache (see

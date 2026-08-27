@@ -187,39 +187,33 @@
 								data-labelkey="{{trait.label}}"
 								data-descriptionkey="{{trait.descriptionkey}}"></i>
 
-						{{!-- THE CENSUS'S DOOR — the roster's own EMPTY STATE, written in the row's icon
-						      language instead of as a block.
+						{{!-- LA PUERTA DEL CENSO — el puntero POR RASGO a la pestaña Censo.
 
-						      WHY IT EXISTS, measured rather than argued (`test-part-render.mjs` section H
-						      prints both figures and now gates them): `trait.roster.show` below renders the
-						      census block when the roster HAS entries or the sheet is UNLOCKED — and this
-						      sheet OPENS LOCKED every time, by its own requirement. So on a Chantry that
-						      has never used a census, which is every newly created one, the locked Rasgos
-						      tab rendered 0 roster blocks, 0 controls and 0 characters of roster markup,
-						      against 8 blocks and 8 add buttons unlocked. A feature with no door in its
-						      default state reads as a feature that was never built, and that is exactly how
-						      it was reported ("no veo el icono del censo").
+						      QUÉ ERA Y QUÉ ES AHORA (add-chantry-roster-tab, D7). En 7.5.137 este icono
+						      abría un popup de solo lectura con el censo del Rasgo, porque el censo
+						      vivía DENTRO de esta pestaña y no tenía puerta alguna en el estado por
+						      defecto: la hoja abre bloqueada, `trait.roster.show` solo era cierto con
+						      entradas o desbloqueada, y una Capilla nueva renderizaba 0 bloques, 0
+						      controles y 0 caracteres de markup de censo sobre 19 filas de Rasgo, 8 de
+						      ellas con censo (frente a 8/8/32 desbloqueada).
 
-						      WHY AN ICON AND NOT THE BLOCK. The other half of the requirement still holds:
-						      "an empty roster SHALL NOT change how an existing sheet reads". Eight
-						      "Puntos: 0 / 2" heads hanging under eight of the nineteen rows WOULD change
-						      it — that is the reading the `show` gate was written to protect and it is
-						      still protected. One icon inside the strip the row already carries (dots,
-						      cost, over-cap flag, eye) is the smallest thing that can be SEEN, and it is
-						      the eye's exact idiom: `collapsible button`, an imperative binder in
-						      `_onRender`, and the read-only `ItemViewer` popup every other description eye
-						      in this system opens. No new mechanism, and the popup is where the census can
-						      afford to explain itself at length — including how to add the first entry,
-						      which is the half a tooltip could not carry.
+						      El censo tiene ahora SU PROPIA PESTAÑA, y el riel se pinta siempre, así que
+						      la visibilidad ya no depende de esto. El icono se conserva porque aporta lo
+						      que la pestaña no puede: el puntero por Rasgo. Al pulsarlo activa la
+						      pestaña Censo y enfoca el grupo de ESTE Rasgo (`_bindTraitRosterButtons`).
+						      Y el popup se retira: dos puertas al mismo contenido es justo lo que el
+						      cambio anterior evitó a propósito.
 
-						      RENDERED ONLY WHEN THE BLOCK IS NOT (`{{#unless trait.roster.show}}`), so the
-						      census is never offered from two places at once and a sheet that already uses
-						      censuses reads byte-for-byte as it did before this change.
+						      YA NO VA CONDICIONADO A `trait.roster.show`. Esa condición existía para no
+						      ofrecer el censo desde dos sitios a la vez cuando el bloque también se
+						      pintaba aquí; el bloque se ha ido (el `{{> chantry_roster.hbs}}` de más
+						      abajo ya no existe), así que el icono se renderiza para los ocho Rasgos con
+						      censo SIEMPRE — bloqueada o no, con entradas o sin ellas. Sigue sin
+						      condicionarse a la puntuación del Rasgo, por la misma razón de siempre: una
+						      affordance cuya PRESENCIA depende del dato es la clase de defecto que esto
+						      arregla, y `0 / 0` en el tooltip es una lectura verdadera y útil.
 
-						      NOT GATED ON THE TRAIT'S VALUE, deliberately: a brand-new Chantry has all
-						      nineteen Traits at zero, and an affordance whose PRESENCE depends on the data
-						      is the very class of defect this fixes. `0 / 0` in the tooltip is a true and
-						      useful reading.
+						      NO GATEADO POR `locked`: navegar no escribe.
 
 						      NO `data-traitkey` HERE, and it is load-bearing rather than tidy:
 						      `_bindTraitDescriptionButtons` binds `.collapsible.button[data-traitkey]` and
@@ -227,21 +221,27 @@
 						      would be claimed by whichever binder ran first and would open the wrong
 						      window. The two binders are kept disjoint by attribute, and
 						      `test-part-render.mjs` asserts no element carries both. --}}
-						{{!-- EL HUECO SE RESERVA SIEMPRE, y por eso hay una rama `else` que pinta un icono
-						      invisible en vez de no pintar nada. La fila es `display:flex` con la etiqueta en
-						      `flex: 1 1 auto` absorbiendo el hueco y TODO lo demas en `flex: 0 0 auto`, asi que
-						      una fila con un icono mas tiene ~62px mas de contenido fijo (el icono, 52px, mas el
-						      `gap` de 10px) y su etiqueta absorbe 62px MENOS: los puntos y el coste se desplazan.
-						      Medido sobre la hoja real: los circulos de las ocho filas con censo empezaban en
-						      x=695 y los de las once sin censo en x=758, y el ojo de una fila sin censo caia
-						      justo donde caia el icono de censo de la de arriba.
+						{{!-- NO LLEVA `data-traitkey`, y eso es load-bearing y no orden:
+						      `_bindTraitDescriptionButtons` liga `.collapsible.button[data-traitkey]` y
+						      ESTAMPA lo que liga (`dataset.collapseBound`), así que un icono con las dos
+						      claves lo reclamaría la ligadura que corriera primero y abriría la ventana
+						      equivocada. Las dos son disjuntas por atributo, y `test-part-render.mjs`
+						      comprueba que ningún elemento renderizado lleve las dos.
 
-						      El hueco es el MISMO elemento con las mismas clases de caja, solo oculto, en vez de
-						      un `margin-right: 62px` en las filas sin censo: asi el ancho reservado es identico
-						      por construccion y no hay una constante que se quede rancia si el icono cambia de
-						      tamaño. Sin `data-rosterkey` no lo engancha el binder, y `pointer-events: none` mas
-						      `aria-hidden` lo dejan fuera del raton y del lector de pantalla. --}}
-						{{#if trait.roster}}{{#unless trait.roster.show}}
+						      LA RAMA `else` PINTA UN HUECO INVISIBLE, y no es cosmética. La fila es
+						      `display:flex` con la etiqueta en `flex: 1 1 auto` absorbiendo el hueco y
+						      todo lo demás en `flex: 0 0 auto`, así que una fila con un icono más tiene
+						      ~62px más de contenido fijo (52 del icono, 10 del `gap`), su etiqueta
+						      absorbe 62px MENOS, y los círculos y el coste se desplazan. Medido sobre la
+						      hoja real: los puntos empezaban en x=695 en las ocho filas con censo y en
+						      x=758 en las once sin censo.
+
+						      El hueco es el MISMO elemento con las mismas clases de caja, solo oculto,
+						      en vez de un `margin-right: 62px`: así el ancho reservado es idéntico por
+						      construcción y no hay una constante que se enrancie si el icono cambia de
+						      tamaño. Sin `data-rosterkey` no lo engancha el binder, y `pointer-events:
+						      none` más `aria-hidden` lo dejan fuera del ratón y del lector de pantalla. --}}
+						{{#if trait.roster}}
 							<i class="pullLeft pointer icon collapsible button fa-solid fa-list-ul chantry-trait-roster-eye"
 									title="{{localize 'wod.chantry.roster.show'}} ({{trait.roster.used}} / {{trait.roster.allowed}})"
 									data-rosterkey="{{trait.key}}"
@@ -249,23 +249,9 @@
 						{{else}}
 							<i class="pullLeft icon collapsible button fa-solid fa-list-ul chantry-trait-roster-eye chantry-trait-icon-slot"
 									aria-hidden="true"></i>
-						{{/unless}}{{else}}
-							<i class="pullLeft icon collapsible button fa-solid fa-list-ul chantry-trait-roster-eye chantry-trait-icon-slot"
-									aria-hidden="true"></i>
 						{{/if}}
 
 					</div>
-
-					{{!-- The census, for the eight Traits that are collections of people or holdings.
-					      `trait.roster.show` is false for the other six and for a locked sheet with no
-					      entries, so an existing sheet reads exactly as it did.
-
-					      `locked=../locked`, NOT `locked`: one `{{#each}}` deep, a bare `locked`
-					      resolves against the TRAIT, which is the failure this system has shipped
-					      twice. Probed, not counted — see the partial's own header. --}}
-					{{#if trait.roster.show}}
-						{{> "systems/worldofdarkness/templates/actor/parts/chantry_roster.hbs" roster=trait.roster traitkey=trait.key locked=../locked}}
-					{{/if}}
 					</div>
 				{{/each}}
 
