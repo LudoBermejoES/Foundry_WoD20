@@ -19,54 +19,11 @@
       than re-derived. No CSS changes were needed: `.connection-entry`, `.feature-itemlistarea`,
       `.headlineGroup` and the `.v3-section`/`.v3-tabmain` shell classes are all scoped generically
       under `.wod20`/`.wod20.pc-actor-v3`, not under the Personaje tab specifically.
-
-      DOS HOJAS RENDERIZAN ESTE FICHERO (add-chantry-roster-tab)
-      -----------------------------------------------------------
-      Desde `add-chantry-roster-tab` esta plantilla es también la pestaña «Censo» de la hoja de
-      Capilla/Constructo (`ChantryActorSheetV2.PARTS.census`), que la renderiza COMPARTIENDO EL
-      FICHERO en vez de copiándolo — el mismo trato que ya tiene `v3/gear.hbs`, y por la misma razón:
-      «un cambio en cómo se lee una entrada ocurre una vez». El interruptor es `context.chantry`,
-      exactamente como `vault` en `gear.hbs`; el PJ no lo pone nunca, así que cae por el `else` de
-      cada condición y no cambia en nada.
-
-      Lo que cambia con `chantry`:
-        * el título es «Censo» (`wod.chantry.roster.headline`) y NO «Aliados y contactos», que es
-          falso para dos de los ocho Rasgos con censo (Biblioteca y Nodo no son gente);
-        * el `+` de la cabecera desaparece: ése abre el diálogo del PJ, que ofrece Trasfondo, Mérito
-          y Defecto — cosas que una Capilla no puede tener. En su lugar hay un `+` POR GRUPO, que
-          estampa `system.relation` con la clave de ese Rasgo para que nadie la teclee;
-        * cada grupo va envuelto en `.census-group[data-censusgroup]` con `tabindex="-1"`, que es lo
-          que permite al icono de la fila del Rasgo ENFOCAR su grupo (tarea 6.1). El binder lo busca
-          por la CLASE y filtra por `dataset.censusgroup` en JS en vez de interpolar la clave dentro
-          del selector: `binder-selector-check.py` comprueba que todo selector que este sistema
-          teclea sea producible por la plantilla, y uno construido con una plantilla de cadena no se
-          puede comprobar;
-        * la cabecera del grupo lleva «Puntos: usados / permitidos» y el aviso de sobrecoste, los dos
-          calculados por `evaluateItemRosters` → `summariseRoster`, el ÚNICO sitio donde se decide
-          `over`, así que no pueden discrepar del aviso de la fila del Rasgo;
-        * un grupo `unassigned` (un `system.relation` que no es ninguna de las ocho claves) se pinta
-          VISIBLE y con aviso, sin lectura de puntos y sin `+`: no suma a ningún Rasgo, y esconderlo
-          sería la forma recurrente «un valor aceptado que silenciosamente no hace nada»;
-        * cada entrada dice sus puntos como TEXTO, también cuando son 0 — que es un valor legal y
-          load-bearing (una entrada de Biblioteca que describe un grimorio sin ocupar círculo);
-        * no hay carril de macros: una Capilla no tira dados.
-
-      UNA REGLA DE FORMATO QUE PARECE UN DESCUIDO Y NO LO ES. Las llaves de cada bloque nuevo van
-      PEGADAS al final de la línea anterior (`</h2>{{#unless chantry}}`), las líneas que emite el PJ
-      conservan su sangría original, y no se ha añadido ni un comentario en su propia línea fuera de
-      esta cabecera. Es lo que hace que la salida del PJ siga siendo BYTE-IDÉNTICA: un `{{#unless}}`
-      o un comentario en su propia línea añaden un salto y una tabulación a la salida, y el requisito
-      «the PC roster does not move» se comprueba comparando bytes.
-
-      La profundidad de `../` está SONDEADA contra el HTML renderizado, no contada: dentro de
-      `{{#each connections as |group|}}` es `../`, y dentro del `{{#each group.entries}}` anidado es
-      `../../` — que es lo que el `locked=../../locked` de más abajo ya demostraba. Un `{{#if}}` NO
-      añade profundidad, ni en Handlebars ni en el renderizador de `test-part-render.mjs`.
 --}}
 <section class="tab {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}" data-drop-area="true">
 
 	<div class="v3-tabhead">
-		<h2 class="v3-tabtitle splatFont">{{#if chantry}}{{localize "wod.chantry.roster.headline"}}{{else}}{{localize "wod.tab.connections"}}{{/if}}</h2>{{#unless chantry}}
+		<h2 class="v3-tabtitle splatFont">{{localize "wod.tab.connections"}}</h2>
 
 		{{!-- Reuses the SAME create route the Personaje tab's own "+" button opens
 		      (`data-origin="feature"` -> `CreateHelper.CreateButtonsNotev2`), which already offers
@@ -75,7 +32,7 @@
 		<button type="button" class="v3-add" data-origin="feature" data-action="itemCreate">
 			<i class="fa-solid fa-square-plus" aria-hidden="true"></i>
 			<span>{{localize "wod.labels.add.item"}}</span>
-		</button>{{/unless}}
+		</button>
 	</div>
 
 	<div class="v3-tabbody">
@@ -93,11 +50,11 @@
 				      says otherwise. The description is triple-stashed because it is already-enriched
 				      HTML off the sheet context. --}}
 				{{#if hasConnections}}
-					{{#each connections as |group|}}{{#if ../chantry}}<div class="census-group" data-censusgroup="{{group.relation}}" tabindex="-1">{{/if}}
+					{{#each connections as |group|}}
 						<div class="headlineGroup splatFont">
 							{{group.label}}
 							{{#if group.rating}}{{#numLoop group.rating}}&#9679;{{/numLoop}}{{/if}}
-							({{group.count}}){{#if ../chantry}}{{#unless group.unassigned}}<span class="information-area census-points">{{localize "wod.chantry.roster.points"}}: {{group.used}} / {{group.allowed}}</span>{{/unless}}{{#if group.over}}<span class="item-warning census-over" title="{{localize 'wod.chantry.roster.over'}}"><i class="fa-solid fa-triangle-exclamation"></i></span>{{/if}}{{#if group.unassigned}}<span class="item-warning census-unassigned">{{localize "wod.chantry.roster.unassignedhint"}}</span>{{/if}}{{#if (eq ../locked false)}}{{#unless group.unassigned}}<button type="button" class="v3-add census-add" data-origin="feature" data-action="itemCreate" data-key="{{group.relation}}" title="{{localize 'wod.chantry.roster.add'}}"><i class="fa-solid fa-square-plus" aria-hidden="true"></i><span>{{localize "wod.chantry.roster.add"}}</span></button>{{/unless}}{{/if}}{{/if}}
+							({{group.count}})
 						</div>
 
 						<div class="feature-itemlistarea">
@@ -125,25 +82,25 @@
 											<a class="connection-link" href="{{item.system.link}}" target="_blank">{{localize 'wod.connections.link'}}</a>
 										{{else}}
 											<span class="information-area connection-link">{{localize 'wod.connections.nolink'}}</span>
-										{{/if}}{{#if ../../chantry}}<span class="information-area census-entrypoints" title="{{localize 'wod.chantry.roster.entrypoints'}}">{{localize "wod.chantry.roster.points"}}: {{item.censuspoints}}</span>{{/if}}
+										{{/if}}
 
 									</div>
 
 								</div>
 							{{/each}}
-						</div>{{#if ../chantry}}</div>{{/if}}
+						</div>
 					{{/each}}
 				{{else}}
-					<p class="v3-empty">{{#if chantry}}{{localize "wod.chantry.roster.empty"}}{{else}}{{localize "wod.connections.empty"}}{{/if}}</p>
+					<p class="v3-empty">{{localize "wod.connections.empty"}}</p>
 				{{/if}}
 
 			</div>
 
 		</div>
 
-		{{#unless chantry}}<aside class="v3-macrorail">
+		<aside class="v3-macrorail">
 			{{> "systems/worldofdarkness/templates/actor/parts/macro_icons.hbs"}}
-		</aside>{{/unless}}
+		</aside>
 	</div>
 
 </section>

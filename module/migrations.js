@@ -14,17 +14,6 @@
 import { findAbilityCompendiumMatch, compendiumProvenanceOf, isEnrichableAbility } from "./scripts/ability-enrichment.js";
 import { resyncActorTraits } from "./scripts/stale-description-refresh.js";
 import { planActorDexPenaltyCorrections, applyDexPenaltyCorrections } from "./scripts/armor-dexpenalty.js";
-import {
-	MIGRATION_FLAG_SCOPE,
-	MIGRATION_FLAG_KEY,
-	hasCensusToMigrate,
-	planCensusMigration,
-	snapshotFromRosters,
-	snapshotFromItems,
-	verifyCensusMigration,
-	formatCensusVerification
-} from "./scripts/chantry-roster-migration.js";
-import { censusItemData } from "./scripts/chantry-census.js";
 
 const FLAG_SCOPE = "worldofdarkness";
 const FLAG_KEY = "abilitiesEnriched";
@@ -321,101 +310,6 @@ export async function correctPositiveArmorDexPenalties() {
 
 	if (totals.corrected || totals.failed) {
 		console.log(`WoD | Armor dexpenalty correction: ${totals.corrected} Item(s) corrected, ${totals.failed} failure(s), over ${totals.scanned} actor(s) incl. unlinked tokens.`);
-	}
-
-	return totals;
-}
-
-// --- El censo de la Capilla: de `system.traitRosters` a Items (add-chantry-roster-tab) -------------
-//
-// LA CUARTA migración de este fichero y la SEGUNDA sin bandera, por la misma razón que la de las
-// armaduras: el predicado (`type === "Chantry"` con `system.traitRosters` no vacío) ES la bandera,
-// porque un mapa con contenido no puede existir legítimamente después de este cambio. Una segunda
-// pasada no crea ni un Item.
-//
-// Las reglas, el plan y la verificación por conteo están en `module/scripts/chantry-roster-migration.js`
-// (nada de Foundry dentro, comprobable bajo `node --test`); esto es solo el paseo.
-//
-// EL ORDEN DE LAS TRES ESCRITURAS ES LOAD-BEARING:
-//   1. copiar el mapa a `flags.worldofdarkness.migration.traitRosters`  (reversible sin backup)
-//   2. crear los Items
-//   3. VERIFICAR POR CONTEO y solo entonces vaciar `system.traitRosters`
-// Al revés, un fallo entre 2 y 3 dejaría el mundo sin el dato en ningún portador. Así, el peor caso
-// es el dato en los dos, que se ve y se arregla.
-
-/**
- * Convierte el censo de toda Capilla/Constructo con `system.traitRosters` no vacío en Items
- * `wod.types.connection`, uno por entrada.
- *
- * Como la de las armaduras, pasea también los tokens NO enlazados: un token con `actorLink: false`
- * lleva su propio actor sintético en el ActorDelta de la escena, y un paseo por el directorio dejaría
- * intacta una copia que alguien puede abrir.
- *
- * Aislado por actor: una Capilla que falle (sin permiso de escritura, un mapa malformado…) no puede
- * abortar el lote ni bloquear `game.ready()`.
- * @returns {Promise<{scanned: number, migrated: number, created: number, failed: number}>}
- */
-export async function migrateChantryRostersToItems() {
-	const candidates = [...game.actors];
-	for (const scene of game.scenes ?? []) {
-		for (const token of scene.tokens ?? []) {
-			if (token.actorLink) continue;
-			const synthetic = token.actor;
-			if (synthetic && !candidates.includes(synthetic)) candidates.push(synthetic);
-		}
-	}
-
-	const chantries = candidates.filter((actor) => actor?.type === "Chantry");
-	const totals = { scanned: chantries.length, migrated: 0, created: 0, failed: 0 };
-
-	for (const actor of chantries) {
-		try {
-			if (actor.canUserModify?.(game.user, "update") === false) continue;
-
-			const rawRosters = actor.system?.traitRosters;
-			if (!hasCensusToMigrate(rawRosters)) continue;
-
-			const before = snapshotFromRosters(rawRosters);
-			const plan = planCensusMigration(rawRosters, censusItemData);
-
-			// 1. El original, a la bandera, ANTES de tocar nada más.
-			await actor.setFlag(MIGRATION_FLAG_SCOPE, MIGRATION_FLAG_KEY, foundry.utils.deepClone(rawRosters));
-
-			// 2. Los Items.
-			await actor.createEmbeddedDocuments("Item", plan);
-
-			// 3. El conteo, leído DE VUELTA del actor — no de `plan`, que es lo que quisimos escribir y
-			//    no lo que hay. Leer de vuelta lo escrito es la contramedida que este proyecto se puso
-			//    después de dos pérdidas silenciosas que reportaron éxito.
-			const after = snapshotFromItems([...actor.items]);
-			const result = verifyCensusMigration(before, after);
-
-			console.log(`WoD | Censo de "${actor.name}": ${formatCensusVerification(result)}`);
-
-			if (!result.ok) {
-				totals.failed++;
-				console.error(`WoD | El censo de "${actor.name}" NO cuadra: se conserva `+
-					`system.traitRosters sin vaciar. El dato está en los dos portadores; revísalo a mano.`);
-				continue;
-			}
-
-			// 4. Vaciar el mapa. Necesario: dos portadores para un dato divergen. La clave sigue
-			//    declarada en template.json, así que vaciarla no la borra del esquema.
-			await actor.update({ "system.traitRosters": {} });
-
-			totals.migrated++;
-			totals.created += plan.length;
-		}
-		catch (err) {
-			totals.failed++;
-			console.error(`WoD | La migración del censo falló para "${actor.name}":`, err);
-		}
-	}
-
-	if (totals.migrated || totals.failed) {
-		console.log(`WoD | Migración del censo de Capillas: ${totals.migrated} actor(es) migrado(s), `+
-			`${totals.created} entrada(s) convertida(s) en Items, ${totals.failed} fallo(s), sobre `+
-			`${totals.scanned} Capilla(s) incl. tokens no enlazados.`);
 	}
 
 	return totals;

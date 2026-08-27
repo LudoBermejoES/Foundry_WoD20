@@ -195,8 +195,7 @@
 			"nolink": "Sin enlace",
 			"relation": "Trasfondo",
 			"portrait": "Retrato",
-			"empty": "Todavía no hay aliados ni contactos. Se agrupan por el Trasfondo que nombra la relación (Contactos, Aliados, Mentor, ...); usa Añadir objeto para crear uno.",
-			"points": "Puntos"
+			"empty": "Todavía no hay aliados ni contactos. Se agrupan por el Trasfondo que nombra la relación (Contactos, Aliados, Mentor, ...); usa Añadir objeto para crear uno."
 		},
 		"languages": {
 			"heading": "Idiomas conocidos",
@@ -1466,17 +1465,15 @@
 			},
 			"roster": {
 				"headline": "Censo",
-				"show": "Ir al censo de este Rasgo",
-				"empty": "El censo de la Capilla es la lista de quién o de qué compone cada Rasgo: aliados, criados, espías, refuerzos, ancianos, simpatizantes del culto, la biblioteca y el nodo. Todavía no hay ninguna entrada. Para añadir la primera, desbloquea la hoja con el candado de la cabecera: aparecerá un botón + en la cabecera de cada Rasgo de esta pestaña. Cada entrada consume los puntos que le asignes (1 por omisión, y 0 vale para lo que se describe sin ocupar un círculo), y la suma no debería pasar de los puntos del Rasgo.",
+				"show": "Ver el censo de este Rasgo",
+				"empty": "Este Rasgo admite un censo: la lista de quién o de qué lo compone, entrada por entrada. Todavía no hay ninguna. Para añadir la primera, desbloquea la hoja con el candado de la cabecera y pulsa el botón + que aparece junto al Rasgo. Cada entrada consume los puntos que le asignes (1 por omisión, y 0 vale para lo que se describe sin ocupar un círculo), y la suma no debería pasar de los puntos del Rasgo.",
 				"points": "Puntos",
 				"over": "Este censo consume más puntos que los que tiene el Rasgo.",
 				"add": "Añadir entrada",
 				"remove": "Quitar entrada",
 				"name": "Nombre",
 				"note": "Nota",
-				"entrypoints": "Puntos que consume esta entrada",
-				"unassigned": "Sin Rasgo asignado",
-				"unassignedhint": "Estas entradas llevan un Rasgo que no existe: corrige su campo «Trasfondo» en la hoja de la entrada para que vuelvan a contar."
+				"entrypoints": "Puntos que consume esta entrada"
 			},
 			"effects": {
 				"headline": "Efectos Integrados",

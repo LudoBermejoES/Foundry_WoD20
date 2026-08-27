@@ -89,6 +89,7 @@ export const preloadHandlebarsTemplates = async function () {
 		// is a console error on every world load; a partial NOT listed here is worse — Foundry
 		// throws "The partial ... could not be found" and takes the whole part down (7.5.44).
 		"systems/worldofdarkness/templates/actor/chantry-sheet-v2.hbs",
+			"systems/worldofdarkness/templates/actor/parts/chantry_roster.hbs",
 		"systems/worldofdarkness/templates/actor/chantry-effects-v2.hbs",
 
 		// PC Actor Sheet Partials - .html files

@@ -232,7 +232,12 @@ export function normaliseRosters(raw) {
 		out[key] = entries.map((entry) => ({
 			name: typeof entry?.name === "string" ? entry.name : "",
 			note: typeof entry?.note === "string" ? entry.note : "",
-			points: normalisePoints(entry?.points)
+			// A 0-point entry is LEGAL and load-bearing: "Biblioteca ●●● puede llevar cinco entradas
+			// descriptivas de 0 puntos sin romper nada" (D5). So this is not `|| 1` — an explicit 0
+			// survives, and only an absent/unparseable value defaults to one point.
+			points: entry?.points === undefined || entry?.points === null || entry?.points === ""
+				? 1
+				: toInt(entry.points)
 		}));
 	}
 
@@ -252,106 +257,19 @@ export function evaluateRosters(rawRosters, traitValues = {}) {
 	const out = {};
 
 	for (const key of ROSTER_TRAIT_KEYS) {
-		out[key] = summariseRoster(rosters[key] ?? [], traitValues?.[key]);
+		const entries = rosters[key] ?? [];
+		const used = entries.reduce((sum, e) => sum + toInt(e.points), 0);
+		const allowed = toInt(traitValues?.[key]);
+
+		out[key] = {
+			entries: entries,
+			used: used,
+			allowed: allowed,
+			over: used > allowed
+		};
 	}
 
 	return out;
-}
-
-/**
- * LOS PUNTOS DE UNA ENTRADA, con su regla fina — extraída de `normaliseRosters` para que la lea
- * también el portador nuevo (Items `wod.types.connection`) y la migración, en vez de reimplementarla
- * tres veces.
- *
- * La regla, LITERAL Y CONTRAINTUITIVA (add-chantry-roster-tab, tarea 3.4): un `points` explícito de
- * 0 SOBREVIVE como 0 — "Biblioteca ●●● puede llevar cinco entradas descriptivas de 0 puntos sin
- * romper nada" (D5) — y solo un valor ausente, nulo o vacío pasa a 1.
- *
- * OJO CON LO QUE NO HACE, porque tanto el comentario que estaba aquí antes como la propia spec de
- * `add-chantry-roster-tab` afirman que un valor NO PARSEABLE también pasa a 1, y el código
- * embarcado nunca ha hecho eso: `toInt("lo que sea")` es 0, así que un valor basura vale CERO
- * puntos, no uno. Se conserva el comportamiento embarcado a propósito (cambiarlo movería la
- * contabilidad de puntos de todas las Capillas y no es lo que este cambio hace); queda escrito aquí
- * porque escribir el test desde la frase de la spec, en vez de desde la regla embarcada, es
- * exactamente cómo este proyecto se ha hecho seis tests que afirmaban el defecto.
- * @param {unknown} value
- * @returns {number}
- */
-export function normalisePoints(value) {
-	return (value === undefined) || (value === null) || (value === "")
-		? 1
-		: toInt(value);
-}
-
-/**
- * EL ÚNICO SITIO donde se decide `used`, `allowed` y `over` — los dos portadores del censo (el mapa
- * `system.traitRosters`, que solo queda para la migración, y los Items `wod.types.connection`, que
- * son el portador desde `add-chantry-roster-tab`) entran los dos por aquí.
- *
- * Que sea uno solo es un requisito, no una comodidad: la lectura «Puntos: 2 / 2» de la pestaña Censo
- * y el aviso de la fila del Rasgo salen de esta función, así que no pueden discrepar.
- * @param {Array<object>} entries  las entradas ya agrupadas de UN Rasgo
- * @param {unknown} allowedValue   el valor del Rasgo (`system.traits[clave]`)
- * @returns {{entries: Array, used: number, allowed: number, over: boolean}}
- */
-function summariseRoster(entries, allowedValue) {
-	const used = entries.reduce((sum, e) => sum + toInt(e.points), 0);
-	const allowed = toInt(allowedValue);
-
-	return {
-		entries: entries,
-		used: used,
-		allowed: allowed,
-		over: used > allowed
-	};
-}
-
-/**
- * Igual que `evaluateRosters` pero desde el portador NUEVO: las entradas del censo ya leídas de los
- * Items `wod.types.connection` del actor. Devuelve la MISMA forma por Rasgo
- * (`{entries, used, allowed, over}`) porque la calcula la misma función.
- *
- * Nada de Foundry entra aquí: el llamante pasa objetos planos `{relation, points, …}` y los campos
- * de más viajan intactos dentro de `entries`, así que la hoja puede meter el propio documento y
- * recuperarlo agrupado.
- *
- * LA NOVENA CLAVE ES DELIBERADA. Una entrada cuyo `relation` no es uno de los ocho Rasgos NO se tira
- * — que es lo que hace `normaliseRosters` con el mapa, y ahí es correcto porque una clave inventada
- * no es un dato de nadie. Aquí sí lo es: es un Item que existe, con su nombre y su descripción, y
- * `system.relation` se teclea a mano en la hoja del objeto (D2.5). Perderlo de vista sería la forma
- * recurrente «un valor aceptado que silenciosamente no hace nada», así que sale en `unassigned`, no
- * suma a ningún Rasgo, y la pestaña lo pinta en un grupo visible con aviso.
- * @param {Array<{relation?: string, points?: unknown}>} entries
- * @param {Record<string, number>} traitValues  `system.traits`
- * @returns {{groups: Record<string, object>, unassigned: {entries: Array, used: number, allowed: number, over: boolean}}}
- */
-export function evaluateItemRosters(entries, traitValues = {}) {
-	const list = Array.isArray(entries) ? entries : [];
-	const byKey = new Map(ROSTER_TRAIT_KEYS.map((key) => [key, []]));
-	const orphans = [];
-
-	for (const entry of list) {
-		const relation = typeof entry?.relation === "string" ? entry.relation : "";
-		if (byKey.has(relation)) {
-			byKey.get(relation).push(entry);
-		}
-		else {
-			orphans.push(entry);
-		}
-	}
-
-	const groups = {};
-
-	for (const key of ROSTER_TRAIT_KEYS) {
-		groups[key] = summariseRoster(byKey.get(key), traitValues?.[key]);
-	}
-
-	return {
-		groups: groups,
-		// `allowed` es 0 y `over` es false a propósito: estas entradas no se cuentan contra NINGÚN
-		// Rasgo, y marcarlas como sobrepasadas diría que consumen algo que no consumen.
-		unassigned: { entries: orphans, used: 0, allowed: 0, over: false }
-	};
 }
 
 /**

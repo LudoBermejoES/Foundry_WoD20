@@ -33,11 +33,6 @@ import { calculateHealth } from "../../scripts/health.js";
 import { calculateTotals } from "../../scripts/totals.js";
 import { buildTraitCompendiumUuidMap } from "../../scripts/trait-enrichment.js";
 import { resolveDescription } from "../../scripts/compendium-description.js";
-
-/* add-chantry-roster-tab — el constructor del censo de relaciones se movió a `scripts/`, porque
-   ahora lo pintan DOS hojas (el PJ v2/v3 y la pestaña Censo de la Capilla) y la de Capilla no puede
-   heredar de esta clase. Ver la cabecera de ese fichero; el precedente es `gear-lists.js`. */
-import { buildConnectionGroups } from "../../scripts/connection-groups.js";
 import { getSplat } from "../../scripts/splat-helpers.js";
 import { prepareItemLists } from "../../scripts/gear-lists.js";
 import ItemViewer from "../../applications/item-viewer.js";
@@ -2407,6 +2402,130 @@ export const prepareGearContext = async function (context, actor) {
   	return context;
 }
 
+const CONNECTION_PLACEHOLDER_IMG = "icons/svg/mystery-man.svg";
+
+/**
+ * add-contacts-allies-roster D8 — the entry's portrait, resolved in three steps, copied from the shapeform
+ * token idiom at `module/items/template/item-sheet.js:165-171`:
+ *
+ *   1. the entry's own `system.portrait` — a data-directory path from the FilePicker OR an absolute URL,
+ *      both of which Foundry's `img`-style strings accept;
+ *   2. else, when the entry LINKS to an actor with `@UUID[Actor.xxx]`, that actor's own portrait;
+ *   3. else the placeholder.
+ *
+ * Step 2 is the whole point and the easiest thing to leave quietly missing: there are 87 files in
+ * `wod20-portraits/` on the server, one per cast member, so most contacts a GM adds are already actors
+ * WITH art — and linking one should show the face with no second step.
+ *
+ * The UUID is read out of `description` and `details` because those are the two fields
+ * `item-sheet.js:151,154` already run `enrichHTML` over, i.e. the two places a working link can be typed.
+ * Only the world's own Actors are resolved: `fromUuidSync` is used, so no async and no compendium fetch.
+ */
+function resolveConnectionPortrait(entry) {
+	const own = (entry.system?.portrait ?? "").trim();
+	if (own !== "") return own;
+
+	const text = `${entry.system?.description ?? ""} ${entry.system?.details ?? ""}`;
+	const match = text.match(/@UUID\[(Actor\.[A-Za-z0-9]+)\]/);
+	if (match) {
+		try {
+			const linked = fromUuidSync(match[1]);
+			const img = linked?.img ?? "";
+			if (img !== "" && img !== CONNECTION_PLACEHOLDER_IMG) return img;
+		}
+		catch (err) {
+			// A dangling @UUID is a GM typo, not a sheet failure — fall through to the placeholder.
+			console.warn(`WoD | connection portrait: could not resolve ${match[1]}`, err);
+		}
+	}
+
+	return CONNECTION_PLACEHOLDER_IMG;
+}
+
+/**
+ * add-contacts-allies-roster — the entry's RELATIONSHIP DESCRIPTION, enriched for the roster row.
+ *
+ * The requirement is that an entry appears "with its name and relationship description visible" — in the
+ * row, not one window away. `feature_item.hbs` emits no description (the inline panel was removed by
+ * `open-item-window-from-eye-icon`), so the row has to be given one here.
+ *
+ * This uses the path the codebase ALREADY uses for Feature text everywhere else — `resolveDescription`
+ * then `enrichHTML` — rather than a second, divergent one. It is the same two lines as
+ * `item-viewer.js:119-122` (the eye), `mortal-actor-sheet.js:1286` (`_onSendChat`) and
+ * `action-helpers.js:2011` (`SendChat`). Two consequences that matter here:
+ *
+ *   - `resolveDescription` degrades to `null` on every failure mode, and a GM-typed connection entry has
+ *     no compendium provenance at all, so in practice this is the entry's own stored text — the fallback
+ *     IS the normal case, and it is silent (no provenance -> no warning).
+ *   - `enrichHTML` is what makes an INTERNAL link work: `@UUID[Actor.xxx]{Name}` typed into the
+ *     description becomes a clickable anchor in the row itself, which is the same enricher
+ *     `item-sheet.js:159` runs on the item's own sheet. So the roster row and the item sheet render the
+ *     same reference the same way, and no enricher was invented for either.
+ *
+ * @param {foundry.abstract.Document} entry - a `wod.types.connection` Feature
+ * @returns {Promise<string>} enriched HTML, or "" when there is no text
+ */
+async function resolveConnectionDescription(entry) {
+	const raw = (await resolveDescription(entry)) ?? entry?.system?.description ?? "";
+	if (!raw) return "";
+	return await foundry.applications.ux.TextEditor.implementation.enrichHTML(raw, { async: true });
+}
+
+/**
+ * add-contacts-allies-roster — groups `wod.types.connection` Features by `system.relation` and resolves
+ * each group's heading from the actor's OWN Background item.
+ *
+ * Returns `[{ relation, label, rating, count, entries[] }]`, sorted by label so the blocks are stable.
+ *
+ * `label`/`rating` come from the Background Feature whose `flags["wod20-char"].id` matches the relation —
+ * so the name is whatever the compendium already localized it to, and the dots are the real ones. This is
+ * what lets the sheet show "Contactos ●●● (4)" and thereby DISPLAY the tension between dots and headcount
+ * without enforcing equality, which the books do not require (design D1/D4).
+ *
+ * Async because each entry's description is enriched (see `resolveConnectionDescription`).
+ */
+async function buildConnectionGroups(actor) {
+	const entries = (actor?.items ?? []).filter(
+		(item) => item.type === "Feature" && item.system?.type === "wod.types.connection" && item.system?.isvisible !== false,
+	);
+	if (entries.length === 0) return [];
+
+	const backgrounds = (actor?.items ?? []).filter(
+		(item) => item.type === "Feature" && item.system?.type === "wod.types.background",
+	);
+	const backgroundFor = (relation) =>
+		backgrounds.find((b) => b.flags?.["wod20-char"]?.id === relation)
+		?? backgrounds.find((b) => (b.name ?? "").toLowerCase() === String(relation).toLowerCase());
+
+	const grouped = new Map();
+	for (const entry of entries) {
+		const relation = entry.system.relation || "";
+		if (!grouped.has(relation)) {
+			const background = backgroundFor(relation);
+			grouped.set(relation, {
+				relation,
+				label: background?.name ?? (relation === "" ? game.i18n.localize("wod.types.connection") : relation),
+				rating: background ? Number(background.system?.value ?? 0) : null,
+				entries: [],
+			});
+		}
+		grouped.get(relation).entries.push(entry);
+	}
+
+	for (const group of grouped.values()) {
+		group.entries.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+		group.count = group.entries.length;
+		for (const entry of group.entries) {
+			entry.portraitSrc = resolveConnectionPortrait(entry);
+			entry.hasPortrait = entry.portraitSrc !== CONNECTION_PLACEHOLDER_IMG;
+			entry.enrichedDescription = await resolveConnectionDescription(entry);
+			entry.hasDescription = entry.enrichedDescription.trim().length > 0;
+		}
+	}
+
+	return Array.from(grouped.values()).sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export const prepareFeatureContext = async function (context, actor) {
   	context.tab = context.tabs.feature;
 
@@ -2587,14 +2706,6 @@ export const prepareShadowAreaContext = function (context, actor) {
  */
 export const prepareConnectionsContext = async function (context, actor) {
 	context.tab = context.tabs.connections;
-
-	/* add-chantry-roster-tab — `v3/connections.hbs` lo renderizan DOS hojas ahora (esta pestaña y la
-	   pestaña Censo de la Capilla), y el interruptor es este flag, igual que `vault` en `v3/gear.hbs`.
-	   Se pone EXPLÍCITAMENTE a `false` en vez de dejarlo undefined: `test-part-render.mjs` exige que
-	   toda clave que una plantilla lee la construya el preparador de su part, y «no la construye
-	   nadie» y «vale false» se leen igual en Handlebars pero no en esa puerta — que es la que descubrió
-	   que esta pestaña no se renderizaba en ninguna de las 173 estructuras. */
-	context.chantry = false;
 
 	context.connections = await buildConnectionGroups(actor);
 	context.hasConnections = context.connections.length > 0;
