@@ -3389,6 +3389,16 @@ input.sheet-infoWidth {
   opacity: 0.7;
 }
 
+/* El hueco reservado del icono de censo: ocupa exactamente lo que ocuparia el icono
+   —es el mismo elemento con las mismas clases— pero no se ve, no recibe raton y no lo
+   anuncia el lector de pantalla. Existe para que los circulos y el coste queden
+   alineados en las diecinueve filas: sin el, las once filas sin censo desplazan sus
+   puntos 62px porque la etiqueta, que es la que absorbe el hueco, tiene mas sitio. */
+.chantry-body .chantry-trait-icon-slot {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .chantry-body .chantry-trait-roster-eye:hover,
 .chantry-body .chantry-trait-roster-eye:focus {
   opacity: 1;

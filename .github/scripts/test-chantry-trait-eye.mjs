@@ -378,6 +378,43 @@ check("E2 that branch checks BOTH the system-wide useSplatFonts setting AND the 
 check("E3 the branch is inside renderActorSheetV2, not (only) the legacy renderActorSheet listener",
 	v2HookStart !== -1 && v1HookStart !== -1 && v2HookBody.includes('sheet.actor.type === "chantry"'));
 
+// --- F. LA ALINEACION DE LA FILA -------------------------------------------------------
+//
+// Este defecto lo encontro el usuario en una CAPTURA, no un gate, y por eso existe esta
+// seccion. La fila es `display:flex` con la etiqueta en `flex: 1 1 auto` absorbiendo el
+// hueco y todo lo demas en `flex: 0 0 auto`: una fila con un icono MAS tiene ~62px mas de
+// contenido fijo, su etiqueta absorbe 62px MENOS, y los circulos y el coste se desplazan.
+// Medido en la hoja real: los puntos empezaban en x=695 en las ocho filas con censo y en
+// x=758 en las once sin censo, y el ojo de una fila sin censo caia justo donde caia el
+// icono de censo de la de arriba.
+//
+// La invariante comprobable sobre el markup, sin DOM: la tira declara SIEMPRE el mismo
+// numero de huecos, y donde no hay icono real hay uno oculto. Si alguien vuelve a la forma
+// "o pinto el icono o no pinto nada", F1 se pone rojo.
+const filaSrc = fs.readFileSync(
+	path.join(ROOT, "templates", "actor", "chantry-sheet-v2.hbs"), "utf8");
+const cssFila = fs.readFileSync(path.join(ROOT, "css", "wod.css"), "utf8");
+const iconSites = (filaSrc.match(/chantry-trait-roster-eye/g) ?? []).length;
+const slotSites = (filaSrc.match(/chantry-trait-icon-slot/g) ?? []).length;
+
+check(`F1 la tira reserva el hueco del icono de censo tambien cuando no hay icono ` +
+	`(${iconSites} sitios de icono, ${slotSites} de ellos huecos)`,
+	iconSites >= 3 && slotSites >= 2);
+
+check("F2 el hueco NO lleva data-rosterkey, asi que el binder no puede engancharlo",
+	slotSites > 0 && !/chantry-trait-icon-slot[^>]*data-rosterkey/.test(filaSrc));
+
+check("F3 el hueco esta fuera del raton y del lector de pantalla",
+	/chantry-trait-icon-slot[\s\S]{0,200}aria-hidden="true"/.test(filaSrc) &&
+	/\.chantry-trait-icon-slot\s*\{[^}]*pointer-events:\s*none/.test(cssFila) &&
+	/\.chantry-trait-icon-slot\s*\{[^}]*visibility:\s*hidden/.test(cssFila));
+
+check("F4 el hueco comparte las clases de CAJA con el icono real: el ancho reservado es " +
+	"identico por construccion, no una constante que se enrancie",
+	["icon", "collapsible", "button", "fa-list-ul"].every((c) =>
+		new RegExp(`class="[^"]*${c}[^"]*chantry-trait-icon-slot`).test(filaSrc)));
+
+
 console.log(results.join("\n"));
 console.log(failed ? `\n${failed} FAILURE(S)` : `\nall ${results.length} checks pass`);
 process.exit(failed ? 1 : 0);

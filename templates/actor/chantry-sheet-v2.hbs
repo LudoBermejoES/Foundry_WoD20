@@ -227,12 +227,32 @@
 						      would be claimed by whichever binder ran first and would open the wrong
 						      window. The two binders are kept disjoint by attribute, and
 						      `test-part-render.mjs` asserts no element carries both. --}}
+						{{!-- EL HUECO SE RESERVA SIEMPRE, y por eso hay una rama `else` que pinta un icono
+						      invisible en vez de no pintar nada. La fila es `display:flex` con la etiqueta en
+						      `flex: 1 1 auto` absorbiendo el hueco y TODO lo demas en `flex: 0 0 auto`, asi que
+						      una fila con un icono mas tiene ~62px mas de contenido fijo (el icono, 52px, mas el
+						      `gap` de 10px) y su etiqueta absorbe 62px MENOS: los puntos y el coste se desplazan.
+						      Medido sobre la hoja real: los circulos de las ocho filas con censo empezaban en
+						      x=695 y los de las once sin censo en x=758, y el ojo de una fila sin censo caia
+						      justo donde caia el icono de censo de la de arriba.
+
+						      El hueco es el MISMO elemento con las mismas clases de caja, solo oculto, en vez de
+						      un `margin-right: 62px` en las filas sin censo: asi el ancho reservado es identico
+						      por construccion y no hay una constante que se quede rancia si el icono cambia de
+						      tamaño. Sin `data-rosterkey` no lo engancha el binder, y `pointer-events: none` mas
+						      `aria-hidden` lo dejan fuera del raton y del lector de pantalla. --}}
 						{{#if trait.roster}}{{#unless trait.roster.show}}
 							<i class="pullLeft pointer icon collapsible button fa-solid fa-list-ul chantry-trait-roster-eye"
 									title="{{localize 'wod.chantry.roster.show'}} ({{trait.roster.used}} / {{trait.roster.allowed}})"
 									data-rosterkey="{{trait.key}}"
 									data-labelkey="{{trait.label}}"></i>
-						{{/unless}}{{/if}}
+						{{else}}
+							<i class="pullLeft icon collapsible button fa-solid fa-list-ul chantry-trait-roster-eye chantry-trait-icon-slot"
+									aria-hidden="true"></i>
+						{{/unless}}{{else}}
+							<i class="pullLeft icon collapsible button fa-solid fa-list-ul chantry-trait-roster-eye chantry-trait-icon-slot"
+									aria-hidden="true"></i>
+						{{/if}}
 
 					</div>
 
