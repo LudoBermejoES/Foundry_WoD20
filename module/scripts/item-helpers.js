@@ -1001,9 +1001,21 @@ export default class ItemHelper {
 					localizeKey: "wod.power.edges",
 					condition: actor.system.settings.hasedges && context.edges?.length
 				},
+				// add-power-roll-wiring Decision 2 — `context.numinas` is a FLAT list
+				// (`GetPowersByType(actor, "wod.types.numina", true)`, above), never a
+				// container+children pair like Disciplines/Arts/Arcanoi really are. Declaring
+				// `template: "hierarchical"` here rendered every Numina through
+				// `power_listmainpower.hbs`, whose only actions are `editDot`/`powerClear` — no
+				// `data-action="rollDice"` exists in that partial, so a Numina could never be
+				// clicked no matter what its own `isrollable`/`dice1`/`dice2` said. `"simple"` is
+				// the shape `power_listpower.hbs` already renders for Rites/Rituals/Combinations,
+				// and it's the one that actually checks `item.system.isrollable`. This is confined
+				// to this one field: `wod.types.numina`'s i18n label, type-dropdown entry, item
+				// creation defaults and the non-PC creature sheet's direct listing are untouched —
+				// none of them read `section.template`.
 				numinas: {
 					id: "numinas",
-					template: "hierarchical",
+					template: "simple",
 					data: { items: context.numinas },
 					localizeKey: "wod.power.numinas",
 					condition: actor.system.settings.hasnuminas && context.numinas?.length

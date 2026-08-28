@@ -254,6 +254,24 @@ export default class ActionHelper {
 				return;
 			}
 
+			// used a Numina (Mage Sorcerer/Psychic Hedge-Path/Phenomenon, Hunter Numen) — the FLAT
+			// `wod.types.numina` shape (add-power-roll-wiring Decision 2), NOT to be confused with
+			// `wod.types.numinapower` above/below, which is a different, child-of-container power
+			// used by other lines. A flat Numina carries no `parentid` and needs no container-rating
+			// fallback, so it needs nothing `_handleArcanoiHekauNumina`-style — it's exactly the
+			// `wod.types.power` shape one case up. Reusing `PowerDialog.Power` (the generic
+			// "creatureDialog" CSS framing) rather than introducing a new subclass: the existing
+			// `NuminaPower` class is already taken by the unrelated `numinapower` child-power shape,
+			// and the spec (`foundry-numina-power-rendering`) requires only that the roll resolve
+			// correctly — Mage-Sorcerer/Psychic and Hunter framing both read fine as a generic power.
+			if (dataset.object == "wod.types.numina") {
+				const numina = new PowerDialog.Power(item);
+				let numinaUse = new PowerDialog.DialogPower(actor, numina);
+				numinaUse.render(true);
+
+				return;
+			}
+
 			// used a DisciplinePower
 			if ((dataset.object == "wod.types.disciplinepower") || (dataset.object == "wod.types.combination")) {
 				const discipline = new PowerDialog.DisciplinePower(item);
