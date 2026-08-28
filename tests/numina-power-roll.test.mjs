@@ -1,13 +1,25 @@
 /**
- * add-power-roll-wiring task 1.2.3 — exercises the render-shape half of Decision 2
+ * add-power-roll-wiring task 1.2.3, CORRECTED — exercises the render-shape half of Decision 2
  * (`Foundry_WoD20/module/scripts/item-helpers.js`'s `BuildPowerSections`/`GetPowersByType`):
- * the `numinas` power section must build as `template: "simple"` (flat, rendered via
- * `power_listpower.hbs`, which checks `item.system.isrollable`), never `"hierarchical"`
- * (rendered via `power_listmainpower.hbs`, which has no `rollDice` action at all — a Numina
- * item under that shape could never be clicked regardless of its own `isrollable` flag). This
- * also regression-guards that genuinely two-tier sections (Disciplines/Arts/Arcanoi) keep
- * `"hierarchical"`, since `item-helpers.js` builds the whole `definitions` object on every
- * call and a careless edit could flip more than the one key in scope.
+ * the `numinas` power section stays `template: "hierarchical"` (rendered via
+ * `power_listmainpower.hbs`, exactly like Disciplines/Arts/Arcanoi), NOT `"simple"`. A first
+ * attempt at this task flipped it to `"simple"` to give a flat, parentless Numen/Numina
+ * (Hunter, Mage Sorcerer/Psychic) a roll affordance — but `wod.types.numina` genuinely has a
+ * second, pre-existing, fixture-covered shape: a CONTAINER item with real `wod.types.numinapower`
+ * children (same pattern as Disciplines/Arcanoi), rendered nested via `getPowerList`.
+ * `power_listpower.hbs` (the "simple" renderer) only draws items whose OWN `system.type` matches
+ * the section's registered type, so a `wod.types.numinapower` child was never in
+ * `context.numinas` and rendered nowhere — caught by `.github/scripts/test-part-render.mjs`'s
+ * orphan sweep against `.github/fixtures/pc-items.json`'s parented Numina+Numina-power pair,
+ * which blocked that commit's own CI preflight. The fix instead teaches
+ * `power_listmainpower.hbs` itself to grant the roll affordance to a container row when that
+ * specific item has ZERO children (`getPowerList` empty) AND is itself flagged `isrollable` —
+ * so a flat Numina rolls directly off its row, while a Numina actually used as a container
+ * (or Disciplines/Arcanoi, whose container items are never `isrollable`) keeps the plain,
+ * non-rollable header exactly as before. This also regression-guards that genuinely two-tier
+ * sections (Disciplines/Arts/Arcanoi) keep `"hierarchical"`, since `item-helpers.js` builds the
+ * whole `definitions` object on every call and a careless edit could flip more than the one key
+ * in scope.
  *
  * `item-helpers.js` is reachable with two minimal global stubs (`FormApplication` — its
  * `import BonusHelper` chain reaches `dialog-bonus.js`'s `class DialogBonus extends
@@ -84,7 +96,7 @@ test("GetPowersByType returns a FLAT, name-sorted list of wod.types.numina items
 	assert.deepEqual(numinas.map((i) => i.name), ["Alpha Numen", "Zeta Numen"]);
 });
 
-test('BuildPowerSections declares the "numinas" section as template "simple", not "hierarchical"', () => {
+test('BuildPowerSections declares the "numinas" section as template "hierarchical", not "simple"', () => {
 	const actor = makeActor([]);
 	const context = {
 		numinas: [{ _id: "n1", name: "Hedge Path Numen", system: { type: "wod.types.numina", isrollable: true } }]
@@ -95,7 +107,7 @@ test('BuildPowerSections declares the "numinas" section as template "simple", no
 	const numinaSection = sections.find((s) => s.id === "numinas");
 
 	assert.ok(numinaSection, "expected a numinas section to be built");
-	assert.equal(numinaSection.template, "simple");
+	assert.equal(numinaSection.template, "hierarchical");
 	assert.equal(numinaSection.data.items.length, 1);
 });
 
@@ -145,6 +157,43 @@ test("the new numina case opens PowerDialog.DialogPower (the working roll dialog
 	assert.match(block, /new PowerDialog\.Power\(/);
 	assert.match(block, /new PowerDialog\.DialogPower\(/);
 	assert.match(block, /\.render\(true\)/);
+});
+
+console.log("\npower_listmainpower.hbs — container row grows a roll affordance for a childless, rollable item");
+
+test("a childless, isrollable container row gains data-action=rollDice gated on isEmpty(getPowerList(...))", () => {
+	const source = readFileSync(join(ROOT, "templates", "actor", "parts", "power_listmainpower.hbs"), "utf8");
+
+	// The whole rollable branch must be reached only when BOTH conditions hold, in one `and`.
+	assert.match(
+		source,
+		/\{\{#if \(and mainpower\.system\.isrollable \(isEmpty \(getPowerList actor mainpower\._id\)\)\)\}\}/,
+		"expected an `and`-gated isrollable + isEmpty(getPowerList(...)) condition"
+	);
+
+	const ifIndex = source.indexOf("{{#if (and mainpower.system.isrollable");
+	assert.notEqual(ifIndex, -1);
+	const elseIndex = source.indexOf("{{else}}", ifIndex);
+	assert.notEqual(elseIndex, -1, "expected an {{else}} falling back to the plain, non-rollable header");
+
+	const rollableBranch = source.slice(ifIndex, elseIndex);
+	assert.match(rollableBranch, /data-action="rollDice"/);
+	assert.match(rollableBranch, /data-rollitem="true"/);
+	assert.match(rollableBranch, /data-object="\{\{mainpower\.system\.type\}\}"/);
+	assert.match(rollableBranch, /data-itemid="\{\{mainpower\._id\}\}"/);
+
+	const fallbackBranch = source.slice(elseIndex, source.indexOf("{{/if}}", elseIndex));
+	assert.doesNotMatch(fallbackBranch, /data-action="rollDice"/, "the non-rollable fallback must not itself be clickable");
+});
+
+test("the container-row fix does not remove the pre-existing nested getPowerList render of real children", () => {
+	const source = readFileSync(join(ROOT, "templates", "actor", "parts", "power_listmainpower.hbs"), "utf8");
+
+	assert.match(
+		source,
+		/\{\{#each \(getPowerList actor mainpower\._id\) as \|item id\|\}\}/,
+		"expected the nested child-power loop (power_listpower.hbs per child) to still be present"
+	);
 });
 
 console.log(`\n${failures === 0 ? "All tests passed." : `${failures} test(s) failed.`}`);

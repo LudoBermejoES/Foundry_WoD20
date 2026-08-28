@@ -2,7 +2,24 @@
     <div class="dragrow headlineNormal power-itemlist" data-itemid="{{mainpower._id}}">
         <div class="width-iconbox draggable"><i class="icon fa-solid fa-grip-vertical"></i></div>
 
-        <div class="splatFont width-namebox">{{mainpower.name}}</div>
+        {{!-- add-power-roll-wiring follow-up (task 1.2 correction) — a container item
+              (`wod.types.numina`, the only hierarchical section fed a genuinely flat/parentless
+              item today) grants a roll affordance off its OWN row when it has zero children
+              (`getPowerList` empty) AND is itself flagged rollable. An item WITH real children
+              (Disciplines, Arcanoi, or a Numina actually used as a container) keeps the
+              non-rollable label exactly as before — clicking the container row there would be
+              ambiguous (roll what, the container or a child?), so it stays a plain header. --}}
+        {{#if (and mainpower.system.isrollable (isEmpty (getPowerList actor mainpower._id)))}}
+            <div class="splatFont width-namebox vrollable"
+                data-action="rollDice"
+                data-type="{{config.sheettype.mortal}}"
+                data-object="{{mainpower.system.type}}"
+                data-rollitem="true"
+                data-ability="true"
+                data-itemid="{{mainpower._id}}">{{mainpower.name}}</div>
+        {{else}}
+            <div class="splatFont width-namebox">{{mainpower.name}}</div>
+        {{/if}}
 
         <div class="resource-value" 
             data-value="{{mainpower.system.value}}" 

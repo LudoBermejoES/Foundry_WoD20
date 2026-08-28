@@ -1001,21 +1001,27 @@ export default class ItemHelper {
 					localizeKey: "wod.power.edges",
 					condition: actor.system.settings.hasedges && context.edges?.length
 				},
-				// add-power-roll-wiring Decision 2 — `context.numinas` is a FLAT list
-				// (`GetPowersByType(actor, "wod.types.numina", true)`, above), never a
-				// container+children pair like Disciplines/Arts/Arcanoi really are. Declaring
-				// `template: "hierarchical"` here rendered every Numina through
-				// `power_listmainpower.hbs`, whose only actions are `editDot`/`powerClear` — no
-				// `data-action="rollDice"` exists in that partial, so a Numina could never be
-				// clicked no matter what its own `isrollable`/`dice1`/`dice2` said. `"simple"` is
-				// the shape `power_listpower.hbs` already renders for Rites/Rituals/Combinations,
-				// and it's the one that actually checks `item.system.isrollable`. This is confined
-				// to this one field: `wod.types.numina`'s i18n label, type-dropdown entry, item
-				// creation defaults and the non-PC creature sheet's direct listing are untouched —
-				// none of them read `section.template`.
+				// add-power-roll-wiring Decision 2, CORRECTED — `wod.types.numina` genuinely has
+				// two real shapes on this system, not one: (a) a flat, parentless Numen/Numina
+				// (Hunter, Mage Sorcerer/Psychic) that needs to roll off its own row, and (b) a
+				// pre-existing, fixture-covered CONTAINER item with real `wod.types.numinapower`
+				// children (same pattern as Disciplines/Arcanoi), rendered nested via
+				// `getPowerList`. An earlier attempt flipped this section to `template: "simple"`
+				// to fix (a) — that broke (b): `power_listpower.hbs` (the "simple" renderer) only
+				// draws items whose OWN `system.type` matches this section's registered type, so a
+				// `wod.types.numinapower` child was never in `context.numinas` at all and rendered
+				// nowhere (caught by `.github/scripts/test-part-render.mjs`'s orphan sweep against
+				// the fixture's parented Numina+Numina-power pair). Staying `"hierarchical"` keeps
+				// (b) working exactly as before; `power_listmainpower.hbs` itself now grants the
+				// roll affordance to a container row when that specific item has NO children (see
+				// the template) — so a flat Numina rolls directly off its row (a), while a Numina
+				// actually used as a container keeps the plain, non-rollable header (b). This is
+				// still confined to this one field: `wod.types.numina`'s i18n label, type-dropdown
+				// entry, item creation defaults and the non-PC creature sheet's direct listing are
+				// untouched — none of them read `section.template`.
 				numinas: {
 					id: "numinas",
-					template: "simple",
+					template: "hierarchical",
 					data: { items: context.numinas },
 					localizeKey: "wod.power.numinas",
 					condition: actor.system.settings.hasnuminas && context.numinas?.length
