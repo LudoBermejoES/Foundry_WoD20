@@ -749,6 +749,32 @@ export default class DropHelper {
         actorData.system.settings.game = droppedItem.system.settings.game;
         actorData.system.settings.variant = droppedItem.system.settings.variant;
         actorData.system.settings.variantsheet = droppedItem.system.settings.variantsheet;
+
+        /*
+         * El GHOUL, y la unica excepcion a la copia literal de arriba.
+         *
+         * El Splat «Ghoul [modern]» empaquetado declara `variantsheet: "mortal"` — MEDIDO sobre el
+         * documento del pack, no supuesto — y eso CONTRADICE al propio sistema:
+         * `CreateHelper.SetMortalVariant` le pone `variantsheet: "vampire"` (create-helpers.js) al
+         * pulsar el boton de variante. Los dos caminos producian Ghouls distintos, y la diferencia
+         * no se ve: `getSplat` lee `variantsheet` PRIMERO y `getPowertype` solo devuelve
+         * "discipline" para "vampire", asi que un Ghoul creado ARRASTRANDO el Splat veia sus
+         * Disciplinas pintadas como poderes genericos — ahi seguian, con el titulo equivocado
+         * encima — mientras que el mismo Ghoul creado con el BOTON las veia bien.
+         *
+         * Se normaliza aqui, en el unico sitio por el que pasa la copia, en vez de reeditar el
+         * documento del pack: el pack es un LevelDB y un actor que ya se arrastro el Splat viejo se
+         * arregla igualmente al siguiente `prepareDerivedData`. La regla completa (por que un Ghoul
+         * es `splat: mortal` CON hoja de vampiro) esta en `module/actor/data/ghoul-bloodpool.js`.
+         *
+         * Deliberadamente NO se generaliza a «llama a SetMortalVariant»: eso encenderia ademas
+         * media docena de flags para kinfolk/sorcerer/encantado y cambiaria el arrastre de todas
+         * las variantes, que no es lo que este arreglo mide.
+         */
+        if (actorData.system.settings.variant === "ghoul") {
+            actorData.system.settings.variantsheet = CONFIG.worldofdarkness.sheettype.vampire;
+        }
+
         actorData.system.settings.dicesetting = "";        
 
         actorData.system.settings.iscreated = true;

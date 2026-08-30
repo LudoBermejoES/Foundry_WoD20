@@ -2,6 +2,7 @@ import AbilityHelper from "./ability-helpers.js";
 import BonusHelper from "./bonus-helpers.js";
 import { enrichAbilityItemData } from "./ability-enrichment.js";
 import { getSplat } from "./splat-helpers.js";
+import { ghoulBloodpoolLimits } from "../actor/data/ghoul-bloodpool.js";
 
 export default class CreateHelper {
 
@@ -921,11 +922,41 @@ export default class CreateHelper {
 				actorData.system.settings.variantsheet = CONFIG.worldofdarkness.sheettype.changeling;
 			}
 			if (variant == 'ghoul') {
+				// `haspath` NO significa «puede elegir una Senda de Iluminacion» — significa «tiene
+				// pista de moralidad». Un Ghoul tiene HUMANIDAD (v20 L15308: «Apunta tu Humanidad
+				// (igual a Consciencia + Autocontrol)»), asi que la pista se enciende. Lo que el
+				// libro le niega en esa misma linea — «Los Ghouls no pueden elegir una Senda de
+				// Iluminacion» — es el SELECTOR de Senda, y ese ya esta cerrado por su propia
+				// guarda en `settings_attribute.html:49`: pide `actor.type == vampire` Y
+				// `variant == "general"`, y un Ghoul no cumple ninguna de las dos (es un `mortal`,
+				// o un `PC`, con variante `ghoul`). `test-ghoul.mjs` lo fija para que nadie relaje
+				// esa guarda sin darse cuenta.
 				actorData.system.settings.haspath = true;
 				actorData.system.settings.hasbloodpool = true;
 				actorData.system.settings.hasvirtue = true;
 				actorData.system.settings.powers.hasdisciplines = true;
+				// `variantsheet: "vampire"` es lo que le da Disciplinas: `getSplat` lee
+				// `variantsheet` PRIMERO y `getPowertype` solo devuelve "discipline" para
+				// "vampire" (`pc-actor-sheet.js:1188`). El `splat` sigue siendo `mortal`, que es
+				// lo que un Ghoul ES. Los dos ejes son distintos y los dos son correctos.
 				actorData.system.settings.variantsheet = CONFIG.worldofdarkness.sheettype.vampire;
+
+				// La hoja heredada arranca con `advantages.bloodpool.max = 10` (template.json,
+				// `templates.mortal.advantages.bloodpool`), que es la reserva de un Vastago de
+				// 13a Generacion, no la de un Ghoul. v20 L15366: «los Ghouls empiezan con un punto
+				// de Sangre, y tienen una reserva de Sangre de 2». Se corrige aqui porque este es
+				// el unico momento en que alguien declara «esto es un Ghoul» sobre un actor
+				// heredado; la rama de items (PC) la corrige `wod-actor-base.js` en cada prepare.
+				if (actorData.system.advantages?.bloodpool != undefined) {
+					const ghoulLimits = ghoulBloodpoolLimits();
+
+					actorData.system.advantages.bloodpool.max = ghoulLimits.max;
+					actorData.system.advantages.bloodpool.perturn = ghoulLimits.perturn;
+
+					if (actorData.system.advantages.bloodpool.temporary > ghoulLimits.max) {
+						actorData.system.advantages.bloodpool.temporary = ghoulLimits.max;
+					}
+				}
 			}
 			if (variant == 'kinfolk') {
 				actorData.system.settings.hasgnosis = true;

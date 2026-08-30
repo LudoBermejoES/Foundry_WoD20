@@ -607,6 +607,20 @@ jobs:
       - name: Prove no ApplicationV2 constructor reads the document off its options argument
         run: node .github/scripts/test-appv2-constructor-signature.mjs
 
+      # ghoul-is-a-mortal-with-a-vampire-sheet: a Ghoul lives on two axes at once
+      # (`settings.variant: "ghoul"` says WHAT IT IS, `settings.variantsheet: "vampire"` says WHAT
+      # SHEET IT READS) and reading the wrong one produces two opposite, silent defects: its
+      # Disciplines degrade to generic powers, or its blood pool inherits the Kindred Generation
+      # table (10/13/15 instead of the book's 2, v20 L15366). The second one used to be prevented
+      # only by ACCIDENT — the packaged Ghoul splat declares no `generation` bio field, so the
+      # derivation's guard never fired. This runs the REAL `_prepareCharacterData` over a Ghoul with
+      # an 8th Generation deliberately set and requires the pool to stay at 2, and the real
+      # `getPowertype`/`getSplat` to still answer "discipline"/"vampire". It also pins that the Path
+      # of Enlightenment selector stays unreachable for a Ghoul (v20 L15308).
+      # Runnable locally: node .github/scripts/test-ghoul.mjs
+      - name: Prove a Ghoul keeps its Disciplines and does NOT inherit the Kindred blood table
+        run: node .github/scripts/test-ghoul.mjs
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server

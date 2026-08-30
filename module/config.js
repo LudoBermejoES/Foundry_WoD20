@@ -64,6 +64,34 @@ wod.chantry = {
     ]
 }
 
+/*
+ * Las constantes del GHOUL (Vampiro V20, cap. «Ghouls», pág. 496-506).
+ *
+ * Un Ghoul es MORTAL con hoja de vampiro, no un Vástago, y esa asimetría es justo la que se pierde
+ * si nadie la escribe: `wod.variant.mortal.ghoul` (abajo) lo declara variante de `mortal`, y
+ * `CreateHelper.SetMortalVariant` le pone `variantsheet: "vampire"` para que herede las Disciplinas
+ * y el tema de la hoja. Lo que NO debe heredar es la tabla de Generación del Vástago — de ahí este
+ * bloque, que es el ÚNICO sitio donde vive el número.
+ *
+ * `bloodpoolmax` NO es la tabla de Generación: v20-core-rulebook-es L15366 dice «los Ghouls empiezan
+ * con un punto de Sangre, y tienen una reserva de Sangre de 2 o más, dependiendo de su edad», y
+ * L15308 («reserva de Sangre (1)») fija el punto de partida. La subida por edad de L15432 (+1 por
+ * siglo para Aparecidos, +1 por cada dos siglos para los demás) NO se modela: la ficha no tiene
+ * campo de edad. Ver `module/actor/data/ghoul-bloodpool.js` para el razonamiento largo.
+ *
+ * `disciplinelevelcap` está DECLARADO Y NO APLICADO, igual que en wodchar
+ * (`vampire.variants.json` -> `signaturePower.levelCapByDonorGeneration`): v20 L15352-15362 limita a
+ * un Ghoul al primer nivel de cualquier Disciplina, y ese tope sube con la Generación del DONANTE,
+ * que la ficha tampoco registra. Se declara para que la regla esté en el sistema y no sólo en el
+ * libro; ninguna comprobación lo lee todavía.
+ */
+wod.ghoul = {
+    bloodpoolmax: 2,
+    bloodpoolstart: 1,
+    bloodperturn: 1,
+    disciplinelevelcap: 1
+}
+
 wod.splat = {
     vampire: "vampire",
     werewolf: "werewolf",

@@ -3,6 +3,7 @@ import CombatHelper from "../../scripts/combat-helpers.js";
 import CreateHelper from "../../scripts/create-helpers.js";
 import Functions from "../../functions.js";
 import PCActorAPI from "../api-handler.js";
+import { isGhoul, ghoulBloodpoolLimits } from "./ghoul-bloodpool.js";
 
 /**
  * Extend the base Actor entity by defining a custom roll data structure which is ideal for the Simple system.
@@ -335,6 +336,44 @@ export class WoDActor extends Actor {
                 }
 
                 if (actorData.system.advantages[key].system.id === "bloodpool") {  
+                    // Un GHOUL no es un Vastago: su reserva de Sangre no sale de la tabla de
+                    // Generacion (v20 L15366, «una reserva de Sangre de 2 o mas, dependiendo de su
+                    // edad» — NO «segun tu Generacion»). La rama de abajo se salta ENTERA, y el
+                    // maximo se fija desde `CONFIG.worldofdarkness.ghoul`.
+                    //
+                    // HASTA HOY ESTO FUNCIONABA POR ACCIDENTE, que es distinto de funcionar: la
+                    // plantilla de Splat del Ghoul no declara campo `generation`, asi que la guarda
+                    // `bio.splatfields.generation != undefined` no entraba y el `max` almacenado
+                    // sobrevivia. Basta que un arrastre de Splat, el exportador o un DJ tecleando en
+                    // Bio escriba esa clave para que el Ghoul herede 10/13/15 puntos de Sangre. La
+                    // guarda explicita es lo que convierte el accidente en garantia.
+                    //
+                    // NO se lee `variantsheet` para decidir esto, y es deliberado: un Ghoul es
+                    // `variantsheet: "vampire"` a proposito (es lo que le da Disciplinas e iconos
+                    // via `getSplat`/`getPowertype`). El eje que dice «no es un Cainita» es
+                    // `settings.variant`, y confundirlos es el defecto mismo.
+                    if (isGhoul(actorData)) {
+                        const ghoulLimits = ghoulBloodpoolLimits();
+
+                        if ((adv.system.max != ghoulLimits.max) || (adv.system.perturn != ghoulLimits.perturn)) {
+                            actorData.system.advantages[key].system.max = ghoulLimits.max;
+                            actorData.system.advantages[key].system.perturn = ghoulLimits.perturn;
+
+                            if (actorData.system.advantages[key].system.temporary > ghoulLimits.max) {
+                                actorData.system.advantages[key].system.temporary = ghoulLimits.max;
+                            }
+
+                            itemList.push({
+                                _id: adv._id,
+                                "system.max": ghoulLimits.max,
+                                "system.perturn": ghoulLimits.perturn,
+                                "system.temporary": actorData.system.advantages[key].system.temporary
+                            });
+                        }
+
+                        continue;
+                    }
+
                     if (actorData.system.bio.splatfields.generation != undefined) {
                         // `mod` is OPTIONAL, and the guard above only proves the PARENT object exists —
                         // it says nothing about this property. `bio.splatfields` has no schema and no
