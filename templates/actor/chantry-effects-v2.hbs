@@ -75,9 +75,9 @@
 					&nbsp;/&nbsp;
 					{{localize "wod.chantry.traits.node"}}: <span class="chantry-effects-node">{{integrated.node}}</span>
 					{{#if integrated.upkeepshortfall}}
-						<span class="item-warning chantry-effects-shortfall" title="{{localize 'wod.chantry.effects.shortfall'}}">
+						<span class="item-warning chantry-effects-shortfall" title="{{localize 'wod.chantry.effects.shortfall' n=integrated.upkeepshortfall}}">
 							<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-							{{localize "wod.chantry.effects.shortfall"}}
+							{{localize "wod.chantry.effects.shortfall" n=integrated.upkeepshortfall}}
 						</span>
 					{{/if}}
 				</div>

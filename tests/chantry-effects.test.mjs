@@ -23,6 +23,7 @@
  * data is the one to trust and this file is the thing that will notice.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
 	INTEGRATED_EFFECTS_POOL,
@@ -341,6 +342,83 @@ test("evaluateRosters never throws on absent or wrong-typed data", () => {
 	for (const raw of [undefined, null, "", 0, [], { allies: "not a list" }]) {
 		assert.doesNotThrow(() => evaluateRosters(raw, {}));
 	}
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────────────────
+ * The upkeep-vs-Node EXPLANATION — a prose contract, not arithmetic
+ *
+ * Why this section exists: the sheet used to print two irreconcilable sentences on one screen. The
+ * Node Trait's description said the Trait is what is left over "tras pagar los costes de
+ * mantenimiento" (markdown/mage/m20-the-operative-dossier.md:2797), and three lines below it the
+ * warning said the Node does not COVER the upkeep. A reader cannot reconcile those, and the natural
+ * conclusion — "the comparison is inverted" — is wrong: the governing rule is
+ * markdown/mage/m20-the-operative-dossier.md:2892, which names the Node as the source the payment
+ * is DRAWN FROM. That misreading reached this project as a bug report, so these assertions guard
+ * the explanation the way the tests above guard the numbers.
+ * ──────────────────────────────────────────────────────────────────────────────────────────────── */
+
+const LANGS = ["es", "en"];
+const lang = Object.fromEntries(LANGS.map((code) => [
+	code,
+	JSON.parse(readFileSync(new URL(`../lang/${code}.json`, import.meta.url), "utf8"))
+]));
+
+const shortfall = (code) => lang[code].wod.chantry.effects.shortfall;
+const nodeDescription = (code) => lang[code].wod.chantry.traitdescriptions.node;
+
+console.log("\nthe upkeep warning explains itself (both languages)");
+
+test("the warning names the figure the members must find, in every language", () => {
+	for (const code of LANGS) {
+		assert.match(shortfall(code), /\{n\}/,
+			`${code}: the warning must interpolate the shortfall, not just say one exists`);
+	}
+});
+
+test("the template feeds that figure to the warning — the template/lang contract", () => {
+	// A `{n}` nobody passes renders literally as "{n}". Both call sites must supply it.
+	const hbs = readFileSync(
+		new URL("../templates/actor/chantry-effects-v2.hbs", import.meta.url), "utf8");
+	const sites = hbs.match(/localize\s+['"]wod\.chantry\.effects\.shortfall['"][^}]*/g) ?? [];
+	assert.ok(sites.length >= 1, "the template no longer localizes the shortfall warning at all");
+	for (const site of sites) {
+		assert.match(site, /n=integrated\.upkeepshortfall/,
+			`a shortfall call site passes no n=: ${site}`);
+	}
+});
+
+test("the warning says WHO pays and that the Chantry stays legal", () => {
+	// Sourced from the rule, not from the string: 2892 names two payers (members, Node), and
+	// `upkeepshortfall` feeds no legality check anywhere in this module.
+	const required = { es: [/miembros/i, /legal/i], en: [/members/i, /legal/i] };
+	for (const code of LANGS) {
+		for (const pattern of required[code]) {
+			assert.match(shortfall(code), pattern, `${code}: ${pattern}`);
+		}
+	}
+});
+
+test("the Node description resolves the contradiction and cites the governing line", () => {
+	for (const code of LANGS) {
+		const text = nodeDescription(code);
+		assert.match(text, /m20-the-operative-dossier\.md:2892/,
+			`${code}: the description must cite the rule that governs the comparison`);
+		assert.match(text, code === "es" ? /Efecto(s)? Integrado/i : /Integrated Effect/i,
+			`${code}: it must say the Effects' upkeep is NOT the "mantenimiento" of 2797`);
+	}
+});
+
+test("the calculator carries the do-not-invert-me note next to the subtraction", () => {
+	// The next reader to meet 2797 alone will try to "fix" `upkeep - node`. This is what stops them.
+	const js = readFileSync(
+		new URL("../module/scripts/chantry-effects.js", import.meta.url), "utf8");
+	const at = js.indexOf("upkeepshortfall: Math.max(0, upkeep - toInt(nodeRating))");
+	assert.ok(at > 0, "the shortfall subtraction moved — move this guard with it");
+	const preamble = js.slice(Math.max(0, at - 1400), at);
+	assert.match(preamble, /m20-the-operative-dossier\.md:2892/,
+		"the subtraction lost its citation of the rule that justifies its direction");
+	assert.match(preamble, /DELIBERATE/,
+		"the subtraction lost the warning that its direction is intentional");
 });
 
 console.log(failures

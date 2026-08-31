@@ -206,7 +206,23 @@ export function evaluateEffects(rawEffects, { rating = 0, effectsRating = 0, nod
 		remaining: pool - spent,
 		overspent: !pooloverflow && spent > pool,
 		spherecap: spherecap,
-		// One Quintessence per effect per week, against whatever the Node produces.
+		// One Quintessence per effect per week, drawn from the Node.
+		//
+		// THE DIRECTION OF THIS COMPARISON IS DELIBERATE -- do not "fix" it. The Node Trait's own
+		// description (markdown/mage/m20-the-operative-dossier.md:2797) calls it "la energía
+		// sobrante que queda cada semana tras pagar los costes de mantenimiento del Constructo o
+		// Capilla", which reads as though the upkeep were already deducted and makes this look
+		// inverted. It is not: those are the facility's unquantified running costs, and the rule
+		// that governs THIS figure is the Integrated Effects paragraph
+		// (markdown/mage/m20-the-operative-dossier.md:2892), which names the Node as the SOURCE
+		// the payment comes out of -- "Cada efecto requiere 1 punto de Quintaesencia por semana
+		// para mantenerse, que pueden proporcionar los miembros de la Capilla/Constructo, o
+		// extraerse de la puntuación de Nodo, si se ha comprado". If the Node were already net of
+		// this cost you could not draw this same cost from it, and "si se ha comprado" would mean
+		// nothing.
+		//
+		// A shortfall is a WARNING, never a legality failure: the members are the other source
+		// that same sentence names, so they simply pay the difference. Nothing here feeds `valid`.
 		upkeep: upkeep,
 		node: toInt(nodeRating),
 		upkeepshortfall: Math.max(0, upkeep - toInt(nodeRating)),
