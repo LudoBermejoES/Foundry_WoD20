@@ -11,7 +11,23 @@
                       actor` on Poderes). The CALLER decides which list this is and wraps the
                       `{{#if}}`/empty-state around the include; this partial only draws the table.
         - `actor`  — the owning actor, read by the roll/type/gnosis-or-willpower branches below.
-        - `locked` — sheet lock state, read by `list_icons.hbs`.
+        - `locked` — sheet lock state, read by `list_icons.hbs` AND, since
+                      offer-write-controls-only-when-unlocked, by the equip toggle below
+                      (`{{#if (eq ../locked false)}}`). The `../` is load-bearing: the toggle sits
+                      directly inside `{{#each items as |item id|}}`, so a bare `locked` would
+                      resolve against the array element, not the sheet, and the button would never
+                      render at all — probed against real Handlebars 4.7.7, not reasoned from brace
+                      counting. Previously ungated entirely (pre-existing on both this sheet and the
+                      Chantry vault, which shares this partial). For the CHANTRY this closed an
+                      affordance-only gap: `ChantryActorSheetV2.onItemActive` already warns and
+                      refuses while locked. For the PC SHEET it closes a REAL write-while-locked gap:
+                      `OnItemActive` (`action-helpers.js:1244`) has NO `this.locked` check at all,
+                      unlike its siblings `OnItemDelete`/`OnItemCreate` — measured, not assumed, by
+                      reading the handler body. This template fix removes the only reachable click
+                      path to it while locked; the handler itself is unchanged and out of this fix's
+                      scope (it is shared by several OTHER templates — `stats_feature_row.hbs`,
+                      `combat_armor.hbs`, v2's own `gear.hbs`, `power_listpower.hbs` — that carry the
+                      identical ungated affordance and were not touched here).
         - `caption` — an i18n key for the `<caption class="v3-sr-only">`, so the same table can
                       announce itself as "Otros objetos" on Equipo or "Objetos mágicos" on Poderes.
 
@@ -94,6 +110,7 @@
 					      The solid/duotone glyph pair is v2's and is kept as-is: it is the
 					      established equipped-vs-not language on this sheet, and `aria-pressed`
 					      is what adds the state a glyph alone never carried. --}}
+					{{#if (eq ../locked false)}}
 					<button type="button" class="v3-iconbtn item-active"
 						data-itemid="{{item.id}}" data-type="isactive" data-action="itemActive"
 						aria-pressed="{{#if (isChecked item.system.isactive)}}true{{else}}false{{/if}}"
@@ -105,6 +122,7 @@
 						{{/if}}
 						<span class="v3-sr-only">{{localize "wod.combat.armor.equip"}}</span>
 					</button>
+					{{/if}}
 
 					{{#if (eq item.system.type "wod.types.treasure")}}
 						{{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.treasure" deletetitle="wod.labels.remove.treasure"}}

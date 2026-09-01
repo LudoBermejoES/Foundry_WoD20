@@ -2,10 +2,12 @@
     <div class="dragrow headlineNormal feature-itemlist" data-itemid="{{item._id}}">
         <div class="width-iconbox draggable"><i class="icon fa-solid fa-grip-vertical"></i></div>
 
+        {{#if (eq locked false)}}
         {{#if (isChecked item.system.isactive)}}
             <i class="item-active pointer icon fa-regular fa-square-check" title="{{localize 'wod.power.active'}}" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive"></i>
         {{else}}
             <i class="item-active pointer icon fa-regular fa-square" title="{{localize 'wod.power.active'}}" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive"></i>
+        {{/if}}
         {{/if}}
 
         

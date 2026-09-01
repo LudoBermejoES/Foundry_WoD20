@@ -2124,20 +2124,17 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 	const READ_ONLY_ACTIONS = new Set(["tab", "actorLock", "sendChat", "rollDice", "useMacro"]);
 
 	/**
-	 * ONE ADMITTED EXCEPTION, named so it cannot grow silently.
-	 *
-	 * `parts/item_table.hbs` renders its equip toggle (`data-action="itemActive"`) with NO lock gate,
-	 * for the PC sheet as much as for this one — it predates this change and gating it would alter
-	 * how the PC's Equipo and Poderes tabs behave, which is out of this change's scope. It is not one
-	 * of the controls the spec's requirement names ("creates, edits or deletes an Item, an Integrated
-	 * Effect or a roster entry"), and the Chantry's own handler refuses while locked
-	 * (`ChantryActorSheetV2.onItemActive` warns and returns), so a locked click cannot write. It is
-	 * COUNTED rather than ignored: if a second ungated write action ever appears, the census below
-	 * fails.
+	 * NO ADMITTED EXCEPTIONS ANY MORE. `parts/item_table.hbs`'s equip toggle
+	 * (`data-action="itemActive"`) used to render with no lock gate at all — on the PC sheet's Equipo
+	 * and Poderes tabs as much as on this Chantry vault, since both share this one partial — and was
+	 * admitted here rather than fixed. It is now wrapped in `{{#if (eq ../locked false)}}` (the `../`
+	 * is load-bearing: the toggle sits directly inside `{{#each items as |item id|}}`, so a bare
+	 * `locked` would resolve against the array element and never render even unlocked — probed
+	 * against real Handlebars 4.7.7, not reasoned from brace counting). Kept as a live Map, empty on
+	 * purpose, so the NEXT ungated write action has to be admitted here explicitly rather than
+	 * silently tolerated by this census going soft.
 	 */
-	const LOCKED_WRITE_ACTIONS_OK = new Map([
-		["itemActive", "parts/item_table.hbs's equip toggle is ungated for BOTH sheets (pre-existing, out of scope); the Chantry handler still refuses while locked"]
-	]);
+	const LOCKED_WRITE_ACTIONS_OK = new Map([]);
 
 	const registeredActions = new Set(Object.keys(ChantrySheetClass.DEFAULT_OPTIONS.actions ?? {}));
 	const writeActions = [...registeredActions].filter((a) => !READ_ONLY_ACTIONS.has(a));
@@ -2987,6 +2984,135 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 	console.log(`     ${chantryPartIds.length} parts x 2 lock states, ` +
 		`${chantryFindings.partialOutput.length} partial renders, ` +
 		`${writeActions.length} writing actions censused`);
+}
+
+/* ============================================================================================ *
+ * I. THE PC SHEET's feature_item.hbs / item_table.hbs equip toggle — no write control renders
+ *    while locked
+ *
+ * offer-write-controls-only-when-unlocked closed two icons that carried `data-action="itemActive"`
+ * with no lock gate at all: `feature_item.hbs`'s isactive checkbox (included from the `feature`
+ * part on BOTH sheets — v2's `parts/feature.hbs` and v3's `v3/feature.hbs` share this one partial)
+ * and `item_table.hbs`'s equip toggle (included from `gear`, v3's mundane-items table — the same
+ * partial is ALSO included from `powers` for the Poderes tab's magical items and from the Chantry
+ * vault, all through the identical `locked=locked` top-level hash param, verified by Section H's
+ * Chantry census above; see that section for the render proof on that code path).
+ *
+ * SCOPED TO "feature" AND "gear" ONLY, deliberately NOT "powers": that part ALSO renders
+ * `power_listpower.hbs`/`power_listpowerdots.hbs`, which carry their OWN, separate, pre-existing
+ * ungated `itemActive` checkbox (out of this fix's scope) — a plain string sweep of the whole
+ * "powers" HTML would flag that unrelated defect as if it were this one's regression. `gear`'s
+ * bare key is v3/gear.hbs (the only "gear" template that includes item_table.hbs at all — v2's OWN
+ * `parts/gear.hbs` carries a THIRD, separate, pre-existing copy of this same ungated icon that this
+ * fix does not touch, stored under the suffixed key "gear::PCActorSheet" and excluded by name).
+ *
+ * NOT folded into a generic "every write action" census like Section H's, because the PC sheet
+ * registers several dozen actions (mage rituals, resonance marks, ...) unrelated to this defect,
+ * and correctly classifying every one of them read/write is a wider undertaking than this fix's
+ * scope. A plain string count of ONE named action, `itemActive`, over the two affected parts is
+ * unambiguous here without that undertaking.
+ *
+ * THE LOCKED HALF IS FREE: `PCActorSheet`'s constructor sets `this.locked = true` (pc-actor-
+ * sheet.js:69) and the 173-structure matrix above never flips it, so `renderedByStructure` already
+ * holds a locked render of every structure — reused as-is, at zero extra render cost.
+ *
+ * THE UNLOCKED HALF NEEDS ITS OWN RENDER (one structure, not all 173 — this is a depth-trap check,
+ * not a completeness sweep): a check that only ever asserts ABSENCE cannot tell "gated correctly"
+ * from "gated into oblivion" — the exact context-depth trap this system has shipped twice before
+ * (reorganize-mage-sheet-v3 9.7, polish-mage-sheet-v3-affordances). Depth was PROBED against real
+ * Handlebars 4.7.7 before writing the templates (not reasoned from brace counting): a bare `locked`
+ * at feature_item.hbs's own top level (a hash param passed by every caller, not a further `{{#each}}`
+ * inside that partial) resolves correctly; a bare `locked` inside item_table.hbs's
+ * `{{#each items as |item id|}}` does not and needs `../locked`, matching the depth `list_icons.hbs`
+ * already uses two lines below it in the same file.
+ * ============================================================================================ */
+
+console.log("\nI. feature_item.hbs / item_table.hbs — no write control renders while locked");
+
+{
+	const WRITE_ACTION = "itemActive";
+	const CENSUS_PART_IDS = ["feature", "gear"];
+	const EXCLUDED_V2_KEYS = new Set(["gear::PCActorSheet"]);
+
+	check(`no "${WRITE_ACTION}" control renders in feature/gear on any LOCKED structure`, () => {
+		const offenders = [];
+		for (const [structureId, perPart] of renderedByStructure) {
+			for (const [key, html] of perPart) {
+				const partId = key.split("::")[0];
+				if (!CENSUS_PART_IDS.includes(partId)) continue;
+				if (EXCLUDED_V2_KEYS.has(key)) continue;   // v2's OWN gear.hbs — separate, pre-existing, out of scope
+				if (html.includes(`data-action="${WRITE_ACTION}"`)) offenders.push(`${structureId}/${key}`);
+			}
+		}
+		if (offenders.length) {
+			throw new Error(
+				`"${WRITE_ACTION}" renders on a LOCKED sheet in: ${summarise(offenders)}. Either gate it ` +
+				`with {{#if (eq locked false)}} (or ../locked inside an {{#each}}) at the right context ` +
+				`depth, or admit it in EXCLUDED_V2_KEYS with a reason.`);
+		}
+	});
+
+	/* ---- the unlocked probe: one structure, proving the gate is not the depth trap ---- */
+
+	const probeStructure = structures.find((s) => s.id === "mortal") ?? structures[0];
+	const unlockedByKey = new Map();   // key ("feature" | "gear", bare = v3) -> html
+
+	try {
+		const actor = await buildActor(probeStructure);
+		const sheetByName = new Map(), baseByName = new Map();
+
+		console.log = () => {};
+		try {
+			for (const { name, cls } of SHEETS) {
+				const inst = new cls({ document: actor });
+				inst.locked = false;
+				sheetByName.set(name, inst);
+				baseByName.set(name, await inst._prepareContext({}));
+			}
+
+			for (const partId of CENSUS_PART_IDS) {
+				for (const { template, sheets } of PART_TEMPLATES.get(partId) ?? []) {
+					const owner = sheets[0];
+					const ownerSheet = sheetByName.get(owner);
+					const ownerBase = baseByName.get(owner);
+					const templatePath = templateFile(template);
+					const context = await ownerSheet._preparePartContext(partId, { ...ownerBase }, {});
+					Object.defineProperty(context, ROOTISH, { value: true, enumerable: false });
+					const renderer = new Renderer(partId, `${probeStructure.id}-unlocked`, findings);
+					renderer.rootContext = context;
+					const html = renderer.renderProgram(compile(templatePath), new Frame(context));
+					const key = unlockedByKey.has(partId) ? `${partId}::${owner}` : partId;
+					unlockedByKey.set(key, html);
+				}
+			}
+		}
+		finally { console.log = realLog; }
+	}
+	catch (err) {
+		console.log = realLog;
+		fail("PC sheet (unlocked probe) — could not render feature/gear", err.message);
+	}
+
+	check(`"${WRITE_ACTION}" DOES render in EACH of feature/gear on the UNLOCKED probe structure (${probeStructure.id})`, () => {
+		// PER PART_ID, not aggregated: an aggregate "seen anywhere" check cannot tell "gear's context
+		// depth is wrong" from "feature already proved the action renders somewhere" — measured by
+		// mutation (bare `locked` reinstated inside item_table.hbs's `{{#each}}`): the button vanishes
+		// from `gear` in BOTH lock states, and an aggregate check across feature+gear stayed green
+		// because `feature`'s independent, correctly-gated icon carried it. Each key must prove itself.
+		const missing = CENSUS_PART_IDS.filter((partId) => {
+			const html = unlockedByKey.get(partId);   // bare key only = v3, the template this fix touched
+			return html === undefined || !html.includes(`data-action="${WRITE_ACTION}"`);
+		});
+		if (missing.length) {
+			throw new Error(
+				`"${WRITE_ACTION}" renders NOWHERE on the unlocked probe, in: ${missing.join(", ")}. This is ` +
+				`the context-depth trap: a bare \`locked\` inside an {{#each}} resolves against the array ` +
+				`element, so \`(eq locked false)\` is false even unlocked, and the control never renders at all.`);
+		}
+	});
+
+	console.log(`     ${renderedByStructure.size} structures x 2 parts censused locked (reused), ` +
+		`1 structure re-rendered unlocked`);
 }
 
 /* ---- report ---- */

@@ -65,11 +65,24 @@ export default class PCDataModel extends foundry.abstract.DataModel {
             ...health.defineSchema()
         });
 
-        // Same as before
+        // apply-armor-dexterity-penalty §8.4.5 — `valueInteger` carries `min: 0`, which Foundry's
+        // NumberField enforces at `_cast`/`clean()` time regardless of what `totals.js` computes:
+        // measured live, `actor.update({'system.initiative.base': -5, ...})` persisted as `0`, while
+        // the identical update with `+5` persisted as `5`, and the SAME actor's
+        // `attributes.dexterity.total` (below, in `base/actor_attributes.js`, no `min` on `total`)
+        // held a negative value on the same object. `design.md` D4 states the premise this schema
+        // silently broke for Initiative alone: "Foundry no acota" — a floor here is not a rule this
+        // system declares anywhere (no book text, no NumberField elsewhere in this file gates
+        // `total`), just the accidental side effect of reusing `valueInteger` for a field that CAN
+        // legitimately go negative once Destreza + Wits does. `valueNumber` (below) is this same
+        // file's own established vocabulary for "integer, no floor" (already used by Quintessence's
+        // `carried`/`bank`). D4 also forbids clamping in `totals.js` itself, precisely so a positive-
+        // sign bug in source data stays visible — this fix removes an UNINTENTIONAL floor at the
+        // schema layer, it does not add one anywhere.
         schema.initiative = new fields.SchemaField({
-            base:  new fields.NumberField({...valueInteger}),
-            bonus:  new fields.NumberField({...valueInteger}),
-            total:  new fields.NumberField({...valueInteger})
+            base:  new fields.NumberField({...valueNumber}),
+            bonus:  new fields.NumberField({...valueNumber}),
+            total:  new fields.NumberField({...valueNumber})
         });
 
         // Same as before

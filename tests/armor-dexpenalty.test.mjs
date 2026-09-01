@@ -358,6 +358,41 @@ test("nothing in module/ reads shieldbonus — it is displayed, never consumed (
 	assert.deepEqual(hits, []);
 });
 
+// =============================================================================================
+console.log("initiative — the SCHEMA is not clamped either (§8.4.5: a defect D4's own test above cannot see)");
+// =============================================================================================
+
+/*
+ * `totals.js`'s own "no Math.max clamp" test above only proves the CONSUMER does not re-clamp what it
+ * computes. It says nothing about whether the value SURVIVES the `actor.update()` that follows —
+ * measured live against a disposable actor (tasks.md §8.4.5): `initiative.base`/`.total` calculated
+ * correctly as negative, then read back as 0 after `update()`, while `attributes.dexterity.total` on
+ * the SAME object held its negative value. The two fields are declared in DIFFERENT files
+ * (`base/actor_attributes.js` for `dexterity.total`, `pc-actor-datamodel.js` for `initiative`), and
+ * only the second one's `NumberField` carried `min: 0` — a schema-level floor Foundry enforces at
+ * `clean()`/`_cast()` time, invisible to any check that only reads `totals.js`.
+ */
+
+const DATAMODEL = read("module/actor/datamodel/pc-actor-datamodel.js");
+
+test("the initiative schema fields carry NO floor (min) — design.md D4 applies to the whole pipeline, not just totals.js", () => {
+	const m = /schema\.initiative\s*=\s*new fields\.SchemaField\(\{([\s\S]*?)\}\);/.exec(DATAMODEL);
+	assert.ok(m, "schema.initiative block not found — has this file been restructured?");
+	const block = m[1];
+
+	// `valueInteger` (this file's own local const) is `{..., min: 0}`; `valueNumber` is the same
+	// shape with no `min` at all. Written from the RULE ("no floor"), not from the fix just applied:
+	// asserting `valueNumber` by name would also pass if `valueInteger` gained a `min: -Infinity`
+	// override, which a literal `min` scan below additionally rules out.
+	assert.ok(!/valueInteger/.test(block),
+		"schema.initiative reuses `valueInteger`, which carries `min: 0` — a negative Iniciativa " +
+		"(dexterity.total + wits.total can be negative once armor penalties stack, design.md D4) " +
+		"would be silently floored to 0 by Foundry's NumberField on the next actor.update().");
+	assert.ok(!/\bmin\s*:/.test(block),
+		`schema.initiative declares a literal "min:" — even without valueInteger, a floor here ` +
+		`contradicts design.md D4 ("Foundry no acota"): ${block.trim()}`);
+});
+
 console.log("");
 if (failures) {
 	console.error(`${failures} armor-dexpenalty test(s) FAILED.`);
