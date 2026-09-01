@@ -1,7 +1,7 @@
 <div class="item-row-area power-itemlist power-row">
     <div class="dragrow headlineNormal power-itemlist" data-itemid="{{item._id}}">
         <div class="width-iconbox draggable"><i class="icon fa-solid fa-grip-vertical"></i></div>
-        <div class="item-activeBox"><input class="item-active pointer" name="item.system.isactive" type="checkbox" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive" {{isChecked item.system.isactive}}></input></div>
+        <div class="item-activeBox">{{#if (eq locked false)}}<input class="item-active pointer" name="item.system.isactive" type="checkbox" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive" {{isChecked item.system.isactive}}></input>{{else}}<input class="item-active" type="checkbox" disabled {{isChecked item.system.isactive}}></input>{{/if}}</div>
 
         {{#if (eq item.type "Rote")}}
 

@@ -111,10 +111,12 @@
 								
 							</div>
 							<div class="iconBox">
+								{{#if (eq ../locked false)}}
 								{{#if (isChecked item.system.isactive)}}
 									<i class="item-active pointer icon fa-solid fa-shield" title="{{localize 'wod.combat.armor.equip'}}" data-itemid="{{item.id}}" data-type="isactive" data-action="itemActive"></i>
 								{{else}}
 									<i class="item-active pointer icon fa-duotone fa-solid fa-shield" title="{{localize 'wod.combat.armor.equip'}}" data-itemid="{{item.id}}" data-type="isactive" data-action="itemActive"></i>
+								{{/if}}
 								{{/if}}
 
 								{{#if (eq item.system.type "wod.types.treasure")}}

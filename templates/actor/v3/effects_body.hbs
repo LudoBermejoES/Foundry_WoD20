@@ -63,7 +63,7 @@
 						      audit's fix for the DOUBLE MEANING of `fa-eye` is to move visibility
 						      onto this pair. It is a button here so it can be reached by keyboard;
 						      on v2 it is an `<i>`, which cannot. --}}
-						{{#if (or (ne bonus.origin '') bonus.system.isremovable)}}
+						{{#if (and (eq ../locked false) (or (ne bonus.origin '') bonus.system.isremovable))}}
 							<button type="button" class="v3-iconbtn item-active"
 								data-itemid="{{bonus._id}}" data-type="isactive" data-action="itemActive"
 								aria-pressed="{{#if bonus.system.isactive}}true{{else}}false{{/if}}"
@@ -72,11 +72,14 @@
 								<span class="v3-sr-only">{{localize "wod.power.active"}}</span>
 							</button>
 						{{else}}
-							{{!-- Not togglable: this bonus is inherited from a parent item, so v2
-							      rendered the same glyph without the `item-active pointer` classes.
-							      Rendered as static state rather than as a dead-looking control. --}}
+							{{!-- Not togglable: either the bonus is inherited from a parent item (v2
+							      rendered the same glyph without the `item-active pointer` classes), or
+							      the sheet is locked (offer-write-controls-only-when-unlocked — this is
+							      the ONLY reachable click path to `OnItemActive`, which itself now also
+							      checks `this.locked`; see action-helpers.js). Either way, rendered as
+							      static state rather than as a dead-looking control. --}}
 							<i class="fa-solid {{#if bonus.system.isactive}}fa-toggle-on{{else}}fa-toggle-off{{/if}} v3-static"
-								role="img" aria-label="{{localize 'wod.power.active'}}"></i>
+								data-itemid="{{bonus._id}}" role="img" aria-label="{{localize 'wod.power.active'}}"></i>
 						{{/if}}
 
 						{{#if (eq ../locked false)}}

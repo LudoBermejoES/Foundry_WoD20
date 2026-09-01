@@ -2987,29 +2987,43 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 }
 
 /* ============================================================================================ *
- * I. THE PC SHEET's feature_item.hbs / item_table.hbs equip toggle — no write control renders
- *    while locked
+ * I. THE PC SHEET's `itemActive` equip/active toggle — no write control renders while locked,
+ *    ANYWHERE it can appear
  *
- * offer-write-controls-only-when-unlocked closed two icons that carried `data-action="itemActive"`
- * with no lock gate at all: `feature_item.hbs`'s isactive checkbox (included from the `feature`
- * part on BOTH sheets — v2's `parts/feature.hbs` and v3's `v3/feature.hbs` share this one partial)
- * and `item_table.hbs`'s equip toggle (included from `gear`, v3's mundane-items table — the same
- * partial is ALSO included from `powers` for the Poderes tab's magical items and from the Chantry
- * vault, all through the identical `locked=locked` top-level hash param, verified by Section H's
- * Chantry census above; see that section for the render proof on that code path).
+ * offer-write-controls-only-when-unlocked closed TWO of NINE templates that carried
+ * `data-action="itemActive"` with no lock gate at all (`feature_item.hbs`, `item_table.hbs`).
+ * close-remaining-itemactive-lock-gaps closes the other SEVEN, found by an exhaustive grep for the
+ * literal `data-action="itemActive"` across `templates/` rather than by trusting the two-item list
+ * the original fix's own comment named: `combat_armor.hbs`, `power_listpower.hbs`,
+ * `power_listpowerdots.hbs`, `stats_feature_row.hbs`, v2's own `gear.hbs`, v2's own `effects.hbs`,
+ * and `v3/effects_body.hbs` (the last of which the original comment did not name at all — it is
+ * the Bonus on/off toggle, not an equip icon, and was missed by the diagnosis that scoped the first
+ * fix). Every one of the nine is gated now, so this section is no longer scoped away from "powers"
+ * — it covers every PART that can carry the action: "feature", "gear", "powers", "combat",
+ * "stats", "effects" (v2's standalone Effects tab) and "settings" (v3's Effects-as-sub-tab, via
+ * the shared `parts/settings.hbs`, gated on `effectsinsettings` — always true for
+ * `PCActorSheetV3`, so it renders unconditionally in this census; v3 declares no "effects" part of
+ * its own at all).
  *
- * SCOPED TO "feature" AND "gear" ONLY, deliberately NOT "powers": that part ALSO renders
- * `power_listpower.hbs`/`power_listpowerdots.hbs`, which carry their OWN, separate, pre-existing
- * ungated `itemActive` checkbox (out of this fix's scope) — a plain string sweep of the whole
- * "powers" HTML would flag that unrelated defect as if it were this one's regression. `gear`'s
- * bare key is v3/gear.hbs (the only "gear" template that includes item_table.hbs at all — v2's OWN
- * `parts/gear.hbs` carries a THIRD, separate, pre-existing copy of this same ungated icon that this
- * fix does not touch, stored under the suffixed key "gear::PCActorSheet" and excluded by name).
+ * ALSO CLOSES THE HANDLER: `OnItemActive` (action-helpers.js) now checks `this.locked` up front,
+ * exactly like its siblings `OnItemDelete`/`OnItemEdit`/`OnItemCreate` already did — this section
+ * cannot see that half (it never invokes a click handler, only renders markup), so it remains a
+ * defence this harness does not measure. Both halves matter for a different reason: the templates
+ * close every RENDERED click path (what a player can actually reach today), the handler closes the
+ * class of defect itself (any OTHER template, present or future, that ever emits this action gets
+ * refused server-side too, matching the Chantry's own `ChantryActorSheetV2.onItemActive`, which
+ * already had this check).
  *
- * NOT folded into a generic "every write action" census like Section H's, because the PC sheet
+ * NO MORE ADMITTED EXCEPTIONS: `EXCLUDED_V2_KEYS` used to carry `"gear::PCActorSheet"` (v2's own
+ * `gear.hbs`, the "THIRD, separate, pre-existing copy" the original fix declined to touch). It is
+ * now empty, kept as a live Set for the same reason Section H keeps `LOCKED_WRITE_ACTIONS_OK` live:
+ * the NEXT ungated occurrence has to be admitted here explicitly, in code review, rather than
+ * silently tolerated by this census going soft.
+ *
+ * STILL NOT folded into a generic "every write action" census like Section H's — the PC sheet
  * registers several dozen actions (mage rituals, resonance marks, ...) unrelated to this defect,
- * and correctly classifying every one of them read/write is a wider undertaking than this fix's
- * scope. A plain string count of ONE named action, `itemActive`, over the two affected parts is
+ * and classifying every one of them read/write is a wider undertaking than this fix's scope. A
+ * plain string count of ONE named action, `itemActive`, over every part that can carry it is
  * unambiguous here without that undertaking.
  *
  * THE LOCKED HALF IS FREE: `PCActorSheet`'s constructor sets `this.locked = true` (pc-actor-
@@ -3018,29 +3032,39 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
  *
  * THE UNLOCKED HALF NEEDS ITS OWN RENDER (one structure, not all 173 — this is a depth-trap check,
  * not a completeness sweep): a check that only ever asserts ABSENCE cannot tell "gated correctly"
- * from "gated into oblivion" — the exact context-depth trap this system has shipped twice before
- * (reorganize-mage-sheet-v3 9.7, polish-mage-sheet-v3-affordances). Depth was PROBED against real
- * Handlebars 4.7.7 before writing the templates (not reasoned from brace counting): a bare `locked`
- * at feature_item.hbs's own top level (a hash param passed by every caller, not a further `{{#each}}`
- * inside that partial) resolves correctly; a bare `locked` inside item_table.hbs's
- * `{{#each items as |item id|}}` does not and needs `../locked`, matching the depth `list_icons.hbs`
- * already uses two lines below it in the same file.
+ * from "gated into oblivion" — the exact context-depth trap this system has shipped repeatedly
+ * (reorganize-mage-sheet-v3 9.7, polish-mage-sheet-v3-affordances, and again here: mutation-tested
+ * below). Every depth was PROBED against real Handlebars 4.7.7 before writing the templates, not
+ * reasoned from brace counting (see `close-remaining-itemactive-lock-gaps/design.md`): a bare
+ * `locked` resolves correctly wherever the partial receives it as a hash param with no further
+ * `{{#each}}` of its own (`power_listpower.hbs`, `power_listpowerdots.hbs`, `stats_feature_row.hbs`,
+ * `feature_item.hbs`); a bare `locked` inside a template's OWN `{{#each item(s) as |item id|}}` /
+ * `{{#each effects as |bonus key|}}` resolves against the array element instead and needs
+ * `../locked` (`item_table.hbs`, `combat_armor.hbs`, v2's `gear.hbs`, v2's `effects.hbs`,
+ * `v3/effects_body.hbs`) — matching the depth each of those templates' OWN pre-existing sibling
+ * code (its `list_icons.hbs` include, or its edit/delete pair) already used one or two lines away.
+ *
+ * The unlocked-render loop below checks EVERY key `renderedByStructure` would produce for these
+ * parts (bare AND `partId::sheet`-suffixed — i.e. v2 and v3's independently-gated templates where
+ * they differ), not just the bare one: an aggregate "seen anywhere" check cannot tell "this specific
+ * template's gate is wrong" from "a sibling template in the same part happens to carry it" — the
+ * exact blind spot mutation-testing below proves by reinstating the bug in ONE template only.
  * ============================================================================================ */
 
-console.log("\nI. feature_item.hbs / item_table.hbs — no write control renders while locked");
+console.log("\nI. itemActive (equip/active toggle) — no write control renders while locked, anywhere");
 
 {
 	const WRITE_ACTION = "itemActive";
-	const CENSUS_PART_IDS = ["feature", "gear"];
-	const EXCLUDED_V2_KEYS = new Set(["gear::PCActorSheet"]);
+	const CENSUS_PART_IDS = ["feature", "gear", "powers", "combat", "stats", "effects", "settings"];
+	const EXCLUDED_V2_KEYS = new Map([]);   // key ("partId" or "partId::sheet") -> reason. Kept live, empty.
 
-	check(`no "${WRITE_ACTION}" control renders in feature/gear on any LOCKED structure`, () => {
+	check(`no "${WRITE_ACTION}" control renders in feature/gear/powers/combat/stats/effects/settings on any LOCKED structure`, () => {
 		const offenders = [];
 		for (const [structureId, perPart] of renderedByStructure) {
 			for (const [key, html] of perPart) {
 				const partId = key.split("::")[0];
 				if (!CENSUS_PART_IDS.includes(partId)) continue;
-				if (EXCLUDED_V2_KEYS.has(key)) continue;   // v2's OWN gear.hbs — separate, pre-existing, out of scope
+				if (EXCLUDED_V2_KEYS.has(key)) continue;
 				if (html.includes(`data-action="${WRITE_ACTION}"`)) offenders.push(`${structureId}/${key}`);
 			}
 		}
@@ -3052,13 +3076,32 @@ console.log("\nI. feature_item.hbs / item_table.hbs — no write control renders
 		}
 	});
 
+	for (const [excludedKey, reason] of EXCLUDED_V2_KEYS) {
+		const fired = [...renderedByStructure.values()].some((perPart) =>
+			perPart.get(excludedKey)?.includes(`data-action="${WRITE_ACTION}"`));
+		if (!fired) fail("stale EXCLUDED_V2_KEYS entry",
+			`"${excludedKey}" (${reason}) never renders "${WRITE_ACTION}" locked any more in this checkout — remove the entry.`);
+	}
+
 	/* ---- the unlocked probe: one structure, proving the gate is not the depth trap ---- */
 
 	const probeStructure = structures.find((s) => s.id === "mortal") ?? structures[0];
-	const unlockedByKey = new Map();   // key ("feature" | "gear", bare = v3) -> html
+	const unlockedByKey = new Map();   // same bare/`partId::sheet` keying renderedByStructure uses
 
 	try {
 		const actor = await buildActor(probeStructure);
+
+		// `stats_feature_row.hbs`'s toggle is gated on `item.system.bonuslist.length` (by design —
+		// "ONLY WHERE IT DOES SOMETHING", see that file's own header), NOT on lock state alone. None
+		// of the shared fixture's Backgrounds/Merits/Flaws/Other Traits carries a `bonuslist`, so the
+		// "stats" part would prove nothing here either way — not because the lock gate is broken, but
+		// because the toggle never reaches the branch that contains it. Mutating ONE fixture item's
+		// `bonuslist` on THIS locally-built actor (not the shared JSON, not any other check's actor)
+		// gives the probe something to find. Any Feature item does; the first Background is arbitrary.
+		const bonuslistBearer = actor.items.find((i) => i.type === "Feature" && i.system?.type === "wod.types.background");
+		if (!bonuslistBearer) throw new Error("no Feature/wod.types.background item on the fixture actor to attach a bonuslist to");
+		bonuslistBearer.system.bonuslist = [{ type: "attribute_buff", settingtype: "strength", isactive: false }];
+
 		const sheetByName = new Map(), baseByName = new Map();
 
 		console.log = () => {};
@@ -3090,19 +3133,23 @@ console.log("\nI. feature_item.hbs / item_table.hbs — no write control renders
 	}
 	catch (err) {
 		console.log = realLog;
-		fail("PC sheet (unlocked probe) — could not render feature/gear", err.message);
+		fail("PC sheet (unlocked probe) — could not render feature/gear/powers/combat/stats/effects/settings", err.message);
 	}
 
-	check(`"${WRITE_ACTION}" DOES render in EACH of feature/gear on the UNLOCKED probe structure (${probeStructure.id})`, () => {
-		// PER PART_ID, not aggregated: an aggregate "seen anywhere" check cannot tell "gear's context
-		// depth is wrong" from "feature already proved the action renders somewhere" — measured by
-		// mutation (bare `locked` reinstated inside item_table.hbs's `{{#each}}`): the button vanishes
-		// from `gear` in BOTH lock states, and an aggregate check across feature+gear stayed green
-		// because `feature`'s independent, correctly-gated icon carried it. Each key must prove itself.
-		const missing = CENSUS_PART_IDS.filter((partId) => {
-			const html = unlockedByKey.get(partId);   // bare key only = v3, the template this fix touched
-			return html === undefined || !html.includes(`data-action="${WRITE_ACTION}"`);
-		});
+	check(`"${WRITE_ACTION}" DOES render in EVERY rendered feature/gear/powers/combat/stats/effects/settings ` +
+		`template (bare AND suffixed keys) on the UNLOCKED probe structure (${probeStructure.id})`, () => {
+		// PER KEY, not aggregated: an aggregate "seen anywhere" check cannot tell "this template's
+		// context depth is wrong" from "a sibling template in the same part happens to carry it" —
+		// measured by mutation (bare `locked` reinstated inside item_table.hbs's `{{#each}}`): the
+		// button vanishes from the "gear" key in BOTH lock states, and an aggregate check across all
+		// keys stayed green because v2's OWN gear.hbs ("gear::PCActorSheet") independently carried it.
+		// Each key must prove itself.
+		if (unlockedByKey.size === 0) {
+			throw new Error("the unlocked probe rendered NOTHING — see the render failure above");
+		}
+		const missing = [...unlockedByKey.entries()]
+			.filter(([, html]) => !html.includes(`data-action="${WRITE_ACTION}"`))
+			.map(([key]) => key);
 		if (missing.length) {
 			throw new Error(
 				`"${WRITE_ACTION}" renders NOWHERE on the unlocked probe, in: ${missing.join(", ")}. This is ` +

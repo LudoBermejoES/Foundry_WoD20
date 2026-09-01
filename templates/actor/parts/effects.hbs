@@ -18,10 +18,14 @@
                 <div class="width-mediumbox">{{shorten (localize (getAbility (localize (getAttributes bonus.system.settingtype)) ../actor)) 15}}</div>        
                 <div class="width-valuebox">{{bonus.system.value}}</div>
                 <div class="width-valuebox">  
-                    {{#if bonus.system.isactive}}
-                        <i class="{{#if (or (ne bonus.origin '') bonus.system.isremovable)}}item-active pointer{{/if}} fa-solid fa-toggle-on" data-itemid="{{bonus._id}}" data-type="isactive" data-action="itemActive"></i>
+                    {{#if (eq ../locked false)}}
+                        {{#if bonus.system.isactive}}
+                            <i class="{{#if (or (ne bonus.origin '') bonus.system.isremovable)}}item-active pointer{{/if}} fa-solid fa-toggle-on" data-itemid="{{bonus._id}}" data-type="isactive" data-action="itemActive"></i>
+                        {{else}}
+                            <i class="{{#if (or (ne bonus.origin '') bonus.system.isremovable)}}item-active pointer{{/if}} fa-solid fa-toggle-off" data-itemid="{{bonus._id}}" data-type="isactive" data-action="itemActive"></i>
+                        {{/if}}
                     {{else}}
-                        <i class="{{#if (or (ne bonus.origin '') bonus.system.isremovable)}}item-active pointer{{/if}} fa-solid fa-toggle-off" data-itemid="{{bonus._id}}" data-type="isactive" data-action="itemActive"></i>
+                        <i class="fa-solid {{#if bonus.system.isactive}}fa-toggle-on{{else}}fa-toggle-off{{/if}}" data-itemid="{{bonus._id}}"></i>
                     {{/if}}
 
                     {{#if (eq ../locked false)}}  

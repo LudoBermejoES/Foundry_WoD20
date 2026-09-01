@@ -76,10 +76,18 @@
 	      the `base` Item template (`template.json:1550`), which `Feature` includes, so it is present
 	      on every one of these rows and the guard can never throw. --}}
 	{{#if item.system.bonuslist.length}}
-		{{#if (isChecked item.system.isactive)}}
-			<i class="pullLeft item-active pointer icon fa-regular fa-square-check" data-tooltip="{{localize 'wod.labels.bonus.appliedtooltip'}}" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive"></i>
+		{{#if (eq locked false)}}
+			{{#if (isChecked item.system.isactive)}}
+				<i class="pullLeft item-active pointer icon fa-regular fa-square-check" data-tooltip="{{localize 'wod.labels.bonus.appliedtooltip'}}" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive"></i>
+			{{else}}
+				<i class="pullLeft item-active pointer icon fa-regular fa-square" data-tooltip="{{localize 'wod.labels.bonus.withheldtooltip'}}" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive"></i>
+			{{/if}}
 		{{else}}
-			<i class="pullLeft item-active pointer icon fa-regular fa-square" data-tooltip="{{localize 'wod.labels.bonus.withheldtooltip'}}" data-itemid="{{item._id}}" data-type="isactive" data-action="itemActive"></i>
+			{{#if (isChecked item.system.isactive)}}
+				<i class="pullLeft icon fa-regular fa-square-check" data-tooltip="{{localize 'wod.labels.bonus.appliedtooltip'}}"></i>
+			{{else}}
+				<i class="pullLeft icon fa-regular fa-square" data-tooltip="{{localize 'wod.labels.bonus.withheldtooltip'}}"></i>
+			{{/if}}
 		{{/if}}
 	{{/if}}
 

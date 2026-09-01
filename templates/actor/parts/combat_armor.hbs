@@ -69,10 +69,12 @@
             
             <div class="iconBox">
 
+                {{#if (eq ../locked false)}}
                 {{#if (isChecked item.system.isequipped)}}
                     <i class="item-active pointer icon fa-solid fa-shield" title="{{localize 'wod.combat.armor.equip'}}" data-itemid="{{item._id}}" data-type="isequipped" data-action="itemActive"></i>
                 {{else}}
                     <i class="item-active pointer icon fa-duotone fa-solid fa-shield" title="{{localize 'wod.combat.armor.equip'}}" data-itemid="{{item._id}}" data-type="isequipped" data-action="itemActive"></i>
+                {{/if}}
                 {{/if}}
                 {{> "systems/worldofdarkness/templates/actor/parts/list_icons.hbs" showsendchat=true showedit=true showdelete=true showtooltip=true item=item locked=../locked edittitle="wod.labels.edit.armor" deletetitle="wod.labels.remove.armor" collapseclass="combat"}}
                 

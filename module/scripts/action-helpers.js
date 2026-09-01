@@ -1244,6 +1244,11 @@ export const OnItemEdit = async function (event, target) {
 export const OnItemActive = async function (event, target) {
 	event.preventDefault();
 
+	if (this.locked) {
+		ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+		return;
+	}
+
 	// Top-level variables
 	const itemtype = target.getAttribute("data-type");
 	const itemid = target.getAttribute('data-itemid');
