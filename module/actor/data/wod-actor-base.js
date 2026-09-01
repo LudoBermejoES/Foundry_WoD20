@@ -4,6 +4,7 @@ import CreateHelper from "../../scripts/create-helpers.js";
 import Functions from "../../functions.js";
 import PCActorAPI from "../api-handler.js";
 import { isGhoul, ghoulBloodpoolLimits } from "./ghoul-bloodpool.js";
+import { recomputeTotalsOnCreate } from "../../scripts/recompute-on-create.js";
 
 /**
  * Extend the base Actor entity by defining a custom roll data structure which is ideal for the Simple system.
@@ -850,6 +851,21 @@ export class WoDActor extends Actor {
   */
     async _onCreate(data, options, userId) {
         await super._onCreate(data, options, userId);
+
+        // recompute-totals-on-actor-import (opción A2, design.md D1/D3): un `PC` que llega
+        // con Items YA embebidos (importado, duplicado, o cualquier otra vía que llame a
+        // `Actor.create()` con `items` en el mismo payload) no pasa por `_onUpdate` ni por
+        // `_onUpdateDescendantDocuments` -- ambos excluyen `type === "PC"` a propósito, ver
+        // los comentarios en esos dos métodos más abajo -- así que sin esto se queda
+        // mostrando los totales EN BRUTO del documento importado (Destreza sin penalización
+        // de armadura, Absorción/Iniciativa sin recalcular) hasta el primer clic de equipar o
+        // la primera tirada. `recomputeTotalsOnCreate` es un no-op de coste cero para un `PC`
+        // recién creado sin Items (el caso normal de la ficha en blanco de la UI) y para
+        // cualquier tipo que no sea `PC`.
+        await recomputeTotalsOnCreate(this, {
+            duplicate: foundry.utils.duplicate,
+            calculateTotals
+        });
     }
 
     async _onUpdate(updateData, options, user) {
