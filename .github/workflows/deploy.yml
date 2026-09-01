@@ -621,6 +621,21 @@ jobs:
       - name: Prove a Ghoul keeps its Disciplines and does NOT inherit the Kindred blood table
         run: node .github/scripts/test-ghoul.mjs
 
+      # foundry-system-types → "Every Feature list and item sheet that shows a point value shows a
+      # variable one": a Merit/Flaw/Background/Bloodbound's cost can be the book's own non-numeric
+      # string ("1 a 5", "1 o 3"), and `pointValue` is the one place that rule lives. Audit row #41
+      # (docs/spec-enforcement-audit.md, 2026-07-29, still open on 2026-09-01): `feature-sheet.html`
+      # printed `system.level` bare in its four type-gated blocks, so a genuinely-zero item's own
+      # item sheet stated a false `Coste 0`. Written from the RULE (which `wod.types.*` are
+      # point-costed, and where in the WHOLE template tree a block is gated on one of them), not
+      # from the four line numbers it was found on — the lesson of row #22, where a ratchet
+      # calibrated on a list of already-fixed ids let the same defect recur in new data untouched.
+      # No per-line/per-id allowlist: POINT_COSTED_TYPES is the requirement's own vocabulary.
+      # Runnable locally: python3 .github/scripts/point-value-guard.py
+      #                   python3 .github/scripts/point-value-guard.py --selftest
+      - name: Check no point-costed Feature's level reaches a template bare
+        run: python3 .github/scripts/point-value-guard.py
+
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy to Foundry server

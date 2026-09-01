@@ -17,24 +17,29 @@
 					<div class="pullLeft" style="display: flex; width: 300px;">
 						<div class="area-box">
 							<div class="top-sidetext">
-								{{#if (eq data.system.type "wod.types.background")}} 
+								{{!-- pointValue, not a bare {{data.system.level}}: a merit/flaw's point value can be
+									  the book's own "1 a 5" / "1 o 3" / "1/2/3/4/5", and a bare interpolation also
+									  printed the literal "0" for a genuinely-zero item. Same helper and same
+									  {{#if}}/{{else}} idiom as feature_item.hbs, notes.html and
+									  stats_feature_row.hbs (module/handlebars.js). --}}
+								{{#if (eq data.system.type "wod.types.background")}}
 									{{captilize (localize "wod.types.background")}}<br />
-									{{captilize (localize "wod.labels.cost")}} {{data.system.level}}
+									{{captilize (localize "wod.labels.cost")}} {{#if (pointValue data.system.level)}}{{pointValue data.system.level}}{{else}}&nbsp;{{/if}}
 								{{/if}}
 
-								{{#if (eq data.system.type "wod.types.merit")}} 
+								{{#if (eq data.system.type "wod.types.merit")}}
 									{{captilize (localize "wod.types.merit")}}<br />
-									{{captilize (localize "wod.labels.cost")}} {{data.system.level}}
+									{{captilize (localize "wod.labels.cost")}} {{#if (pointValue data.system.level)}}{{pointValue data.system.level}}{{else}}&nbsp;{{/if}}
 								{{/if}}
 
-								{{#if (eq data.system.type "wod.types.flaw")}} 
+								{{#if (eq data.system.type "wod.types.flaw")}}
 									{{captilize (localize "wod.types.flaw")}}<br />
-									{{captilize (localize "wod.labels.cost")}} {{data.system.level}}
+									{{captilize (localize "wod.labels.cost")}} {{#if (pointValue data.system.level)}}{{pointValue data.system.level}}{{else}}&nbsp;{{/if}}
 								{{/if}}
 
-								{{#if (eq data.system.type "wod.types.bloodbound")}} 
+								{{#if (eq data.system.type "wod.types.bloodbound")}}
 									{{captilize (localize "wod.types.bloodbound")}}<br />
-									{{captilize (localize "wod.labels.rating")}} {{data.system.level}}
+									{{captilize (localize "wod.labels.rating")}} {{#if (pointValue data.system.level)}}{{pointValue data.system.level}}{{else}}&nbsp;{{/if}}
 								{{/if}}
 
 								{{#if (eq data.system.type "wod.types.boon")}} 
