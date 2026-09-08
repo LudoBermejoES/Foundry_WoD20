@@ -38,7 +38,7 @@
 
 import { ROSTER_TRAIT_KEYS, evaluateItemRosters, normalisePoints } from "./chantry-effects.js";
 
-/** El marcador del censo del PJ: una silueta humana. Correcto para los seis Rasgos que son gente. */
+/** El marcador del censo del PJ: una silueta humana. Correcto para los Rasgos que son gente. */
 export const CENSUS_PERSON_PLACEHOLDER = "icons/svg/mystery-man.svg";
 
 /**
@@ -47,8 +47,26 @@ export const CENSUS_PERSON_PLACEHOLDER = "icons/svg/mystery-man.svg";
  */
 export const CENSUS_HOLDING_PLACEHOLDER = "systems/worldofdarkness/assets/img/items/feature.svg";
 
-/** Los Rasgos con censo que son colecciones de COSAS y no de personas (D4). */
-export const NON_PERSON_ROSTER_TRAITS = Object.freeze(["library", "node"]);
+/**
+ * Los Rasgos con censo que son colecciones de COSAS y no de personas (D4 de
+ * `add-chantry-inventory-effects-and-roster`, vigente tras `rebuild-chantry-book-of-chantries-only`
+ * para el único de los tres que sobrevive con este sentido: `node`, el Nodo del libro, una fuente de
+ * Quintaesencia, no gente. `guardian` y `staffTier` SÍ son colecciones de gente.
+ */
+export const NON_PERSON_ROSTER_TRAITS = Object.freeze(["node"]);
+
+/**
+ * La etiqueta localizada de cada Rasgo con censo, POR CLAVE — necesaria porque, a diferencia de la
+ * era Dossier (los ocho vivían bajo `wod.chantry.traits.<clave>`), los tres de hoy viven en tres
+ * sitios de contenido distintos: `guardian` sigue siendo un Rasgo de construcción, `staffTier` es un
+ * campo del bloque Personal, y `node` es un campo del bloque Reino+Nodo.
+ * @type {Readonly<Record<string, string>>}
+ */
+export const ROSTER_LABEL_KEYS = Object.freeze({
+	guardian: "wod.chantry.traits.guardian",
+	staffTier: "wod.chantry.personnel.stafftier",
+	node: "wod.chantry.realm.fields.nodesize"
+});
 
 /**
  * El marcador de retrato de una entrada sin retrato propio, POR RASGO.
@@ -62,53 +80,56 @@ export function censusPlaceholderFor(relation) {
 }
 
 /**
- * EL RESOLVEDOR DE GRUPO DE LA CAPILLA (D2.1).
+ * EL RESOLVEDOR DE GRUPO DE LA CAPILLA (D2.1, actualizado por `rebuild-chantry-book-of-chantries-
+ * only`: el censo pasa de ocho claves bajo `system.traits` a tres, repartidas en tres sitios).
  *
  * El del PJ busca un Item Trasfondo con `flags["wod20-char"].id === relation` y saca de él la
- * etiqueta y los círculos. UNA CAPILLA NO TIENE NI UN SOLO ITEM TRASFONDO — sus Rasgos son números
- * bajo `system.traits` — así que por ese camino cada grupo saldría titulado con la cadena cruda
- * («allies») y con `rating: null`, o sea sin círculos.
+ * etiqueta y los círculos. UNA CAPILLA NO TIENE NI UN SOLO ITEM TRASFONDO — así que por ese camino
+ * cada grupo saldría titulado con la cadena cruda y con `rating: null`, o sea sin círculos.
  *
- * Aquí la etiqueta sale de `wod.chantry.traits.<clave>` (existe para las 19 claves) y los círculos de
- * `system.traits[clave]`.
+ * `values` es el mapa PLANO `{guardian, staffTier, node}` que `rosterAllowedValues()`
+ * (`chantry-effects.js`) construye a partir de `system.traits`/`system.personnel`/`system.realm` —
+ * este resolvedor ya no conoce esos tres bloques por su nombre, solo el mapa ya aplanado, y
+ * `ROSTER_LABEL_KEYS` para saber en qué sitio de contenido vive la etiqueta de cada uno.
  *
- * UNA CLAVE QUE NO ES NINGUNA DE LAS OCHO no devuelve la cadena cruda: devuelve la etiqueta del grupo
- * «Sin Rasgo asignado». `system.relation` se teclea a mano en la hoja de la entrada, y en la Capilla
- * un error de tecleo saca la entrada de la contabilidad de puntos — así que tiene que VERSE (D2.5).
- * @param {Record<string, unknown>} traits `system.traits`
+ * UNA CLAVE QUE NO ES NINGUNA DE LAS TRES no devuelve la cadena cruda: devuelve la etiqueta del
+ * grupo «Sin Rasgo asignado». `system.relation` se teclea a mano en la hoja de la entrada, y en la
+ * Capilla un error de tecleo saca la entrada de la contabilidad de puntos — así que tiene que VERSE
+ * (D2.5).
+ * @param {Record<string, unknown>} values  `rosterAllowedValues({traits, personnel, realm})`
  * @returns {(relation: string) => {label: string, rating: number|null}}
  */
-export function chantryGroupResolver(traits = {}) {
+export function chantryGroupResolver(values = {}) {
 	return (relation) => {
 		if (!ROSTER_TRAIT_KEYS.includes(relation)) {
 			return { label: game.i18n.localize("wod.chantry.roster.unassigned"), rating: null };
 		}
 
 		return {
-			label: game.i18n.localize(`wod.chantry.traits.${relation}`),
-			rating: parseInt(traits?.[relation]) || 0
+			label: game.i18n.localize(ROSTER_LABEL_KEYS[relation] ?? `wod.chantry.traits.${relation}`),
+			rating: parseInt(values?.[relation]) || 0
 		};
 	};
 }
 
 /**
  * Las opciones con las que la hoja de Capilla llama a `buildConnectionGroups`.
- * @param {Record<string, unknown>} traits `system.traits`
+ * @param {Record<string, unknown>} values  `rosterAllowedValues({traits, personnel, realm})`
  * @param {{locked?: boolean, locale?: string}} [state]
  * @returns {object}
  */
-export function censusOptions(traits = {}, state = {}) {
+export function censusOptions(values = {}, state = {}) {
 	return {
-		resolveGroup: chantryGroupResolver(traits),
+		resolveGroup: chantryGroupResolver(values),
 		placeholderFor: censusPlaceholderFor,
-		/* DESBLOQUEADA se pintan los OCHO grupos aunque estén vacíos, porque cada uno lleva su propio
+		/* DESBLOQUEADA se pintan los TRES grupos aunque estén vacíos, porque cada uno lleva su propio
 		   botón de crear y ésa es la única ruta de creación (no hay diálogo). BLOQUEADA solo se pintan
 		   los que tienen entradas: un censo entero vacío cae así al estado vacío de la pestaña, que es
 		   el que explica cómo añadir la primera entrada — el criterio de aceptación de D10. */
 		alwaysGroups: state.locked ? [] : [...ROSTER_TRAIT_KEYS],
-		/* Alfabético POR LA ETIQUETA LOCALIZADA y con locale: por clave saldría «Aliados, Ancianos,
-		   Arcano» mal, y un `localeCompare` sin locale pone «Arcano» antes de «Ancianos» — el defecto
-		   exacto que 7.5.125 arregló en la lista de Rasgos. */
+		/* Alfabético POR LA ETIQUETA LOCALIZADA y con locale: por clave saldría mal ordenado, y un
+		   `localeCompare` sin locale desordena las etiquetas acentuadas — el defecto exacto que
+		   7.5.125 arregló en la lista de Rasgos. */
 		locale: state.locale
 	};
 }
@@ -121,7 +142,7 @@ export function censusOptions(traits = {}, state = {}) {
  * llama a la única función que decide `over` en todo el sistema. Es lo que hace imposible que el
  * «Puntos: 2 / 2» de la pestaña y el aviso de la fila del Rasgo discrepen (tarea 3.3).
  * @param {Array<object>} groups lo que devuelve `buildConnectionGroups`
- * @param {Record<string, unknown>} traits `system.traits`
+ * @param {Record<string, unknown>} values `rosterAllowedValues({traits, personnel, realm})`
  * @returns {Array<object>} los mismos grupos, decorados en el sitio
  */
 export function decorateCensusGroups(groups, traits = {}) {

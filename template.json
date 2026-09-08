@@ -1496,42 +1496,24 @@
 			"locked": false,
 			"flavor": "tradition",
 			"rating": 1,
-			"tier": "safehouse",
+			"tier": "pitifully-weak",
 			"pool": {
 				"total": 10,
 				"spent": 0
 			},
 			"traits": {
-				"allies": 0,
-				"arcane-cloaking": 0,
-				"backup": 0,
-				"cult-sympathizers": 0,
-				"enhancement": 0,
-				"elders": 0,
-				"integrated-effects": 0,
-				"library": 0,
-				"node": 0,
-				"reality-zone": 0,
-				"requisitions": 0,
-				"resources": 0,
-				"retainers": 0,
-				"spies": 0,
-				"familiar": 0,
-				"influence": 0,
-				"wonder": 0,
-				"mentor": 0,
-				"patron": 0,
 				"guardian": null,
 				"fortification": null,
 				"wards": null,
 				"trap-system": null,
 				"alarm-system": null,
-				"research-library": null
+				"research-library": null,
+				"laboratories": null
 			},
 			"notes": "",
-			"integratedEffects": [],
 			"traitRosters": {},
 			"wardsDefensiveLevels": 0,
+			"laboratoriesPreferential": false,
 			"realm": {
 				"hasRealm": false,
 				"size": null,
@@ -1541,7 +1523,19 @@
 				"interconnected": false,
 				"advancedTransport": false,
 				"population": null,
-				"socialStructure": null
+				"socialStructure": null,
+				"hasNode": false,
+				"nodeSize": null,
+				"nodeNamed": false,
+				"nodeBattery": false,
+				"nodeTass": false
+			},
+			"personnel": {
+				"staffTier": null,
+				"staffLoyalty": null,
+				"hereditaryStaff": false,
+				"military": false,
+				"consorts": []
 			},
 			"descriptors": []
 		}

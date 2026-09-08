@@ -4,22 +4,25 @@ import { prepareItemLists } from "../../scripts/gear-lists.js";
 import {
 	SPHERE_KEYS,
 	ROSTER_TRAIT_KEYS,
-	evaluateEffects,
 	evaluateItemRosters,
-	normaliseEffects,
-	traitCap,
-	isSingleRatingCapTrait,
+	rosterAllowedValues,
 	hasRoster,
 	isBookOfChantriesTrait,
 	bookTraitLevelCost,
 	computeWardsDefensiveWards,
+	computeLaboratoriesPreferential,
 	computeRealmCost,
 	realmQuintessenceUpkeepPerDay,
 	REALM_SIZE_LEVELS,
 	REALM_TERRAIN_LEVELS,
 	REALM_CLIMATE_LEVELS,
 	REALM_POPULATION_LEVELS,
-	REALM_SOCIAL_STRUCTURE_LEVELS
+	REALM_SOCIAL_STRUCTURE_LEVELS,
+	REALM_NODE_SIZE_LEVELS,
+	computePersonnelCost,
+	computeConsortsCost,
+	PERSONNEL_STAFF_TIER_LEVELS,
+	PERSONNEL_STAFF_LOYALTY_LEVELS
 } from "../../scripts/chantry-effects.js";
 /* add-chantry-roster-tab — el censo se pinta con el MISMO constructor y la MISMA plantilla que el
    censo del PJ. Los dos ficheros están en `scripts/`, no en `PCActorSheet`, precisamente para que
@@ -195,6 +198,14 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			descriptorAdd: ChantryActorSheetV2.onDescriptorAdd,
 			descriptorRemove: ChantryActorSheetV2.onDescriptorRemove,
 
+			/* rebuild-chantry-book-of-chantries-only — el bloque Personal: `consorts` es una lista
+			   repetible de coste variable, igual que `sphereShifts` del Reino, así que su add/remove
+			   son ACCIONES (un clic que añade/quita una fila) mientras que `staffTier`/`staffLoyalty`/
+			   `hereditaryStaff`/`military` son UN control que escribe UN campo cada uno y viven en el
+			   `data-source` switch de `onSubmitActorForm`, igual que los campos del Reino. */
+			personnelConsortAdd: ChantryActorSheetV2.onPersonnelConsortAdd,
+			personnelConsortDelete: ChantryActorSheetV2.onPersonnelConsortDelete,
+
 			/* THE INVENTORY (task 3.4). Three of these are the system's own shared handlers,
 			   imported rather than reimplemented - they are actor-agnostic and already correct:
 			     `itemEdit`   opens the item's own sheet, and refuses while locked;
@@ -223,16 +234,6 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			   work rather than be a dead icon, which is the failure I1 exists to prevent. */
 			useMacro: OnUseMacro,
 
-			/* INTEGRATED EFFECTS and the per-Trait ROSTERS (tasks 3.5/3.6). Both are ACTOR DATA,
-			   not Items (design.md D3), so these write straight into `system.integratedEffects` /
-			   `system.traitRosters`. Every one of them refuses while the sheet is locked, and every
-			   control that invokes them is absent from a locked render (task 3.8) - two independent
-			   gates, the same defence-in-depth the dot handlers already have. */
-			effectCreate: ChantryActorSheetV2.onEffectCreate,
-			effectDelete: ChantryActorSheetV2.onEffectDelete,
-			effectSphereAdd: ChantryActorSheetV2.onEffectSphereAdd,
-			effectSphereDelete: ChantryActorSheetV2.onEffectSphereDelete,
-
 			/* EL CENSO (add-chantry-roster-tab, tarea 5.2). `itemCreate` es el MISMO nombre de acción
 			   que el PJ registra, porque la plantilla es compartida y `sheet-invariants.py` I1
 			   comprueba cada `data-action` contra el mapa de CADA hoja que renderiza la plantilla —
@@ -243,7 +244,8 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			         this.actor.system.settings.variantsheet === "" ? this.actor.system.settings.splat…
 			     SIN `?.`, y la Capilla es el único tipo de Actor de este sistema sin
 			     `system.settings` (medido en `template.json`: locked, flavor, rating, tier, pool,
-			     traits, notes, integratedEffects, traitRosters). O sea TypeError en el primer clic.
+			     traits, notes, traitRosters, wardsDefensiveLevels, laboratoriesPreferential, realm,
+			     personnel, descriptors). O sea TypeError en el primer clic.
 			     `OnItemDelete` y `OnItemActive` ya se sustituyeron por lo mismo, y está dicho arriba.
 
 			   Y además el diálogo del PJ (`CreateButtonsNotev2`) ofrece Trasfondo, Mérito y Defecto,
@@ -283,9 +285,14 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	 * Icons come from this Actor type's OWN icon set: `wod.sheettype` (module/config.js) already
 	 * declares `chantry`, so `game.worldofdarkness.icons.chantry` is built by `wod.js` like every
 	 * other splat's, and `getSplat()` answers "chantry" for this actor type. They are named here
-	 * rather than derived per-tab-id in `getTabs()` the way `PCActorSheet` does it, because two of
-	 * the three ids (`traits`, `effects`) are not icon names and a lookup by id would silently
-	 * return `undefined` — which renders as an empty rail slot and nothing else.
+	 * rather than derived per-tab-id in `getTabs()` the way `PCActorSheet` does it, because `traits`
+	 * is not an icon name and a lookup by id would silently return `undefined` — which renders as an
+	 * empty rail slot and nothing else.
+	 *
+	 * rebuild-chantry-book-of-chantries-only RETIRES THE EFFECTS TAB. Integrated Effects depended on
+	 * three Dossier Traits (`integrated-effects`/`node`/`reality-zone`) all retired in this change,
+	 * and the book offers no equivalent "anchored spell" subsystem to give the tab an honest number
+	 * (design.md D2). Three tabs now: Rasgos, Censo, Equipo.
 	 */
 	tabGroups = {
 		primary: "traits"
@@ -311,12 +318,6 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			title: game.i18n.localize("wod.chantry.roster.headline"),
 			icon: game.worldofdarkness.icons.chantry.connections
 		},
-		effects: {
-			id: "effects",
-			group: "primary",
-			title: game.i18n.localize("wod.chantry.effects.headline"),
-			icon: game.worldofdarkness.icons.chantry.magic
-		},
 		gear: {
 			id: "gear",
 			group: "primary",
@@ -326,7 +327,8 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	};
 
 	/*
-	 * FOUR PARTS: the rail, and one per tab.
+	 * FOUR PARTS: the rail, and one per tab (Rasgos, Censo, Equipo — Efectos retired, see the class
+	 * header above).
 	 *
 	 * `chantry-sheet-v2.hbs` KEEPS ITS NAME as the Rasgos tab (see that file's own header): two
 	 * preflight gates read it by path, and its content is unchanged bar the roster include.
@@ -350,9 +352,6 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		   que el mismo fichero sirve para la pestaña `connections` del PJ y para `census` aquí. */
 		census: {
 			template: "systems/worldofdarkness/templates/actor/v3/connections.hbs"
-		},
-		effects: {
-			template: "systems/worldofdarkness/templates/actor/chantry-effects-v2.hbs"
 		},
 		gear: {
 			template: "systems/worldofdarkness/templates/actor/v3/gear.hbs"
@@ -405,41 +404,52 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		const traits = actor.system.traits ?? {};
 		const rating = parseInt(actor.system.rating) || 0;
 		const traitcost = CONFIG.worldofdarkness.chantry.traitcost;
+		const realm = actor.system.realm ?? {};
+		const personnel = actor.system.personnel ?? {};
 
 		/* EL CENSO SE LEE DE LOS ITEMS, no de `system.traitRosters` (add-chantry-roster-tab, D1). El
 		   mapa sigue declarado en `template.json` para que un mundo sin migrar no explote, y la
 		   migración (`module/scripts/chantry-roster-migration.js`) lo vacía en cuanto corre; esta hoja
 		   ya no lo lee en ninguna parte.
 		   Las cifras de la fila del Rasgo (el tooltip del icono) y las de la pestaña salen de la MISMA
-		   llamada, así que no pueden discrepar. */
+		   llamada, así que no pueden discrepar.
+		   rebuild-chantry-book-of-chantries-only: el censo pasa de leer `system.traits` a secas a leer
+		   el mapa PLANO `{guardian, staffTier, node}` que `rosterAllowedValues` construye — `staffTier`
+		   vive en `system.personnel` y el `node` del libro en `system.realm.nodeSize`, ninguno de los
+		   dos bajo `system.traits`. */
 		const censusEntries = actor.items?.filter?.(isConnectionEntry) ?? [];
+		const rosterValues = rosterAllowedValues({ traits: traits, personnel: personnel, realm: realm });
 		const rosters = evaluateItemRosters(
 			censusEntries.map((item) => ({ relation: item.system?.relation, points: item.system?.points })),
-			traits).groups;
+			rosterValues).groups;
 
 		let spent = 0;
 		const traitlist = [];
 
 		/* CI-preflight followup (2026-09-08, run 34241724870) — this used to be a bare loop over the
-		   nineteen LINEAR Traits, with the six book-of-chantries NAMED-LEVEL Traits pushed into a
-		   SEPARATE `data.bookTraits` array by a second loop below, rendered through a second,
+		   nineteen Dossier LINEAR Traits, with the six book-of-chantries NAMED-LEVEL Traits pushed
+		   into a SEPARATE `data.bookTraits` array by a second loop below, rendered through a second,
 		   parallel `{{#each}}` in the template. `test-part-render.mjs` caught exactly the defect
 		   that shape invites: `template.json` declared 25 Traits on `Actor.Chantry.traits` while
 		   `CONFIG.worldofdarkness.chantry.traitcost` only priced 19 of them, so the row count never
-		   matched the declaration count. `traitcost` now carries all 25 (config.js), each entry
-		   tagged with its OWN pricing model, and this ONE loop builds every row from it - a Trait
-		   declared on the actor and priced here always renders exactly once, through the same
-		   `chantry-trait-row` markup, whichever model it uses. */
+		   matched the declaration count. `rebuild-chantry-book-of-chantries-only` later retires the
+		   19 Dossier Traits outright and adds a SEVENTH book-of-chantries one (`laboratories`) —
+		   `traitcost` now carries exactly those seven (config.js), every one of them table-priced,
+		   and this ONE loop builds every row from it - a Trait declared on the actor and priced here
+		   always renders exactly once, through the same `chantry-trait-row` markup. */
 		for (const key in traitcost) {
 			const entry = traitcost[key];
 			const isTablePriced = !!(entry && (typeof entry === "object") && (entry.pricingModel === "table"));
 
 			if (isTablePriced) {
-				/* THE SIX NAMED-LEVEL Traits (add-book-of-chantries-traits, design.md D2/D11/D12):
-				   level 0 is a real, named, priced choice ("Sin Guardián", -10), not "zero dots of a
-				   linear Trait" - so this branch has no dot allocator, no per-Trait cap (D3: these
-				   are never checked against the 2x/1x rating cap) and no roster (none of the six is
-				   in ROSTER_TRAIT_KEYS). */
+				/* THE SEVEN NAMED-LEVEL Traits (add-book-of-chantries-traits, design.md D2/D11/D12;
+				   `laboratories` added by rebuild-chantry-book-of-chantries-only D6): level 0 is a
+				   real, named, priced choice ("Sin Guardián", -10), not "zero dots of a linear
+				   Trait" - so this branch has no dot allocator and no per-Trait cap (D3: none of the
+				   seven is ever checked against a rating-derived cap). `guardian` alone DOES carry a
+				   census (ROSTER_TRAIT_KEYS), so `roster` below is conditional, not hardcoded null —
+				   it used to be safe to hardcode when none of the six named-level Traits had a
+				   census; that stopped being true the moment `guardian` gained one. */
 				const rawLevel = traits[key];
 				const level = (rawLevel === null || rawLevel === undefined) ? null : parseInt(rawLevel);
 				const cost = (level === null) ? undefined : bookTraitLevelCost(key, level);
@@ -456,8 +466,8 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 					notbuilt: level === null,
 					// A stored level the table no longer reaches (a hand edit, or a future book
 					// errata shrinking a table) is flagged rather than silently priced at 0 or
-					// thrown on render - the same "degrade to a renderable state" discipline
-					// `evaluateEffects` above already applies to `pooloverflow`.
+					// thrown on render - the same "degrade to a renderable state" discipline the
+					// fallback branch below applies to an unrecognised pricing model.
 					unpriced: (level !== null) && (cost === undefined),
 					// The LOCKED render's plain-text value - resolved here rather than built in the
 					// template with `concat`, so a `null` level (design.md D11's "not built",
@@ -472,42 +482,31 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 					cap: undefined,
 					overcap: false,
 					overcapkey: undefined,
-					roster: null
+					roster: hasRoster(key) ? { ...rosters[key] } : null
 				});
 
 				continue;
 			}
 
-			const value = parseInt(traits[key]) || 0;
-			const cost = entry;
-
-			spent += value * cost;
-
-			/* THE CAP IS PER TRAIT NOW (task 3.7 / design.md D7). This loop used to compute one
-			   `const cap = rating * 2` above it and apply it to all fourteen. Zona de Realidad's own
-			   entry in the Operative Dossier's table says otherwise, in as many words: "Este rasgo
-			   no puede ser superior a la puntuación de la Capilla/Constructo" — the rating ONCE, not
-			   twice. wodchar has always implemented the exception
-			   (`SINGLE_RATING_CAP_TRAITS`, server/services/rules/chantry.ts); this sheet followed
-			   the WRITTEN requirement, and the written requirement was the thing that was wrong.
-			   The rule now lives in one place for both halves of the project to read
-			   (`module/scripts/chantry-effects.js`'s `traitCap`), and the tooltip is a per-Trait key
-			   because "supera el doble" is a false sentence for the one Trait the book is explicit
-			   about. */
-			const cap = traitCap(key, rating);
-
+			/* rebuild-chantry-book-of-chantries-only retires the Dossier's 19 LINEAR Traits and their
+			   2x/1x rating cap (design.md D8): with the Dossier gone, every entry
+			   `CONFIG.worldofdarkness.chantry.traitcost` declares is table-priced (config.js builds
+			   `traitcost` entirely from `BOOK_OF_CHANTRIES_TRAIT_KEYS`). This branch is therefore not
+			   expected to run at all — kept as a DEGRADE-TO-RENDERABLE fallback (this project's own
+			   discipline for a data shape the code does not expect) rather than a silent drop or a
+			   reference to the linear cap machinery this change removes, so a future hand-edited
+			   `traitcost` entry with no `pricingModel` still renders a flagged row instead of nothing. */
 			traitlist.push({
 				key: key,
 				label: `wod.chantry.traits.${key}`,
 				descriptionkey: `wod.chantry.traitdescriptions.${key}`,
-				pricingModel: "linear",
-				value: value,
-				cost: cost,
-				cap: cap,
-				overcap: (rating > 0) && (value > cap),
-				overcapkey: isSingleRatingCapTrait(key)
-					? "wod.chantry.overcapsingle"
-					: "wod.chantry.overcap",
+				pricingModel: "unknown",
+				value: parseInt(traits[key]) || 0,
+				cost: undefined,
+				unpriced: true,
+				cap: undefined,
+				overcap: false,
+				overcapkey: undefined,
 				/* The census. `show` is what keeps the spec's promise that "an empty
 				   roster SHALL NOT change how an existing sheet reads": the magnitude Traits never
 				   get one, and the eight that do render no BLOCK at all while the sheet is locked
@@ -539,12 +538,10 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		data.listData = { traits: traitlist };
 
 		/* ======================================================================================
-		 * add-book-of-chantries-traits (task 5.2) — `wards`' defensive add-on, the Horizon Realm
-		 * block and the narrative-descriptor tag list. All three price against the SAME `spent` the
-		 * loop above has been accumulating for all 25 Traits, book-of-chantries ones included since
-		 * the CI-preflight followup (2026-09-08) merged them into it — it is not reset or shadowed
-		 * by a second total, exactly like `integrated-effects`'s own pool above never gets one
-		 * either.
+		 * add-book-of-chantries-traits (task 5.2) — `wards`' defensive add-on, the Horizon Realm+Node
+		 * block, the Personnel block and the narrative-descriptor tag list. All price against the
+		 * SAME `spent` the loop above has been accumulating for every Trait `traitcost` declares — it
+		 * is not reset or shadowed by a second total.
 		 * ====================================================================================== */
 
 		const wardsLevel = parseInt(actor.system.wardsDefensiveLevels) || 0;
@@ -555,17 +552,27 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			value: wardsLevel,
 			cost: wardsDefensive.cost,
 			aggravatedDamage: wardsDefensive.aggravatedDamage,
-			// Same cap SHAPE as the linear Traits' own `overcap` above (rating x1, design.md D8 — the
-			// one figure of this whole change the book leaves unbounded, and the one finding of its
-			// own cost audit), but this add-on is never a member of `traitcost`'s loop, so it needs
-			// its own flag rather than reusing `trait.overcap`.
+			// Same cap SHAPE as the Traits' own `overcap` above (rating x1, design.md D8 — the one
+			// figure of this whole change the book leaves unbounded, and the one finding of its own
+			// cost audit), but this add-on is never a member of `traitcost`'s loop, so it needs its
+			// own flag rather than reusing `trait.overcap`.
 			overcap: (rating > 0) && (wardsLevel > rating)
 		};
 
-		const realm = actor.system.realm ?? {};
+		/* `laboratories`' own add-on: "Trato Preferencial", a flat -2, the same pattern as
+		   `wardsDefensiveLevels` above but with no per-level scale of its own (design.md D6). */
+		const laboratoriesPreferential = !!actor.system.laboratoriesPreferential;
+		spent += computeLaboratoriesPreferential(laboratoriesPreferential);
+		data.laboratoriesPreferential = laboratoriesPreferential;
+
 		spent += computeRealmCost(realm);
 
-		data.realm = this._prepareRealmContext(realm);
+		data.realm = this._prepareRealmContext(realm, rosters.node);
+
+		/* rebuild-chantry-book-of-chantries-only, design.md D4 — el bloque Personal. */
+		spent += computePersonnelCost(personnel);
+
+		data.personnel = this._preparePersonnelContext(personnel, rosters.staffTier);
 
 		const descriptors = Array.isArray(actor.system.descriptors) ? actor.system.descriptors : [];
 
@@ -664,56 +671,22 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 				   no lo pone nunca, así que su render no cambia. */
 				context.chantry = true;
 
-				const traits = this.actor.system.traits ?? {};
+				/* rebuild-chantry-book-of-chantries-only: el mapa PLANO {guardian, staffTier, node},
+				   no `system.traits` a secas — `staffTier` vive en `system.personnel` y el `node` del
+				   libro en `system.realm.nodeSize`. */
+				const values = rosterAllowedValues({
+					traits: this.actor.system.traits ?? {},
+					personnel: this.actor.system.personnel ?? {},
+					realm: this.actor.system.realm ?? {}
+				});
 
 				context.connections = decorateCensusGroups(
-					await buildConnectionGroups(this.actor, censusOptions(traits, {
+					await buildConnectionGroups(this.actor, censusOptions(values, {
 						locked: this.locked,
 						locale: CONFIG.language
 					})),
-					traits);
+					values);
 				context.hasConnections = context.connections.length > 0;
-
-				return context;
-			}
-
-			case "effects": {
-				context.tab = context.tabs.effects;
-
-				const traits = this.actor.system.traits ?? {};
-
-				/* Every figure the Efectos tab prints, derived here and stored nowhere (spec: "SHALL
-				   NOT be stored as a second copy that can drift from them"). Named `integrated`, not
-				   `effects`, for the same reason the actor field is `system.integratedEffects` and
-				   not `system.effects` (design.md D3): `effects` is `ActiveEffect`'s word in
-				   Foundry, and this sheet may one day grow those too. */
-				context.integrated = evaluateEffects(this.actor.system.integratedEffects, {
-					rating: this.actor.system.rating,
-					effectsRating: traits["integrated-effects"],
-					nodeRating: traits.node,
-					realityZone: traits["reality-zone"]
-				});
-
-				/* The Sphere `<select>`'s options, built HERE rather than iterated out of CONFIG
-				   inside two nested `{{#each}}`es in the template — see `chantry-effects-v2.hbs`'s
-				   own note on why that depth is not worth having. The effect's own index rides along
-				   on each Sphere so no control has to reach back up a loop for it either. */
-				for (const row of context.integrated.rows) {
-					for (const sphere of row.spheres) {
-						sphere.index = row.index;
-						sphere.labelkey = sphere.sphere === ""
-							? "wod.chantry.effects.nosphere"
-							: `wod.spheres.${sphere.sphere}`;
-						sphere.options = [
-							{ key: "", labelkey: "wod.chantry.effects.nosphere", selected: sphere.sphere === "" },
-							...SPHERE_KEYS.map((key) => ({
-								key: key,
-								labelkey: `wod.spheres.${key}`,
-								selected: sphere.sphere === key
-							}))
-						];
-					}
-				}
 
 				return context;
 			}
@@ -959,56 +932,13 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		else if (target?.name === "name") {
 			await this.actor.update({ name: target.value });
 		}
-		/* ---- Integrated Effects and rosters: array data, edited in place -----------------------
-		   These four branches are why this handler stays a `data-source` dispatch instead of moving
-		   to appv2's generic `expandObject(formData)` shape: what has to change is one element of an
-		   array of objects, identified by index, and `system.integratedEffects.0.spheres.2.level`
-		   through a generic path would rewrite the whole structure from whatever the form happened
-		   to serialise — including the fields a locked or collapsed row did not render. Reading the
-		   ONE control that fired, and writing back the canonicalised array, cannot lose a field that
-		   was not on screen. */
-		else if (source === "effect") {
-			const index = Number(dataset.index);
-			const field = dataset.field;
-			const effects = this._effectsForWrite();
+		else if (source === "laboratoriespreferential") {
+			const checked = !!target.checked;
 
-			if (!Number.isInteger(index) || index < 0 || index >= effects.length) return;
-			if ((field !== "name") && (field !== "description")) return;
-
-			effects[index][field] = target.value;
-
-			await this._writeEffects(effects);
-		}
-		else if (source === "effectsphere") {
-			const index = Number(dataset.index);
-			const sphereindex = Number(dataset.sphereindex);
-			const field = dataset.field;
-			const effects = this._effectsForWrite();
-
-			if (!Number.isInteger(index) || index < 0 || index >= effects.length) return;
-			if (!Number.isInteger(sphereindex) || sphereindex < 0 || sphereindex >= effects[index].spheres.length) return;
-
-			if (field === "sphere") {
-				// "" (unset) is legal and is what a new row starts as; anything outside the nine is
-				// dropped to "" rather than stored, so the cost calculator never sees a key it
-				// cannot price. `normaliseEffects` would do it on the next read anyway; doing it
-				// here means the stored data is never wrong in the first place.
-				effects[index].spheres[sphereindex].sphere = SPHERE_KEYS.includes(target.value) ? target.value : "";
-			}
-			else if (field === "level") {
-				let level = parseInt(target.value);
-
-				if (isNaN(level) || level < 0) {
-					level = 0;
-				}
-
-				effects[index].spheres[sphereindex].level = level;
-			}
-			else {
-				return;
-			}
-
-			await this._writeEffects(effects);
+			await this.actor.update({
+				"system.laboratoriesPreferential": checked,
+				"system.pool.spent": this._computePoolSpent({ laboratoriesPreferential: checked })
+			});
 		}
 		/* Ya no hay rama `roster`: una entrada del censo es un Item con su propia hoja
 		   (add-chantry-roster-tab, D1), así que su nombre, su descripción y sus puntos se editan ahí y
@@ -1074,10 +1004,37 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 			await this.actor.update(update);
 		}
+		/* rebuild-chantry-book-of-chantries-only, design.md D3 — el Nodo del libro es una compra
+		   INDEPENDIENTE del Reino ("Cada área se compra por separado", book-of-chantries-es.md:5656),
+		   así que su propio interruptor limpia SUS CUATRO campos al desactivarse, no los ocho del
+		   Reino — la misma disciplina que `realmhasrealm` ya aplica al lado contrario. */
+		else if (source === "realmhasnode") {
+			const checked = !!target.checked;
+
+			const update = checked
+				? { "system.realm.hasNode": true }
+				: {
+					"system.realm.hasNode": false,
+					"system.realm.nodeSize": null,
+					"system.realm.nodeNamed": false,
+					"system.realm.nodeBattery": false,
+					"system.realm.nodeTass": false
+				};
+
+			const realmForCost = checked ? { ...(this.actor.system.realm ?? {}), hasNode: true } : {
+				...(this.actor.system.realm ?? {}), hasNode: false, nodeSize: null, nodeNamed: false
+			};
+			update["system.pool.spent"] = this._computePoolSpent({ realm: realmForCost });
+
+			await this.actor.update(update);
+		}
 		else if (source === "realmfield") {
 			const field = dataset.field;
-			const scalarFields = ["size", "terrain", "climate", "population", "socialStructure"];
-			const booleanFields = ["interconnected", "advancedTransport"];
+			/* `nodeSize` se une a los campos escalares de nivel con tabla (misma disciplina que
+			   `size`), y `nodeNamed`/`nodeBattery`/`nodeTass` a los booleanos — los tres son
+			   informativos o de coste plano, nunca escalonados. */
+			const scalarFields = ["size", "terrain", "climate", "population", "socialStructure", "nodeSize"];
+			const booleanFields = ["interconnected", "advancedTransport", "nodeNamed", "nodeBattery", "nodeTass"];
 
 			if (!scalarFields.includes(field) && !booleanFields.includes(field)) return;
 
@@ -1113,6 +1070,48 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			await this.actor.update({
 				"system.realm.sphereShifts": shifts,
 				"system.pool.spent": this._computePoolSpent({ realm: realm })
+			});
+		}
+		/* rebuild-chantry-book-of-chantries-only, design.md D4 — el bloque Personal. `staffTier`/
+		   `staffLoyalty` son campos de nivel con tabla (mismo patrón que los Rasgos de tabla del
+		   libro); `hereditaryStaff`/`military` son booleanos de coste plano. */
+		else if (source === "personnelfield") {
+			const field = dataset.field;
+			const levelFields = ["staffTier", "staffLoyalty"];
+			const booleanFields = ["hereditaryStaff", "military"];
+
+			if (!levelFields.includes(field) && !booleanFields.includes(field)) return;
+
+			const value = booleanFields.includes(field)
+				? !!target.checked
+				: ((target.value === "") ? null : parseInt(target.value));
+
+			const personnel = { ...(this.actor.system.personnel ?? {}), [field]: value };
+
+			await this.actor.update({
+				[`system.personnel.${field}`]: value,
+				"system.pool.spent": this._computePoolSpent({ personnel: personnel })
+			});
+		}
+		/* `consorts[].powerLevel` — la única cifra que edita un control dentro de la lista repetible;
+		   añadir/quitar una fila entera son ACCIONES (`personnelConsortAdd`/`personnelConsortDelete`,
+		   abajo), porque son un CLIC, no un control que escribe un valor. */
+		else if (source === "personnelconsort") {
+			const index = Number(dataset.index);
+			const consorts = foundry.utils.deepClone(this.actor.system.personnel?.consorts ?? []);
+
+			if (!Number.isInteger(index) || (index < 0) || (index >= consorts.length)) return;
+
+			let powerLevel = parseInt(target.value);
+			if (!Number.isInteger(powerLevel) || (powerLevel < 0)) powerLevel = 0;
+
+			consorts[index] = { powerLevel: powerLevel };
+
+			const personnel = { ...(this.actor.system.personnel ?? {}), consorts: consorts };
+
+			await this.actor.update({
+				"system.personnel.consorts": consorts,
+				"system.pool.spent": this._computePoolSpent({ personnel: personnel })
 			});
 		}
 	}
@@ -1181,19 +1180,20 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 	/**
 	 * `system.pool.spent`, recomputed from the actor's CURRENT stored data with `overrides` merged
-	 * in for whichever ONE of `traits`/`wardsDefensiveLevels`/`realm`/`descriptors` the caller is
-	 * about to write — never from only whichever fields happen to be on screen, so a write to any
-	 * one of the five cost sources this sheet now has (the 19 linear Traits, the six
-	 * book-of-chantries Traits, `wardsDefensiveLevels`, `realm`, the narrative descriptors) never
-	 * zeroes out the other four's contribution to the same total. Mirrors wodchar's own rule for the
-	 * identical hazard (design.md D13 of add-book-of-chantries-traits: "a PATCH that only touches one
-	 * of the three recomputes poolSpent using the EXISTING other two, not as if they were absent").
-	 * Descriptors carry a real, signed cost (`reprice-chantry-descriptors`, 2026-09-08) — the earlier
-	 * "descriptors are zero-cost" design decision is reverted, matching wodchar's own computation.
+	 * in for whichever ONE of `traits`/`wardsDefensiveLevels`/`laboratoriesPreferential`/`realm`/
+	 * `personnel`/`descriptors` the caller is about to write — never from only whichever fields
+	 * happen to be on screen, so a write to any one of this sheet's cost sources (the seven
+	 * book-of-chantries Traits, `wardsDefensiveLevels`, `laboratoriesPreferential`, the Realm+Node
+	 * block, the Personnel block, the narrative descriptors) never zeroes out any other's
+	 * contribution to the same total. Mirrors wodchar's own rule for the identical hazard (design.md
+	 * D13 of `add-book-of-chantries-traits`: "a PATCH that only touches one of the three recomputes
+	 * poolSpent using the EXISTING other two, not as if they were absent").
 	 * @param {object} [overrides]
 	 * @param {Record<string, number|null>} [overrides.traits]  replaces `system.traits` for THIS calc
 	 * @param {number} [overrides.wardsDefensiveLevels]          replaces `system.wardsDefensiveLevels`
+	 * @param {boolean} [overrides.laboratoriesPreferential]      replaces `system.laboratoriesPreferential`
 	 * @param {object} [overrides.realm]                         replaces `system.realm` for THIS calc
+	 * @param {object} [overrides.personnel]                     replaces `system.personnel` for THIS calc
 	 * @param {string[]} [overrides.descriptors]                  replaces `system.descriptors` for THIS calc
 	 * @returns {number}
 	 */
@@ -1203,17 +1203,19 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		const wardsDefensiveLevels = (overrides.wardsDefensiveLevels !== undefined)
 			? overrides.wardsDefensiveLevels
 			: (parseInt(actor.system.wardsDefensiveLevels) || 0);
+		const laboratoriesPreferential = (overrides.laboratoriesPreferential !== undefined)
+			? overrides.laboratoriesPreferential
+			: !!actor.system.laboratoriesPreferential;
 		const realm = overrides.realm ?? (actor.system.realm ?? {});
+		const personnel = overrides.personnel ?? (actor.system.personnel ?? {});
 		const descriptors = overrides.descriptors
 			?? (Array.isArray(actor.system.descriptors) ? actor.system.descriptors : []);
 
 		const traitcost = CONFIG.worldofdarkness.chantry.traitcost;
 		let spent = 0;
 
-		/* CI-preflight followup (2026-09-08) — `traitcost` now carries all 25 Traits, each entry
-		   tagged with its own pricing model (config.js), so ONE loop prices every one of them; this
-		   used to be two loops (the 19 linear Traits here, the six book-of-chantries ones in a
-		   second pass below) and both had to stay in sync with `_prepareContext`'s own loop by hand. */
+		/* Every one of the seven book-of-chantries Traits is table-priced (config.js) — a single
+		   loop prices all of them, matching `_prepareContext`'s own loop. */
 		for (const traitkey in traitcost) {
 			const entry = traitcost[traitkey];
 
@@ -1231,23 +1233,30 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		}
 
 		spent += computeWardsDefensiveWards(wardsDefensiveLevels).cost;
+		spent += computeLaboratoriesPreferential(laboratoriesPreferential);
 		spent += computeRealmCost(realm);
+		spent += computePersonnelCost(personnel);
 		spent += descriptors.reduce((sum, id) => sum + chantryDescriptorPointValue(id), 0);
 
 		return spent;
 	}
 
 	/**
-	 * The Horizon Realm block's render-ready shape (design.md D4/D12, task 5.2): the `hasRealm`
-	 * toggle plus, for each of the five NAMED-LEVEL fields, a `<select>`'s worth of options sized to
-	 * its OWN table (never the 2x/1x rating cap — that never applied to this block either, D4), the
-	 * two boolean fields, the `sphereShifts` array shaped like the Effects tab's own Sphere rows
-	 * above (same repeating-row idiom), and the computed daily Quintessence upkeep — REPORTED, never
-	 * subtracted from anything (D4).
+	 * The Horizon Realm+Node block's render-ready shape (design.md D4/D12, task 5.2; extended by
+	 * `rebuild-chantry-book-of-chantries-only` with the book's own Node — `hasNode`/`nodeSize`/
+	 * `nodeNamed`/`nodeBattery`/`nodeTass`, an INDEPENDENT purchase from the Realm's own fields that
+	 * shares this same `system.realm` object and this same render section): the `hasRealm`/`hasNode`
+	 * toggles plus, for each NAMED-LEVEL field, a `<select>`'s worth of options sized to its OWN
+	 * table, the boolean fields, the `sphereShifts` array (a repeating-row idiom), and the computed
+	 * daily Quintessence upkeep — REPORTED, never subtracted from anything (D4). The section as a
+	 * whole renders when EITHER `hasRealm` or `hasNode` is true (a Chantry may have one without the
+	 * other, book-of-chantries-es.md:5656).
 	 * @param {object} realm  `actor.system.realm ?? {}`
+	 * @param {{used: number, allowed: number, over: boolean}} [nodeRoster]  the Node's own census
+	 *        totals (`rosters.node` from `evaluateItemRosters`), for the census door icon's tooltip
 	 * @returns {object}
 	 */
-	_prepareRealmContext(realm) {
+	_prepareRealmContext(realm, nodeRoster) {
 		const levelField = (field, table) => {
 			const raw = realm[field];
 			const level = ((raw === null) || (raw === undefined)) ? null : parseInt(raw);
@@ -1272,9 +1281,16 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		};
 
 		const sphereShifts = Array.isArray(realm.sphereShifts) ? realm.sphereShifts : [];
+		const hasRealm = !!realm.hasRealm;
+		const hasNode = !!realm.hasNode;
 
 		return {
-			hasRealm: !!realm.hasRealm,
+			hasRealm: hasRealm,
+			hasNode: hasNode,
+			// The section's own render gate — `hasRealm || hasNode`, so a Node-only Chantry (no
+			// Realm) still shows something (spec: "a Chantry may have Node without Realm, and Realm
+			// without Node, exactly as the book treats them as two related but independent things").
+			show: hasRealm || hasNode,
 			size: levelField("size", REALM_SIZE_LEVELS),
 			terrain: levelField("terrain", REALM_TERRAIN_LEVELS),
 			climate: levelField("climate", REALM_CLIMATE_LEVELS),
@@ -1291,7 +1307,7 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 				sphere: typeof shift?.sphere === "string" ? shift.sphere : "",
 				delta: Number.isInteger(shift?.delta) ? shift.delta : (parseInt(shift?.delta) || 0),
 				options: [
-					{ key: "", labelkey: "wod.chantry.effects.nosphere", selected: !shift?.sphere },
+					{ key: "", labelkey: "wod.chantry.realm.sphereshift.nosphere", selected: !shift?.sphere },
 					...SPHERE_KEYS.map((sphereKey) => ({
 						key: sphereKey,
 						labelkey: `wod.spheres.${sphereKey}`,
@@ -1299,7 +1315,68 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 					}))
 				]
 			})),
-			upkeep: realmQuintessenceUpkeepPerDay(realm)
+			upkeep: realmQuintessenceUpkeepPerDay(realm),
+
+			/* rebuild-chantry-book-of-chantries-only — el Nodo del libro, D3. `nodeSize` reutiliza la
+			   tabla de tamaño del Reino SIN el 6º peldaño "Vasto" (REALM_NODE_SIZE_LEVELS, exclusivo
+			   del Reino). `nodeBattery`/`nodeTass` son INFORMATIVOS: nunca se suman al pool (D3/D5). */
+			nodeSize: levelField("nodeSize", REALM_NODE_SIZE_LEVELS),
+			nodeNamed: !!realm.nodeNamed,
+			nodeBattery: !!realm.nodeBattery,
+			nodeTass: !!realm.nodeTass,
+			// La puerta del censo del Nodo (D con roster re-homed): mismo patrón que el icono de
+			// censo de un Rasgo de construcción, pero fuera del bucle de Rasgos porque el Nodo del
+			// libro ya no vive bajo `system.traits`.
+			roster: nodeRoster ? { ...nodeRoster } : null
+		};
+	}
+
+	/**
+	 * The Personnel block's render-ready shape (rebuild-chantry-book-of-chantries-only, design.md
+	 * D4): `staffTier`/`staffLoyalty` as named-level `<select>`s sized to their own 5-row tables
+	 * (same "not built" / real-level-0 distinction the seven Traits and the Realm+Node fields already
+	 * use), `hereditaryStaff`/`military` as priced checkboxes, and `consorts` as a repeating-row list
+	 * of `{powerLevel}` with no upper bound, the same repeating-row idiom `sphereShifts` already uses.
+	 * @param {object} personnel  `actor.system.personnel ?? {}`
+	 * @param {{used: number, allowed: number, over: boolean}} [staffTierRoster]  `rosters.staffTier`
+	 *        from `evaluateItemRosters`, for the census door icon's tooltip
+	 * @returns {object}
+	 */
+	_preparePersonnelContext(personnel, staffTierRoster) {
+		const levelField = (field, table, keyPrefix) => {
+			const raw = personnel[field];
+			const level = ((raw === null) || (raw === undefined)) ? null : parseInt(raw);
+
+			return {
+				field: field,
+				value: level,
+				notbuilt: level === null,
+				currentlabelkey: (level === null)
+					? "wod.chantry.bookoftraits.notbuilt"
+					: `wod.chantry.personnel.levels.${keyPrefix}.${level}`,
+				options: table.map((points, index) => ({
+					level: index,
+					labelkey: `wod.chantry.personnel.levels.${keyPrefix}.${index}`,
+					selected: level === index
+				}))
+			};
+		};
+
+		const consorts = Array.isArray(personnel.consorts) ? personnel.consorts : [];
+
+		return {
+			staffTier: levelField("staffTier", PERSONNEL_STAFF_TIER_LEVELS, "stafftier"),
+			staffLoyalty: levelField("staffLoyalty", PERSONNEL_STAFF_LOYALTY_LEVELS, "staffloyalty"),
+			hereditaryStaff: !!personnel.hereditaryStaff,
+			military: !!personnel.military,
+			consorts: consorts.map((consort, index) => ({
+				index: index,
+				powerLevel: Number.isInteger(consort?.powerLevel) ? consort.powerLevel : (parseInt(consort?.powerLevel) || 0)
+			})),
+			consortsCost: computeConsortsCost(consorts),
+			// La puerta del censo de `staffTier`: mismo patrón que el Nodo, fuera del bucle de
+			// Rasgos porque el bloque Personal ya no vive bajo `system.traits`.
+			roster: staffTierRoster ? { ...staffTierRoster } : null
 		};
 	}
 
@@ -1461,110 +1538,6 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	}
 
 	/* ==========================================================================================
-	 * INTEGRATED EFFECTS (task 3.5) — actor DATA, not Items (design.md D3)
-	 *
-	 * Every handler below writes the WHOLE `system.integratedEffects` array. Foundry replaces an
-	 * array wholesale rather than merging it, so read-modify-write of the whole list is the only
-	 * shape that can delete an element at all, and it is what `normaliseEffects` exists for: the
-	 * value that goes back is always the canonical shape, whatever a hand edit or an import left in
-	 * there. A stored `cost` is dropped on the way through, which is what makes it impossible for a
-	 * printed cost to disagree with the Spheres it came from.
-	 * ========================================================================================== */
-
-	/** The current effects list, canonicalised, ready to be modified and written back. */
-	_effectsForWrite() {
-		return normaliseEffects(this.actor.system.integratedEffects);
-	}
-
-	async _writeEffects(effects) {
-		await this.actor.update({ "system.integratedEffects": effects });
-	}
-
-	static async onEffectCreate(event) {
-		event.preventDefault();
-
-		if (this.locked) {
-			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
-			return;
-		}
-
-		const effects = this._effectsForWrite();
-
-		/* Born with ONE Sphere row rather than none: an effect with no Spheres costs 0 and reads as
-		   a blank line, and every real one has at least one. The Sphere is unset, which the row
-		   renders as "- select -" and prices at 0 until a Sphere is picked. */
-		effects.push({ name: "", description: "", spheres: [{ sphere: "", level: 1 }] });
-
-		await this._writeEffects(effects);
-	}
-
-	static async onEffectDelete(event, target) {
-		event.preventDefault();
-		event.stopPropagation();
-
-		if (this.locked) {
-			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
-			return;
-		}
-
-		const index = Number(target.dataset.index);
-		const effects = this._effectsForWrite();
-
-		if (!Number.isInteger(index) || index < 0 || index >= effects.length) return;
-
-		const name = effects[index].name;
-
-		const confirmed = await this._confirm(
-			game.i18n.localize("wod.chantry.effects.remove"),
-			`${game.i18n.localize("wod.labels.remove.removing")} ${name}`);
-
-		if (!confirmed) return;
-
-		effects.splice(index, 1);
-
-		await this._writeEffects(effects);
-	}
-
-	static async onEffectSphereAdd(event, target) {
-		event.preventDefault();
-
-		if (this.locked) {
-			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
-			return;
-		}
-
-		const index = Number(target.dataset.index);
-		const effects = this._effectsForWrite();
-
-		if (!Number.isInteger(index) || index < 0 || index >= effects.length) return;
-
-		effects[index].spheres.push({ sphere: "", level: 1 });
-
-		await this._writeEffects(effects);
-	}
-
-	static async onEffectSphereDelete(event, target) {
-		event.preventDefault();
-		event.stopPropagation();
-
-		if (this.locked) {
-			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
-			return;
-		}
-
-		const index = Number(target.dataset.index);
-		const sphereindex = Number(target.dataset.sphereindex);
-		const effects = this._effectsForWrite();
-
-		if (!Number.isInteger(index) || index < 0 || index >= effects.length) return;
-		if (!Number.isInteger(sphereindex) || sphereindex < 0 || sphereindex >= effects[index].spheres.length) return;
-
-		effects[index].spheres.splice(sphereindex, 1);
-
-		await this._writeEffects(effects);
-	}
-
-	/* ==========================================================================================
 	 * EL CENSO (add-chantry-roster-tab) — Items `Feature` `wod.types.connection`, no datos del actor
 	 *
 	 * El portador viejo (`system.traitRosters`, un array de objetos planos dentro del actor) se ha ido
@@ -1620,8 +1593,8 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	 * narrative-descriptor tag list. `system.realm`/`system.descriptors` (design.md D4/D6/D12).
 	 * ========================================================================================== */
 
-	/** Adds one blank `{sphere: "", delta: 1}` row — same starting shape `onEffectCreate` above
-	 * gives a new Integrated Effect's first Sphere row. */
+	/** Adds one blank `{sphere: "", delta: 1}` row — the same starting-row idiom `onPersonnelConsortAdd`
+	 * below uses for the Personnel block's own repeating list. */
 	static async onRealmSphereShiftAdd(event) {
 		event.preventDefault();
 
@@ -1662,6 +1635,55 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		await this.actor.update({
 			"system.realm.sphereShifts": shifts,
 			"system.pool.spent": this._computePoolSpent({ realm: realm })
+		});
+	}
+
+	/**
+	 * rebuild-chantry-book-of-chantries-only, design.md D4 — el bloque Personal's `consorts`, la
+	 * ÚNICA lista de coste variable y sin tope del bloque (igual de abierta que `sphereShifts` del
+	 * Reino, book-of-chantries-es.md:5911). Nace con `powerLevel: 1`, el mismo "no vacío" que
+	 * `onRealmSphereShiftAdd` ya establece para su propia lista repetible.
+	 */
+	static async onPersonnelConsortAdd(event) {
+		event.preventDefault();
+
+		if (this.locked) {
+			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+			return;
+		}
+
+		const consorts = foundry.utils.deepClone(this.actor.system.personnel?.consorts ?? []);
+		consorts.push({ powerLevel: 1 });
+
+		const personnel = { ...(this.actor.system.personnel ?? {}), consorts: consorts };
+
+		await this.actor.update({
+			"system.personnel.consorts": consorts,
+			"system.pool.spent": this._computePoolSpent({ personnel: personnel })
+		});
+	}
+
+	static async onPersonnelConsortDelete(event, target) {
+		event.preventDefault();
+		event.stopPropagation();
+
+		if (this.locked) {
+			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+			return;
+		}
+
+		const index = Number(target.dataset.index);
+		const consorts = foundry.utils.deepClone(this.actor.system.personnel?.consorts ?? []);
+
+		if (!Number.isInteger(index) || (index < 0) || (index >= consorts.length)) return;
+
+		consorts.splice(index, 1);
+
+		const personnel = { ...(this.actor.system.personnel ?? {}), consorts: consorts };
+
+		await this.actor.update({
+			"system.personnel.consorts": consorts,
+			"system.pool.spent": this._computePoolSpent({ personnel: personnel })
 		});
 	}
 

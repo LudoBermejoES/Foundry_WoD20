@@ -5,7 +5,14 @@
  * priced invariant (added by `add-chantry-inventory-effects-and-roster`, for exactly this defect
  * class) caught it. `BOOK_OF_CHANTRIES_LEVEL_COSTS`/`BOOK_OF_CHANTRIES_TRAIT_KEYS` stay the single
  * source of truth in `chantry-effects.js`; imported here only to WIDEN `traitcost`'s own key set to
- * match, not to duplicate the tables. */
+ * match, not to duplicate the tables.
+ *
+ * rebuild-chantry-book-of-chantries-only (2026-09-08) — the Dossier's 19 linear Traits (`allies`
+ * through `patron`) are RETIRED outright (proposal.md/design.md D1): no equivalent in El Libro de
+ * las Capillas, and the one exception of NAME (`node`) is a different economy entirely, rebuilt from
+ * scratch in the Realm+Node block instead. `BOOK_OF_CHANTRIES_TRAIT_KEYS` now carries a SEVENTH key,
+ * `laboratories` (design.md D6) — still the same single source of truth, still imported rather than
+ * duplicated. */
 import { BOOK_OF_CHANTRIES_LEVEL_COSTS, BOOK_OF_CHANTRIES_TRAIT_KEYS } from "./scripts/chantry-effects.js";
 
 export const wod = {};
@@ -29,58 +36,43 @@ wod.sheettype = {
 
 /*
  * Chantry/Construct construction Traits - Power Pool Cost per dot.
- * Sources, and they are TWO: the first fourteen come from m20-the-operative-dossier's "Estatus y
- * el Constructo" table; the last five are the Backgrounds M20 core p.308 permits on a Chantry but
- * that table never prices, so their cost is this project's (see the comment on them below).
- * The cap rule (no single Trait may exceed 2x the Chantry/Construct's rating, Zona de Realidad
- * excepted at 1x) is enforced by the sheet, not here.
+ *
+ * rebuild-chantry-book-of-chantries-only (2026-09-08) retires the Dossier's 19 linear Traits and
+ * the five M20-core Backgrounds a Chantry used to be able to add (proposal.md/design.md D1): no
+ * equivalent in El Libro de las Capillas, and the exception of NAME (`node`) is rebuilt from
+ * scratch in the Realm+Node block, not migrated. What is left is the book's own SEVEN Traits, every
+ * one priced by a CLOSED TABLE of named levels with a signed cost (book-of-chantries-es.md's
+ * Appendix Two), never a per-dot rate — level 0 is a real, named, priced choice ("Sin Guardián",
+ * -10), not "zero dots of a linear Trait". `pricingModel: "table"` is what the sheet's shared
+ * Trait-row loop reads; `levels` is the SAME frozen array `chantry-effects.js` prices book-trait
+ * levels from, not a copy of it. With no linear Trait left, the sheet's old 2x/1x rating cap has
+ * nothing left to apply to (design.md D8): every one of these seven validates only against its own
+ * table's range.
  */
 wod.chantry = {
-    traitcost: {
-        "allies": 2,
-        "arcane-cloaking": 2,
-        "backup": 2,
-        "cult-sympathizers": 2,
-        "enhancement": 4,
-        "elders": 2,
-        "integrated-effects": 2,
-        "library": 2,
-        "node": 3,
-        "reality-zone": 5,
-        "requisitions": 4,
-        "resources": 3,
-        "retainers": 2,
-        "spies": 2,
-        // M20 core p.308's Backgrounds, which the Dossier's costed table omits: priced at 2, the cost
-        // every Trait of their class carries in that same table. THAT FIGURE IS THIS PROJECT'S, not
-        // the book's (add-chantry-inventory-effects-and-roster design.md D4) - the reference entities
-        // carry `cost_source: "project"` so a Storyteller can see where the number came from.
-        "familiar": 2,
-        "influence": 2,
-        "wonder": 2,
-        "mentor": 2,
-        "patron": 2,
-        /* add-book-of-chantries-traits, CI-preflight followup (2026-09-08). These six are priced by a
-         * CLOSED TABLE of named levels with a signed cost (book-of-chantries-es.md's Appendix Two),
-         * never a per-dot rate — level 0 is a real, named, priced choice ("Sin Guardián", -10), not
-         * "zero dots of a linear Trait". `pricingModel: "table"` is what the sheet's shared
-         * Trait-row loop reads to tell the two shapes apart; `levels` is the SAME frozen array
-         * `chantry-effects.js` prices book-trait levels from, not a copy of it. */
-        ...Object.fromEntries(BOOK_OF_CHANTRIES_TRAIT_KEYS.map((key) => [
-            key,
-            { pricingModel: "table", levels: BOOK_OF_CHANTRIES_LEVEL_COSTS[key] }
-        ]))
-    },
+    traitcost: Object.fromEntries(BOOK_OF_CHANTRIES_TRAIT_KEYS.map((key) => [
+        key,
+        { pricingModel: "table", levels: BOOK_OF_CHANTRIES_LEVEL_COSTS[key] }
+    ])),
     flavors: [
         "tradition",
         "technocracy"
     ],
+    /* rebuild-chantry-book-of-chantries-only, design.md D7 — the Dossier's five facility-archetype
+     * bands (Escondite/Santuario/Mística/Fortaleza/Centro de Poder) retire alongside the Dossier
+     * itself, replaced by the book's own six power bands (Lamentablemente Débil/Débil/Media/
+     * Fuerte/Poderosa/Muy Poderosa, book-of-chantries-es.md:5459-5464). The only reason the Dossier
+     * bands survived `add-book-of-chantries-traits` was "shared scaffolding, not a choice" (that
+     * change's own D9) — the sole other consumer of a 5-band scale. That reason disappears the
+     * moment the Dossier does.
+     */
     tiers: [
-        "safehouse",
-        "sanctum",
-        "mystic",
-        "fortress",
-        "powercenter"
+        "pitifully-weak",
+        "weak",
+        "average",
+        "strong",
+        "powerful",
+        "very-powerful"
     ]
 }
 

@@ -15,6 +15,7 @@
  * than only in production.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
 	BOOK_OF_CHANTRIES_TRAIT_KEYS,
@@ -26,9 +27,7 @@ import {
 	computeWardsDefensiveWards,
 	computeSphereShiftCost,
 	computeRealmCost,
-	realmQuintessenceUpkeepPerDay,
-	traitCap,
-	isSingleRatingCapTrait
+	realmQuintessenceUpkeepPerDay
 } from "../module/scripts/chantry-effects.js";
 
 let failures = 0;
@@ -45,16 +44,17 @@ function test(name, fn) {
 	}
 }
 
-console.log("chantry-effects.js — the six book-of-chantries Traits (design.md D2/D3)");
+console.log("chantry-effects.js — the seven book-of-chantries Traits (design.md D2/D3/D6)");
 
-test("all six keys are recognised, and only them", () => {
+test("all seven keys are recognised, and only them", () => {
 	assert.deepEqual(BOOK_OF_CHANTRIES_TRAIT_KEYS, [
-		"guardian", "fortification", "wards", "trap-system", "alarm-system", "research-library"
+		"guardian", "fortification", "wards", "trap-system", "alarm-system", "research-library",
+		"laboratories"
 	]);
 	for (const key of BOOK_OF_CHANTRIES_TRAIT_KEYS) {
 		assert.equal(isBookOfChantriesTrait(key), true, key);
 	}
-	assert.equal(isBookOfChantriesTrait("allies"), false, "a linear Trait is not one of the six");
+	assert.equal(isBookOfChantriesTrait("allies"), false, "the Dossier's Traits are retired outright");
 	assert.equal(isBookOfChantriesTrait("nope"), false);
 });
 
@@ -72,6 +72,12 @@ test("fortification / wards / trap-system / alarm-system / research-library leve
 	assert.deepEqual(BOOK_OF_CHANTRIES_LEVEL_COSTS["research-library"], [-5, 0, 5, 10, 15]);
 });
 
+test("laboratories: 0 Ninguno (-10) ... 3 Vanguardistas (+10) (design.md D6)", () => {
+	assert.deepEqual(BOOK_OF_CHANTRIES_LEVEL_COSTS.laboratories, [-10, -5, 5, 10]);
+	assert.equal(bookTraitLevelCost("laboratories", 0), -10);
+	assert.equal(bookTraitLevelCost("laboratories", 3), 10);
+});
+
 test("a level outside the table's own range is undefined, never extrapolated (design.md D3)", () => {
 	assert.equal(bookTraitLevelCost("guardian", 5), undefined);
 	assert.equal(bookTraitLevelCost("guardian", -1), undefined);
@@ -80,16 +86,14 @@ test("a level outside the table's own range is undefined, never extrapolated (de
 	assert.equal(bookTraitLevelCost("unknown-trait", 0), undefined);
 });
 
-test("none of the six is ever a SINGLE_RATING_CAP_TRAITS member or affected by traitCap's callers " +
-	"(design.md D3 — the 2x/1x cap simply does not apply to them)", () => {
-	for (const key of BOOK_OF_CHANTRIES_TRAIT_KEYS) {
-		assert.equal(isSingleRatingCapTrait(key), false, key);
-	}
-	// traitCap() itself is agnostic to the key (it only checks SINGLE_RATING_CAP_TRAITS membership),
-	// so calling it on a book-of-chantries key would silently apply the DEFAULT 2x rule — which is
-	// exactly why `_prepareContext` must never call it for one of these six. Documented here so a
-	// future reader who greps `traitCap(` finds the rule, not just the sheet's own comment.
-	assert.equal(traitCap("guardian", 1), 2, "traitCap has no opinion of its own about these keys");
+test("none of the seven carries a rating-derived cap any more (design.md D8: the Dossier's 2x/1x " +
+	"rule is retired outright, not merely inapplicable)", () => {
+	// `traitCap`/`isSingleRatingCapTrait`/`SINGLE_RATING_CAP_TRAITS` are GONE from this module
+	// (rebuild-chantry-book-of-chantries-only): with no linear Trait left, there is nothing left to
+	// cap at 2x/1x, so there is no longer a function whose absence-of-effect needs asserting here.
+	const src = readFileSync(new URL("../module/scripts/chantry-effects.js", import.meta.url), "utf8");
+	assert.ok(!/export function traitCap/.test(src),
+		"traitCap() reappeared; the 2x/1x cap machinery should stay retired");
 });
 
 console.log("chantry-effects.js — wards.defensiveLevels (design.md D8)");

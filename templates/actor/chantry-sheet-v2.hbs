@@ -2,12 +2,14 @@
   rebuild-chantry-sheet-v2 — the ApplicationV2 replacement for templates/actor/chantry-sheet.html.
 
   THIS IS THE `traits` PART, not the whole sheet any more (add-chantry-inventory-effects-and-roster,
-  task 3.1). `ChantryActorSheetV2` grew three tabs — Rasgos (this file), Efectos
-  (`chantry-effects-v2.hbs`) and Equipo (the SHARED `v3/gear.hbs`) — plus the rail
-  (`v3/navigation.hbs`). The file KEEPS ITS NAME on purpose: it is the sheet's home tab and its
-  content is unchanged bar the roster include, and two preflight gates
-  (`test-chantry-trait-eye.mjs`, `test-chantry-trait-order.mjs`) read this path by name. Renaming it
-  would have been churn with a gate-shaped cost and no benefit.
+  task 3.1). `ChantryActorSheetV2` has three tabs today — Rasgos (this file), Censo
+  (the SHARED `v3/connections.hbs`) and Equipo (the SHARED `v3/gear.hbs`) — plus the rail
+  (`v3/navigation.hbs`). Efectos (`chantry-effects-v2.hbs`) was the fourth tab until
+  `rebuild-chantry-book-of-chantries-only` retired Integrated Effects outright and deleted that
+  file (design.md D2) — Rasgos now also carries the Realm+Node and Personnel blocks that used to
+  sit alongside it here. The file KEEPS ITS NAME on purpose: it is the sheet's home tab and two
+  preflight gates (`test-chantry-trait-eye.mjs`, `test-chantry-trait-order.mjs`) read this path by
+  name. Renaming it would have been churn with a gate-shaped cost and no benefit.
 
   ApplicationV2 IS the `<form>` for this sheet (DocumentSheetV2's default `tag` is "form"), so
   `wod20`/`wod-sheet`/`chantry` (plus whatever the render hook adds -
@@ -218,6 +220,28 @@
 									{{/if}}
 								</div>
 							{{/if}}
+
+							{{!-- rebuild-chantry-book-of-chantries-only, design.md D6 — `laboratories`
+							      carries its own add-on, "Trato Preferencial": a FLAT boolean -2, never
+							      a stepper (the book gives it no scale of its own, unlike wards'
+							      defensiveLevels). Same "keyed off trait.key, rendered next to its own
+							      row and nowhere else" pattern as wards' add-on above. --}}
+							{{#if (eq trait.key "laboratories")}}
+								<div class="pullLeft chantry-laboratories-preferential" title="{{localize 'wod.chantry.bookoftraits.laboratoriespreferential.hint'}}">
+									<span class="chantry-laboratories-preferential-label">{{localize "wod.chantry.bookoftraits.laboratoriespreferential.label"}}:</span>
+									{{#if ../locked}}
+										{{#if ../laboratoriesPreferential}}
+											<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
+										{{else}}
+											<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
+										{{/if}}
+									{{else}}
+										<input type="checkbox" class="editable" name="system.laboratoriesPreferential"
+												data-source="laboratoriespreferential"
+												{{#if ../laboratoriesPreferential}}checked{{/if}} />
+									{{/if}}
+								</div>
+							{{/if}}
 						{{else}}
 							<div class="pullLeft resource-value chantry-trait-value" data-value="{{trait.value}}" data-key="{{trait.key}}">
 								{{#numLoop 10}}
@@ -320,9 +344,16 @@
 			</div>
 
 			{{!-- add-book-of-chantries-traits (task 5.2) — the Horizon Realm block (design.md D4).
-			      The toggle always renders (it is the only way to turn the block on at all); the
-			      eight fields + the upkeep figure render ONLY while `realm.hasRealm` is true, per
-			      the spec's own requirement ("SHALL render no Realm section at all" otherwise). --}}
+			      rebuild-chantry-book-of-chantries-only WIDENS this section with the book's own
+			      Node (design.md D3): an INDEPENDENT purchase from the Realm ("Cada área se compra
+			      por separado", book-of-chantries-es.md:5656) that shares this same render section
+			      because both are optional facility blocks on the same `system.realm` object. BOTH
+			      toggles always render (that is the only way to turn either block on at all — the
+			      same reasoning that already applied to `hasRealm` alone); each block's own detail
+			      fields render ONLY while its own toggle is true, per the spec's own requirement
+			      ("SHALL render no Realm+Node section at all" when BOTH are false — read here, as
+			      it already was for `hasRealm` alone, as "no DETAIL FIELDS", since the toggles
+			      themselves are how a Storyteller reaches either block in the first place). --}}
 			<div class="clearareaBox area-box chantry-realm">
 
 				<div class="sheet-headline sheet-banner splatFont">
@@ -513,6 +544,223 @@
 					</div>
 				{{/if}}
 
+				{{!-- rebuild-chantry-book-of-chantries-only, design.md D3 — el Nodo del libro, una
+				      compra independiente del Reino. `nodeBattery`/`nodeTass` son INFORMATIVOS
+				      (nunca se suman al pool, D3/D5): se pintan como checkboxes de solo lectura de
+				      la nota, no como controles que compran algo. --}}
+				<div class="clearareaBox row chantry-realm-toggle-row" data-field="hasNode">
+					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.hasnode"}}</div>
+					{{#if locked}}
+						{{#if realm.hasNode}}
+							<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
+						{{else}}
+							<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
+						{{/if}}
+					{{else}}
+						<input type="checkbox" class="editable" name="system.realm.hasNode" data-source="realmhasnode"
+								{{#if realm.hasNode}}checked{{/if}} />
+					{{/if}}
+
+					{{!-- La puerta del censo del Nodo (roster re-homed): mismo patrón que la de un
+					      Rasgo con censo, pero fuera del bucle de Rasgos. Siempre visible, con o sin
+					      datos, bloqueada o no — la misma disciplina «una affordance cuya PRESENCIA
+					      depende del dato» que ya justifica el icono de `guardian`. --}}
+					{{#if realm.roster}}
+						<i class="pullLeft pointer icon collapsible button fa-solid fa-list-ul chantry-node-roster-eye"
+								title="{{localize 'wod.chantry.roster.show'}} ({{realm.roster.used}} / {{realm.roster.allowed}})"
+								data-rosterkey="node"
+								data-labelkey="wod.chantry.realm.fields.nodesize"></i>
+					{{/if}}
+				</div>
+
+				{{#if realm.hasNode}}
+					<div class="chantry-realm-fields chantry-node-fields">
+
+						{{#with realm.nodeSize as |field|}}
+							<div class="clearareaBox row chantry-realm-field-row" data-field="nodeSize">
+								<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.nodesize"}}</div>
+								{{#if ../locked}}
+									<input class="pullLeft inputdata chantry-locked-value" type="text"
+											value="{{localize field.currentlabelkey}}" disabled />
+								{{else}}
+									<select class="pullLeft inputdata editable" name="system.realm.nodeSize"
+											data-source="realmfield" data-field="nodeSize">
+										<option value="" {{#if field.notbuilt}}selected{{/if}}>{{localize "wod.chantry.bookoftraits.notbuilt"}}</option>
+										{{#each field.options as |option|}}
+											<option value="{{option.level}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
+										{{/each}}
+									</select>
+								{{/if}}
+							</div>
+						{{/with}}
+
+						<div class="clearareaBox row chantry-realm-field-row" data-field="nodeNamed">
+							<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.nodenamed"}}</div>
+							{{#if locked}}
+								{{#if realm.nodeNamed}}
+									<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
+								{{else}}
+									<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
+								{{/if}}
+							{{else}}
+								<input type="checkbox" class="editable" name="system.realm.nodeNamed"
+										data-source="realmfield" data-field="nodeNamed"
+										{{#if realm.nodeNamed}}checked{{/if}} />
+							{{/if}}
+						</div>
+
+						{{!-- INFORMATIVOS: nunca gatean el candado ni el `data-source`, porque no
+						      escriben nada que el pool sume (D3/D5) — solo anotan lo que el Narrador
+						      resolvió por su cuenta en una tirada extendida. --}}
+						<div class="clearareaBox row chantry-realm-field-row" data-field="nodeBattery">
+							<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.nodebattery"}}</div>
+							{{#if locked}}
+								{{#if realm.nodeBattery}}
+									<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
+								{{else}}
+									<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
+								{{/if}}
+							{{else}}
+								<input type="checkbox" class="editable" name="system.realm.nodeBattery"
+										data-source="realmfield" data-field="nodeBattery"
+										{{#if realm.nodeBattery}}checked{{/if}} />
+							{{/if}}
+						</div>
+
+						<div class="clearareaBox row chantry-realm-field-row" data-field="nodeTass">
+							<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.nodetass"}}</div>
+							{{#if locked}}
+								{{#if realm.nodeTass}}
+									<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
+								{{else}}
+									<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
+								{{/if}}
+							{{else}}
+								<input type="checkbox" class="editable" name="system.realm.nodeTass"
+										data-source="realmfield" data-field="nodeTass"
+										{{#if realm.nodeTass}}checked{{/if}} />
+							{{/if}}
+						</div>
+
+					</div>
+				{{/if}}
+
+			</div>
+
+			{{!-- rebuild-chantry-book-of-chantries-only, design.md D4 — el bloque Personal
+			      (Sirvientes y Acólitos). Sustituye a retainers/backup/cult-sympathizers/elders/spies
+			      del Dossier, retirados. `staffTier` es el ÚNICO campo de este bloque con censo. --}}
+			<div class="clearareaBox area-box chantry-personnel">
+
+				<div class="sheet-headline sheet-banner splatFont">
+					<span class="sheet-banner-text">{{localize "wod.chantry.personnel.headline"}}</span>
+				</div>
+
+				<div class="clearareaBox row chantry-personnel-field-row" data-field="staffTier">
+					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.personnel.stafftier"}}</div>
+					{{#with personnel.staffTier as |field|}}
+						{{#if ../locked}}
+							<input class="pullLeft inputdata chantry-locked-value" type="text"
+									value="{{localize field.currentlabelkey}}" disabled />
+						{{else}}
+							<select class="pullLeft inputdata editable" name="system.personnel.staffTier"
+									data-source="personnelfield" data-field="staffTier">
+								<option value="" {{#if field.notbuilt}}selected{{/if}}>{{localize "wod.chantry.bookoftraits.notbuilt"}}</option>
+								{{#each field.options as |option|}}
+									<option value="{{option.level}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
+								{{/each}}
+							</select>
+						{{/if}}
+					{{/with}}
+
+					{{!-- La puerta del censo de `staffTier` — mismo patrón que la del Nodo. --}}
+					{{#if personnel.roster}}
+						<i class="pullLeft pointer icon collapsible button fa-solid fa-list-ul chantry-personnel-roster-eye"
+								title="{{localize 'wod.chantry.roster.show'}} ({{personnel.roster.used}} / {{personnel.roster.allowed}})"
+								data-rosterkey="staffTier"
+								data-labelkey="wod.chantry.personnel.stafftier"></i>
+					{{/if}}
+				</div>
+
+				<div class="clearareaBox row chantry-personnel-field-row" data-field="staffLoyalty">
+					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.personnel.staffloyalty"}}</div>
+					{{#with personnel.staffLoyalty as |field|}}
+						{{#if ../locked}}
+							<input class="pullLeft inputdata chantry-locked-value" type="text"
+									value="{{localize field.currentlabelkey}}" disabled />
+						{{else}}
+							<select class="pullLeft inputdata editable" name="system.personnel.staffLoyalty"
+									data-source="personnelfield" data-field="staffLoyalty">
+								<option value="" {{#if field.notbuilt}}selected{{/if}}>{{localize "wod.chantry.bookoftraits.notbuilt"}}</option>
+								{{#each field.options as |option|}}
+									<option value="{{option.level}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
+								{{/each}}
+							</select>
+						{{/if}}
+					{{/with}}
+				</div>
+
+				<div class="clearareaBox row chantry-personnel-field-row" data-field="hereditaryStaff">
+					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.personnel.hereditarystaff"}}</div>
+					{{#if locked}}
+						{{#if personnel.hereditaryStaff}}
+							<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
+						{{else}}
+							<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
+						{{/if}}
+					{{else}}
+						<input type="checkbox" class="editable" name="system.personnel.hereditaryStaff"
+								data-source="personnelfield" data-field="hereditaryStaff"
+								{{#if personnel.hereditaryStaff}}checked{{/if}} />
+					{{/if}}
+				</div>
+
+				<div class="clearareaBox row chantry-personnel-field-row" data-field="military">
+					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.personnel.military"}}</div>
+					{{#if locked}}
+						{{#if personnel.military}}
+							<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
+						{{else}}
+							<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
+						{{/if}}
+					{{else}}
+						<input type="checkbox" class="editable" name="system.personnel.military"
+								data-source="personnelfield" data-field="military"
+								{{#if personnel.military}}checked{{/if}} />
+					{{/if}}
+				</div>
+
+				{{!-- `consorts` — la única lista repetible del bloque, mismo patrón que
+				      `sphereShifts` del Reino: sin tope superior, coste 2 ptos/nivel de poder. --}}
+				<div class="chantry-personnel-consorts">
+					<div class="pullLeft headlineNormal">{{localize "wod.chantry.personnel.consorts"}}</div>
+
+					{{#if personnel.consorts.length}}
+						{{#each personnel.consorts as |consort|}}
+							<div class="clearareaBox row chantry-personnel-consort-row" data-index="{{consort.index}}">
+								{{#if ../locked}}
+									<span class="chantry-locked-value">{{localize "wod.chantry.personnel.consortpowerlevel"}} {{consort.powerLevel}}</span>
+								{{else}}
+									<input class="inputdata resource-value-input" type="number" min="0" data-source="personnelconsort"
+											data-index="{{consort.index}}" value="{{consort.powerLevel}}"
+											title="{{localize 'wod.chantry.personnel.consortpowerlevel'}}" />
+									<i class="pullLeft pointer icon fa-solid fa-trash chantry-personnel-consort-remove"
+											data-action="personnelConsortDelete" data-index="{{consort.index}}"
+											title="{{localize 'wod.chantry.personnel.consortremove'}}"></i>
+								{{/if}}
+							</div>
+						{{/each}}
+					{{else}}
+						<div class="chantry-personnel-consorts-empty">{{localize "wod.chantry.personnel.consortsempty"}}</div>
+					{{/if}}
+
+					{{#unless locked}}
+						<i class="pullLeft pointer icon fa-solid fa-plus chantry-personnel-consort-add"
+								data-action="personnelConsortAdd"
+								title="{{localize 'wod.chantry.personnel.consortadd'}}"></i>
+					{{/unless}}
+				</div>
+
 			</div>
 
 			{{!-- add-book-of-chantries-traits (task 5.2) — narrative descriptors: read-only tags,
@@ -540,7 +788,7 @@
 									{{tag.fallbacklabel}}
 								{{/if}}
 								<span class="chantry-descriptor-tag-cost">({{signed tag.pointValue}})</span>
-								{{#unless locked}}
+								{{#unless ../locked}}
 									<i class="pointer icon fa-solid fa-xmark chantry-descriptor-tag-remove"
 											data-action="descriptorRemove" data-id="{{tag.id}}"
 											title="{{localize 'wod.chantry.descriptors.remove'}}"></i>

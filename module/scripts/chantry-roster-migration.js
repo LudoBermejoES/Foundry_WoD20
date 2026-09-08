@@ -37,7 +37,21 @@
  * Retirarlo es otro cambio, con su propia decisión.
  */
 
-import { ROSTER_TRAIT_KEYS, normaliseRosters, normalisePoints } from "./chantry-effects.js";
+import { LEGACY_TRAITROSTERS_MAP_KEYS, normaliseRosters, normalisePoints } from "./chantry-effects.js";
+
+/*
+ * rebuild-chantry-book-of-chantries-only — ESTA MIGRACIÓN LEE `LEGACY_TRAITROSTERS_MAP_KEYS`, NO
+ * `ROSTER_TRAIT_KEYS`. El censo VIVO pasó de ocho claves (allies/retainers/spies/backup/elders/
+ * cult-sympathizers/library/node) a tres (guardian/staffTier/node, y el `node` de hoy es un Rasgo
+ * DISTINTO del Dossier). `system.traitRosters` — el portador que ESTA migración vacía — nunca se
+ * escribió con ninguna de las tres claves nuevas: solo existió, siempre, con las ocho del Dossier.
+ * Si este fichero leyera `ROSTER_TRAIT_KEYS` (la vocación VIVA de hoy) en vez de la lista congelada
+ * de abajo, un mundo con censo Dossier todavía sin migrar dejaría de encontrarlo — `normaliseRosters`
+ * tiraría las ocho claves por no reconocerlas, `hasCensusToMigrate` respondería `false`, y ese dato
+ * quedaría varado en un campo que ya no lee ninguna hoja, sin aviso. Las dos listas se desacoplan
+ * a propósito: una es la vocación del censo HOY, la otra es la forma que tuvo SIEMPRE el portador
+ * que se está vaciando.
+ */
 
 /** El scope y la ruta de la bandera de respaldo. Un solo sitio, para que el paseo y el test coincidan. */
 export const MIGRATION_FLAG_SCOPE = "worldofdarkness";
@@ -67,8 +81,8 @@ export const ATTEMPT_FLAG_KEY = "migration.traitRostersAttempted";
  * @returns {boolean}
  */
 export function hasCensusToMigrate(rawRosters) {
-	const rosters = normaliseRosters(rawRosters);
-	return ROSTER_TRAIT_KEYS.some((key) => (rosters[key]?.length ?? 0) > 0);
+	const rosters = normaliseRosters(rawRosters, LEGACY_TRAITROSTERS_MAP_KEYS);
+	return LEGACY_TRAITROSTERS_MAP_KEYS.some((key) => (rosters[key]?.length ?? 0) > 0);
 }
 
 /**
@@ -86,10 +100,10 @@ export function hasCensusToMigrate(rawRosters) {
  * @returns {Array<object>} datos de creación de Items, en orden
  */
 export function planCensusMigration(rawRosters, makeItemData) {
-	const rosters = normaliseRosters(rawRosters);
+	const rosters = normaliseRosters(rawRosters, LEGACY_TRAITROSTERS_MAP_KEYS);
 	const plan = [];
 
-	for (const key of ROSTER_TRAIT_KEYS) {
+	for (const key of LEGACY_TRAITROSTERS_MAP_KEYS) {
 		for (const entry of rosters[key] ?? []) {
 			plan.push(makeItemData(key, entry));
 		}
@@ -104,10 +118,10 @@ export function planCensusMigration(rawRosters, makeItemData) {
  * @returns {Record<string, Array<{name: string, points: number}>>}
  */
 export function snapshotFromRosters(rawRosters) {
-	const rosters = normaliseRosters(rawRosters);
+	const rosters = normaliseRosters(rawRosters, LEGACY_TRAITROSTERS_MAP_KEYS);
 	const out = {};
 
-	for (const key of ROSTER_TRAIT_KEYS) {
+	for (const key of LEGACY_TRAITROSTERS_MAP_KEYS) {
 		const entries = rosters[key] ?? [];
 		if (entries.length === 0) continue;
 		out[key] = entries.map((entry) => ({ name: entry.name, points: normalisePoints(entry.points) }));
@@ -129,7 +143,7 @@ export function snapshotFromItems(items) {
 		if (item.system?.type !== "wod.types.connection") continue;
 
 		const relation = item.system?.relation;
-		if (!ROSTER_TRAIT_KEYS.includes(relation)) continue;
+		if (!LEGACY_TRAITROSTERS_MAP_KEYS.includes(relation)) continue;
 
 		(out[relation] ??= []).push({ name: item.name, points: normalisePoints(item.system?.points) });
 	}

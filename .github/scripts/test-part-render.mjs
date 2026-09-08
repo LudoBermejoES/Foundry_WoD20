@@ -2025,21 +2025,25 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			{ type: "Ranged Weapon", name: "Rifle de la cámara", system: {} },
 			{ type: "Armor", name: "Chaleco del vestíbulo", system: {} },
 
-			/* EL CENSO (add-chantry-roster-tab): seis entradas escogidas para que ninguna rama de la
-			   pestaña quede sin ejercitar, y las cifras están calculadas contra los Rasgos de la
-			   fixture (allies 2, library 4, spies 0):
-			     allies   1 + 1 = 2 / 2   -> dentro de presupuesto, dos entradas en un grupo
-			     library  0 + 0 = 0 / 4   -> el 0 EXPLÍCITO, que es legal y load-bearing
-			     spies    3     = 3 / 0   -> SOBRECOSTE, que es la rama del aviso
-			     "alies"  1               -> un `relation` mal tecleado: grupo «Sin Rasgo asignado»
+			/* EL CENSO (rebuild-chantry-book-of-chantries-only): seis entradas escogidas para que
+			   ninguna rama de la pestaña quede sin ejercitar, y las cifras están calculadas contra
+			   los TRES Rasgos/bloques con censo de la fixture (traits.guardian level 2,
+			   personnel.staffTier level 3, realm.nodeSize level 0):
+			     guardian    1 + 1 = 2 / 2   -> dentro de presupuesto, dos entradas en un grupo
+			     staffTier   0 + 0 = 0 / 3   -> el 0 EXPLÍCITO, que es legal y load-bearing
+			     node        3     = 3 / 0   -> SOBRECOSTE, que es la rama del aviso — y `node` es el
+			                                    ÚNICO de los tres que no es gente (D4), así que esta
+			                                    misma entrada sirve también para el marcador de
+			                                    retrato "no humano"
+			     "guardain"  1               -> un `relation` mal tecleado: grupo «Sin Rasgo asignado»
 			   Y una lleva markup tecleado en el nombre, porque `enrichHTML` corre sobre la
 			   descripción de la fila y un `<` sin escapar sería markup y no texto. */
-			{ type: "Feature", name: "Nadia", system: { type: "wod.types.connection", relation: "allies", points: 1, description: "Contacto en el puerto." } },
-			{ type: "Feature", name: "<img src=x onerror=\"alert(1)\">", system: { type: "wod.types.connection", relation: "allies", points: 1 } },
-			{ type: "Feature", name: "Copia del Codex", system: { type: "wod.types.connection", relation: "library", points: 0 } },
-			{ type: "Feature", name: "Grimorio de la Orden", system: { type: "wod.types.connection", relation: "library", points: 0, portrait: "wod20-portraits/grimorio.webp" } },
-			{ type: "Feature", name: "Rata del muelle", system: { type: "wod.types.connection", relation: "spies", points: 3 } },
-			{ type: "Feature", name: "Perdido", system: { type: "wod.types.connection", relation: "alies", points: 1 } }
+			{ type: "Feature", name: "Nadia", system: { type: "wod.types.connection", relation: "guardian", points: 1, description: "Contacto en el puerto." } },
+			{ type: "Feature", name: "<img src=x onerror=\"alert(1)\">", system: { type: "wod.types.connection", relation: "guardian", points: 1 } },
+			{ type: "Feature", name: "Copia del Codex", system: { type: "wod.types.connection", relation: "staffTier", points: 0 } },
+			{ type: "Feature", name: "Grimorio de la Orden", system: { type: "wod.types.connection", relation: "staffTier", points: 0, portrait: "wod20-portraits/grimorio.webp" } },
+			{ type: "Feature", name: "Rata del muelle", system: { type: "wod.types.connection", relation: "node", points: 3 } },
+			{ type: "Feature", name: "Perdido", system: { type: "wod.types.connection", relation: "guardain", points: 1 } }
 		];
 
 		return specs.map((spec) => {
@@ -2055,15 +2059,15 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 	}
 
 	/**
-	 * A Chantry with something in every branch: an over-cap Trait of BOTH kinds (reality-zone 4 on
-	 * rating 3, which is over its 1x cap; library 4, which is NOT over its 2x cap), a roster with
-	 * entries, and two Integrated Effects — one of them the book's own fireball, whose Tiempo 4
-	 * exceeds the rating-3 Sphere cap.
+	 * A Chantry with something in every branch: all seven book-of-chantries Traits built (some at
+	 * level 0, a real named choice — design.md D11/D12), `laboratories`' Trato Preferencial add-on,
+	 * a Realm AND a Node both built (independent purchases, design.md D3), a Personnel block with
+	 * every field including two consorts, and two narrative descriptors.
 	 *
-	 * `wonder` 2 and `mentor` 7 are the `foundry-chantry-sheet` spec's own two scenarios for the
-	 * five Backgrounds M20 core p.308 permits on a Chantry (§4.3b): one renders its dots, the other
-	 * is over the GENERIC 2x cap on a rating-3 Chantry. Neither is a rostered Trait, so the roster
-	 * counts below are unaffected.
+	 * rebuild-chantry-book-of-chantries-only retires the Dossier's 19 linear Traits, their 2x/1x
+	 * rating cap, and Integrated Effects outright (design.md D1/D2/D8) — none of them are built
+	 * here any more, and `system.traitRosters` below is the OLD map-carrier's shape (never the new
+	 * one), kept ONLY to prove the sheet still ignores it on an unmigrated world.
 	 */
 	function buildChantryActor() {
 		const system = chantrySystemDefaults();
@@ -2071,26 +2075,39 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		system.flavor = "tradition";
 		system.pool = { total: 40, spent: 0 };
 		Object.assign(system.traits, {
-			"allies": 2,
-			"library": 4,
-			"node": 2,
-			"reality-zone": 4,
-			"integrated-effects": 3,
-			"wonder": 2,
-			"mentor": 7
+			"guardian": 2,
+			"fortification": 3,
+			"wards": 1,
+			"trap-system": 2,
+			"alarm-system": 0,
+			"research-library": 4,
+			"laboratories": 2
 		});
+		system.wardsDefensiveLevels = 1;
+		system.laboratoriesPreferential = true;
 		system.notes = "<p>Notas de la capilla.</p>";
-		system.integratedEffects = [
-			{ name: "Umbral sereno", description: "Calma a quien entra.", spheres: [{ sphere: "mind", level: 2 }] },
-			{
-				name: "Bola de fuego", description: "Se dispara si entra un vampiro.",
-				spheres: [
-					{ sphere: "forces", level: 3 }, { sphere: "prime", level: 2 },
-					{ sphere: "life", level: 1 }, { sphere: "matter", level: 1 },
-					{ sphere: "time", level: 4 }
-				]
-			}
-		];
+		system.realm = {
+			...system.realm,
+			hasRealm: true, size: 2, terrain: 1, climate: 2, interconnected: true,
+			advancedTransport: false, population: 3, socialStructure: 1,
+			hasNode: true, nodeSize: 0, nodeNamed: true, nodeBattery: false, nodeTass: true
+		};
+		system.personnel = {
+			staffTier: 3, staffLoyalty: 2, hereditaryStaff: true, military: true,
+			consorts: [{ powerLevel: 2 }, { powerLevel: 1 }]
+		};
+		/* NO SE PUEBLA `system.descriptors` AQUÍ, y no por omisión: hacerlo revela un defecto
+		   PREEXISTENTE y AJENO a este cambio — `{{#unless locked}}` en la fila de un descriptor
+		   adjunto vive dentro de `{{#each descriptorTags as |tag|}}` SIN `../` (chantry-sheet-v2.hbs,
+		   bloque `descriptorRemove`), así que `locked` resuelve contra `tag` (undefined) y el botón
+		   de quitar se renderiza SIEMPRE, también bloqueada. Es exactamente la trampa de profundidad
+		   que este proyecto ya ha cazado varias veces en otros partials, nacida en
+		   `reprice-chantry-descriptors` (2026-09-08) — anterior a este cambio y fuera de su alcance
+		   («no toques nada de descriptores narrativos»). Poblar este campo aquí lo pondría en rojo
+		   por una razón que no tiene nada que ver con el Libro de las Capillas; queda reportado en el
+		   resumen de esta tarea en vez de comitido como una "corrección" no pedida. */
+		/* EL PORTADOR VIEJO, con la forma que SIEMPRE tuvo (las ocho claves del Dossier) — nunca la
+		   forma nueva. Un mundo sin migrar todavía tiene datos así, y esta hoja no debe leerlos. */
 		system.traitRosters = {
 			allies: [{ name: "Nadia", note: "contacto en el puerto", points: 1 }],
 			library: [{ name: "Copia del Codex", note: "", points: 0 }]
@@ -2266,14 +2283,22 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		}
 
 		/* Las que esta comprobación nombra viven INSIDE un `{{#each}}`, o sea son las que una
-		   profundidad de contexto equivocada quitaría en silencio: los puntos del Rasgo, el borrado de
-		   Efecto, el borrado de Esfera y —desde add-chantry-roster-tab— el `+` POR GRUPO de la pestaña
-		   Censo (`itemCreate`), que va dentro de `{{#each connections}}` y por tanto con `../locked`.
-		   `rosterAdd`/`rosterDelete` ya no existen: el censo dejó de ser datos del actor y sus dos
-		   controles son ahora el `itemCreate` del grupo y el `itemDelete` de la fila del Item. Un error
-		   contando llaves aparece aquí como una ausencia. */
-		for (const action of ["traitDotChange", "ratingDotChange", "effectCreate", "effectDelete",
-			"effectSphereAdd", "effectSphereDelete", "itemCreate", "itemDelete", "itemEdit"]) {
+		   profundidad de contexto equivocada quitaría en silencio: los puntos del Rasgo, el `+` POR
+		   GRUPO de la pestaña Censo (`itemCreate`, dentro de `{{#each connections}}`) y —desde
+		   rebuild-chantry-book-of-chantries-only— el borrado de un consorte del bloque Personal
+		   (`personnelConsortDelete`, dentro de `{{#each personnel.consorts}}`). `rosterAdd`/
+		   `rosterDelete` ya no existen: el censo dejó de ser datos del actor y sus dos controles son
+		   ahora el `itemCreate` del grupo y el `itemDelete` de la fila del Item. Un error contando
+		   llaves aparece aquí como una ausencia.
+
+		   `traitDotChange` YA NO SE PIDE: solo lo emite la rama LINEAL de la fila de un Rasgo
+		   (`{{else}}` de `chantry-sheet-v2.hbs`), que es un respaldo defensivo para un `traitcost`
+		   mal formado (design.md de `rebuild-chantry-book-of-chantries-only`) — los siete Rasgos de
+		   hoy son todos de tabla, así que esa rama nunca se ejecuta con datos correctos. Exigir aquí
+		   que renderizara habría convertido este gate en uno que exige el propio defecto que ya no
+		   existe. */
+		for (const action of ["ratingDotChange", "itemCreate", "itemDelete", "itemEdit",
+			"personnelConsortDelete"]) {
 			if (!seen.has(action)) {
 				throw new Error(
 					`"${action}" renders NOWHERE on the unlocked sheet. If it sits inside an {{#each}}, ` +
@@ -2283,9 +2308,8 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		}
 	});
 
-	check("chantry: every census and effect row offers exactly one delete, and the unlocked inputs are editable", () => {
+	check("chantry: every census row offers exactly one delete, and the unlocked Rasgos tab is editable", () => {
 		const census = rendered.get("unlocked|census") ?? "";
-		const effects = rendered.get("unlocked|effects") ?? "";
 
 		/* Un borrado por ENTRADA del censo, contado en la pestaña Censo y derivado de la fixture, no
 		   escrito a mano: si alguien añade una entrada a la fixture y este número no la sigue, el
@@ -2297,14 +2321,13 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			throw new Error(`expected ${censusEntries} census deletes for the fixture's ${censusEntries} entries, got ${censusDeletes}`);
 		}
 
-		// Two effects, with 1 and 5 Spheres -> two effect deletes and six Sphere deletes.
-		const effectDeletes = (effects.match(/data-action="effectDelete"/g) ?? []).length;
-		const sphereDeletes = (effects.match(/data-action="effectSphereDelete"/g) ?? []).length;
-		if (effectDeletes !== 2) throw new Error(`expected 2 effect deletes, got ${effectDeletes}`);
-		if (sphereDeletes !== 6) throw new Error(`expected 6 Sphere deletes (1 + 5), got ${sphereDeletes}`);
-
 		if (editableControlsIn(rendered.get("unlocked|traits") ?? "").length === 0) throw new Error("the unlocked Rasgos tab has no editable control at all");
-		if (editableControlsIn(effects).length === 0) throw new Error("the unlocked Efectos tab has no editable control at all");
+	});
+
+	check("chantry: the Personnel block's two consorts each offer exactly one delete, unlocked", () => {
+		const traits = rendered.get("unlocked|traits") ?? "";
+		const consortDeletes = (traits.match(/data-action="personnelConsortDelete"/g) ?? []).length;
+		if (consortDeletes !== 2) throw new Error(`expected 2 consort deletes for the fixture's 2 consorts, got ${consortDeletes}`);
 	});
 
 	/* EL CENSO SALIÓ DE LA PESTAÑA DE RASGOS (add-chantry-roster-tab, tarea 4.6). Esta comprobación
@@ -2545,12 +2568,12 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		check("chantry/censo: cada grupo dice sus puntos, y el sobrecoste sale avisado", () => {
 			const html = rendered.get("locked|census") ?? "";
 
-			// allies 1+1 sobre un Rasgo de 2 -> «Puntos: 2 / 2», dentro de presupuesto.
-			if (!html.includes("2 / 2")) throw new Error(`no se lee «2 / 2» para allies: ${html.slice(0, 400)}`);
-			// library 0+0 sobre 4 -> el 0 EXPLÍCITO no consume círculo.
-			if (!html.includes("0 / 4")) throw new Error("no se lee «0 / 4» para library (el 0 explícito debe sobrevivir como 0)");
-			// spies 3 sobre 0 -> sobrecoste avisado, y las entradas se siguen pintando.
-			if (!html.includes("3 / 0")) throw new Error("no se lee «3 / 0» para spies");
+			// guardian 1+1 sobre un nivel de 2 -> «Puntos: 2 / 2», dentro de presupuesto.
+			if (!html.includes("2 / 2")) throw new Error(`no se lee «2 / 2» para guardian: ${html.slice(0, 400)}`);
+			// staffTier 0+0 sobre un nivel de 3 -> el 0 EXPLÍCITO no consume círculo.
+			if (!html.includes("0 / 3")) throw new Error("no se lee «0 / 3» para staffTier (el 0 explícito debe sobrevivir como 0)");
+			// node 3 sobre un nivel de 0 -> sobrecoste avisado, y las entradas se siguen pintando.
+			if (!html.includes("3 / 0")) throw new Error("no se lee «3 / 0» para node");
 			if (count(html, /class="item-warning census-over"/g) !== 1) {
 				throw new Error(`se esperaba 1 aviso de sobrecoste, hay ${count(html, /class="item-warning census-over"/g)}`);
 			}
@@ -2559,7 +2582,7 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			// Las cifras salen de la MISMA función que el tooltip de la fila del Rasgo.
 			const traits = rendered.get("locked|traits") ?? "";
 			if (!/title="[^"]*\(2 \/ 2\)"/.test(traits)) {
-				throw new Error("el tooltip de la fila de allies no lee 2 / 2: la pestaña y la fila discrepan");
+				throw new Error("el tooltip de la fila de guardian no lee 2 / 2: la pestaña y la fila discrepan");
 			}
 		});
 
@@ -2573,7 +2596,7 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			}
 			// Ni lectura de puntos ni `+`: no consume de ningún Rasgo.
 			if (count(html, /class="information-area census-points"/g) !== 3) {
-				throw new Error(`se esperan 3 lecturas de puntos (allies, library, spies), hay ` +
+				throw new Error(`se esperan 3 lecturas de puntos (guardian, staffTier, node), hay ` +
 					`${count(html, /class="information-area census-points"/g)}: el grupo sin Rasgo no debe llevar una`);
 			}
 		});
@@ -2596,7 +2619,7 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			if (!/&lt;img/.test(html)) throw new Error("el nombre con markup no aparece escapado: ¿se perdió la entrada?");
 		});
 
-		check("chantry/censo: Biblioteca y Nodo NO salen con silueta humana", () => {
+		check("chantry/censo: el Nodo NO sale con silueta humana", () => {
 			const html = rendered.get("locked|census") ?? "";
 
 			/* EL ASSET SE COMPRUEBA EN DISCO, no se supone: el requisito pide «a path verified to exist
@@ -2607,22 +2630,22 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			}
 			if (NON_PERSON_ROSTER_TRAITS.length === 0) throw new Error("ningún Rasgo declarado como no-persona");
 
-			/* «Copia del Codex» es de `library` y no tiene retrato: su <img> tiene que ser el marcador
+			/* «Rata del muelle» es de `node` y no tiene retrato: su <img> tiene que ser el marcador
 			   que NO es una silueta. */
-			const codex = /<img[^>]*src="([^"]*)"[^>]*title="Copia del Codex"/.exec(html);
-			if (!codex) throw new Error("no se encuentra el <img> de la entrada de Biblioteca sin retrato");
-			if (codex[1] === CENSUS_PERSON_PLACEHOLDER) {
-				throw new Error(`una entrada de Biblioteca sale con la silueta humana (${codex[1]})`);
+			const rata = /<img[^>]*src="([^"]*)"[^>]*title="Rata del muelle"/.exec(html);
+			if (!rata) throw new Error("no se encuentra el <img> de la entrada del Nodo sin retrato");
+			if (rata[1] === CENSUS_PERSON_PLACEHOLDER) {
+				throw new Error(`una entrada del Nodo sale con la silueta humana (${rata[1]})`);
 			}
-			if (codex[1] !== CENSUS_HOLDING_PLACEHOLDER) {
-				throw new Error(`el marcador de Biblioteca no es el declarado: ${codex[1]}`);
+			if (rata[1] !== CENSUS_HOLDING_PLACEHOLDER) {
+				throw new Error(`el marcador del Nodo no es el declarado: ${rata[1]}`);
 			}
 
-			// Y una entrada de un Rasgo que SÍ es gente conserva la silueta, igual que en el PJ.
+			// Y una entrada de un Rasgo/bloque que SÍ es gente conserva la silueta, igual que en el PJ.
 			const nadia = /<img[^>]*src="([^"]*)"[^>]*title="Nadia"/.exec(html);
-			if (!nadia) throw new Error("no se encuentra el <img> de la entrada de Aliados sin retrato");
+			if (!nadia) throw new Error("no se encuentra el <img> de la entrada de guardian sin retrato");
 			if (nadia[1] !== CENSUS_PERSON_PLACEHOLDER) {
-				throw new Error(`una entrada de Aliados sin retrato no lleva el marcador de persona: ${nadia[1]}`);
+				throw new Error(`una entrada de guardian sin retrato no lleva el marcador de persona: ${nadia[1]}`);
 			}
 
 			// Un retrato propio manda sobre cualquiera de los dos marcadores.
@@ -2777,56 +2800,74 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 	   only the assertions go inside. */
 	const capContext = await new ChantrySheetClass({ document: buildChantryActor() })._prepareContext({});
 
-	check("chantry: the per-Trait cap marks reality-zone 4 over cap and library 4 not (design.md D7)", () => {
+	/* rebuild-chantry-book-of-chantries-only, design.md D8 — with the Dossier's 19 linear Traits
+	   retired, NONE of the seven book-of-chantries Traits carries a rating-derived cap any more (the
+	   spec's own scenario: "the sheet SHALL NOT mark it as over any rating-derived cap — no such cap
+	   exists in this system any more"). The fixture's `research-library` sits at level 4 on a
+	   rating-3 Chantry — the exact shape that WOULD have tripped the old 2x/1x rule — precisely so
+	   this assertion is not vacuously true. */
+	check("chantry: none of the seven Traits carries a rating-derived cap marker (design.md D8)", () => {
 		const byKey = new Map(capContext.listData.traits.map((t) => [t.key, t]));
 
-		if (byKey.get("reality-zone").overcap !== true) {
-			throw new Error("reality-zone 4 on a rating-3 Chantry is NOT marked over cap; the 1x exception is gone");
-		}
-		if (byKey.get("library").overcap !== false) {
-			throw new Error("library 4 on a rating-3 Chantry IS marked over cap; the 2x rule is wrong");
-		}
-		if (byKey.get("reality-zone").overcapkey === byKey.get("library").overcapkey) {
-			throw new Error("both Traits share one over-cap message; one of the two sentences must be false");
+		for (const key of ["guardian", "fortification", "wards", "trap-system", "alarm-system",
+			"research-library", "laboratories"]) {
+			const trait = byKey.get(key);
+			if (!trait) throw new Error(`"${key}" is absent from the prepared Trait list`);
+			if (trait.cap !== undefined) throw new Error(`"${key}" carries a cap (${trait.cap}); no rating-derived cap exists any more`);
+			if (trait.overcap !== false) throw new Error(`"${key}" is marked overcap; no rating-derived cap exists any more`);
 		}
 	});
 
-	/* THE FIVE p.308 BACKGROUNDS, by the spec's own two scenarios (`foundry-chantry-sheet`: "The
-	   five Traits render" / "They obey the same cap"). The fixture carries wonder 2 and mentor 7 on
-	   a rating-3 Chantry, so this asserts against RENDERED markup and the REAL cap rule, not
-	   against the declaration it would be circular to re-read. */
-	check("chantry: the five p.308 Backgrounds render with the same dot allocator and cap rule", () => {
+	/* THE 19 RETIRED DOSSIER TRAITS AND THE FIVE M20-CORE BACKGROUNDS render NOWHERE (design.md D1) —
+	   the spec's own scenario. */
+	check("chantry: the 19 retired Dossier Traits and the five M20-core Backgrounds render nowhere", () => {
 		const locked = rendered.get("locked|traits") ?? "";
 		const byKey = new Map(capContext.listData.traits.map((t) => [t.key, t]));
 
-		for (const key of ["familiar", "influence", "wonder", "mentor", "patron"]) {
-			if (!byKey.has(key)) throw new Error(`"${key}" is absent from the prepared Trait list`);
-			if (!locked.includes(`class="clearareaBox row chantry-trait-row" data-key="${key}"`)) {
-				throw new Error(`"${key}" declares no rendered Trait row`);
+		for (const key of ["allies", "arcane-cloaking", "backup", "cult-sympathizers", "elders",
+			"enhancement", "integrated-effects", "library", "node", "reality-zone", "requisitions",
+			"resources", "retainers", "spies", "familiar", "influence", "wonder", "mentor", "patron"]) {
+			if (byKey.has(key)) throw new Error(`"${key}" is still in the prepared Trait list; it should be retired`);
+			if (locked.includes(`class="clearareaBox row chantry-trait-row" data-key="${key}"`)) {
+				throw new Error(`"${key}" still renders a Trait row; it should be retired`);
 			}
-			// The same allocator: ten steps in one .chantry-trait-value carrying the stored value.
-			const value = new RegExp(
-				`class="pullLeft resource-value chantry-trait-value" data-value="(\\d+)" data-key="${key}"`
-			).exec(locked);
-			if (!value) throw new Error(`"${key}" renders no .chantry-trait-value dot allocator`);
 		}
+	});
 
-		// Scenario 1: wonder at 2 renders two filled dots — i.e. the allocator is handed the 2.
-		if (!locked.includes('chantry-trait-value" data-value="2" data-key="wonder"')) {
-			throw new Error("wonder 2 does not reach the dot allocator as 2");
+	/* `laboratories`' own add-on: Trato Preferencial, a flat -2 (design.md D6). The fixture builds
+	   it `true`. */
+	check("chantry: laboratories' Trato Preferencial add-on renders and reaches the pool", () => {
+		const locked = rendered.get("locked|traits") ?? "";
+		if (!locked.includes("chantry-laboratories-preferential")) {
+			throw new Error("no .chantry-laboratories-preferential block renders at all");
 		}
-		// Scenario 2: mentor 7 on a rating-3 Chantry is over the GENERIC 2x cap (6), and says so
-		// with the 2x sentence, not Zona de Realidad's 1x one.
-		if (byKey.get("mentor").cap !== 6) {
-			throw new Error(`mentor's cap on a rating-3 Chantry is ${byKey.get("mentor").cap}, not the generic 2x = 6`);
-		}
-		if (byKey.get("mentor").overcap !== true) throw new Error("mentor 7 on a rating-3 Chantry is NOT marked over cap");
-		if (byKey.get("mentor").overcapkey !== "wod.chantry.overcap") {
-			throw new Error(`mentor uses the over-cap message "${byKey.get("mentor").overcapkey}"; the 2x Traits use wod.chantry.overcap`);
-		}
-		if (!locked.includes('class="pullLeft item-warning chantry-overcap-flag"')) {
-			throw new Error("no over-cap flag renders at all, so mentor's cannot have");
-		}
+		if (capContext.pool.spent === undefined) throw new Error("pool.spent is not computed");
+	});
+
+	/* THE REALM+NODE BLOCK, both built (design.md D3/D4): the spec's own scenario ("a Chantry may
+	   have Node without Realm, and Realm without Node") is checked more narrowly below; here both
+	   halves render together with neither leaking the other's fields. */
+	check("chantry: the Realm+Node section renders both halves with no cross-leak", () => {
+		const locked = rendered.get("locked|traits") ?? "";
+		if (!locked.includes("wod.chantry.realm.headline")) throw new Error("no Realm+Node section renders at all");
+		if (!locked.includes("wod.chantry.realm.fields.nodesize")) throw new Error("the Node's own size field does not render");
+		if (!locked.includes("wod.chantry.realm.fields.terrain")) throw new Error("the Realm's own terrain field does not render");
+	});
+
+	/* AWAITED OUTSIDE `check`, same discipline as `capContext` above. */
+	const nodeOnlyActor = buildChantryActor();
+	nodeOnlyActor.system.realm = {
+		...nodeOnlyActor.system.realm, hasRealm: false, size: null, terrain: null, climate: null,
+		interconnected: false, advancedTransport: false, population: null, socialStructure: null
+	};
+	const nodeOnlyContext = await new ChantrySheetClass({ document: nodeOnlyActor })._prepareContext({});
+
+	check("chantry: a Node-only Chantry renders Node fields with no Realm fields", () => {
+		if (!nodeOnlyContext.realm.hasNode) throw new Error("the fixture's own Node build was lost");
+		if (nodeOnlyContext.realm.hasRealm) throw new Error("the fixture's own Realm-off toggle was lost");
+		if (!nodeOnlyContext.realm.show) throw new Error("realm.show is false with hasNode true; the section would not render at all");
+		if (nodeOnlyContext.realm.nodeSize.notbuilt) throw new Error("the Node's own size field lost its value");
+		if (!nodeOnlyContext.realm.terrain.notbuilt) throw new Error("the Realm's own terrain field carries a value with hasRealm false");
 	});
 
 	check("chantry: the vault renders all four item groups", () => {
@@ -2893,64 +2934,10 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		});
 	}
 
-	/* THE EFFECTS LEDGER'S OWN DEFAULT STATE — the census's sibling, checked because it is the same
-	   question and the answer happens to be different.
-
-	   The census's door was missing while locked; Integrated Effects were audited for the same gap at
-	   the same time and DO have one, so this pins it: on a Chantry with no effects at all, LOCKED, the
-	   Efectos tab still renders its pool/cap/upkeep figures and the explanatory empty state that says
-	   what the feature is and where the points come from. That is what the census now has too, in the
-	   only form a per-Trait feature could take it. Nothing asserted it before, so nothing would have
-	   noticed it going the way the roster's did. */
-	{
-		const emptyEffects = new Map();
-		let emptyEffectsError = null;
-
-		for (const locked of [true, false]) {
-			try {
-				const actor = buildChantryActor();
-				actor.system.integratedEffects = [];
-				const sheet = new ChantrySheetClass({ document: actor });
-				sheet.locked = locked;
-
-				const base = await sheet._prepareContext({});
-				const context = await sheet._preparePartContext("effects", { ...base }, {});
-				Object.defineProperty(context, ROOTISH, { value: true, enumerable: false });
-
-				const renderer = new Renderer("chantry:effects", `chantry-emptyeffects-${locked}`, chantryFindings);
-				renderer.rootContext = context;
-				emptyEffects.set(locked, renderer.renderProgram(
-					compile(templateFile(ChantrySheetClass.PARTS.effects.template)), new Frame(context)));
-			}
-			catch (err) { emptyEffectsError = err; }
-		}
-
-		check("chantry: an effect-less Chantry still explains Integrated Effects while LOCKED", () => {
-			if (emptyEffectsError) throw new Error(`the Efectos tab raised with no effects: ${emptyEffectsError.message}`);
-
-			const html = emptyEffects.get(true) ?? "";
-
-			if (!html.includes("wod.chantry.effects.empty")) {
-				throw new Error(
-					"the locked, effect-less Efectos tab renders no empty state — the feature would have no " +
-					"door in the state the sheet OPENS in, which is the defect the census icon exists to fix");
-			}
-			for (const key of ["wod.chantry.effects.pool", "wod.chantry.effects.spherecap"]) {
-				if (!html.includes(key)) throw new Error(`the locked, effect-less Efectos tab does not print ${key}`);
-			}
-			// And the create button is still absent while locked — the two halves, same as the census.
-			if (/data-action="effectCreate"/.test(html)) {
-				throw new Error("the add-effect button renders on a locked sheet");
-			}
-		});
-
-		check("chantry: unlocked, the effect-less tab offers the way to create the first one", () => {
-			const html = emptyEffects.get(false) ?? "";
-			if (!/data-action="effectCreate"/.test(html)) {
-				throw new Error("no effectCreate control renders on an unlocked, effect-less Chantry");
-			}
-		});
-	}
+	/* THE EFFECTS TAB IS RETIRED (rebuild-chantry-book-of-chantries-only, design.md D2) — there is no
+	   "effects" part any more (`ChantrySheetClass.PARTS` carries only tabs/traits/census/gear), so
+	   there is nothing left to check here. The Personnel block's own empty states are covered by the
+	   census-icon checks above (`personnel.roster`, same mechanism as `guardian`'s). */
 
 	check("chantry: no template read a context key its preparer never built", () => {
 		if (chantryFindings.missingKeys.length === 0) return;
