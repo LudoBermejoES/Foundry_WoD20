@@ -194,8 +194,55 @@ if (SELFTEST) {
 const htmlPath = path.join(ROOT, "templates", "actor", "chantry-sheet-v2.hbs");
 const htmlSrc = fs.readFileSync(htmlPath, "utf8");
 
+/**
+ * The MATCHING `{{/each}}` for the `{{#each}}` opening at `openIdx` - depth-counts every
+ * `{{#tag}}`/`{{/tag}}` pair in between (any tag name, not just `each`), so a block NESTED inside
+ * the Trait loop (an `{{#if}}`, another `{{#each}}`...) cannot be mistaken for the outer close.
+ *
+ * CI-preflight followup (2026-09-08, run 34241724870): before add-book-of-chantries-traits' six
+ * named-level Traits moved INTO this same loop, its body held no nested `{{#each}}` of its own, so
+ * a plain `indexOf("{{/each}}", eachStart)` happened to land on the right tag by accident. The
+ * merged loop now nests `{{#each trait.options as |option|}}` inside it (building each Trait's own
+ * `<select>`), and the naive `indexOf` started returning THAT inner close instead - truncating
+ * `block` before the eye icon it exists to find, so A1/A1b/A3 read "not found" for a control that
+ * was there the whole time. This is the fix, not a loosened assertion: A1/A1b/A3 still require the
+ * exact same markup, just isolated correctly.
+ * @param {string} src
+ * @param {number} openIdx  index of the `{{#each ...}}` opening tag
+ * @returns {number} index of the matching `{{/each}}`, or -1
+ */
+function findMatchingEachClose(src, openIdx) {
+	const bodyStart = src.indexOf("}}", openIdx) + 2;
+	if (bodyStart < 2) return -1;
+
+	// Handlebars comments (`{{!-- ... --}}`, `{{! ... }}`) can quote a `{{#foo}}`/`{{/foo}}` as
+	// DOCUMENTATION - this very file's own header comment does exactly that a few lines above, and
+	// so does the template's own header. A depth counter blind to comments would count that quoted
+	// text as a real tag and desync.
+	const commentSpans = [];
+	const commentRe = /\{\{!--[\s\S]*?--\}\}|\{\{![^}]*\}\}/g;
+	let cm;
+	while ((cm = commentRe.exec(src))) commentSpans.push([cm.index, cm.index + cm[0].length]);
+	const insideComment = (idx) => commentSpans.some(([s, e]) => idx >= s && idx < e);
+
+	const tagRe = /\{\{(#|\/)([a-zA-Z][\w-]*)\b/g;
+	tagRe.lastIndex = bodyStart;
+
+	let depth = 1;
+	let m;
+	while ((m = tagRe.exec(src))) {
+		if (insideComment(m.index)) continue;
+		if (m[1] === "#") depth++;
+		else {
+			depth--;
+			if (depth === 0) return m.index;
+		}
+	}
+	return -1;
+}
+
 const eachStart = htmlSrc.indexOf("{{#each listData.traits as |trait|}}");
-const eachEnd = htmlSrc.indexOf("{{/each}}", eachStart);
+const eachEnd = eachStart === -1 ? -1 : findMatchingEachClose(htmlSrc, eachStart);
 if (eachStart === -1 || eachEnd === -1) {
 	check("A0 the Trait-list {{#each}} block exists in chantry-sheet-v2.hbs", false);
 }

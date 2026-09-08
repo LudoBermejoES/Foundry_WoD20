@@ -1,3 +1,13 @@
+/* CI-preflight followup, 2026-09-08 (run 34241724870) — add-book-of-chantries-traits §5.1/5.2 shipped
+ * the six named-level construction Traits (`guardian`, `fortification`, `wards`, `trap-system`,
+ * `alarm-system`, `research-library`) declared on `template.json`'s `Actor.Chantry.traits` but priced
+ * nowhere in `CONFIG.worldofdarkness.chantry.traitcost` — `test-part-render.mjs`'s own declared===
+ * priced invariant (added by `add-chantry-inventory-effects-and-roster`, for exactly this defect
+ * class) caught it. `BOOK_OF_CHANTRIES_LEVEL_COSTS`/`BOOK_OF_CHANTRIES_TRAIT_KEYS` stay the single
+ * source of truth in `chantry-effects.js`; imported here only to WIDEN `traitcost`'s own key set to
+ * match, not to duplicate the tables. */
+import { BOOK_OF_CHANTRIES_LEVEL_COSTS, BOOK_OF_CHANTRIES_TRAIT_KEYS } from "./scripts/chantry-effects.js";
+
 export const wod = {};
 
 wod.sheettype = {
@@ -49,7 +59,17 @@ wod.chantry = {
         "influence": 2,
         "wonder": 2,
         "mentor": 2,
-        "patron": 2
+        "patron": 2,
+        /* add-book-of-chantries-traits, CI-preflight followup (2026-09-08). These six are priced by a
+         * CLOSED TABLE of named levels with a signed cost (book-of-chantries-es.md's Appendix Two),
+         * never a per-dot rate — level 0 is a real, named, priced choice ("Sin Guardián", -10), not
+         * "zero dots of a linear Trait". `pricingModel: "table"` is what the sheet's shared
+         * Trait-row loop reads to tell the two shapes apart; `levels` is the SAME frozen array
+         * `chantry-effects.js` prices book-trait levels from, not a copy of it. */
+        ...Object.fromEntries(BOOK_OF_CHANTRIES_TRAIT_KEYS.map((key) => [
+            key,
+            { pricingModel: "table", levels: BOOK_OF_CHANTRIES_LEVEL_COSTS[key] }
+        ]))
     },
     flavors: [
         "tradition",

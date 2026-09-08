@@ -10,8 +10,6 @@ import {
 	traitCap,
 	isSingleRatingCapTrait,
 	hasRoster,
-	BOOK_OF_CHANTRIES_TRAIT_KEYS,
-	BOOK_OF_CHANTRIES_LEVEL_COSTS,
 	isBookOfChantriesTrait,
 	bookTraitLevelCost,
 	computeWardsDefensiveWards,
@@ -421,9 +419,66 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		let spent = 0;
 		const traitlist = [];
 
+		/* CI-preflight followup (2026-09-08, run 34241724870) — this used to be a bare loop over the
+		   nineteen LINEAR Traits, with the six book-of-chantries NAMED-LEVEL Traits pushed into a
+		   SEPARATE `data.bookTraits` array by a second loop below, rendered through a second,
+		   parallel `{{#each}}` in the template. `test-part-render.mjs` caught exactly the defect
+		   that shape invites: `template.json` declared 25 Traits on `Actor.Chantry.traits` while
+		   `CONFIG.worldofdarkness.chantry.traitcost` only priced 19 of them, so the row count never
+		   matched the declaration count. `traitcost` now carries all 25 (config.js), each entry
+		   tagged with its OWN pricing model, and this ONE loop builds every row from it - a Trait
+		   declared on the actor and priced here always renders exactly once, through the same
+		   `chantry-trait-row` markup, whichever model it uses. */
 		for (const key in traitcost) {
+			const entry = traitcost[key];
+			const isTablePriced = !!(entry && (typeof entry === "object") && (entry.pricingModel === "table"));
+
+			if (isTablePriced) {
+				/* THE SIX NAMED-LEVEL Traits (add-book-of-chantries-traits, design.md D2/D11/D12):
+				   level 0 is a real, named, priced choice ("Sin Guardián", -10), not "zero dots of a
+				   linear Trait" - so this branch has no dot allocator, no per-Trait cap (D3: these
+				   are never checked against the 2x/1x rating cap) and no roster (none of the six is
+				   in ROSTER_TRAIT_KEYS). */
+				const rawLevel = traits[key];
+				const level = (rawLevel === null || rawLevel === undefined) ? null : parseInt(rawLevel);
+				const cost = (level === null) ? undefined : bookTraitLevelCost(key, level);
+
+				if (cost !== undefined) spent += cost;
+
+				traitlist.push({
+					key: key,
+					label: `wod.chantry.traits.${key}`,
+					descriptionkey: `wod.chantry.traitdescriptions.${key}`,
+					pricingModel: "table",
+					value: level,
+					cost: cost,
+					notbuilt: level === null,
+					// A stored level the table no longer reaches (a hand edit, or a future book
+					// errata shrinking a table) is flagged rather than silently priced at 0 or
+					// thrown on render - the same "degrade to a renderable state" discipline
+					// `evaluateEffects` above already applies to `pooloverflow`.
+					unpriced: (level !== null) && (cost === undefined),
+					// The LOCKED render's plain-text value - resolved here rather than built in the
+					// template with `concat`, so a `null` level (design.md D11's "not built",
+					// distinct from a real level 0) reads as the actual "— No construido —" string
+					// instead of a `concat`-built key ending in the literal text "null".
+					currentlabelkey: (level === null) ? "wod.chantry.bookoftraits.notbuilt" : `wod.chantry.traitlevels.${key}.${level}`,
+					options: entry.levels.map((points, index) => ({
+						level: index,
+						labelkey: `wod.chantry.traitlevels.${key}.${index}`,
+						selected: level === index
+					})),
+					cap: undefined,
+					overcap: false,
+					overcapkey: undefined,
+					roster: null
+				});
+
+				continue;
+			}
+
 			const value = parseInt(traits[key]) || 0;
-			const cost = traitcost[key];
+			const cost = entry;
 
 			spent += value * cost;
 
@@ -444,6 +499,7 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 				key: key,
 				label: `wod.chantry.traits.${key}`,
 				descriptionkey: `wod.chantry.traitdescriptions.${key}`,
+				pricingModel: "linear",
 				value: value,
 				cost: cost,
 				cap: cap,
@@ -482,43 +538,13 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		data.listData = { traits: traitlist };
 
 		/* ======================================================================================
-		 * add-book-of-chantries-traits (task 5.2) — the six NAMED-LEVEL Traits, `wards`' defensive
-		 * add-on, the Horizon Realm block and the narrative-descriptor tag list. ALL FOUR price
-		 * against the SAME `spent` this loop has been accumulating (design.md D2.6/D8/D13) — it is
-		 * not reset or shadowed by a second total, exactly like `integrated-effects`'s own pool
-		 * above never gets one either.
+		 * add-book-of-chantries-traits (task 5.2) — `wards`' defensive add-on, the Horizon Realm
+		 * block and the narrative-descriptor tag list. All three price against the SAME `spent` the
+		 * loop above has been accumulating for all 25 Traits, book-of-chantries ones included since
+		 * the CI-preflight followup (2026-09-08) merged them into it — it is not reset or shadowed
+		 * by a second total, exactly like `integrated-effects`'s own pool above never gets one
+		 * either.
 		 * ====================================================================================== */
-
-		data.bookTraits = BOOK_OF_CHANTRIES_TRAIT_KEYS.map((key) => {
-			const rawLevel = traits[key];
-			const level = (rawLevel === null || rawLevel === undefined) ? null : parseInt(rawLevel);
-			const cost = (level === null) ? undefined : bookTraitLevelCost(key, level);
-
-			if (cost !== undefined) spent += cost;
-
-			return {
-				key: key,
-				label: `wod.chantry.traits.${key}`,
-				value: level,
-				notbuilt: level === null,
-				cost: cost,
-				// A stored level the table no longer reaches (a hand edit, or a future book errata
-				// shrinking a table) is flagged rather than silently priced at 0 or thrown on render
-				// — the same "degrade to a renderable state" discipline `evaluateEffects` above
-				// already applies to `pooloverflow`.
-				unpriced: (level !== null) && (cost === undefined),
-				// The LOCKED render's plain-text value — resolved here rather than built in the
-				// template with `concat`, so a `null` level (design.md D11's "not built", distinct
-				// from a real level 0) reads as the actual "— No construido —" string instead of a
-				// `concat`-built key ending in the literal text "null".
-				currentlabelkey: (level === null) ? "wod.chantry.bookoftraits.notbuilt" : `wod.chantry.traitlevels.${key}.${level}`,
-				options: BOOK_OF_CHANTRIES_LEVEL_COSTS[key].map((points, index) => ({
-					level: index,
-					labelkey: `wod.chantry.traitlevels.${key}.${index}`,
-					selected: level === index
-				}))
-			};
-		});
 
 		const wardsLevel = parseInt(actor.system.wardsDefensiveLevels) || 0;
 		const wardsDefensive = computeWardsDefensiveWards(wardsLevel);
@@ -1168,16 +1194,24 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		const traitcost = CONFIG.worldofdarkness.chantry.traitcost;
 		let spent = 0;
 
+		/* CI-preflight followup (2026-09-08) — `traitcost` now carries all 25 Traits, each entry
+		   tagged with its own pricing model (config.js), so ONE loop prices every one of them; this
+		   used to be two loops (the 19 linear Traits here, the six book-of-chantries ones in a
+		   second pass below) and both had to stay in sync with `_prepareContext`'s own loop by hand. */
 		for (const traitkey in traitcost) {
-			spent += (parseInt(traits[traitkey]) || 0) * traitcost[traitkey];
-		}
+			const entry = traitcost[traitkey];
 
-		for (const bookkey of BOOK_OF_CHANTRIES_TRAIT_KEYS) {
-			const level = traits[bookkey];
-			if ((level === null) || (level === undefined)) continue;
+			if (entry && (typeof entry === "object") && (entry.pricingModel === "table")) {
+				const level = traits[traitkey];
+				if ((level === null) || (level === undefined)) continue;
 
-			const cost = bookTraitLevelCost(bookkey, parseInt(level));
-			if (cost !== undefined) spent += cost;
+				const cost = bookTraitLevelCost(traitkey, parseInt(level));
+				if (cost !== undefined) spent += cost;
+
+				continue;
+			}
+
+			spent += (parseInt(traits[traitkey]) || 0) * entry;
 		}
 
 		spent += computeWardsDefensiveWards(wardsDefensiveLevels).cost;

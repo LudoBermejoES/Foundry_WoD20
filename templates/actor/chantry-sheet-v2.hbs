@@ -158,20 +158,82 @@
 					<div class="chantry-trait-block">
 					<div class="clearareaBox row chantry-trait-row" data-key="{{trait.key}}">
 
-						<div class="pullLeft headlineNormal ability-headlineWidth {{#if trait.overcap}}item-warning{{/if}}">{{localize trait.label}}</div>
+						<div class="pullLeft headlineNormal ability-headlineWidth {{#if (or trait.overcap trait.unpriced)}}item-warning{{/if}}">{{localize trait.label}}</div>
 
-						<div class="pullLeft resource-value chantry-trait-value" data-value="{{trait.value}}" data-key="{{trait.key}}">
-							{{#numLoop 10}}
-								<span class="resource-value-step" data-index="{{this}}" {{#if (eq ../../locked false)}}data-action="traitDotChange"{{/if}}></span>
-							{{/numLoop}}
-						</div>
+						{{!-- CI-preflight followup (2026-09-08, run 34241724870): the six book-of-chantries
+						      NAMED-LEVEL Traits (`guardian`/`fortification`/`wards`/`trap-system`/
+						      `alarm-system`/`research-library`) used to render through a SEPARATE
+						      `{{#each bookTraits}}` loop, in their own `.chantry-book-traits` box, with a
+						      class of their own (`chantry-book-trait-row`) - two parallel rendering paths
+						      for one declared Trait set. `test-part-render.mjs`'s own declared===priced
+						      invariant (`Actor.Chantry.traits` vs `CONFIG.worldofdarkness.chantry.traitcost`)
+						      cannot see a Trait that renders outside this loop at all, so a mismatch between
+						      the two (exactly what happened: 25 declared, only 19 priced) went uncaught.
+						      All 25 now render from THIS ONE loop, through the SAME `chantry-trait-row`
+						      class, branching only on `trait.pricingModel` - design.md D2/D3's actual rule
+						      (level 0 is a real, named, priced choice, never checked against the 2x/1x
+						      rating cap) is preserved; only the RENDERING PATH changed. --}}
+						{{!-- DEPTH NOTE for every `../` below: `{{#if}}`/`{{#unless}}` do NOT push a context
+						      frame in this system's Handlebars runtime (verified against both the offline
+						      harness's `renderBlock` - `if`/`unless` call `renderProgram(node.program, frame)`
+						      with the SAME frame, no `new Frame(...)` - and real Handlebars, which agrees).
+						      Only `{{#each}}`/`{{#with}}` and a registered block helper like `numLoop` push
+						      one. So every `{{#if}}` nested here (`pricingModel`, `trait.key`, the locked
+						      checks) costs ZERO extra `../`, however many of them wrap a given line — the
+						      count is governed ONLY by the real `{{#each}}`/`{{#numLoop}}` frames outside
+						      this `{{#each listData.traits}}` body, exactly as it was before this followup
+						      merged the six book-of-chantries rows into this same loop. --}}
+						{{#if (eq trait.pricingModel "table")}}
+							{{#if ../locked}}
+								<input class="pullLeft inputdata chantry-locked-value" type="text"
+										value="{{localize trait.currentlabelkey}}" disabled />
+							{{else}}
+								<select class="pullLeft inputdata editable" name="system.traits.{{trait.key}}"
+										data-source="booktrait" data-key="{{trait.key}}">
+									<option value="" {{#if trait.notbuilt}}selected{{/if}}>{{localize "wod.chantry.bookoftraits.notbuilt"}}</option>
+									{{#each trait.options as |option|}}
+										<option value="{{option.level}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
+									{{/each}}
+								</select>
+							{{/if}}
 
-						<div class="pullLeft chantry-trait-cost">({{trait.cost}} {{localize "wod.chantry.costperdot"}})</div>
+							{{!-- `wards` alone carries the defensiveLevels add-on: a SEPARATE stepper next
+							      to its own select, never a seventh dot/level position on `wards` itself
+							      (spec requirement, design.md D8/D12). Untouched by this followup - still
+							      keyed off `trait.key`, still rendered next to the `wards` row and nowhere
+							      else, exactly as before the merge. --}}
+							{{#if (eq trait.key "wards")}}
+								<div class="pullLeft chantry-wards-defensive" title="{{localize 'wod.chantry.bookoftraits.wardsdefensive.hint'}}">
+									<span class="chantry-wards-defensive-label">{{localize "wod.chantry.bookoftraits.wardsdefensive.label"}}:</span>
+									{{#if ../locked}}
+										<span class="chantry-locked-value">{{../wardsDefensive.value}}</span>
+									{{else}}
+										<input class="inputdata resource-value-input chantry-wards-defensive-input" type="number" min="0"
+												name="system.wardsDefensiveLevels" data-source="wardsdefensive"
+												value="{{../wardsDefensive.value}}" />
+									{{/if}}
+									{{#if ../wardsDefensive.overcap}}
+										<i class="pullLeft item-warning fa-solid fa-triangle-exclamation"
+												title="{{localize 'wod.chantry.bookoftraits.wardsdefensive.overcap'}}"></i>
+									{{/if}}
+								</div>
+							{{/if}}
+						{{else}}
+							<div class="pullLeft resource-value chantry-trait-value" data-value="{{trait.value}}" data-key="{{trait.key}}">
+								{{#numLoop 10}}
+									<span class="resource-value-step" data-index="{{this}}" {{#if (eq ../../locked false)}}data-action="traitDotChange"{{/if}}></span>
+								{{/numLoop}}
+							</div>
+
+							<div class="pullLeft chantry-trait-cost">({{trait.cost}} {{localize "wod.chantry.costperdot"}})</div>
+						{{/if}}
 
 						{{!-- The message is a per-Trait KEY (`trait.overcapkey`), not the one literal
 						      it used to be: Zona de Realidad caps at the rating ONCE and every other
 						      Trait at twice it (design.md D7), so a single "supera el doble" sentence
-						      was wrong for exactly the Trait whose cap the book states explicitly. --}}
+						      was wrong for exactly the Trait whose cap the book states explicitly.
+						      `trait.overcap` is always false for a table-priced Trait (design.md D3: no
+						      rating-derived cap applies to any of the six), so this never fires for them. --}}
 						{{#if trait.overcap}}
 							<div class="pullLeft item-warning chantry-overcap-flag" title="{{localize trait.overcapkey}}">
 								<i class="fa-solid fa-triangle-exclamation"></i>
@@ -252,63 +314,6 @@
 						{{/if}}
 
 					</div>
-					</div>
-				{{/each}}
-
-			</div>
-
-			{{!-- add-book-of-chantries-traits (task 5.2) — the six NAMED-LEVEL Traits + wards'
-			      defensive add-on. Own box, own control shape (a `<select>` per Trait sized to its
-			      own table, never the 2x/1x dot allocator above): design.md D2/D3 say these six are
-			      priced by table, never by dots, and never checked against the rating-derived cap
-			      at all — mixing them into `.chantry-traits`' `{{#each listData.traits}}` loop would
-			      also have widened `CONFIG.worldofdarkness.chantry.traitcost`, which
-			      `test-chantry-trait-order.mjs`/`test-chantry-trait-eye.mjs` read directly and which
-			      has no per-dot rate to offer for any of these six (design.md D11). --}}
-			<div class="clearareaBox area-box chantry-book-traits">
-
-				<div class="sheet-headline sheet-banner splatFont">
-					<span class="sheet-banner-text">{{localize "wod.chantry.bookoftraits.headline"}}</span>
-				</div>
-
-				{{#each bookTraits as |trait|}}
-					<div class="clearareaBox row chantry-book-trait-row" data-key="{{trait.key}}">
-
-						<div class="pullLeft headlineNormal ability-headlineWidth {{#if trait.unpriced}}item-warning{{/if}}">{{localize trait.label}}</div>
-
-						{{#if ../locked}}
-							<input class="pullLeft inputdata chantry-locked-value" type="text"
-									value="{{localize trait.currentlabelkey}}" disabled />
-						{{else}}
-							<select class="pullLeft inputdata editable" name="system.traits.{{trait.key}}"
-									data-source="booktrait" data-key="{{trait.key}}">
-								<option value="" {{#if trait.notbuilt}}selected{{/if}}>{{localize "wod.chantry.bookoftraits.notbuilt"}}</option>
-								{{#each trait.options as |option|}}
-									<option value="{{option.level}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
-								{{/each}}
-							</select>
-						{{/if}}
-
-						{{!-- `wards` alone carries the defensiveLevels add-on: a SEPARATE stepper next
-						      to its own select, never a seventh dot/level position on `wards` itself
-						      (spec requirement, design.md D8/D12). --}}
-						{{#if (eq trait.key "wards")}}
-							<div class="pullLeft chantry-wards-defensive" title="{{localize 'wod.chantry.bookoftraits.wardsdefensive.hint'}}">
-								<span class="chantry-wards-defensive-label">{{localize "wod.chantry.bookoftraits.wardsdefensive.label"}}:</span>
-								{{#if ../locked}}
-									<span class="chantry-locked-value">{{../wardsDefensive.value}}</span>
-								{{else}}
-									<input class="inputdata resource-value-input chantry-wards-defensive-input" type="number" min="0"
-											name="system.wardsDefensiveLevels" data-source="wardsdefensive"
-											value="{{../wardsDefensive.value}}" />
-								{{/if}}
-								{{#if ../wardsDefensive.overcap}}
-									<i class="pullLeft item-warning fa-solid fa-triangle-exclamation"
-											title="{{localize 'wod.chantry.bookoftraits.wardsdefensive.overcap'}}"></i>
-								{{/if}}
-							</div>
-						{{/if}}
-
 					</div>
 				{{/each}}
 

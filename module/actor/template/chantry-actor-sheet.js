@@ -58,8 +58,20 @@ export default class ChantryActorSheet extends foundry.appv1.sheets.ActorSheet {
 		const traitlist = [];
 
 		for (const key in traitcost) {
-			const value = parseInt(traits[key]) || 0;
 			const cost = traitcost[key];
+
+			/* CI-preflight followup (2026-09-08) — `traitcost` now also carries the six
+			   book-of-chantries named-level Traits (config.js), tagged `{ pricingModel: "table" }`
+			   rather than a bare per-dot number. This legacy sheet is the per-actor rollback
+			   (design.md D1 of rebuild-chantry-sheet-v2) and was never updated for those six - it
+			   has no `<select>`/level-table row to offer them, only the 1-10 dot allocator below,
+			   which is wrong for a named-level Trait. Skipping them here keeps this sheet's own
+			   behaviour exactly what it already was before this followup (it did not render or
+			   price them either, since they were absent from `traitcost` until now) rather than
+			   computing `value * {an object}` into `spent` as `NaN`. */
+			if (cost && (typeof cost === "object") && (cost.pricingModel === "table")) continue;
+
+			const value = parseInt(traits[key]) || 0;
 
 			spent += value * cost;
 
@@ -247,7 +259,13 @@ export default class ChantryActorSheet extends foundry.appv1.sheets.ActorSheet {
 		let spent = 0;
 
 		for (const traitkey in traitcost) {
-			spent += (parseInt(traits[traitkey]) || 0) * traitcost[traitkey];
+			const cost = traitcost[traitkey];
+
+			// See getData()'s own note: the six book-of-chantries named-level Traits are tagged
+			// objects now, not per-dot numbers, and this legacy sheet never offered them a control.
+			if (cost && (typeof cost === "object") && (cost.pricingModel === "table")) continue;
+
+			spent += (parseInt(traits[traitkey]) || 0) * cost;
 		}
 
 		await this.actor.update({
