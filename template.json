@@ -1520,11 +1520,30 @@
 				"influence": 0,
 				"wonder": 0,
 				"mentor": 0,
-				"patron": 0
+				"patron": 0,
+				"guardian": null,
+				"fortification": null,
+				"wards": null,
+				"trap-system": null,
+				"alarm-system": null,
+				"research-library": null
 			},
 			"notes": "",
 			"integratedEffects": [],
-			"traitRosters": {}
+			"traitRosters": {},
+			"wardsDefensiveLevels": 0,
+			"realm": {
+				"hasRealm": false,
+				"size": null,
+				"sphereShifts": [],
+				"terrain": null,
+				"climate": null,
+				"interconnected": false,
+				"advancedTransport": false,
+				"population": null,
+				"socialStructure": null
+			},
+			"descriptors": []
 		}
 	},
 	"Item": {

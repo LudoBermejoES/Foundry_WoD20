@@ -9,13 +9,35 @@ import {
 	normaliseEffects,
 	traitCap,
 	isSingleRatingCapTrait,
-	hasRoster
+	hasRoster,
+	BOOK_OF_CHANTRIES_TRAIT_KEYS,
+	BOOK_OF_CHANTRIES_LEVEL_COSTS,
+	isBookOfChantriesTrait,
+	bookTraitLevelCost,
+	computeWardsDefensiveWards,
+	computeRealmCost,
+	realmQuintessenceUpkeepPerDay,
+	REALM_SIZE_LEVELS,
+	REALM_TERRAIN_LEVELS,
+	REALM_CLIMATE_LEVELS,
+	REALM_POPULATION_LEVELS,
+	REALM_SOCIAL_STRUCTURE_LEVELS
 } from "../../scripts/chantry-effects.js";
 /* add-chantry-roster-tab — el censo se pinta con el MISMO constructor y la MISMA plantilla que el
    censo del PJ. Los dos ficheros están en `scripts/`, no en `PCActorSheet`, precisamente para que
    esta clase pueda usarlos sin heredar nada (D1 sigue en pie; el precedente es `gear-lists.js`). */
 import { buildConnectionGroups, isConnectionEntry } from "../../scripts/connection-groups.js";
 import { censusOptions, decorateCensusGroups, censusItemData } from "../../scripts/chantry-census.js";
+/* add-book-of-chantries-traits — el catálogo de `chantry-descriptor` (design.md D6/D16). Ver la
+   cabecera de ese fichero: son DATOS embebidos en el sistema (id -> categoría), no un compendio, y
+   las cadenas localizadas viven en `lang/*.json` bajo `wod.chantry.descriptors.*`. */
+import {
+	CHANTRY_DESCRIPTOR_CATEGORIES,
+	CHANTRY_DESCRIPTOR_IDS,
+	chantryDescriptorCategory,
+	isKnownChantryDescriptor,
+	descriptorFallbackLabel
+} from "../../scripts/chantry-descriptors.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -161,6 +183,18 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			},
 			ratingDotChange: ChantryActorSheetV2.onRatingDotChange,
 			traitDotChange: ChantryActorSheetV2.onTraitDotChange,
+
+			/* add-book-of-chantries-traits (task 5.2) — the Horizon Realm's `sphereShifts` array and
+			   the narrative-descriptor tag list. The six named-level Traits, `wardsDefensiveLevels`
+			   and the Realm's scalar fields are all `<select>`/`<input>` controls dispatched through
+			   `onSubmitActorForm`'s `data-source` switch (same idiom as `flavor`/`tier`/`pooltotal`
+			   above) rather than declared `actions`, because they are ONE control writing ONE field
+			   each — an `action` entry is for a CLICK (add/remove/toggle a row), which is exactly
+			   what these four are. */
+			realmSphereShiftAdd: ChantryActorSheetV2.onRealmSphereShiftAdd,
+			realmSphereShiftDelete: ChantryActorSheetV2.onRealmSphereShiftDelete,
+			descriptorAdd: ChantryActorSheetV2.onDescriptorAdd,
+			descriptorRemove: ChantryActorSheetV2.onDescriptorRemove,
 
 			/* THE INVENTORY (task 3.4). Three of these are the system's own shared handlers,
 			   imported rather than reimplemented - they are actor-agnostic and already correct:
@@ -446,6 +480,95 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			game.i18n.localize(a.label).localeCompare(game.i18n.localize(b.label), CONFIG.language || undefined));
 
 		data.listData = { traits: traitlist };
+
+		/* ======================================================================================
+		 * add-book-of-chantries-traits (task 5.2) — the six NAMED-LEVEL Traits, `wards`' defensive
+		 * add-on, the Horizon Realm block and the narrative-descriptor tag list. ALL FOUR price
+		 * against the SAME `spent` this loop has been accumulating (design.md D2.6/D8/D13) — it is
+		 * not reset or shadowed by a second total, exactly like `integrated-effects`'s own pool
+		 * above never gets one either.
+		 * ====================================================================================== */
+
+		data.bookTraits = BOOK_OF_CHANTRIES_TRAIT_KEYS.map((key) => {
+			const rawLevel = traits[key];
+			const level = (rawLevel === null || rawLevel === undefined) ? null : parseInt(rawLevel);
+			const cost = (level === null) ? undefined : bookTraitLevelCost(key, level);
+
+			if (cost !== undefined) spent += cost;
+
+			return {
+				key: key,
+				label: `wod.chantry.traits.${key}`,
+				value: level,
+				notbuilt: level === null,
+				cost: cost,
+				// A stored level the table no longer reaches (a hand edit, or a future book errata
+				// shrinking a table) is flagged rather than silently priced at 0 or thrown on render
+				// — the same "degrade to a renderable state" discipline `evaluateEffects` above
+				// already applies to `pooloverflow`.
+				unpriced: (level !== null) && (cost === undefined),
+				// The LOCKED render's plain-text value — resolved here rather than built in the
+				// template with `concat`, so a `null` level (design.md D11's "not built", distinct
+				// from a real level 0) reads as the actual "— No construido —" string instead of a
+				// `concat`-built key ending in the literal text "null".
+				currentlabelkey: (level === null) ? "wod.chantry.bookoftraits.notbuilt" : `wod.chantry.traitlevels.${key}.${level}`,
+				options: BOOK_OF_CHANTRIES_LEVEL_COSTS[key].map((points, index) => ({
+					level: index,
+					labelkey: `wod.chantry.traitlevels.${key}.${index}`,
+					selected: level === index
+				}))
+			};
+		});
+
+		const wardsLevel = parseInt(actor.system.wardsDefensiveLevels) || 0;
+		const wardsDefensive = computeWardsDefensiveWards(wardsLevel);
+		spent += wardsDefensive.cost;
+
+		data.wardsDefensive = {
+			value: wardsLevel,
+			cost: wardsDefensive.cost,
+			aggravatedDamage: wardsDefensive.aggravatedDamage,
+			// Same cap SHAPE as the linear Traits' own `overcap` above (rating x1, design.md D8 — the
+			// one figure of this whole change the book leaves unbounded, and the one finding of its
+			// own cost audit), but this add-on is never a member of `traitcost`'s loop, so it needs
+			// its own flag rather than reusing `trait.overcap`.
+			overcap: (rating > 0) && (wardsLevel > rating)
+		};
+
+		const realm = actor.system.realm ?? {};
+		spent += computeRealmCost(realm);
+
+		data.realm = this._prepareRealmContext(realm);
+
+		const descriptors = Array.isArray(actor.system.descriptors) ? actor.system.descriptors : [];
+
+		data.descriptorTags = descriptors.map((id) => ({
+			id: id,
+			known: isKnownChantryDescriptor(id),
+			labelkey: isKnownChantryDescriptor(id) ? `wod.chantry.descriptors.catalog.${id}` : null,
+			// An id this system's bundled catalogue does not recognise (design.md D16's documented
+			// gap) still renders as SOMETHING rather than a blank tag — see
+			// `chantry-descriptors.js`'s own header for why this can happen at all.
+			fallbacklabel: isKnownChantryDescriptor(id) ? null : descriptorFallbackLabel(id),
+			categorykey: isKnownChantryDescriptor(id)
+				? `wod.chantry.descriptors.categories.${chantryDescriptorCategory(id)}`
+				: null
+		}));
+
+		// The "add" picker: every KNOWN id not already attached, grouped by category in the same
+		// order `CHANTRY_DESCRIPTOR_CATEGORIES` declares them. A category with nothing left to add
+		// (every one of its ids already attached) is dropped rather than rendered as an empty group.
+		const attached = new Set(descriptors);
+
+		data.descriptorPicker = CHANTRY_DESCRIPTOR_CATEGORIES
+			.map((category) => ({
+				category: category,
+				categorykey: `wod.chantry.descriptors.categories.${category}`,
+				options: CHANTRY_DESCRIPTOR_IDS
+					.filter((id) => (chantryDescriptorCategory(id) === category) && !attached.has(id))
+					.map((id) => ({ id: id, labelkey: `wod.chantry.descriptors.catalog.${id}` }))
+			}))
+			.filter((group) => group.options.length > 0);
 
 		data.pool = {
 			total: actor.system.pool?.total ?? 0,
@@ -853,6 +976,108 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		/* Ya no hay rama `roster`: una entrada del censo es un Item con su propia hoja
 		   (add-chantry-roster-tab, D1), así que su nombre, su descripción y sus puntos se editan ahí y
 		   no en tres `<input>` dentro de la fila del Rasgo. */
+
+		/* ---- add-book-of-chantries-traits (task 5.2) --------------------------------------------
+		   The six named-level Traits, `wardsDefensiveLevels` and the Horizon Realm's scalar fields
+		   are each ONE control writing ONE value, so they stay in this SAME `data-source` dispatch
+		   rather than becoming declared `actions` (those are for a CLICK — add/remove a row, which
+		   is what `realmSphereShiftAdd`/`realmSphereShiftDelete`/`descriptorAdd`/`descriptorRemove`
+		   are, registered in `DEFAULT_OPTIONS.actions` instead). Every branch recomputes
+		   `system.pool.spent` through `_computePoolSpent()` so none of the four cost sources can
+		   ever zero out another (see that method's own doc). ------------------------------------ */
+		else if (source === "booktrait") {
+			const key = dataset.key;
+			if (!isBookOfChantriesTrait(key)) return;
+
+			// "" is the `<select>`'s own "— No construido —" option (design.md D11/D12: absence and
+			// a real, named level 0 are different states) — never coerced to 0.
+			const value = (target.value === "") ? null : parseInt(target.value);
+			const traits = { ...(this.actor.system.traits ?? {}), [key]: value };
+
+			await this.actor.update({
+				[`system.traits.${key}`]: value,
+				"system.pool.spent": this._computePoolSpent({ traits: traits })
+			});
+		}
+		else if (source === "wardsdefensive") {
+			let value = parseInt(target.value);
+			if (!Number.isInteger(value) || (value < 0)) value = 0;
+
+			await this.actor.update({
+				"system.wardsDefensiveLevels": value,
+				"system.pool.spent": this._computePoolSpent({ wardsDefensiveLevels: value })
+			});
+		}
+		else if (source === "realmhasrealm") {
+			const checked = !!target.checked;
+
+			const update = checked
+				? { "system.realm.hasRealm": true }
+				: {
+					/* Turning the toggle OFF clears the other eight fields, rather than leaving them
+					   stored-but-hidden (mirrors wodchar's own `onRealmToggle`, design.md D14).
+					   `computeRealmCost()`/`realmQuintessenceUpkeepPerDay()` sum every field by its
+					   PRESENCE, never by `hasRealm` (D4) — a field left behind would keep charging
+					   points and reporting upkeep with the block visibly "off", exactly the "a value
+					   accepted that silently keeps doing something" shape this project already tracks
+					   several instances of (CLAUDE.md). */
+					"system.realm.hasRealm": false,
+					"system.realm.size": null,
+					"system.realm.sphereShifts": [],
+					"system.realm.terrain": null,
+					"system.realm.climate": null,
+					"system.realm.interconnected": false,
+					"system.realm.advancedTransport": false,
+					"system.realm.population": null,
+					"system.realm.socialStructure": null
+				};
+
+			const realmForCost = checked ? { ...(this.actor.system.realm ?? {}), hasRealm: true } : {};
+			update["system.pool.spent"] = this._computePoolSpent({ realm: realmForCost });
+
+			await this.actor.update(update);
+		}
+		else if (source === "realmfield") {
+			const field = dataset.field;
+			const scalarFields = ["size", "terrain", "climate", "population", "socialStructure"];
+			const booleanFields = ["interconnected", "advancedTransport"];
+
+			if (!scalarFields.includes(field) && !booleanFields.includes(field)) return;
+
+			const value = booleanFields.includes(field)
+				? !!target.checked
+				: ((target.value === "") ? null : parseInt(target.value));
+
+			const realm = { ...(this.actor.system.realm ?? {}), [field]: value };
+
+			await this.actor.update({
+				[`system.realm.${field}`]: value,
+				"system.pool.spent": this._computePoolSpent({ realm: realm })
+			});
+		}
+		else if (source === "realmsphereshift") {
+			const index = Number(dataset.index);
+			const field = dataset.field;
+			const shifts = foundry.utils.deepClone(this.actor.system.realm?.sphereShifts ?? []);
+
+			if (!Number.isInteger(index) || (index < 0) || (index >= shifts.length)) return;
+			if ((field !== "sphere") && (field !== "delta")) return;
+
+			if (field === "sphere") {
+				shifts[index].sphere = SPHERE_KEYS.includes(target.value) ? target.value : "";
+			}
+			else {
+				const delta = parseInt(target.value);
+				shifts[index].delta = Number.isFinite(delta) ? delta : 0;
+			}
+
+			const realm = { ...(this.actor.system.realm ?? {}), sphereShifts: shifts };
+
+			await this.actor.update({
+				"system.realm.sphereShifts": shifts,
+				"system.pool.spent": this._computePoolSpent({ realm: realm })
+			});
+		}
 	}
 
 	/* Alter the Chantry/Construct's own rating dot (1-5). `data-action="ratingDotChange"` is only
@@ -905,6 +1130,41 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		const traits = foundry.utils.deepClone(this.actor.system.traits ?? {});
 		traits[key] = value;
 
+		await this.actor.update({
+			[`system.traits.${key}`]: value,
+			// add-book-of-chantries-traits — THIS USED TO be a bare loop over `traitcost` (the 19
+			// linear Traits only). Left as-is, changing a LINEAR Trait's dots would have zeroed out
+			// whatever the six book-of-chantries Traits, `wardsDefensiveLevels` and `realm` were
+			// contributing to the SAME pool (design.md D2.6/D13) on every single dot click. Routed
+			// through the shared helper so all four sources of cost are recomputed together, no
+			// matter which one the user just touched.
+			"system.pool.spent": this._computePoolSpent({ traits: traits })
+		});
+	}
+
+	/**
+	 * `system.pool.spent`, recomputed from the actor's CURRENT stored data with `overrides` merged
+	 * in for whichever ONE of `traits`/`wardsDefensiveLevels`/`realm` the caller is about to write —
+	 * never from only whichever fields happen to be on screen, so a write to any one of the four
+	 * cost sources this sheet now has (the 19 linear Traits, the six book-of-chantries Traits,
+	 * `wardsDefensiveLevels`, `realm`) never zeroes out the other three's contribution to the same
+	 * total. Mirrors wodchar's own rule for the identical hazard (design.md D13 of
+	 * add-book-of-chantries-traits: "a PATCH that only touches one of the three recomputes
+	 * poolSpent using the EXISTING other two, not as if they were absent").
+	 * @param {object} [overrides]
+	 * @param {Record<string, number|null>} [overrides.traits]  replaces `system.traits` for THIS calc
+	 * @param {number} [overrides.wardsDefensiveLevels]          replaces `system.wardsDefensiveLevels`
+	 * @param {object} [overrides.realm]                         replaces `system.realm` for THIS calc
+	 * @returns {number}
+	 */
+	_computePoolSpent(overrides = {}) {
+		const actor = this.actor;
+		const traits = overrides.traits ?? (actor.system.traits ?? {});
+		const wardsDefensiveLevels = (overrides.wardsDefensiveLevels !== undefined)
+			? overrides.wardsDefensiveLevels
+			: (parseInt(actor.system.wardsDefensiveLevels) || 0);
+		const realm = overrides.realm ?? (actor.system.realm ?? {});
+
 		const traitcost = CONFIG.worldofdarkness.chantry.traitcost;
 		let spent = 0;
 
@@ -912,10 +1172,84 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			spent += (parseInt(traits[traitkey]) || 0) * traitcost[traitkey];
 		}
 
-		await this.actor.update({
-			[`system.traits.${key}`]: value,
-			"system.pool.spent": spent
-		});
+		for (const bookkey of BOOK_OF_CHANTRIES_TRAIT_KEYS) {
+			const level = traits[bookkey];
+			if ((level === null) || (level === undefined)) continue;
+
+			const cost = bookTraitLevelCost(bookkey, parseInt(level));
+			if (cost !== undefined) spent += cost;
+		}
+
+		spent += computeWardsDefensiveWards(wardsDefensiveLevels).cost;
+		spent += computeRealmCost(realm);
+
+		return spent;
+	}
+
+	/**
+	 * The Horizon Realm block's render-ready shape (design.md D4/D12, task 5.2): the `hasRealm`
+	 * toggle plus, for each of the five NAMED-LEVEL fields, a `<select>`'s worth of options sized to
+	 * its OWN table (never the 2x/1x rating cap — that never applied to this block either, D4), the
+	 * two boolean fields, the `sphereShifts` array shaped like the Effects tab's own Sphere rows
+	 * above (same repeating-row idiom), and the computed daily Quintessence upkeep — REPORTED, never
+	 * subtracted from anything (D4).
+	 * @param {object} realm  `actor.system.realm ?? {}`
+	 * @returns {object}
+	 */
+	_prepareRealmContext(realm) {
+		const levelField = (field, table) => {
+			const raw = realm[field];
+			const level = ((raw === null) || (raw === undefined)) ? null : parseInt(raw);
+
+			return {
+				// The STORED key (`socialStructure`), used for `data-field`/`name` — distinct from
+				// this object's own lower-case context key (`socialstructure`), which only exists
+				// because Handlebars property lookups are case-sensitive and this sheet's other
+				// blocks (`wardsdefensive`, `bookoftraits`) already settled on lower-case.
+				field: field,
+				value: level,
+				notbuilt: level === null,
+				currentlabelkey: (level === null)
+					? "wod.chantry.bookoftraits.notbuilt"
+					: `wod.chantry.realm.levels.${field}.${level}`,
+				options: table.map((row, index) => ({
+					level: index,
+					labelkey: `wod.chantry.realm.levels.${field}.${index}`,
+					selected: level === index
+				}))
+			};
+		};
+
+		const sphereShifts = Array.isArray(realm.sphereShifts) ? realm.sphereShifts : [];
+
+		return {
+			hasRealm: !!realm.hasRealm,
+			size: levelField("size", REALM_SIZE_LEVELS),
+			terrain: levelField("terrain", REALM_TERRAIN_LEVELS),
+			climate: levelField("climate", REALM_CLIMATE_LEVELS),
+			population: levelField("population", REALM_POPULATION_LEVELS),
+			// `data-field="socialStructure"` (camelCase, matching the stored key) travels through the
+			// template as a plain string, so the context key can stay lower-case like every other key
+			// this sheet already exposes (`wardsdefensive`, `bookoftraits`) without the two needing to
+			// agree on a casing convention.
+			socialstructure: levelField("socialStructure", REALM_SOCIAL_STRUCTURE_LEVELS),
+			interconnected: !!realm.interconnected,
+			advancedtransport: !!realm.advancedTransport,
+			sphereShifts: sphereShifts.map((shift, index) => ({
+				index: index,
+				sphere: typeof shift?.sphere === "string" ? shift.sphere : "",
+				delta: Number.isInteger(shift?.delta) ? shift.delta : (parseInt(shift?.delta) || 0),
+				options: [
+					{ key: "", labelkey: "wod.chantry.effects.nosphere", selected: !shift?.sphere },
+					...SPHERE_KEYS.map((sphereKey) => ({
+						key: sphereKey,
+						labelkey: `wod.spheres.${sphereKey}`,
+						selected: shift?.sphere === sphereKey
+					}))
+				]
+			})),
+			upkeep: realmQuintessenceUpkeepPerDay(realm)
+		};
 	}
 
 	/* ==========================================================================================
@@ -1228,5 +1562,104 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		}
 
 		await this.actor.createEmbeddedDocuments("Item", [censusItemData(key)]);
+	}
+
+	/* ==========================================================================================
+	 * add-book-of-chantries-traits (task 5.2) — the Horizon Realm's `sphereShifts` array and the
+	 * narrative-descriptor tag list. `system.realm`/`system.descriptors` (design.md D4/D6/D12).
+	 * ========================================================================================== */
+
+	/** Adds one blank `{sphere: "", delta: 1}` row — same starting shape `onEffectCreate` above
+	 * gives a new Integrated Effect's first Sphere row. */
+	static async onRealmSphereShiftAdd(event) {
+		event.preventDefault();
+
+		if (this.locked) {
+			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+			return;
+		}
+
+		const shifts = foundry.utils.deepClone(this.actor.system.realm?.sphereShifts ?? []);
+		shifts.push({ sphere: "", delta: 1 });
+
+		const realm = { ...(this.actor.system.realm ?? {}), sphereShifts: shifts };
+
+		await this.actor.update({
+			"system.realm.sphereShifts": shifts,
+			"system.pool.spent": this._computePoolSpent({ realm: realm })
+		});
+	}
+
+	static async onRealmSphereShiftDelete(event, target) {
+		event.preventDefault();
+		event.stopPropagation();
+
+		if (this.locked) {
+			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+			return;
+		}
+
+		const index = Number(target.dataset.index);
+		const shifts = foundry.utils.deepClone(this.actor.system.realm?.sphereShifts ?? []);
+
+		if (!Number.isInteger(index) || (index < 0) || (index >= shifts.length)) return;
+
+		shifts.splice(index, 1);
+
+		const realm = { ...(this.actor.system.realm ?? {}), sphereShifts: shifts };
+
+		await this.actor.update({
+			"system.realm.sphereShifts": shifts,
+			"system.pool.spent": this._computePoolSpent({ realm: realm })
+		});
+	}
+
+	/**
+	 * Attaches the id currently selected in the picker's own `<select>` — the button carries no
+	 * value of its own, so the value to act on lives in the sibling control it sits next to, same
+	 * idiom `onCensusCreate` above uses for `target.dataset.key`. Never touches `system.pool.spent`
+	 * (design.md D6: descriptors are zero-cost, and `_computePoolSpent()` deliberately has no
+	 * `descriptors` parameter at all — there is nothing for it to price).
+	 */
+	static async onDescriptorAdd(event, target) {
+		event.preventDefault();
+
+		if (this.locked) {
+			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+			return;
+		}
+
+		const picker = target.closest?.(".chantry-descriptor-picker")
+			?.querySelector?.("select[data-descriptorpicker]");
+		const id = picker?.value;
+		if (!id) return;
+
+		const descriptors = Array.isArray(this.actor.system.descriptors)
+			? [...this.actor.system.descriptors]
+			: [];
+
+		if (descriptors.includes(id)) return;
+
+		descriptors.push(id);
+
+		await this.actor.update({ "system.descriptors": descriptors });
+	}
+
+	/** Detaches one descriptor id. Works for an UNKNOWN id too (design.md D16's documented gap) —
+	 * filtering by exact string match needs no catalogue lookup at all. */
+	static async onDescriptorRemove(event, target) {
+		event.preventDefault();
+		event.stopPropagation();
+
+		if (this.locked) {
+			ui.notifications.warn(game.i18n.localize("wod.system.sheetlocked"));
+			return;
+		}
+
+		const id = target.dataset.id;
+		const descriptors = (Array.isArray(this.actor.system.descriptors) ? this.actor.system.descriptors : [])
+			.filter((existing) => existing !== id);
+
+		await this.actor.update({ "system.descriptors": descriptors });
 	}
 }

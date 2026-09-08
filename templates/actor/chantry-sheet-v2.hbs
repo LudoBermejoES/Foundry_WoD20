@@ -257,6 +257,315 @@
 
 			</div>
 
+			{{!-- add-book-of-chantries-traits (task 5.2) — the six NAMED-LEVEL Traits + wards'
+			      defensive add-on. Own box, own control shape (a `<select>` per Trait sized to its
+			      own table, never the 2x/1x dot allocator above): design.md D2/D3 say these six are
+			      priced by table, never by dots, and never checked against the rating-derived cap
+			      at all — mixing them into `.chantry-traits`' `{{#each listData.traits}}` loop would
+			      also have widened `CONFIG.worldofdarkness.chantry.traitcost`, which
+			      `test-chantry-trait-order.mjs`/`test-chantry-trait-eye.mjs` read directly and which
+			      has no per-dot rate to offer for any of these six (design.md D11). --}}
+			<div class="clearareaBox area-box chantry-book-traits">
+
+				<div class="sheet-headline sheet-banner splatFont">
+					<span class="sheet-banner-text">{{localize "wod.chantry.bookoftraits.headline"}}</span>
+				</div>
+
+				{{#each bookTraits as |trait|}}
+					<div class="clearareaBox row chantry-book-trait-row" data-key="{{trait.key}}">
+
+						<div class="pullLeft headlineNormal ability-headlineWidth {{#if trait.unpriced}}item-warning{{/if}}">{{localize trait.label}}</div>
+
+						{{#if ../locked}}
+							<input class="pullLeft inputdata chantry-locked-value" type="text"
+									value="{{localize trait.currentlabelkey}}" disabled />
+						{{else}}
+							<select class="pullLeft inputdata editable" name="system.traits.{{trait.key}}"
+									data-source="booktrait" data-key="{{trait.key}}">
+								<option value="" {{#if trait.notbuilt}}selected{{/if}}>{{localize "wod.chantry.bookoftraits.notbuilt"}}</option>
+								{{#each trait.options as |option|}}
+									<option value="{{option.level}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
+								{{/each}}
+							</select>
+						{{/if}}
+
+						{{!-- `wards` alone carries the defensiveLevels add-on: a SEPARATE stepper next
+						      to its own select, never a seventh dot/level position on `wards` itself
+						      (spec requirement, design.md D8/D12). --}}
+						{{#if (eq trait.key "wards")}}
+							<div class="pullLeft chantry-wards-defensive" title="{{localize 'wod.chantry.bookoftraits.wardsdefensive.hint'}}">
+								<span class="chantry-wards-defensive-label">{{localize "wod.chantry.bookoftraits.wardsdefensive.label"}}:</span>
+								{{#if ../locked}}
+									<span class="chantry-locked-value">{{../wardsDefensive.value}}</span>
+								{{else}}
+									<input class="inputdata resource-value-input chantry-wards-defensive-input" type="number" min="0"
+											name="system.wardsDefensiveLevels" data-source="wardsdefensive"
+											value="{{../wardsDefensive.value}}" />
+								{{/if}}
+								{{#if ../wardsDefensive.overcap}}
+									<i class="pullLeft item-warning fa-solid fa-triangle-exclamation"
+											title="{{localize 'wod.chantry.bookoftraits.wardsdefensive.overcap'}}"></i>
+								{{/if}}
+							</div>
+						{{/if}}
+
+					</div>
+				{{/each}}
+
+			</div>
+
+			{{!-- add-book-of-chantries-traits (task 5.2) — the Horizon Realm block (design.md D4).
+			      The toggle always renders (it is the only way to turn the block on at all); the
+			      eight fields + the upkeep figure render ONLY while `realm.hasRealm` is true, per
+			      the spec's own requirement ("SHALL render no Realm section at all" otherwise). --}}
+			<div class="clearareaBox area-box chantry-realm">
+
+				<div class="sheet-headline sheet-banner splatFont">
+					<span class="sheet-banner-text">{{localize "wod.chantry.realm.headline"}}</span>
+				</div>
+
+				<div class="clearareaBox row chantry-realm-toggle-row">
+					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.hasrealm"}}</div>
+					{{#if locked}}
+						{{#if realm.hasRealm}}
+							<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
+						{{else}}
+							<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
+						{{/if}}
+					{{else}}
+						<input type="checkbox" class="editable" name="system.realm.hasRealm" data-source="realmhasrealm"
+								{{#if realm.hasRealm}}checked{{/if}} />
+					{{/if}}
+				</div>
+
+				{{#if realm.hasRealm}}
+					<div class="chantry-realm-fields">
+
+						{{!-- The five NAMED-LEVEL fields all share the exact same row shape — only
+						      the field/table differ, which `_prepareRealmContext` already resolved
+						      server-side onto `realm.<fieldkey>`. Written out explicitly (no loop
+						      over a field-name list) because this system's Handlebars runtime has no
+						      `array`/`lookup`-into-a-dynamic-key helper registered. --}}
+						{{#with realm.size as |field|}}
+							<div class="clearareaBox row chantry-realm-field-row" data-field="size">
+								<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.size"}}</div>
+								{{#if ../locked}}
+									<input class="pullLeft inputdata chantry-locked-value" type="text"
+											value="{{localize field.currentlabelkey}}" disabled />
+								{{else}}
+									<select class="pullLeft inputdata editable" name="system.realm.size"
+											data-source="realmfield" data-field="size">
+										<option value="" {{#if field.notbuilt}}selected{{/if}}>{{localize "wod.chantry.bookoftraits.notbuilt"}}</option>
+										{{#each field.options as |option|}}
+											<option value="{{option.level}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
+										{{/each}}
+									</select>
+								{{/if}}
+							</div>
+						{{/with}}
+
+						{{#with realm.terrain as |field|}}
+							<div class="clearareaBox row chantry-realm-field-row" data-field="terrain">
+								<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.terrain"}}</div>
+								{{#if ../locked}}
+									<input class="pullLeft inputdata chantry-locked-value" type="text"
+											value="{{localize field.currentlabelkey}}" disabled />
+								{{else}}
+									<select class="pullLeft inputdata editable" name="system.realm.terrain"
+											data-source="realmfield" data-field="terrain">
+										<option value="" {{#if field.notbuilt}}selected{{/if}}>{{localize "wod.chantry.bookoftraits.notbuilt"}}</option>
+										{{#each field.options as |option|}}
+											<option value="{{option.level}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
+										{{/each}}
+									</select>
+								{{/if}}
+							</div>
+						{{/with}}
+
+						{{#with realm.climate as |field|}}
+							<div class="clearareaBox row chantry-realm-field-row" data-field="climate">
+								<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.climate"}}</div>
+								{{#if ../locked}}
+									<input class="pullLeft inputdata chantry-locked-value" type="text"
+											value="{{localize field.currentlabelkey}}" disabled />
+								{{else}}
+									<select class="pullLeft inputdata editable" name="system.realm.climate"
+											data-source="realmfield" data-field="climate">
+										<option value="" {{#if field.notbuilt}}selected{{/if}}>{{localize "wod.chantry.bookoftraits.notbuilt"}}</option>
+										{{#each field.options as |option|}}
+											<option value="{{option.level}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
+										{{/each}}
+									</select>
+								{{/if}}
+							</div>
+						{{/with}}
+
+						{{#with realm.population as |field|}}
+							<div class="clearareaBox row chantry-realm-field-row" data-field="population">
+								<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.population"}}</div>
+								{{#if ../locked}}
+									<input class="pullLeft inputdata chantry-locked-value" type="text"
+											value="{{localize field.currentlabelkey}}" disabled />
+								{{else}}
+									<select class="pullLeft inputdata editable" name="system.realm.population"
+											data-source="realmfield" data-field="population">
+										<option value="" {{#if field.notbuilt}}selected{{/if}}>{{localize "wod.chantry.bookoftraits.notbuilt"}}</option>
+										{{#each field.options as |option|}}
+											<option value="{{option.level}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
+										{{/each}}
+									</select>
+								{{/if}}
+							</div>
+						{{/with}}
+
+						{{#with realm.socialstructure as |field|}}
+							<div class="clearareaBox row chantry-realm-field-row" data-field="socialStructure">
+								<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.socialstructure"}}</div>
+								{{#if ../locked}}
+									<input class="pullLeft inputdata chantry-locked-value" type="text"
+											value="{{localize field.currentlabelkey}}" disabled />
+								{{else}}
+									<select class="pullLeft inputdata editable" name="system.realm.socialStructure"
+											data-source="realmfield" data-field="socialStructure">
+										<option value="" {{#if field.notbuilt}}selected{{/if}}>{{localize "wod.chantry.bookoftraits.notbuilt"}}</option>
+										{{#each field.options as |option|}}
+											<option value="{{option.level}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
+										{{/each}}
+									</select>
+								{{/if}}
+							</div>
+						{{/with}}
+
+						<div class="clearareaBox row chantry-realm-field-row" data-field="interconnected">
+							<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.interconnected"}}</div>
+							{{#if locked}}
+								{{#if realm.interconnected}}
+									<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
+								{{else}}
+									<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
+								{{/if}}
+							{{else}}
+								<input type="checkbox" class="editable" name="system.realm.interconnected"
+										data-source="realmfield" data-field="interconnected"
+										{{#if realm.interconnected}}checked{{/if}} />
+							{{/if}}
+						</div>
+
+						<div class="clearareaBox row chantry-realm-field-row" data-field="advancedTransport">
+							<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.advancedtransport"}}</div>
+							{{#if locked}}
+								{{#if realm.advancedtransport}}
+									<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
+								{{else}}
+									<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
+								{{/if}}
+							{{else}}
+								<input type="checkbox" class="editable" name="system.realm.advancedTransport"
+										data-source="realmfield" data-field="advancedTransport"
+										{{#if realm.advancedtransport}}checked{{/if}} />
+							{{/if}}
+						</div>
+
+						<div class="chantry-realm-sphereshifts">
+							<div class="pullLeft headlineNormal">{{localize "wod.chantry.realm.sphereshift.headline"}}</div>
+
+							{{#if realm.sphereShifts.length}}
+								{{#each realm.sphereShifts as |shift|}}
+									<div class="clearareaBox row chantry-realm-sphereshift-row" data-index="{{shift.index}}">
+										{{#if ../locked}}
+											<span class="chantry-locked-value">{{localize (concat "wod.spheres." shift.sphere)}} {{shift.delta}}</span>
+										{{else}}
+											<select class="inputdata editable" data-source="realmsphereshift" data-index="{{shift.index}}" data-field="sphere">
+												{{#each shift.options as |option|}}
+													<option value="{{option.key}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
+												{{/each}}
+											</select>
+											<input class="inputdata resource-value-input" type="number" data-source="realmsphereshift"
+													data-index="{{shift.index}}" data-field="delta" value="{{shift.delta}}"
+													title="{{localize 'wod.chantry.realm.sphereshift.delta'}}" />
+											<i class="pullLeft pointer icon fa-solid fa-trash chantry-realm-sphereshift-remove"
+													data-action="realmSphereShiftDelete" data-index="{{shift.index}}"
+													title="{{localize 'wod.chantry.realm.sphereshift.remove'}}"></i>
+										{{/if}}
+									</div>
+								{{/each}}
+							{{else}}
+								<div class="chantry-realm-sphereshift-empty">{{localize "wod.chantry.realm.sphereshift.empty"}}</div>
+							{{/if}}
+
+							{{#unless locked}}
+								<i class="pullLeft pointer icon fa-solid fa-plus chantry-realm-sphereshift-add"
+										data-action="realmSphereShiftAdd"
+										title="{{localize 'wod.chantry.realm.sphereshift.add'}}"></i>
+							{{/unless}}
+						</div>
+
+						<div class="clearareaBox row chantry-realm-upkeep-row">
+							<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.upkeep"}}</div>
+							<div class="pullLeft chantry-realm-upkeep-value">{{realm.upkeep}}</div>
+						</div>
+
+					</div>
+				{{/if}}
+
+			</div>
+
+			{{!-- add-book-of-chantries-traits (task 5.2) — narrative descriptors: read-only tags,
+			      never a dot allocator, never a cost annotation against the pool (design.md D6, spec
+			      requirement: "no control that could be mistaken for one that spends points"). The
+			      add/remove controls only ATTACH/DETACH an id; neither ever touches
+			      `system.pool.spent` — `_computePoolSpent()` has no `descriptors` parameter at all. --}}
+			<div class="clearareaBox area-box chantry-descriptors">
+
+				<div class="sheet-headline sheet-banner splatFont">
+					<span class="sheet-banner-text">{{localize "wod.chantry.descriptors.headline"}}</span>
+				</div>
+
+				<div class="chantry-descriptors-hint">{{localize "wod.chantry.descriptors.hint"}}</div>
+
+				{{#if descriptorTags.length}}
+					<div class="chantry-descriptor-tags">
+						{{#each descriptorTags as |tag|}}
+							<span class="chantry-descriptor-tag" data-id="{{tag.id}}">
+								{{#if tag.known}}
+									{{localize tag.labelkey}}
+									<em class="chantry-descriptor-tag-category">({{localize tag.categorykey}})</em>
+								{{else}}
+									{{tag.fallbacklabel}}
+								{{/if}}
+								{{#unless locked}}
+									<i class="pointer icon fa-solid fa-xmark chantry-descriptor-tag-remove"
+											data-action="descriptorRemove" data-id="{{tag.id}}"
+											title="{{localize 'wod.chantry.descriptors.remove'}}"></i>
+								{{/unless}}
+							</span>
+						{{/each}}
+					</div>
+				{{else}}
+					<div class="chantry-descriptors-empty">{{localize "wod.chantry.descriptors.empty"}}</div>
+				{{/if}}
+
+				{{#unless locked}}
+					{{#if descriptorPicker.length}}
+						<div class="chantry-descriptor-picker">
+							<select data-descriptorpicker>
+								{{#each descriptorPicker as |group|}}
+									<optgroup label="{{localize group.categorykey}}">
+										{{#each group.options as |option|}}
+											<option value="{{option.id}}">{{localize option.labelkey}}</option>
+										{{/each}}
+									</optgroup>
+								{{/each}}
+							</select>
+							<i class="pointer icon fa-solid fa-plus chantry-descriptor-add"
+									data-action="descriptorAdd"
+									title="{{localize 'wod.chantry.descriptors.add'}}"></i>
+						</div>
+					{{/if}}
+				{{/unless}}
+
+			</div>
+
 			<div class="clearareaBox area-box chantry-notes">
 
 				<div class="sheet-headline sheet-banner splatFont">

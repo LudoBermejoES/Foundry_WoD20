@@ -383,3 +383,255 @@ export function isSingleRatingCapTrait(key) {
 export function hasRoster(key) {
 	return ROSTER_TRAIT_KEYS.includes(key);
 }
+
+/* ================================================================================================
+ * add-book-of-chantries-traits — the six NAMED-LEVEL Traits, `wards`' defensive add-on and the
+ * Horizon Realm block. Mirrors `wod20-char/web/server/services/rules/chantry.ts` (design.md
+ * D2/D3/D4/D8/D10/D11/D12 of that change) as CLOSELY as the two runtimes let it: same keys, same
+ * signed numbers, same "index into a closed table, never extrapolated" discipline this file's own
+ * `integratedEffectsPool()` already established above. This is a SEPARATE table from `traitcost`
+ * (above) rather than a widening of it, on purpose: `traitcost` is a PER-DOT rate multiplied by a
+ * circle count, and these six Traits have no such rate — level 0 is a real, named, priced choice
+ * ("Sin Guardián", -10), not "zero dots of a linear Trait". Folding them into `traitcost` would
+ * also enrol them in `test-chantry-trait-eye.mjs`'s per-key `traitdescriptions` requirement and in
+ * `test-chantry-trait-order.mjs`'s alphabetical-dot-list sort, neither of which fits a level select.
+ *
+ * NAMES LIVE IN `lang/*.json`, NOT HERE (`wod.chantry.traitlevels.<key>.<level>`) — this table
+ * carries only the numbers a rule needs, the same separation the rest of this system keeps between
+ * content (localized strings) and rules (this file).
+ * ================================================================================================ */
+
+/** The six Traits `book-of-chantries-es.md`'s Appendix Two prices as named levels with a signed
+ * cost (design.md D2). @type {ReadonlyArray<string>} */
+export const BOOK_OF_CHANTRIES_TRAIT_KEYS = Object.freeze([
+	"guardian", "fortification", "wards", "trap-system", "alarm-system", "research-library"
+]);
+
+/** `key`'s level-cost table, one signed integer per level, index === level (design.md D2/D3). Never
+ * interpolated or extrapolated past the last row — see `bookTraitLevelCost` below. */
+export const BOOK_OF_CHANTRIES_LEVEL_COSTS = Object.freeze({
+	guardian: Object.freeze([-10, -5, 0, 5, 20]),
+	fortification: Object.freeze([-5, 0, 5, 10, 15]),
+	wards: Object.freeze([0, 2, 5, 10]),
+	"trap-system": Object.freeze([0, 5, 10]),
+	"alarm-system": Object.freeze([0, 2, 5, 10]),
+	"research-library": Object.freeze([-5, 0, 5, 10, 15])
+});
+
+/** Whether `key` is one of the six book-of-chantries Traits — the ones priced by table, never by
+ * the 2x/1x rating cap (design.md D3): `traitCap()` above is never called for one of these. */
+export function isBookOfChantriesTrait(key) {
+	return BOOK_OF_CHANTRIES_TRAIT_KEYS.includes(key);
+}
+
+/**
+ * `key`'s pool cost at `level`: an index into `BOOK_OF_CHANTRIES_LEVEL_COSTS[key]`.
+ *
+ * Returns `undefined` for a level outside the table's own range or `null`/`undefined` itself
+ * (never THROWS): unlike `integratedEffectsPool()`, which is only ever called with a value the
+ * sheet already renders as a filled dot count, this is called from a `<select>` whose stored value
+ * may be `null` ("not built", design.md D11/D12 — a real, distinct state from level 0) or, on a
+ * hand-edited/legacy actor, an integer the table does not reach. The caller (`_prepareContext`)
+ * degrades an `undefined` result to "unpriced, flagged" rather than letting the render throw.
+ * @param {string} key
+ * @param {number|null|undefined} level
+ * @returns {number|undefined}
+ */
+export function bookTraitLevelCost(key, level) {
+	const table = BOOK_OF_CHANTRIES_LEVEL_COSTS[key];
+	if (!table || !Number.isInteger(level) || level < 0 || level >= table.length) return undefined;
+	return table[level];
+}
+
+/** Pool cost per `wards.defensiveLevels` level (design.md D8: `book-of-chantries-es.md:5708-5710`,
+ * "cada cinco puntos adicionales"). */
+export const WARDS_DEFENSIVE_POOL_COST_PER_LEVEL = 5;
+
+/** Aggravated damage informed per `wards.defensiveLevels` level — informational, never deducted
+ * from anything (same status as any other Trait's flavor text). */
+export const WARDS_DEFENSIVE_DAMAGE_PER_LEVEL = 1;
+
+/**
+ * `wards.defensiveLevels`' own pool cost and informed damage. The RATING cap (1x, design.md D8 —
+ * the one figure of this whole change the book leaves unbounded, and the one finding of its own
+ * cost audit) is enforced by the caller (`_prepareContext`), not here, exactly like `traitCap()`
+ * above prices nothing and only says how high a Trait may legally go.
+ * @param {number} defensiveLevels
+ * @returns {{cost: number, aggravatedDamage: number}}
+ */
+export function computeWardsDefensiveWards(defensiveLevels) {
+	const n = toInt(defensiveLevels);
+	return {
+		cost: n * WARDS_DEFENSIVE_POOL_COST_PER_LEVEL,
+		aggravatedDamage: n * WARDS_DEFENSIVE_DAMAGE_PER_LEVEL
+	};
+}
+
+/* ---- The Horizon Realm — a bounded block on the SAME construction pool, never a second one
+   (design.md D4). "Todos los aspectos suman o restan a esta cantidad" (book-of-chantries-
+   es.md:5480). ---- */
+
+export const REALM_HAS_REALM_COST = 10;
+export const REALM_INTERCONNECTED_COST = 10;
+export const REALM_ADVANCED_TRANSPORT_COST = 10;
+export const REALM_SPHERE_SHIFT_COST_PER_POINT = 2;
+/** Quintessence/day `interconnected` adds to the upkeep formula — DISTINCT from
+ * `REALM_INTERCONNECTED_COST` (pool points): the book prices the same boolean twice, once in
+ * construction points (10) and once in daily upkeep (5). */
+export const REALM_INTERCONNECTED_UPKEEP_PER_DAY = 5;
+/** Quintessence/day `advancedTransport` adds to the upkeep formula — happens to equal
+ * `REALM_ADVANCED_TRANSPORT_COST` (10) but kept as a separate constant on purpose (same reasoning
+ * as `REALM_INTERCONNECTED_UPKEEP_PER_DAY`'s own comment). */
+export const REALM_ADVANCED_TRANSPORT_UPKEEP_PER_DAY = 10;
+/** 10x `size`'s OWN signed cost ONLY (design.md D4, corrected 2026-09-08 after a Task 4 finding: a
+ * Vast Realm alone was reporting 500/day instead of the book's own 400 before this correction).
+ * The book's "su coste" (book-of-chantries-es.md:5660-5661) sits inside the "Tamaño" section and
+ * refers to `size`'s own cost, NOT the net cost of the whole `realm` block — see
+ * `realmQuintessenceUpkeepPerDay` below for the full formula this constant feeds. */
+export const REALM_UPKEEP_MULTIPLIER = 10;
+
+/** `size`'s 6 named levels (book-of-chantries-es.md:5662-5672) — names in `lang/*.json` under
+ * `wod.chantry.realm.levels.size.<level>`. */
+export const REALM_SIZE_LEVELS = Object.freeze([
+	{ points: -10 }, { points: -5 }, { points: 5 }, { points: 10 }, { points: 15 }, { points: 40 }
+]);
+
+/** `terrain`'s 7 named levels (book-of-chantries-es.md:5796-5806), each with its own Quintessence/
+ * day upkeep figure — the ONLY field besides `size`/`population`/the two booleans that contributes
+ * to `realmQuintessenceUpkeepPerDay`. */
+export const REALM_TERRAIN_LEVELS = Object.freeze([
+	{ points: 0, upkeep: 0 },
+	{ points: 5, upkeep: 0 },
+	{ points: -5, upkeep: 15 },
+	{ points: 5, upkeep: 5 },
+	{ points: 10, upkeep: 10 },
+	{ points: 10, upkeep: 15 },
+	{ points: 10, upkeep: 10 }
+]);
+
+/** `climate`'s 4 named levels (book-of-chantries-es.md:5810-5816) — no Quintessence upkeep figure
+ * anywhere in the book for this field. */
+export const REALM_CLIMATE_LEVELS = Object.freeze([
+	{ points: -10 }, { points: -5 }, { points: 0 }, { points: 5 }
+]);
+
+/** `population`'s 6 named levels (book-of-chantries-es.md:5874-5882) — only its top level carries a
+ * Quintessence/day figure. */
+export const REALM_POPULATION_LEVELS = Object.freeze([
+	{ points: -5 },
+	{ points: -10 },
+	{ points: -10 },
+	{ points: 5 },
+	{ points: 10 },
+	{ points: 15, upkeep: 15 }
+]);
+
+/** `socialStructure`'s 4 named levels (book-of-chantries-es.md:5884-5894) — no Quintessence upkeep
+ * figure anywhere in the book for this field. */
+export const REALM_SOCIAL_STRUCTURE_LEVELS = Object.freeze([
+	{ points: -5 }, { points: 0 }, { points: 5 }, { points: 10 }
+]);
+
+/** Signed integer parse allowing negatives, unlike this file's own `toInt()` (which floors
+ * negatives to 0 — correct for a dot count, wrong for `sphereShifts[].delta`, which is explicitly
+ * signed, design.md D4/D5). */
+function toSignedInt(value) {
+	const n = parseInt(value, 10);
+	return Number.isFinite(n) ? n : 0;
+}
+
+function realmLevelPoints(table, level) {
+	if (!Number.isInteger(level) || level < 0 || level >= table.length) return undefined;
+	return table[level].points;
+}
+
+function realmLevelUpkeep(table, level) {
+	if (!Number.isInteger(level) || level < 0 || level >= table.length) return 0;
+	return table[level].upkeep ?? 0;
+}
+
+/**
+ * `sphereShifts`' pool cost: 2 points per absolute point of `delta`, sign-indifferent (design.md
+ * D4/D5) — the book's own worked example: Life +2, Time -1, Matter +3 = 2x2 + 2x1 + 2x3 = 12.
+ * @param {Array<{sphere?: string, delta?: number}>} sphereShifts
+ * @returns {number}
+ */
+export function computeSphereShiftCost(sphereShifts) {
+	if (!Array.isArray(sphereShifts)) return 0;
+	return sphereShifts.reduce((sum, s) => sum + REALM_SPHERE_SHIFT_COST_PER_POINT * Math.abs(toSignedInt(s?.delta)), 0);
+}
+
+/**
+ * The Realm block's net signed cost: the sum of every PRESENT field (design.md D4). A field simply
+ * absent (`null`/`undefined`) from `realm` contributes nothing — the same "presence, not value,
+ * decides" reading `system.traits` already gives the six book-of-chantries Traits above.
+ * @param {object|null|undefined} realm  `system.realm`
+ * @returns {number}
+ */
+export function computeRealmCost(realm) {
+	if (!realm || typeof realm !== "object") return 0;
+
+	let cost = 0;
+	if (realm.hasRealm) cost += REALM_HAS_REALM_COST;
+
+	const sizePoints = realmLevelPoints(REALM_SIZE_LEVELS, realm.size);
+	if (sizePoints !== undefined) cost += sizePoints;
+
+	if (Array.isArray(realm.sphereShifts)) cost += computeSphereShiftCost(realm.sphereShifts);
+
+	const terrainPoints = realmLevelPoints(REALM_TERRAIN_LEVELS, realm.terrain);
+	if (terrainPoints !== undefined) cost += terrainPoints;
+
+	const climatePoints = realmLevelPoints(REALM_CLIMATE_LEVELS, realm.climate);
+	if (climatePoints !== undefined) cost += climatePoints;
+
+	if (realm.interconnected) cost += REALM_INTERCONNECTED_COST;
+	if (realm.advancedTransport) cost += REALM_ADVANCED_TRANSPORT_COST;
+
+	const populationPoints = realmLevelPoints(REALM_POPULATION_LEVELS, realm.population);
+	if (populationPoints !== undefined) cost += populationPoints;
+
+	const socialStructurePoints = realmLevelPoints(REALM_SOCIAL_STRUCTURE_LEVELS, realm.socialStructure);
+	if (socialStructurePoints !== undefined) cost += socialStructurePoints;
+
+	return cost;
+}
+
+/**
+ * The Realm block's Quintessence upkeep/day: reported, NEVER deducted (design.md D4) — same pattern
+ * as `upkeep`/`upkeepshortfall` against `node` in `evaluateEffects` above.
+ *
+ * CORRECTED formula (design.md D4, 2026-09-08): NOT `REALM_UPKEEP_MULTIPLIER x computeRealmCost()`
+ * — that folds in `hasRealm`'s flat +10 and fields the book gives no Quintessence figure for at all
+ * (`sphereShifts`/`climate`/`socialStructure`). The correct reading, per book-of-chantries-
+ * es.md:5660-5661 ("un Reino requiere 10 veces su coste para mantenerse", inside the "Tamaño"
+ * section) plus each field's own cited upkeep column:
+ *
+ *   10 x max(0, `size`'s OWN cost)
+ *   + `terrain`'s own Quintessence/day
+ *   + `population`'s own Quintessence/day
+ *   + (REALM_INTERCONNECTED_UPKEEP_PER_DAY if `interconnected`)
+ *   + (REALM_ADVANCED_TRANSPORT_UPKEEP_PER_DAY if `advancedTransport`)
+ *
+ * `hasRealm`, `sphereShifts`, `climate` and `socialStructure` contribute NOTHING here — the book
+ * never associates a Quintessence cost with any of them, only a pool-point one (`computeRealmCost`
+ * still charges all four in points, unaffected by this function).
+ * @param {object|null|undefined} realm  `system.realm`
+ * @returns {number}
+ */
+export function realmQuintessenceUpkeepPerDay(realm) {
+	if (!realm || typeof realm !== "object") return 0;
+
+	let upkeep = 0;
+
+	const sizePoints = realmLevelPoints(REALM_SIZE_LEVELS, realm.size);
+	if (sizePoints !== undefined) upkeep += REALM_UPKEEP_MULTIPLIER * Math.max(0, sizePoints);
+
+	upkeep += realmLevelUpkeep(REALM_TERRAIN_LEVELS, realm.terrain);
+	upkeep += realmLevelUpkeep(REALM_POPULATION_LEVELS, realm.population);
+
+	if (realm.interconnected) upkeep += REALM_INTERCONNECTED_UPKEEP_PER_DAY;
+	if (realm.advancedTransport) upkeep += REALM_ADVANCED_TRANSPORT_UPKEEP_PER_DAY;
+
+	return upkeep;
+}

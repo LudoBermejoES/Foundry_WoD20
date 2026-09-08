@@ -1439,7 +1439,13 @@
 				"influence": "Influence",
 				"wonder": "Wonder",
 				"mentor": "Mentor",
-				"patron": "Patron"
+				"patron": "Patron",
+				"guardian": "Guardian",
+				"fortification": "Fortification",
+				"wards": "Wards",
+				"trap-system": "Trap System",
+				"alarm-system": "Alarm System",
+				"research-library": "Research Library"
 			},
 			"traitdescriptions": {
 				"allies": "<p>A consort, Extraordinary Citizen, spirit, HIT Mark, or other exceptional ally per dot.</p><p>This Trait relies on the same logic as the character-level Allies Background: each ally is a full-fledged Storyteller character in their own right, with needs, fears, motivations, and goals that may clash with the group's. If an ally dies or otherwise leaves the group, the Trait loses the points that represented that character until replacements are recruited.</p><table><tr><th>Dots</th><th>Allies (per the Allies Background's own scale)</th></tr><tr><td>X</td><td>No allies to help when needed.</td></tr><tr><td>•</td><td>One moderately powerful ally, or two minor flunkies.</td></tr><tr><td>••</td><td>Two moderate allies, four flunkies, or one more powerful ally.</td></tr><tr><td>•••</td><td>Three moderate allies, or a mix of minor and major.</td></tr><tr><td>••••</td><td>Four moderate allies, six minor flunkies, or a mix of all three types.</td></tr><tr><td>•••••</td><td>Five moderate allies, or a set of minor and major ones.</td></tr><tr><td>••••• •</td><td>Six moderate allies, a small gang of flunkies, or one or two truly powerful friends.</td></tr><tr><td>••••• ••</td><td>Seven moderates, a group of flunkies, or a handful of strong companions.</td></tr><tr><td>••••• •••</td><td>Eight moderates, a bunch of followers, or a few tough guys.</td></tr><tr><td>••••• ••••</td><td>Nine moderates, a private militia, or a gang of major friends.</td></tr><tr><td>••••• •••••</td><td>Ten capable allies, a small army, or a truly deadly gang.</td></tr></table><p><em>Editorial identification (by name and function, not an explicit Operative Dossier citation): Allies Background (markdown/mage/m20-core-rulebook-es.md:10345-10365). Translated from the Spanish text; no English edition of that book exists in this project's corpus.</em></p>",
@@ -1502,6 +1508,188 @@
 				"overcap": "A Sphere exceeds the Chantry/Construct's rating.",
 				"empty": "No integrated effects yet. Each dot of the Integrated Effects Trait grants points to buy Sphere levels with.",
 				"nosphere": "- Sphere -"
+			},
+			"bookoftraits": {
+				"headline": "Book of Chantries Traits",
+				"notbuilt": "— Not built —",
+				"wardsdefensive": {
+					"label": "Defensive Levels",
+					"hint": "Each level costs 5 points and inflicts one extra point of aggravated damage on an unauthorized entrant. Cannot exceed the Chantry/Construct's own rating.",
+					"overcap": "Defensive levels exceed the Chantry/Construct's own rating."
+				}
+			},
+			"traitlevels": {
+				"guardian": {
+					"0": "No Guardian (-10): the area must be protected by the Chantry's own mages.",
+					"1": "Weak (-5): the Guardian has a power level of one or two.",
+					"2": "Normal (0): a level three or four Guardian.",
+					"3": "Powerful (+5): level five or six.",
+					"4": "Ridiculous (+20): level seven. Not recommended for player Chantries."
+				},
+				"fortification": {
+					"0": "Poorly Fortified (-5): no natural or artificial defenses, an easy target.",
+					"1": "Average Fortification (0): some positional advantages, easy to defend.",
+					"2": "Well Fortified (+5): a fairly tough place.",
+					"3": "Formidable (+10): strong defenses.",
+					"4": "Impregnable (+15): practically impossible to breach."
+				},
+				"wards": {
+					"0": "None (0): implicit base level.",
+					"1": "One type (+2): Willpower difficulty 8 to bar entry.",
+					"2": "One category (+5): difficulty 9.",
+					"3": "Anything unauthorized (+10): difficulty 10."
+				},
+				"trap-system": {
+					"0": "None (0): no trap system.",
+					"1": "Simple (+5): Perception + Alertness difficulty 7 to avoid being caught; Strength Feat 8 to break free.",
+					"2": "Complex (+10): difficulty 8, roughly one roll per turn; Strength Feat 11 to break free."
+				},
+				"alarm-system": {
+					"0": "None (0): no alarm system.",
+					"1": "Low Quality (+2): Perception + Stealth difficulty 7 to avoid alerting the guardian.",
+					"2": "Medium (+5): the roll repeats once per turn while the intruder moves.",
+					"3": "State of the Art (+10): difficulty 8, and the whole Chantry is alerted."
+				},
+				"research-library": {
+					"0": "Poor (-5): nonexistent or too small for mundane research.",
+					"1": "Modest (0): Academics difficulty 8, or 6 in one specific area.",
+					"2": "Good (+5): Academics difficulty 7, or 5 in three specific areas.",
+					"3": "Exceptional (+10): Academics difficulty 6, or 4 in five specific areas; the Chantry must be Large.",
+					"4": "Overwhelming (+15): Academics difficulty 5, or 3 in ten specific areas; the Chantry must be Huge."
+				}
+			},
+			"realm": {
+				"headline": "Horizon Realm",
+				"hasrealm": "Has a Horizon Realm? (+10 points)",
+				"upkeep": "Quintessence upkeep/day (reported, never deducted from any stored total)",
+				"fields": {
+					"size": "Size",
+					"sphereshifts": "Sphere Rating Shifts",
+					"terrain": "Terrain",
+					"climate": "Climate",
+					"interconnected": "Interconnected Locations (+10 points / +5 Quintessence per day)",
+					"advancedtransport": "Advanced Transportation (+10 points / +10 Quintessence per day)",
+					"population": "Population",
+					"socialstructure": "Social Structure"
+				},
+				"levels": {
+					"size": {
+						"0": "Tiny (-10)",
+						"1": "Small (-5)",
+						"2": "Medium (+5)",
+						"3": "Large (+10)",
+						"4": "Huge (+15)",
+						"5": "Vast (+40, Realm only)"
+					},
+					"terrain": {
+						"0": "Mundane (0)",
+						"1": "Simple Terrain (+5)",
+						"2": "Difficult Terrain (-5, +15 Quintessence/day)",
+						"3": "Strange (+5, +5 Quintessence/day)",
+						"4": "Extravagant (+10, +10 Quintessence/day)",
+						"5": "Extradimensional (+10, +15 Quintessence/day)",
+						"6": "Sheltered (+10, +10 Quintessence/day)"
+					},
+					"climate": {
+						"0": "Unbearable (-10)",
+						"1": "Harsh (-5)",
+						"2": "Earthly (0)",
+						"3": "Pleasant (+5)"
+					},
+					"population": {
+						"0": "No People (-5)",
+						"1": "Dangerous Inhabitants (-10)",
+						"2": "Overpopulated (-10)",
+						"3": "Strange Inhabitants (+5)",
+						"4": "Very Strange Inhabitants (+10)",
+						"5": "Advanced Inhabitants (+15, +15 Quintessence/day)"
+					},
+					"socialstructure": {
+						"0": "Primitive (-5)",
+						"1": "Archaic (0)",
+						"2": "Modern (+5)",
+						"3": "Advanced (+10)"
+					}
+				},
+				"sphereshift": {
+					"headline": "Sphere Rating Shifts",
+					"add": "Add shift",
+					"remove": "Remove",
+					"delta": "Signed difference (2 points per absolute point)",
+					"empty": "No Sphere shifts."
+				}
+			},
+			"descriptors": {
+				"headline": "Narrative Descriptors",
+				"empty": "This Chantry has no attached narrative descriptors.",
+				"hint": "Purely color tags cited from the Book of Chantries: the number in parentheses is the book's own citation and is NEVER summed into the construction pool.",
+				"add": "Add descriptor",
+				"remove": "Remove",
+				"categorypicker": "Category",
+				"categories": {
+					"atmosphere": "Atmosphere",
+					"phenomenon": "Phenomenon",
+					"location": "Location",
+					"land-status": "Land Status",
+					"thinning": "Thinning",
+					"internal-politics": "Internal Politics",
+					"leadership": "Leadership",
+					"staff-loyalty": "Staff Loyalty",
+					"staff-tier": "Staff & Acolytes",
+					"communications": "Communications",
+					"building-condition": "Building Condition"
+				},
+				"catalog": {
+					"atmosphere-alien": "Alien Atmosphere (-10)",
+					"atmosphere-dark": "Dark Atmosphere (-5)",
+					"atmosphere-peaceful": "Peaceful Atmosphere (+5)",
+					"atmosphere-celestial": "Celestial Atmosphere (+10)",
+					"phenomenon-curse-severe": "Severe Curse (-10)",
+					"phenomenon-curse-mild": "Mild Curse (-5)",
+					"phenomenon-curse-secret-dark": "Dark Secret Curse (-2)",
+					"phenomenon-haunted": "Haunted (-5)",
+					"phenomenon-psychic-emanations-powerful": "Powerful Psychic Emanations (-5)",
+					"phenomenon-psychic-emanations-none": "No Psychic Emanations (+5)",
+					"phenomenon-magical-manifestations-blatant": "Blatant Magical Manifestations (-15)",
+					"phenomenon-continuum-temporal-shifts": "Temporal Shifts (-5)",
+					"phenomenon-energy-fluctuations-extreme": "Extreme Energy Fluctuations (-10)",
+					"location-city": "City (-5)",
+					"location-hard-to-reach": "Hard to Reach (-5)",
+					"location-isolated": "Isolated (+5)",
+					"land-status-large-private-property": "Large Private Property (+5)",
+					"land-status-rented-30y": "Rented (30 years) (-5)",
+					"land-status-well-documented": "Well Documented (-1)",
+					"land-status-frequently-raided": "Frequently Raided (-10)",
+					"thinning-strong": "Strong Thinning (-5)",
+					"thinning-typical": "Typical Thinning (0)",
+					"thinning-weak": "Weak Thinning (+2)",
+					"thinning-none": "No Thinning (+5)",
+					"internal-politics-intriguing": "Intriguing (-10)",
+					"internal-politics-strict-hierarchy": "Strict Hierarchy (-10)",
+					"internal-politics-disorganized": "Disorganized (-5)",
+					"internal-politics-very-organized": "Very Organized (+5)",
+					"internal-politics-harmonious": "Harmonious (+10)",
+					"leadership-evil": "Evil Leadership (-15)",
+					"leadership-foolish": "Foolish Leadership (-5)",
+					"leadership-dictatorial": "Dictatorial Leadership (-5)",
+					"leadership-wise": "Wise Leadership (+5)",
+					"leadership-benevolent": "Benevolent Leadership (+10)",
+					"staff-loyalty-spies": "Spies (-10)",
+					"staff-loyalty-disloyal": "Disloyal (-5)",
+					"staff-loyalty-loyal": "Loyal (+5)",
+					"staff-loyalty-committed": "Committed (+10)",
+					"staff-loyalty-fanatic": "Fanatic (+15)",
+					"staff-tier-none": "No Staff (-10)",
+					"staff-tier-few": "Few Staff (-5)",
+					"staff-tier-functional": "Functional Staff (0)",
+					"staff-tier-many": "Many Staff (+5)",
+					"staff-tier-innumerable": "Innumerable Staff (+10)",
+					"communications-modern": "Modern Communications (+2)",
+					"communications-trans-umbral": "Trans-Umbral Communications (+5)",
+					"communications-trans-horizon": "Trans-Horizon Communications (+10)",
+					"building-condition-ruins": "Ruins (-10)",
+					"building-condition-high-tech": "High Technology (+10)"
+				}
 			}
 		},
 		"gear": {

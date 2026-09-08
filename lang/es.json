@@ -1436,7 +1436,13 @@
 				"influence": "Influencia",
 				"wonder": "Maravilla",
 				"mentor": "Mentor",
-				"patron": "Patrón"
+				"patron": "Patrón",
+				"guardian": "Guardián",
+				"fortification": "Fortificación",
+				"wards": "Protecciones",
+				"trap-system": "Sistema de Trampas",
+				"alarm-system": "Sistema de Alarma",
+				"research-library": "Biblioteca (Investigación Mundana)"
 			},
 			"traitdescriptions": {
 				"allies": "<p>Un consorte, Ciudadano Extraordinario, espíritu, EDE, u otro aliado excepcional por punto.</p><p>Este Rasgo se apoya en la misma lógica que el Trasfondo Aliados de personaje: cada aliado es un personaje del Narrador por derecho propio, con necesidades, miedos, motivaciones y objetivos que pueden chocar con los del grupo. Si un aliado muere o abandona al grupo, el Rasgo pierde los puntos que representaban a ese personaje hasta que se recluten reemplazos.</p><table><tr><th>Puntos</th><th>Aliados (según la escala del Trasfondo Aliados)</th></tr><tr><td>X</td><td>Sin aliados que ayuden cuando se necesite.</td></tr><tr><td>•</td><td>Un aliado de poder moderado o dos compinches menores.</td></tr><tr><td>••</td><td>Dos aliados moderados, cuatro compinches o un único aliado más poderoso.</td></tr><tr><td>•••</td><td>Tres aliados moderados o una combinación de menores y mayores.</td></tr><tr><td>••••</td><td>Cuatro aliados moderados, seis compinches menores o una combinación de los tres tipos.</td></tr><tr><td>•••••</td><td>Cinco aliados moderados o un conjunto de menores y mayores.</td></tr><tr><td>••••• •</td><td>Seis aliados moderados, una pequeña pandilla de compinches o uno o dos amigos realmente poderosos.</td></tr><tr><td>••••• ••</td><td>Siete moderados, un grupo de compinches o un puñado de compañeros fuertes.</td></tr><tr><td>••••• •••</td><td>Ocho moderados, un montón de seguidores o unos pocos tipos duros.</td></tr><tr><td>••••• ••••</td><td>Nueve moderados, una milicia privada o una pandilla de amigos importantes.</td></tr><tr><td>••••• •••••</td><td>Diez aliados capaces, un pequeño ejército o una pandilla realmente mortífera.</td></tr></table><p><em>Identificación editorial (por nombre y función, no por cita explícita del Dossier del Operativo): Trasfondo Aliados (markdown/mage/m20-core-rulebook-es.md:10345-10365).</em></p>",
@@ -1499,6 +1505,188 @@
 				"overcap": "Alguna Esfera supera la puntuación de la Capilla/Constructo.",
 				"empty": "Todavía no hay efectos integrados. Cada punto del Rasgo Efectos Integrados otorga puntos con los que comprar niveles de Esfera.",
 				"nosphere": "- Esfera -"
+			},
+			"bookoftraits": {
+				"headline": "Rasgos del Libro de las Capillas",
+				"notbuilt": "— No construido —",
+				"wardsdefensive": {
+					"label": "Niveles Defensivos",
+					"hint": "Cada nivel cuesta 5 puntos e inflige un punto más de daño agravado a quien entre sin autorización. No puede superar la puntuación de la Capilla/Constructo.",
+					"overcap": "Los niveles defensivos superan la puntuación de la Capilla/Constructo."
+				}
+			},
+			"traitlevels": {
+				"guardian": {
+					"0": "Sin Guardián (-10): el área debe ser protegida por los propios magos de la Capilla.",
+					"1": "Débil (-5): el Guardián tiene un nivel de poder de uno o dos.",
+					"2": "Normal (0): Guardián de nivel tres o cuatro.",
+					"3": "Poderoso (+5): nivel cinco o seis.",
+					"4": "Ridículo (+20): nivel siete. No se recomienda para Capillas de jugadores."
+				},
+				"fortification": {
+					"0": "Mal Fortificado (-5): sin defensas naturales ni artificiales, un blanco fácil.",
+					"1": "Fortificación Media (0): algunas ventajas de posición, fácil de defender.",
+					"2": "Bien Fortificado (+5): un lugar bastante duro.",
+					"3": "Formidable (+10): defensas fuertes.",
+					"4": "Inexpugnable (+15): prácticamente imposible de franquear."
+				},
+				"wards": {
+					"0": "Ninguna (0): nivel base implícito.",
+					"1": "Un tipo (+2): dificultad de Fuerza de Voluntad 8 para el vetado.",
+					"2": "Una categoría (+5): dificultad 9.",
+					"3": "Cualquier cosa no autorizada (+10): dificultad 10."
+				},
+				"trap-system": {
+					"0": "Ninguno (0): sin sistema de trampas.",
+					"1": "Simple (+5): Percepción + Alerta dificultad 7 para no quedar atrapado; Hazaña de Fuerza 8 para soltarse.",
+					"2": "Complejo (+10): dificultad 8, tirada cada turno aproximadamente; Hazaña de Fuerza 11 para soltarse."
+				},
+				"alarm-system": {
+					"0": "Ninguno (0): sin sistema de alarma.",
+					"1": "Baja Calidad (+2): Percepción + Sigilo dificultad 7 para no alertar al guardián.",
+					"2": "Media (+5): la tirada se repite una vez por turno mientras el intruso se mueve.",
+					"3": "Vanguardista (+10): dificultad 8, y se alerta a toda la Capilla."
+				},
+				"research-library": {
+					"0": "Pobre (-5): inexistente o demasiado pequeña para investigación no mágica.",
+					"1": "Modesta (0): Documentación dificultad 8, o 6 en un área concreta.",
+					"2": "Buena (+5): Documentación dificultad 7, o 5 en tres áreas concretas.",
+					"3": "Excepcional (+10): Documentación dificultad 6, o 4 en cinco áreas concretas; la Capilla debe ser Grande.",
+					"4": "Abrumadora (+15): Documentación dificultad 5, o 3 en diez áreas concretas; la Capilla debe ser Enorme."
+				}
+			},
+			"realm": {
+				"headline": "Reino del Horizonte",
+				"hasrealm": "¿Tiene Reino del Horizonte? (+10 puntos)",
+				"upkeep": "Mantenimiento de Quintaesencia/día (informado, nunca descontado de ningún total almacenado)",
+				"fields": {
+					"size": "Tamaño",
+					"sphereshifts": "Desplazamiento de Puntuaciones de Esfera",
+					"terrain": "Terreno",
+					"climate": "Clima",
+					"interconnected": "Ubicaciones Interconectadas (+10 puntos / +5 Quintaesencia por día)",
+					"advancedtransport": "Transporte Avanzado (+10 puntos / +10 Quintaesencia por día)",
+					"population": "Población",
+					"socialstructure": "Estructura Social"
+				},
+				"levels": {
+					"size": {
+						"0": "Diminuto (-10)",
+						"1": "Pequeño (-5)",
+						"2": "Medio (+5)",
+						"3": "Grande (+10)",
+						"4": "Enorme (+15)",
+						"5": "Vasto (+40, solo Reino)"
+					},
+					"terrain": {
+						"0": "Mundano (0)",
+						"1": "Terreno Simple (+5)",
+						"2": "Terreno Difícil (-5, +15 Quintaesencia/día)",
+						"3": "Extraño (+5, +5 Quintaesencia/día)",
+						"4": "Extravagante (+10, +10 Quintaesencia/día)",
+						"5": "Extradimensional (+10, +15 Quintaesencia/día)",
+						"6": "Bajo Techo (+10, +10 Quintaesencia/día)"
+					},
+					"climate": {
+						"0": "Insoportable (-10)",
+						"1": "Riguroso (-5)",
+						"2": "Terrenal (0)",
+						"3": "Agradable (+5)"
+					},
+					"population": {
+						"0": "Sin Gente (-5)",
+						"1": "Habitantes Peligrosos (-10)",
+						"2": "Superpoblado (-10)",
+						"3": "Habitantes Extraños (+5)",
+						"4": "Habitantes Muy Extraños (+10)",
+						"5": "Habitantes Avanzados (+15, +15 Quintaesencia/día)"
+					},
+					"socialstructure": {
+						"0": "Primitiva (-5)",
+						"1": "Arcaica (0)",
+						"2": "Moderna (+5)",
+						"3": "Avanzada (+10)"
+					}
+				},
+				"sphereshift": {
+					"headline": "Desplazamiento de Puntuaciones de Esfera",
+					"add": "Añadir desplazamiento",
+					"remove": "Quitar",
+					"delta": "Diferencia (con signo; 2 puntos por cada punto absoluto)",
+					"empty": "Sin desplazamientos de Esfera."
+				}
+			},
+			"descriptors": {
+				"headline": "Descriptores Narrativos",
+				"empty": "Esta Capilla no tiene descriptores narrativos adjuntos.",
+				"hint": "Solo etiquetas de color citadas del Libro de las Capillas: el número entre paréntesis es la cita del libro y NUNCA se suma a la reserva de construcción.",
+				"add": "Añadir descriptor",
+				"remove": "Quitar",
+				"categorypicker": "Categoría",
+				"categories": {
+					"atmosphere": "Atmósfera",
+					"phenomenon": "Fenómeno",
+					"location": "Ubicación",
+					"land-status": "Estatus de la Tierra",
+					"thinning": "Adelgazamiento",
+					"internal-politics": "Política Interna",
+					"leadership": "Liderazgo",
+					"staff-loyalty": "Lealtad de Sirvientes",
+					"staff-tier": "Sirvientes y Acólitos",
+					"communications": "Comunicaciones",
+					"building-condition": "Condiciones del Edificio"
+				},
+				"catalog": {
+					"atmosphere-alien": "Atmósfera Alienígena (-10)",
+					"atmosphere-dark": "Atmósfera Tenebrosa (-5)",
+					"atmosphere-peaceful": "Atmósfera Apacible (+5)",
+					"atmosphere-celestial": "Atmósfera Celestial (+10)",
+					"phenomenon-curse-severe": "Maldición Grave (-10)",
+					"phenomenon-curse-mild": "Maldición Leve (-5)",
+					"phenomenon-curse-secret-dark": "Maldición de Secreto Oscuro (-2)",
+					"phenomenon-haunted": "Embrujada (-5)",
+					"phenomenon-psychic-emanations-powerful": "Emanaciones Psíquicas Poderosas (-5)",
+					"phenomenon-psychic-emanations-none": "Sin Emanaciones Psíquicas (+5)",
+					"phenomenon-magical-manifestations-blatant": "Manifestaciones Mágicas Descaradas (-15)",
+					"phenomenon-continuum-temporal-shifts": "Cambios Temporales (-5)",
+					"phenomenon-energy-fluctuations-extreme": "Variación Extrema de Energía (-10)",
+					"location-city": "Ubicación en Ciudad (-5)",
+					"location-hard-to-reach": "Ubicación Difícil de Alcanzar (-5)",
+					"location-isolated": "Ubicación Aislada (+5)",
+					"land-status-large-private-property": "Gran Propiedad Privada (+5)",
+					"land-status-rented-30y": "Alquilada (30 años) (-5)",
+					"land-status-well-documented": "Bien Documentada (-1)",
+					"land-status-frequently-raided": "Asaltada con Frecuencia (-10)",
+					"thinning-strong": "Adelgazamiento Fuerte (-5)",
+					"thinning-typical": "Adelgazamiento Típico (0)",
+					"thinning-weak": "Adelgazamiento Débil (+2)",
+					"thinning-none": "Sin Adelgazamiento (+5)",
+					"internal-politics-intriguing": "Política Intrigante (-10)",
+					"internal-politics-strict-hierarchy": "Jerarquía Estricta (-10)",
+					"internal-politics-disorganized": "Política Desorganizada (-5)",
+					"internal-politics-very-organized": "Política Muy Organizada (+5)",
+					"internal-politics-harmonious": "Política Armoniosa (+10)",
+					"leadership-evil": "Liderazgo Maligno (-15)",
+					"leadership-foolish": "Liderazgo Necio (-5)",
+					"leadership-dictatorial": "Liderazgo Dictatorial (-5)",
+					"leadership-wise": "Liderazgo Sabio (+5)",
+					"leadership-benevolent": "Liderazgo Benevolente (+10)",
+					"staff-loyalty-spies": "Sirvientes Espías (-10)",
+					"staff-loyalty-disloyal": "Sirvientes Desleales (-5)",
+					"staff-loyalty-loyal": "Sirvientes Leales (+5)",
+					"staff-loyalty-committed": "Sirvientes Comprometidos (+10)",
+					"staff-loyalty-fanatic": "Sirvientes Fanáticos (+15)",
+					"staff-tier-none": "Sin Sirvientes (-10)",
+					"staff-tier-few": "Pocos Sirvientes (-5)",
+					"staff-tier-functional": "Sirvientes Funcional (0)",
+					"staff-tier-many": "Muchos Sirvientes (+5)",
+					"staff-tier-innumerable": "Sirvientes Innumerables (+10)",
+					"communications-modern": "Comunicaciones Modernas (+2)",
+					"communications-trans-umbral": "Comunicaciones Trans-Umbrales (+5)",
+					"communications-trans-horizon": "Comunicaciones Trans-Horizontales (+10)",
+					"building-condition-ruins": "Edificio en Ruinas (-10)",
+					"building-condition-high-tech": "Edificio de Alta Tecnología (+10)"
+				}
 			}
 		},
 		"gear": {
