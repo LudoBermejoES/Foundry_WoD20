@@ -1640,7 +1640,9 @@
 					"staff-loyalty": "Lealtad de Sirvientes",
 					"staff-tier": "Sirvientes y Acólitos",
 					"communications": "Comunicaciones",
-					"building-condition": "Condiciones del Edificio"
+					"building-condition": "Condiciones del Edificio",
+					"guardian-nature": "Naturaleza del Guardián",
+					"guardian-loyalty": "Lealtad del Guardián"
 				},
 				"catalog": {
 					"atmosphere-alien": "Atmósfera Alienígena (-10)",
@@ -1691,7 +1693,27 @@
 					"communications-trans-umbral": "Comunicaciones Trans-Umbrales (+5)",
 					"communications-trans-horizon": "Comunicaciones Trans-Horizontales (+10)",
 					"building-condition-ruins": "Edificio en Ruinas (-10)",
-					"building-condition-high-tech": "Edificio de Alta Tecnología (+10)"
+					"building-condition-high-tech": "Edificio de Alta Tecnología (+10)",
+					"phenomenon-psychic-emanations-strong": "Emanaciones Psíquicas Fuertes (-2)",
+					"phenomenon-psychic-emanations-normal": "Emanaciones Psíquicas Normales (+0)",
+					"phenomenon-magical-manifestations-subtle": "Manifestaciones Mágicas Sutiles (-5)",
+					"phenomenon-magical-manifestations-notable": "Manifestaciones Mágicas Notables (-10)",
+					"phenomenon-energy-fluctuations-subtle": "Variación Sutil de Energía (-5)",
+					"location-town": "Ubicación en Pueblo (-1)",
+					"location-sparsely-populated": "Ubicación Escasamente Poblada (+1)",
+					"internal-politics-conflicting-loyalties": "Lealtades Enfrentadas (-5)",
+					"internal-politics-rogue-cabals": "Cábalas Bellacas (-5)",
+					"land-status-private-property": "Propiedad Privada (+0)",
+					"land-status-rented-15y": "Alquilada, 15 años (-10)",
+					"land-status-rented-5y": "Alquilada, 5 años (-15)",
+					"guardian-nature-mundane": "Guardianes Durmientes (+1/5 guardias)",
+					"guardian-nature-aware": "Guardianes Conscientes (+5/5 guardias)",
+					"guardian-nature-supernatural": "Guardianes Sobrenaturales (+10/5 guardias)",
+					"guardian-loyalty-fanatic": "Lealtad Fanática (+15)",
+					"guardian-loyalty-loyal": "Lealtad Leal (+10)",
+					"guardian-loyalty-reluctant": "Lealtad Reacia (-5)",
+					"guardian-loyalty-hostile": "Lealtad Hostil (-10)",
+					"guardian-loyalty-living-entity": "Entidad Viviente (+20)"
 				}
 			}
 		},

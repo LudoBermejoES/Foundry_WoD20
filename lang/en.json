@@ -1643,7 +1643,9 @@
 					"staff-loyalty": "Staff Loyalty",
 					"staff-tier": "Staff & Acolytes",
 					"communications": "Communications",
-					"building-condition": "Building Condition"
+					"building-condition": "Building Condition",
+					"guardian-nature": "Guardian Nature",
+					"guardian-loyalty": "Guardian Loyalty"
 				},
 				"catalog": {
 					"atmosphere-alien": "Alien Atmosphere (-10)",
@@ -1694,7 +1696,27 @@
 					"communications-trans-umbral": "Trans-Umbral Communications (+5)",
 					"communications-trans-horizon": "Trans-Horizon Communications (+10)",
 					"building-condition-ruins": "Ruins (-10)",
-					"building-condition-high-tech": "High Technology (+10)"
+					"building-condition-high-tech": "High Technology (+10)",
+					"phenomenon-psychic-emanations-strong": "Strong Psychic Emanations (-2)",
+					"phenomenon-psychic-emanations-normal": "Normal Psychic Emanations (+0)",
+					"phenomenon-magical-manifestations-subtle": "Subtle Magical Manifestations (-5)",
+					"phenomenon-magical-manifestations-notable": "Notable Magical Manifestations (-10)",
+					"phenomenon-energy-fluctuations-subtle": "Subtle Energy Fluctuations (-5)",
+					"location-town": "Town Location (-1)",
+					"location-sparsely-populated": "Sparsely Populated Location (+1)",
+					"internal-politics-conflicting-loyalties": "Conflicting Loyalties (-5)",
+					"internal-politics-rogue-cabals": "Rogue Cabals (-5)",
+					"land-status-private-property": "Private Property (+0)",
+					"land-status-rented-15y": "Rented, 15 years (-10)",
+					"land-status-rented-5y": "Rented, 5 years (-15)",
+					"guardian-nature-mundane": "Mundane Guardians (+1/5 guards)",
+					"guardian-nature-aware": "Aware Guardians (+5/5 guards)",
+					"guardian-nature-supernatural": "Supernatural Guardians (+10/5 guards)",
+					"guardian-loyalty-fanatic": "Fanatical Loyalty (+15)",
+					"guardian-loyalty-loyal": "Loyal (+10)",
+					"guardian-loyalty-reluctant": "Reluctant Loyalty (-5)",
+					"guardian-loyalty-hostile": "Hostile Loyalty (-10)",
+					"guardian-loyalty-living-entity": "Living Entity (+20)"
 				}
 			}
 		},

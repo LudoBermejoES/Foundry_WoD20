@@ -14,8 +14,9 @@
  * task's scope, a `wod20-char`/coordinator decision) and a `wod20-compendium-es` regeneration +
  * deploy — a second submodule's release, not this one's.
  *
- * So this Actor-type SYSTEM carries its own copy of the 49 rows the catalogue held at the time of
- * writing (`webgen/data/entities/mage/mage-chantry-descriptors.json`, 2026-09-08), the same way
+ * So this Actor-type SYSTEM carries its own copy of the 69 rows the catalogue held at the time of
+ * writing (`webgen/data/entities/mage/mage-chantry-descriptors.json`, 2026-09-08,
+ * complete-chantry-descriptor-catalogue), the same way
  * `chantry-effects.js` carries its own copy of `BOOK_OF_CHANTRIES_LEVEL_COSTS`/`REALM_*_LEVELS`
  * rather than reading `wod20-char`'s TypeScript module (design.md D11's `realmLevelPoints` doc says
  * the same thing about those tables). ONLY the id -> category MAPPING lives here; every localized
@@ -25,8 +26,8 @@
  * ============================================================================================
  * KNOWN GAP, RECORDED RATHER THAN HIDDEN
  * ============================================================================================
- * If the wodchar catalogue grows past these 49 rows (`tasks.md` 1.3 already names a ~60-row full
- * pass as a tracked follow-up), an id a Chantry carries may be ABSENT from `CHANTRY_DESCRIPTOR_IDS`
+ * If the wodchar catalogue grows past these 69 rows, an id a Chantry carries may be ABSENT from
+ * `CHANTRY_DESCRIPTOR_IDS`
  * below. `descriptorFallbackLabel()` exists for exactly that case: it degrades to a readable label
  * derived from the id itself (kebab-case -> Title Case) rather than rendering blank or throwing.
  * Re-syncing this list after a catalogue change is a manual step today — there is no build tooling
@@ -34,9 +35,10 @@
  */
 
 /**
- * The 11 categories `webgen/taxonomy.json`'s `chantry-descriptor.mechanical_fields` declares
- * (design.md D6), in the order the sheet's category filter/optgroups list them. Localized labels
- * live in `lang/*.json` under `wod.chantry.descriptors.categories.<key>`.
+ * The 13 categories `webgen/taxonomy.json`'s `chantry-descriptor.mechanical_fields` declares
+ * (design.md D6, extended by complete-chantry-descriptor-catalogue D2's `guardian-nature`/
+ * `guardian-loyalty`), in the order the sheet's category filter/optgroups list them. Localized
+ * labels live in `lang/*.json` under `wod.chantry.descriptors.categories.<key>`.
  * @type {ReadonlyArray<string>}
  */
 export const CHANTRY_DESCRIPTOR_CATEGORIES = Object.freeze([
@@ -50,7 +52,9 @@ export const CHANTRY_DESCRIPTOR_CATEGORIES = Object.freeze([
 	"staff-loyalty",
 	"staff-tier",
 	"communications",
-	"building-condition"
+	"building-condition",
+	"guardian-nature",
+	"guardian-loyalty"
 ]);
 
 /**
@@ -70,14 +74,24 @@ export const CHANTRY_DESCRIPTOR_CATEGORY_BY_ID = Object.freeze({
 	"phenomenon-curse-secret-dark": "phenomenon",
 	"phenomenon-haunted": "phenomenon",
 	"phenomenon-psychic-emanations-powerful": "phenomenon",
+	"phenomenon-psychic-emanations-strong": "phenomenon",
+	"phenomenon-psychic-emanations-normal": "phenomenon",
 	"phenomenon-psychic-emanations-none": "phenomenon",
+	"phenomenon-magical-manifestations-subtle": "phenomenon",
+	"phenomenon-magical-manifestations-notable": "phenomenon",
 	"phenomenon-magical-manifestations-blatant": "phenomenon",
 	"phenomenon-continuum-temporal-shifts": "phenomenon",
+	"phenomenon-energy-fluctuations-subtle": "phenomenon",
 	"phenomenon-energy-fluctuations-extreme": "phenomenon",
 	"location-city": "location",
 	"location-hard-to-reach": "location",
+	"location-town": "location",
+	"location-sparsely-populated": "location",
 	"location-isolated": "location",
+	"land-status-private-property": "land-status",
 	"land-status-large-private-property": "land-status",
+	"land-status-rented-5y": "land-status",
+	"land-status-rented-15y": "land-status",
 	"land-status-rented-30y": "land-status",
 	"land-status-well-documented": "land-status",
 	"land-status-frequently-raided": "land-status",
@@ -87,7 +101,9 @@ export const CHANTRY_DESCRIPTOR_CATEGORY_BY_ID = Object.freeze({
 	"thinning-none": "thinning",
 	"internal-politics-intriguing": "internal-politics",
 	"internal-politics-strict-hierarchy": "internal-politics",
+	"internal-politics-conflicting-loyalties": "internal-politics",
 	"internal-politics-disorganized": "internal-politics",
+	"internal-politics-rogue-cabals": "internal-politics",
 	"internal-politics-very-organized": "internal-politics",
 	"internal-politics-harmonious": "internal-politics",
 	"leadership-evil": "leadership",
@@ -109,7 +125,15 @@ export const CHANTRY_DESCRIPTOR_CATEGORY_BY_ID = Object.freeze({
 	"communications-trans-umbral": "communications",
 	"communications-trans-horizon": "communications",
 	"building-condition-ruins": "building-condition",
-	"building-condition-high-tech": "building-condition"
+	"building-condition-high-tech": "building-condition",
+	"guardian-nature-mundane": "guardian-nature",
+	"guardian-nature-aware": "guardian-nature",
+	"guardian-nature-supernatural": "guardian-nature",
+	"guardian-loyalty-fanatic": "guardian-loyalty",
+	"guardian-loyalty-loyal": "guardian-loyalty",
+	"guardian-loyalty-reluctant": "guardian-loyalty",
+	"guardian-loyalty-hostile": "guardian-loyalty",
+	"guardian-loyalty-living-entity": "guardian-loyalty"
 });
 
 /** Every known id, in the SAME order `CHANTRY_DESCRIPTOR_CATEGORY_BY_ID` declares them (grouped by
