@@ -1625,7 +1625,7 @@
 			"descriptors": {
 				"headline": "Descriptores Narrativos",
 				"empty": "Esta Capilla no tiene descriptores narrativos adjuntos.",
-				"hint": "Solo etiquetas de color citadas del Libro de las Capillas: el número entre paréntesis es la cita del libro y NUNCA se suma a la reserva de construcción.",
+				"hint": "Etiquetas narrativas citadas del Libro de las Capillas: el número entre paréntesis es su coste (con signo) y se suma a la reserva de construcción, igual que cualquier otro Rasgo.",
 				"add": "Añadir descriptor",
 				"remove": "Quitar",
 				"categorypicker": "Categoría",

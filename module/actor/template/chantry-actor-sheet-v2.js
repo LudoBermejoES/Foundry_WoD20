@@ -34,7 +34,8 @@ import {
 	CHANTRY_DESCRIPTOR_IDS,
 	chantryDescriptorCategory,
 	isKnownChantryDescriptor,
-	descriptorFallbackLabel
+	descriptorFallbackLabel,
+	chantryDescriptorPointValue
 } from "../../scripts/chantry-descriptors.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -568,6 +569,11 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 		const descriptors = Array.isArray(actor.system.descriptors) ? actor.system.descriptors : [];
 
+		/* reprice-chantry-descriptors (2026-09-08) — the book prices these, and this sheet's own
+		   `spent` now sums them into the SAME pool as every other block, matching wodchar's own
+		   computation (design.md D5). */
+		spent += descriptors.reduce((sum, id) => sum + chantryDescriptorPointValue(id), 0);
+
 		data.descriptorTags = descriptors.map((id) => ({
 			id: id,
 			known: isKnownChantryDescriptor(id),
@@ -578,7 +584,8 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			fallbacklabel: isKnownChantryDescriptor(id) ? null : descriptorFallbackLabel(id),
 			categorykey: isKnownChantryDescriptor(id)
 				? `wod.chantry.descriptors.categories.${chantryDescriptorCategory(id)}`
-				: null
+				: null,
+			pointValue: chantryDescriptorPointValue(id)
 		}));
 
 		// The "add" picker: every KNOWN id not already attached, grouped by category in the same
@@ -592,7 +599,11 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 				categorykey: `wod.chantry.descriptors.categories.${category}`,
 				options: CHANTRY_DESCRIPTOR_IDS
 					.filter((id) => (chantryDescriptorCategory(id) === category) && !attached.has(id))
-					.map((id) => ({ id: id, labelkey: `wod.chantry.descriptors.catalog.${id}` }))
+					.map((id) => ({
+						id: id,
+						labelkey: `wod.chantry.descriptors.catalog.${id}`,
+						pointValue: chantryDescriptorPointValue(id)
+					}))
 			}))
 			.filter((group) => group.options.length > 0);
 
@@ -1170,17 +1181,20 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 	/**
 	 * `system.pool.spent`, recomputed from the actor's CURRENT stored data with `overrides` merged
-	 * in for whichever ONE of `traits`/`wardsDefensiveLevels`/`realm` the caller is about to write —
-	 * never from only whichever fields happen to be on screen, so a write to any one of the four
-	 * cost sources this sheet now has (the 19 linear Traits, the six book-of-chantries Traits,
-	 * `wardsDefensiveLevels`, `realm`) never zeroes out the other three's contribution to the same
-	 * total. Mirrors wodchar's own rule for the identical hazard (design.md D13 of
-	 * add-book-of-chantries-traits: "a PATCH that only touches one of the three recomputes
-	 * poolSpent using the EXISTING other two, not as if they were absent").
+	 * in for whichever ONE of `traits`/`wardsDefensiveLevels`/`realm`/`descriptors` the caller is
+	 * about to write — never from only whichever fields happen to be on screen, so a write to any
+	 * one of the five cost sources this sheet now has (the 19 linear Traits, the six
+	 * book-of-chantries Traits, `wardsDefensiveLevels`, `realm`, the narrative descriptors) never
+	 * zeroes out the other four's contribution to the same total. Mirrors wodchar's own rule for the
+	 * identical hazard (design.md D13 of add-book-of-chantries-traits: "a PATCH that only touches one
+	 * of the three recomputes poolSpent using the EXISTING other two, not as if they were absent").
+	 * Descriptors carry a real, signed cost (`reprice-chantry-descriptors`, 2026-09-08) — the earlier
+	 * "descriptors are zero-cost" design decision is reverted, matching wodchar's own computation.
 	 * @param {object} [overrides]
 	 * @param {Record<string, number|null>} [overrides.traits]  replaces `system.traits` for THIS calc
 	 * @param {number} [overrides.wardsDefensiveLevels]          replaces `system.wardsDefensiveLevels`
 	 * @param {object} [overrides.realm]                         replaces `system.realm` for THIS calc
+	 * @param {string[]} [overrides.descriptors]                  replaces `system.descriptors` for THIS calc
 	 * @returns {number}
 	 */
 	_computePoolSpent(overrides = {}) {
@@ -1190,6 +1204,8 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			? overrides.wardsDefensiveLevels
 			: (parseInt(actor.system.wardsDefensiveLevels) || 0);
 		const realm = overrides.realm ?? (actor.system.realm ?? {});
+		const descriptors = overrides.descriptors
+			?? (Array.isArray(actor.system.descriptors) ? actor.system.descriptors : []);
 
 		const traitcost = CONFIG.worldofdarkness.chantry.traitcost;
 		let spent = 0;
@@ -1216,6 +1232,7 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 		spent += computeWardsDefensiveWards(wardsDefensiveLevels).cost;
 		spent += computeRealmCost(realm);
+		spent += descriptors.reduce((sum, id) => sum + chantryDescriptorPointValue(id), 0);
 
 		return spent;
 	}
@@ -1651,9 +1668,9 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	/**
 	 * Attaches the id currently selected in the picker's own `<select>` — the button carries no
 	 * value of its own, so the value to act on lives in the sibling control it sits next to, same
-	 * idiom `onCensusCreate` above uses for `target.dataset.key`. Never touches `system.pool.spent`
-	 * (design.md D6: descriptors are zero-cost, and `_computePoolSpent()` deliberately has no
-	 * `descriptors` parameter at all — there is nothing for it to price).
+	 * idiom `onCensusCreate` above uses for `target.dataset.key`. Recomputes `system.pool.spent`
+	 * through `_computePoolSpent()` (reprice-chantry-descriptors, 2026-09-08) — descriptors carry a
+	 * real, signed cost now, so attaching one changes the pool exactly like adding a Trait dot does.
 	 */
 	static async onDescriptorAdd(event, target) {
 		event.preventDefault();
@@ -1676,11 +1693,16 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 		descriptors.push(id);
 
-		await this.actor.update({ "system.descriptors": descriptors });
+		await this.actor.update({
+			"system.descriptors": descriptors,
+			"system.pool.spent": this._computePoolSpent({ descriptors: descriptors })
+		});
 	}
 
 	/** Detaches one descriptor id. Works for an UNKNOWN id too (design.md D16's documented gap) —
-	 * filtering by exact string match needs no catalogue lookup at all. */
+	 * filtering by exact string match needs no catalogue lookup at all. Recomputes
+	 * `system.pool.spent` through `_computePoolSpent()` (reprice-chantry-descriptors, 2026-09-08),
+	 * same reasoning as `onDescriptorAdd` above. */
 	static async onDescriptorRemove(event, target) {
 		event.preventDefault();
 		event.stopPropagation();
@@ -1694,6 +1716,9 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		const descriptors = (Array.isArray(this.actor.system.descriptors) ? this.actor.system.descriptors : [])
 			.filter((existing) => existing !== id);
 
-		await this.actor.update({ "system.descriptors": descriptors });
+		await this.actor.update({
+			"system.descriptors": descriptors,
+			"system.pool.spent": this._computePoolSpent({ descriptors: descriptors })
+		});
 	}
 }

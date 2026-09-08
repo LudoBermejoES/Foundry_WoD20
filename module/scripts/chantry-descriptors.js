@@ -8,7 +8,7 @@
  * `chantry-trait` Items themselves) does so because `webgen/foundry_type_map.json` exports that
  * entity TYPE into a `wod20-compendium-es` pack. `chantry-descriptor` is deliberately NOT in that
  * map (verified 2026-09-08, `grep -n "chantry-descriptor" webgen/foundry_type_map.json` — no
- * match): it is a coarse narrative catalogue, never priced, never rolled against, so there is no
+ * match): it is a coarse narrative catalogue, never rolled against, so there is no
  * compendium document this sheet could `game.packs.get(...).getDocuments()` to resolve an id like
  * `"leadership-wise"` into "Liderazgo Sabio". Adding one would mean touching `webgen/` (out of this
  * task's scope, a `wod20-char`/coordinator decision) and a `wod20-compendium-es` regeneration +
@@ -59,9 +59,6 @@ export const CHANTRY_DESCRIPTOR_CATEGORIES = Object.freeze([
 
 /**
  * Every `chantry-descriptor` id this system knows a category for, keyed to that category.
- * `flavor_point_value` is DELIBERATELY not carried here — design.md D6 forbids summing it into
- * anything, and the sheet only ever prints it as a citation, read straight from
- * `wod.chantry.descriptors.catalog.<id>` alongside the name (see that lang key's own value).
  * @type {Readonly<Record<string, string>>}
  */
 export const CHANTRY_DESCRIPTOR_CATEGORY_BY_ID = Object.freeze({
@@ -139,6 +136,94 @@ export const CHANTRY_DESCRIPTOR_CATEGORY_BY_ID = Object.freeze({
 /** Every known id, in the SAME order `CHANTRY_DESCRIPTOR_CATEGORY_BY_ID` declares them (grouped by
  * category) — what the "add" picker iterates. @type {ReadonlyArray<string>} */
 export const CHANTRY_DESCRIPTOR_IDS = Object.freeze(Object.keys(CHANTRY_DESCRIPTOR_CATEGORY_BY_ID));
+
+/**
+ * `id` -> the book's own `mechanics.flavor_point_value`, a manual copy of
+ * `webgen/data/entities/mage/mage-chantry-descriptors.json` (same 69 rows, same sync discipline as
+ * `CHANTRY_DESCRIPTOR_CATEGORY_BY_ID` above — re-sync both together on a catalogue change).
+ * `reprice-chantry-descriptors` (2026-09-08) reverts the earlier "descriptors are zero-cost" design
+ * decision: the book prices 65 of these 69 rows (four sit at 0), and the sheet's own `poolSpent`
+ * now sums them exactly like every other priced block, matching wodchar's own computation.
+ * @type {Readonly<Record<string, number>>}
+ */
+export const CHANTRY_DESCRIPTOR_POINT_VALUE_BY_ID = Object.freeze({
+	"atmosphere-alien": -10,
+	"atmosphere-dark": -5,
+	"atmosphere-peaceful": 5,
+	"atmosphere-celestial": 10,
+	"phenomenon-curse-severe": -10,
+	"phenomenon-curse-mild": -5,
+	"phenomenon-curse-secret-dark": -2,
+	"phenomenon-haunted": -5,
+	"phenomenon-psychic-emanations-powerful": -5,
+	"phenomenon-psychic-emanations-strong": -2,
+	"phenomenon-psychic-emanations-normal": 0,
+	"phenomenon-psychic-emanations-none": 5,
+	"phenomenon-magical-manifestations-subtle": -5,
+	"phenomenon-magical-manifestations-notable": -10,
+	"phenomenon-magical-manifestations-blatant": -15,
+	"phenomenon-continuum-temporal-shifts": -5,
+	"phenomenon-energy-fluctuations-subtle": -5,
+	"phenomenon-energy-fluctuations-extreme": -10,
+	"location-city": -5,
+	"location-hard-to-reach": -5,
+	"location-town": -1,
+	"location-sparsely-populated": 1,
+	"location-isolated": 5,
+	"land-status-private-property": 0,
+	"land-status-large-private-property": 5,
+	"land-status-rented-5y": -15,
+	"land-status-rented-15y": -10,
+	"land-status-rented-30y": -5,
+	"land-status-well-documented": -1,
+	"land-status-frequently-raided": -10,
+	"thinning-strong": -5,
+	"thinning-typical": 0,
+	"thinning-weak": 2,
+	"thinning-none": 5,
+	"internal-politics-intriguing": -10,
+	"internal-politics-strict-hierarchy": -10,
+	"internal-politics-conflicting-loyalties": -5,
+	"internal-politics-disorganized": -5,
+	"internal-politics-rogue-cabals": -5,
+	"internal-politics-very-organized": 5,
+	"internal-politics-harmonious": 10,
+	"leadership-evil": -15,
+	"leadership-foolish": -5,
+	"leadership-dictatorial": -5,
+	"leadership-wise": 5,
+	"leadership-benevolent": 10,
+	"staff-loyalty-spies": -10,
+	"staff-loyalty-disloyal": -5,
+	"staff-loyalty-loyal": 5,
+	"staff-loyalty-committed": 10,
+	"staff-loyalty-fanatic": 15,
+	"staff-tier-none": -10,
+	"staff-tier-few": -5,
+	"staff-tier-functional": 0,
+	"staff-tier-many": 5,
+	"staff-tier-innumerable": 10,
+	"communications-modern": 2,
+	"communications-trans-umbral": 5,
+	"communications-trans-horizon": 10,
+	"building-condition-ruins": -10,
+	"building-condition-high-tech": 10,
+	"guardian-nature-mundane": 1,
+	"guardian-nature-aware": 5,
+	"guardian-nature-supernatural": 10,
+	"guardian-loyalty-fanatic": 15,
+	"guardian-loyalty-loyal": 10,
+	"guardian-loyalty-reluctant": -5,
+	"guardian-loyalty-hostile": -10,
+	"guardian-loyalty-living-entity": 20
+});
+
+/** `id`'s signed point value, or `0` for an id this system does not recognise — same tolerant
+ * shape as `chantryDescriptorCategory`/`isKnownChantryDescriptor` above (an id outside the known
+ * catalogue is a documented gap, not an error). */
+export function chantryDescriptorPointValue(id) {
+	return CHANTRY_DESCRIPTOR_POINT_VALUE_BY_ID[id] ?? 0;
+}
 
 /** Whether `id` is one this system can label/categorise. A Chantry may still carry an id outside
  * this set (design.md D16's "known gap" above) — the sheet renders it via `descriptorFallbackLabel`

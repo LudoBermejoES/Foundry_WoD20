@@ -1628,7 +1628,7 @@
 			"descriptors": {
 				"headline": "Narrative Descriptors",
 				"empty": "This Chantry has no attached narrative descriptors.",
-				"hint": "Purely color tags cited from the Book of Chantries: the number in parentheses is the book's own citation and is NEVER summed into the construction pool.",
+				"hint": "Narrative tags cited from the Book of Chantries: the number in parentheses is their signed cost, summed into the construction pool like any other Trait.",
 				"add": "Add descriptor",
 				"remove": "Remove",
 				"categorypicker": "Category",

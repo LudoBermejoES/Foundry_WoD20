@@ -516,10 +516,11 @@
 			</div>
 
 			{{!-- add-book-of-chantries-traits (task 5.2) — narrative descriptors: read-only tags,
-			      never a dot allocator, never a cost annotation against the pool (design.md D6, spec
-			      requirement: "no control that could be mistaken for one that spends points"). The
-			      add/remove controls only ATTACH/DETACH an id; neither ever touches
-			      `system.pool.spent` — `_computePoolSpent()` has no `descriptors` parameter at all. --}}
+			      never a dot allocator (spec requirement: "no control that could be mistaken for one
+			      that spends points"). reprice-chantry-descriptors (2026-09-08) reverts the "never a
+			      cost annotation" half of that: the book prices these, so each tag and picker option
+			      now shows its signed `flavor_point_value`, and the add/remove controls recompute
+			      `system.pool.spent` through `_computePoolSpent()` (design.md D5). --}}
 			<div class="clearareaBox area-box chantry-descriptors">
 
 				<div class="sheet-headline sheet-banner splatFont">
@@ -538,6 +539,7 @@
 								{{else}}
 									{{tag.fallbacklabel}}
 								{{/if}}
+								<span class="chantry-descriptor-tag-cost">({{signed tag.pointValue}})</span>
 								{{#unless locked}}
 									<i class="pointer icon fa-solid fa-xmark chantry-descriptor-tag-remove"
 											data-action="descriptorRemove" data-id="{{tag.id}}"
@@ -557,7 +559,7 @@
 								{{#each descriptorPicker as |group|}}
 									<optgroup label="{{localize group.categorykey}}">
 										{{#each group.options as |option|}}
-											<option value="{{option.id}}">{{localize option.labelkey}}</option>
+											<option value="{{option.id}}">{{localize option.labelkey}} ({{signed option.pointValue}})</option>
 										{{/each}}
 									</optgroup>
 								{{/each}}
