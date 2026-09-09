@@ -24,6 +24,7 @@ import {
 	REALM_NODE_NAMED_COST,
 	computePersonnelCost,
 	computeConsortsCost,
+	PERSONNEL_CONSORT_COST_PER_POWER_LEVEL,
 	PERSONNEL_STAFF_TIER_LEVELS,
 	PERSONNEL_STAFF_LOYALTY_LEVELS
 } from "../../scripts/chantry-effects.js";
@@ -31,7 +32,7 @@ import {
    censo del PJ. Los dos ficheros están en `scripts/`, no en `PCActorSheet`, precisamente para que
    esta clase pueda usarlos sin heredar nada (D1 sigue en pie; el precedente es `gear-lists.js`). */
 import { buildConnectionGroups, isConnectionEntry } from "../../scripts/connection-groups.js";
-import { censusOptions, decorateCensusGroups, censusItemData } from "../../scripts/chantry-census.js";
+import { censusOptions, decorateCensusGroups, censusItemData, CENSUS_PERSON_PLACEHOLDER } from "../../scripts/chantry-census.js";
 /* add-book-of-chantries-traits — el catálogo de `chantry-descriptor` (design.md D6/D16). Ver la
    cabecera de ese fichero: son DATOS embebidos en el sistema (id -> categoría), no un compendio, y
    las cadenas localizadas viven en `lang/*.json` bajo `wod.chantry.descriptors.*`. */
@@ -707,6 +708,15 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 					})),
 					capacity);
 				context.hasConnections = context.connections.length > 0;
+
+				/* i-see-consortes-in-censo-tab: los Consortes NO son Items (viven en
+				   `system.personnel.consorts`, no en el censo de Rasgos), así que no pueden salir de
+				   `buildConnectionGroups`/`decorateCensusGroups` — esos dos solo conocen Items con
+				   `system.relation`. Se pintan como un grupo AJENO, propio de esta pestaña, para que el
+				   usuario los vea "en el sitio esperado" (censo) sin forzarlos por la tubería de Rasgos,
+				   que les pintaría un aviso "sin Rasgo asignado" falso: un Consorte no cuenta contra
+				   ningún Rasgo por diseño, no por error de tecleo. */
+				context.consortsGroup = this._prepareConsortsCensusGroup(this.actor.system.personnel?.consorts);
 
 				return context;
 			}
@@ -1415,6 +1425,54 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			// La puerta del censo de `staffTier`: mismo patrón que el Nodo, fuera del bucle de
 			// Rasgos porque el bloque Personal ya no vive bajo `system.traits`.
 			roster: staffTierRoster ? { ...staffTierRoster } : null
+		};
+	}
+
+	/**
+	 * The Censo tab's Consortes group (`i-see-consortes-in-censo-tab`). Consortes are plain data on
+	 * `system.personnel.consorts`, not embedded Items, so they never go through
+	 * `buildConnectionGroups` — this hand-builds the SAME shape `v3/connections.hbs` already knows
+	 * how to render for a real group's entries (`name`/portrait/`link`), but skips the Item-only
+	 * parts of that markup entirely (no `feature_item.hbs`, no edit/chat/menu icons — a Consorte has
+	 * no embedded-Item id for those actions to bind to; editing still happens on the Personal tab).
+	 *
+	 * Returns `null` when there are no Consortes, so the template can skip the whole block — an
+	 * empty Consortes group would otherwise render a header with nothing under it.
+	 * @param {Array<object>} [consorts] `actor.system.personnel.consorts`
+	 * @returns {{label: string, count: number, entries: Array<object>}|null}
+	 */
+	_prepareConsortsCensusGroup(consorts) {
+		const list = Array.isArray(consorts) ? consorts : [];
+		if (list.length === 0) return null;
+
+		return {
+			label: game.i18n.localize("wod.chantry.personnel.consorts"),
+			count: list.length,
+			entries: list.map((consort) => {
+				const portrait = typeof consort?.portrait === "string" && consort.portrait.trim() !== ""
+					? consort.portrait
+					: null;
+				const link = typeof consort?.link === "string" && consort.link.trim() !== ""
+					? consort.link
+					: null;
+				const powerLevel = Number.isInteger(consort?.powerLevel)
+					? consort.powerLevel
+					: (parseInt(consort?.powerLevel) || 0);
+
+				return {
+					name: typeof consort?.name === "string" && consort.name.trim() !== ""
+						? consort.name
+						: game.i18n.localize("wod.labels.new.connection"),
+					portraitSrc: portrait ?? CENSUS_PERSON_PLACEHOLDER,
+					hasPortrait: portrait !== null,
+					link: link,
+					// Mismo cálculo que `computeConsortsCost` hace por entrada, no una cifra nueva:
+					// el «Puntos» de esta fila es exactamente lo que ESTA entrada añade al gasto de
+					// la reserva (`chantry-effects.js`), nunca un cupo compartido — un Consorte no
+					// tiene aforo de grupo, cada uno se paga por su cuenta.
+					censuspoints: powerLevel * PERSONNEL_CONSORT_COST_PER_POWER_LEVEL
+				};
+			})
 		};
 	}
 

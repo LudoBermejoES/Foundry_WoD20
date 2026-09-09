@@ -135,6 +135,42 @@
 					{{/each}}
 				{{else}}
 					<p class="v3-empty">{{#if chantry}}{{localize "wod.chantry.roster.empty"}}{{else}}{{localize "wod.connections.empty"}}{{/if}}</p>
+				{{/if}}{{#if consortsGroup}}
+					{{!-- i-see-consortes-in-censo-tab: los Consortes viven en `system.personnel.consorts`,
+					      no como Items, así que NO pasan por `feature_item.hbs` (no hay `data-itemid` al
+					      que atar editar/enviar-al-chat/menú -- esos botones no tendrían nada real que
+					      hacer). Solo retrato, nombre, enlace y su coste en puntos; editar sigue viviendo
+					      en la pestaña Personal. Guardado por `chantry`, así que el PJ no lo ve nunca. --}}
+					<div class="census-group" data-censusgroup="consorts" tabindex="-1">
+						<div class="headlineGroup splatFont">
+							{{consortsGroup.label}}
+							({{consortsGroup.count}})
+						</div>
+
+						<div class="feature-itemlistarea">
+							{{#each consortsGroup.entries as |entry|}}
+								<div class="sheet-boxcontainer connection-entry">
+
+									<div class="shape-panel-image connection-portrait">
+										<img class="profile-img shape-image{{#unless entry.hasPortrait}} shape-image-empty{{/unless}}"
+										     src="{{entry.portraitSrc}}" title="{{entry.name}}" alt="{{entry.name}}" />
+									</div>
+
+									<div class="connection-body">
+										<div class="headlineNormal">{{entry.name}}</div>
+
+										{{#if entry.link}}
+											<a class="connection-link" href="{{entry.link}}" target="_blank">{{localize 'wod.connections.link'}}</a>
+										{{else}}
+											<span class="information-area connection-link">{{localize 'wod.connections.nolink'}}</span>
+										{{/if}}
+										<span class="information-area census-entrypoints" title="{{localize 'wod.chantry.roster.entrypoints'}}">{{localize "wod.chantry.roster.points"}}: {{entry.censuspoints}}</span>
+									</div>
+
+								</div>
+							{{/each}}
+						</div>
+					</div>
 				{{/if}}
 
 			</div>

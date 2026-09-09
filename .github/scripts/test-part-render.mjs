@@ -2117,7 +2117,15 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		};
 		system.personnel = {
 			staffTier: 3, staffLoyalty: 2, hereditaryStaff: true, military: true,
-			consorts: [{ powerLevel: 2 }, { powerLevel: 1 }]
+			// i-see-consortes-in-censo-tab: uno CON name/link/portrait (el camino normal, un
+			// personaje real enlazado) y otro SIN ninguno de los tres (el borde ya cubierto por
+			// `fix-chantry-foundry-sheet-parity` — un Consorte de solo estadísticas, sin ficha), para
+			// que un solo fixture ejercite el fallback de retrato/enlace/nombre a la vez que el
+			// camino con datos.
+			consorts: [
+				{ powerLevel: 2, name: "Raffela Diemer", link: "https://wodchar.ludobermejo.es/personaje/abc", portrait: "data:image/webp;base64,AAAA" },
+				{ powerLevel: 1 }
+			]
 		};
 		/* NO SE PUEBLA `system.descriptors` AQUÍ, y no por omisión: hacerlo revela un defecto
 		   PREEXISTENTE y AJENO a este cambio — `{{#unless locked}}` en la fila de un descriptor
@@ -2353,6 +2361,38 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		if (consortDeletes !== 2) throw new Error(`expected 2 consort deletes for the fixture's 2 consorts, got ${consortDeletes}`);
 	});
 
+	/* i-see-consortes-in-censo-tab: los Consortes NO son Items, así que ningún `data-action` los
+	   cubre aquí (no hay editar/borrar en esta pestaña, a propósito — ver el comentario del partial) —
+	   esta comprobación es puramente de LECTURA: que las dos filas de la fixture (una con
+	   name/link/portrait, otra sin ninguno de los tres) aparezcan con su retrato, su enlace y su
+	   nombre/fallback correctos, y que el grupo no aparezca en absoluto para un Consorte inexistente. */
+	check("chantry: la pestaña Censo pinta un grupo Consortes con retrato, nombre y enlace", () => {
+		const census = rendered.get("unlocked|census") ?? "";
+
+		if (!census.includes('data-censusgroup="consorts"')) {
+			throw new Error("expected a Consortes census-group, found none");
+		}
+		if (!census.includes("Raffela Diemer")) throw new Error("expected the named consort's name to render");
+		if (!census.includes('src="data:image/webp;base64,AAAA"')) {
+			throw new Error("expected the named consort's own portrait data URI, not a placeholder");
+		}
+		if (!census.includes('href="https://wodchar.ludobermejo.es/personaje/abc"')) {
+			throw new Error("expected the named consort's link to render as an anchor");
+		}
+		// El segundo Consorte (sin name/link/portrait) cae al placeholder/fallback: comprobado por
+		// CONTEO, no por ausencia de "Raffela", porque ambas filas comparten la clase de imagen.
+		const placeholderPortraits = (census.match(/shape-image-empty/g) ?? []).length;
+		if (placeholderPortraits < 1) throw new Error("expected the unlinked consort to fall back to the placeholder portrait");
+		if (!census.includes(game.i18n.localize("wod.connections.nolink"))) {
+			throw new Error("expected the unlinked consort's row to show the no-link fallback text");
+		}
+		// Puntos por entrada = powerLevel * 2 (computeConsortsCost's own per-unit price), nunca un
+		// cupo de grupo — un Consorte no tiene aforo compartido.
+		if (!census.includes(`${game.i18n.localize("wod.chantry.roster.points")}: 4`)) {
+			throw new Error("expected the powerLevel-2 consort's own cost (4) to render");
+		}
+	});
+
 	/* EL CENSO SALIÓ DE LA PESTAÑA DE RASGOS (add-chantry-roster-tab, tarea 4.6). Esta comprobación
 	   codificaba el invariante VIEJO — «2 bloques de censo bloqueada, 8 desbloqueada» — y se ha
 	   reescrito contra la regla nueva en vez de ajustarse hasta que pasara: el censo tiene su propia
@@ -2455,11 +2495,14 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 				compile(templateFile(ChantrySheetClass.PARTS[partId].template)), new Frame(context));
 		}
 
-		/** Una Capilla RECIÉN CREADA: ni censo viejo, ni entradas, ni nada. */
+		/** Una Capilla RECIÉN CREADA: ni censo viejo, ni entradas, ni Consortes, ni nada. */
 		const stripCensus = (actor) => {
 			actor.system.traitRosters = {};
 			actor.items = actor.items.filter(
 				(i) => !(i.type === "Feature" && i.system?.type === "wod.types.connection"));
+			// i-see-consortes-in-censo-tab: el grupo Consortes también cuenta como "censo" para estas
+			// comprobaciones de estado vacío — una Capilla recién creada no tiene ninguno.
+			if (actor.system.personnel) actor.system.personnel.consorts = [];
 		};
 
 		const count = (html, re) => (html.match(re) ?? []).length;
@@ -2628,11 +2671,17 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 
 		check("chantry/censo: los puntos de cada entrada se leen como TEXTO, también cuando son 0", () => {
 			const html = rendered.get("locked|census") ?? "";
-			const entries = buildChantryActor().items.filter(
+			const fixture = buildChantryActor();
+			const entries = fixture.items.filter(
 				(i) => i.type === "Feature" && i.system?.type === "wod.types.connection").length;
+			// i-see-consortes-in-censo-tab: el grupo Consortes reusa la MISMA clase para su «Puntos: N»
+			// por entrada, así que sus filas cuentan aquí también.
+			const consorts = (fixture.system.personnel?.consorts ?? []).length;
 
 			const readouts = count(html, /class="information-area census-entrypoints"/g);
-			if (readouts !== entries) throw new Error(`${readouts} lectura(s) de puntos por entrada para ${entries} entrada(s)`);
+			if (readouts !== entries + consorts) {
+				throw new Error(`${readouts} lectura(s) de puntos por entrada para ${entries} entrada(s) + ${consorts} consorte(s)`);
+			}
 			if (!/census-entrypoints[^>]*>[^<]*:\s*0</.test(html)) {
 				throw new Error("una entrada de 0 puntos no imprime su 0; `pointValue` lo esconde y aquí no puede esconderse");
 			}

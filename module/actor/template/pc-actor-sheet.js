@@ -2595,6 +2595,9 @@ export const prepareConnectionsContext = async function (context, actor) {
 	   nadie» y «vale false» se leen igual en Handlebars pero no en esa puerta — que es la que descubrió
 	   que esta pestaña no se renderizaba en ninguna de las 173 estructuras. */
 	context.chantry = false;
+	// i-see-consortes-in-censo-tab: mismo trato que `chantry` de la línea anterior — el PJ no tiene
+	// Consortes, así que esta clave se pone explícitamente a `null` en vez de dejarla undefined.
+	context.consortsGroup = null;
 
 	context.connections = await buildConnectionGroups(actor);
 	context.hasConnections = context.connections.length > 0;
