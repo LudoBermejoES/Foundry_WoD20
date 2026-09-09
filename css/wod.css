@@ -3442,13 +3442,27 @@ input.sheet-infoWidth {
 
 /* ---- (5) Node detail blocks: each Node is its own bounded card
    (fix-chantry-foundry-sheet-parity) ----
-   Reuses `.chantry-trait-block`'s own block+zebra-band idiom (a Chantry may have several Nodes,
-   and a flat undifferentiated list would be illegible) — the name renders as this block's own
-   heading-weight first line, its other fields as ordinary locked-value rows underneath. */
+   A REAL border + padding, not zebra shading alone — measured against a live render: the zebra
+   background by itself read as one continuous list with no visible seam between two Nodes. Each
+   block is its own rounded box with breathing room around it (`chantry-node-list`'s own `gap`
+   handles the space BETWEEN blocks; the block's own padding/margin handles the space INSIDE and
+   is what makes it read as a card rather than a shaded band). The name renders as this block's own
+   heading-weight first line; its other fields are ordinary rows underneath, each on its own line
+   with a real inter-column gap so a label and its value never run into one another. */
 .chantry-body .chantry-node-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.chantry-body .chantry-node-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--main-border-color, currentColor);
+  border-radius: 6px;
 }
 
 .chantry-body .chantry-node-block:nth-of-type(even) {
@@ -3457,20 +3471,50 @@ input.sheet-infoWidth {
 
 .chantry-body .chantry-node-row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  flex-wrap: wrap;
   gap: 10px;
-  padding: 3px 6px;
 }
 
 .chantry-body .chantry-node-name .headlineNormal {
   font-weight: bold;
+  font-size: 1.05em;
+}
+
+/* The Node's free-text description (no label — it is prose, not a data row): visually
+   subordinate, matching the reduced-opacity treatment every other secondary annotation on this
+   sheet already uses, so it reads as narrative color rather than another field. */
+.chantry-body .chantry-node-row.chantry-node-description {
+  font-style: italic;
+  opacity: 0.85;
 }
 
 /* ---- (6) Consort rows: name first at full weight, power level next, link last
-   (fix-chantry-foundry-sheet-parity) ---- */
+   (fix-chantry-foundry-sheet-parity) ----
+   Each Consort is its own bordered chip, the same visual weight as a Node block or a Census
+   entry — matched deliberately, since the user reads Consortes right next to those two and
+   otherwise the row (previously plain running text with NO gap between name/level/link — a real
+   layout bug, not a design choice) looked like an accident rather than an entry. No portrait
+   (explicitly out of scope — wodchar's portrait endpoint is not publicly hotlinkable), but the
+   bordered box + bold name gives it comparable presence without one. */
+.chantry-body .chantry-personnel-consort-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--main-border-color, currentColor);
+  border-radius: 6px;
+}
+
 .chantry-body .chantry-personnel-consort-name {
   flex: 0 0 auto;
   font-weight: bold;
+}
+
+.chantry-body .chantry-personnel-consorts .chantry-locked-value {
+  flex: 0 0 auto;
 }
 
 .chantry-body .chantry-trait-roster-eye:hover,
