@@ -544,21 +544,19 @@
 					</div>
 				{{/if}}
 
-				{{!-- rebuild-chantry-book-of-chantries-only, design.md D3 — el Nodo del libro, una
-				      compra independiente del Reino. `nodeBattery`/`nodeTass` son INFORMATIVOS
-				      (nunca se suman al pool, D3/D5): se pintan como checkboxes de solo lectura de
-				      la nota, no como controles que compran algo. --}}
-				<div class="clearareaBox row chantry-realm-toggle-row" data-field="hasNode">
-					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.hasnode"}}</div>
+				{{!-- expand-chantry-node-personnel-and-roster-linking, design.md D1 — el Nodo del libro
+				      es repetible: "Cada Nodo cuesta cinco puntos" fija el coste POR UNIDAD, así que
+				      `nodeCount` es un contador (0+), no un interruptor. `nodeBattery`/`nodeTass` son
+				      INFORMATIVOS (nunca se suman al pool, D3/D5): se pintan como checkboxes de solo
+				      lectura de la nota, no como controles que compran algo. --}}
+				<div class="clearareaBox row chantry-realm-toggle-row" data-field="nodeCount">
+					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.nodecount"}}</div>
 					{{#if locked}}
-						{{#if realm.hasNode}}
-							<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
-						{{else}}
-							<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
-						{{/if}}
+						<span class="chantry-locked-value">{{realm.nodeCount}}</span>
 					{{else}}
-						<input type="checkbox" class="editable" name="system.realm.hasNode" data-source="realmhasnode"
-								{{#if realm.hasNode}}checked{{/if}} />
+						<input class="inputdata resource-value-input" type="number" min="0"
+								name="system.realm.nodeCount" data-source="realmnodecount"
+								value="{{realm.nodeCount}}" />
 					{{/if}}
 
 					{{!-- La puerta del censo del Nodo (roster re-homed): mismo patrón que la de un
@@ -573,7 +571,7 @@
 					{{/if}}
 				</div>
 
-				{{#if realm.hasNode}}
+				{{#if (gt realm.nodeCount 0)}}
 					<div class="chantry-realm-fields chantry-node-fields">
 
 						{{#with realm.nodeSize as |field|}}

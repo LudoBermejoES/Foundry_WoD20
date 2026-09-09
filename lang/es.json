@@ -1586,7 +1586,7 @@
 					"empty": "Sin desplazamientos de Esfera.",
 					"nosphere": "- Esfera -"
 				},
-				"hasnode": "¿Tiene Nodo propio? (+5 puntos)"
+				"nodecount": "Número de Nodos (5 puntos cada uno)"
 			},
 			"descriptors": {
 				"headline": "Descriptores Narrativos",

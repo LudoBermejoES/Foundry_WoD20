@@ -6,6 +6,7 @@ import {
 	ROSTER_TRAIT_KEYS,
 	evaluateItemRosters,
 	rosterAllowedValues,
+	rosterRatingValues,
 	hasRoster,
 	isBookOfChantriesTrait,
 	bookTraitLevelCost,
@@ -415,8 +416,11 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		   llamada, así que no pueden discrepar.
 		   rebuild-chantry-book-of-chantries-only: el censo pasa de leer `system.traits` a secas a leer
 		   el mapa PLANO `{guardian, staffTier, node}` que `rosterAllowedValues` construye — `staffTier`
-		   vive en `system.personnel` y el `node` del libro en `system.realm.nodeSize`, ninguno de los
-		   dos bajo `system.traits`. */
+		   vive en `system.personnel` y el `node` del libro en `system.realm.nodeCount`, ninguno de los
+		   dos bajo `system.traits`.
+		   expand-chantry-node-personnel-and-roster-linking, design.md D2: `rosterAllowedValues` ya NO
+		   devuelve el nivel/dot crudo de cada Rasgo — devuelve el AFORO real (`guardian`=1 si está
+		   construido, `staffTier` por su tabla de aforo, `node`=`nodeCount` directamente). */
 		const censusEntries = actor.items?.filter?.(isConnectionEntry) ?? [];
 		const rosterValues = rosterAllowedValues({ traits: traits, personnel: personnel, realm: realm });
 		const rosters = evaluateItemRosters(
@@ -673,19 +677,32 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 				/* rebuild-chantry-book-of-chantries-only: el mapa PLANO {guardian, staffTier, node},
 				   no `system.traits` a secas — `staffTier` vive en `system.personnel` y el `node` del
-				   libro en `system.realm.nodeSize`. */
-				const values = rosterAllowedValues({
+				   libro en `system.realm.nodeSize`/`nodeCount`.
+				   expand-chantry-node-personnel-and-roster-linking, design.md D2 — DOS mapas, no uno:
+				   `capacity` es el AFORO real (nunca el índice de tabla del Rasgo) que
+				   `decorateCensusGroups`/`evaluateItemRosters` usan para «Puntos: X / Y» y el aviso de
+				   sobrecoste; `rating` es el nivel/dot crudo que la cabecera de cada grupo pinta como
+				   círculos (`group.rating` en `v3/connections.hbs`), deliberadamente AJENO al aforo —
+				   ver la cabecera de `rosterRatingValues` en `chantry-effects.js` para por qué no puede
+				   ser el mismo mapa (el aforo nuevo de `staffTier` llega a 20; pintarlo como círculos
+				   sería un roto visual). */
+				const capacity = rosterAllowedValues({
+					traits: this.actor.system.traits ?? {},
+					personnel: this.actor.system.personnel ?? {},
+					realm: this.actor.system.realm ?? {}
+				});
+				const rating = rosterRatingValues({
 					traits: this.actor.system.traits ?? {},
 					personnel: this.actor.system.personnel ?? {},
 					realm: this.actor.system.realm ?? {}
 				});
 
 				context.connections = decorateCensusGroups(
-					await buildConnectionGroups(this.actor, censusOptions(values, {
+					await buildConnectionGroups(this.actor, censusOptions(rating, {
 						locked: this.locked,
 						locale: CONFIG.language
 					})),
-					values);
+					capacity);
 				context.hasConnections = context.connections.length > 0;
 
 				return context;
@@ -1004,26 +1021,31 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 			await this.actor.update(update);
 		}
-		/* rebuild-chantry-book-of-chantries-only, design.md D3 — el Nodo del libro es una compra
-		   INDEPENDIENTE del Reino ("Cada área se compra por separado", book-of-chantries-es.md:5656),
-		   así que su propio interruptor limpia SUS CUATRO campos al desactivarse, no los ocho del
-		   Reino — la misma disciplina que `realmhasrealm` ya aplica al lado contrario. */
-		else if (source === "realmhasnode") {
-			const checked = !!target.checked;
+		/* expand-chantry-node-personnel-and-roster-linking, design.md D1 — el Nodo del libro pasa de
+		   interruptor (`hasNode`, 0/1) a CONTADOR repetible (`nodeCount`, 0+): "Cada Nodo cuesta
+		   cinco puntos" fija el coste POR UNIDAD, así que una Capilla puede tener varios. Bajarlo a 0
+		   limpia SUS CUATRO campos descriptivos, la misma disciplina que el interruptor retirado ya
+		   aplicaba (y que `realmhasrealm` sigue aplicando al lado del Reino) — subirlo por encima de 0
+		   los deja intactos, porque ya no hay un "on/off" que limpiar, solo un contador que puede
+		   volver a 0. Un valor no numérico o negativo (campo vaciado a mano) se trata como 0, igual
+		   que `personnelconsort` ya hace para `powerLevel`. */
+		else if (source === "realmnodecount") {
+			let value = parseInt(target.value);
+			if (!Number.isInteger(value) || value < 0) value = 0;
 
-			const update = checked
-				? { "system.realm.hasNode": true }
+			const update = (value > 0)
+				? { "system.realm.nodeCount": value }
 				: {
-					"system.realm.hasNode": false,
+					"system.realm.nodeCount": 0,
 					"system.realm.nodeSize": null,
 					"system.realm.nodeNamed": false,
 					"system.realm.nodeBattery": false,
 					"system.realm.nodeTass": false
 				};
 
-			const realmForCost = checked ? { ...(this.actor.system.realm ?? {}), hasNode: true } : {
-				...(this.actor.system.realm ?? {}), hasNode: false, nodeSize: null, nodeNamed: false
-			};
+			const realmForCost = (value > 0)
+				? { ...(this.actor.system.realm ?? {}), nodeCount: value }
+				: { ...(this.actor.system.realm ?? {}), nodeCount: 0, nodeSize: null, nodeNamed: false };
 			update["system.pool.spent"] = this._computePoolSpent({ realm: realmForCost });
 
 			await this.actor.update(update);
@@ -1245,12 +1267,14 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	 * The Horizon Realm+Node block's render-ready shape (design.md D4/D12, task 5.2; extended by
 	 * `rebuild-chantry-book-of-chantries-only` with the book's own Node — `hasNode`/`nodeSize`/
 	 * `nodeNamed`/`nodeBattery`/`nodeTass`, an INDEPENDENT purchase from the Realm's own fields that
-	 * shares this same `system.realm` object and this same render section): the `hasRealm`/`hasNode`
-	 * toggles plus, for each NAMED-LEVEL field, a `<select>`'s worth of options sized to its OWN
-	 * table, the boolean fields, the `sphereShifts` array (a repeating-row idiom), and the computed
-	 * daily Quintessence upkeep — REPORTED, never subtracted from anything (D4). The section as a
-	 * whole renders when EITHER `hasRealm` or `hasNode` is true (a Chantry may have one without the
-	 * other, book-of-chantries-es.md:5656).
+	 * shares this same `system.realm` object and this same render section; `hasNode` later retired by
+	 * `expand-chantry-node-personnel-and-roster-linking` for `nodeCount`, a repeatable counter — see
+	 * design.md D1): the `hasRealm` toggle plus `nodeCount`'s own numeric field, for each NAMED-LEVEL
+	 * field a `<select>`'s worth of options sized to its OWN table, the boolean fields, the
+	 * `sphereShifts` array (a repeating-row idiom), and the computed daily Quintessence upkeep —
+	 * REPORTED, never subtracted from anything (D4). The section as a whole renders when EITHER
+	 * `hasRealm` is true or `nodeCount` is greater than 0 (a Chantry may have one without the other,
+	 * book-of-chantries-es.md:5656).
 	 * @param {object} realm  `actor.system.realm ?? {}`
 	 * @param {{used: number, allowed: number, over: boolean}} [nodeRoster]  the Node's own census
 	 *        totals (`rosters.node` from `evaluateItemRosters`), for the census door icon's tooltip
@@ -1282,15 +1306,16 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 		const sphereShifts = Array.isArray(realm.sphereShifts) ? realm.sphereShifts : [];
 		const hasRealm = !!realm.hasRealm;
-		const hasNode = !!realm.hasNode;
+		const nodeCountRaw = parseInt(realm.nodeCount, 10);
+		const nodeCount = (Number.isInteger(nodeCountRaw) && nodeCountRaw > 0) ? nodeCountRaw : 0;
 
 		return {
 			hasRealm: hasRealm,
-			hasNode: hasNode,
-			// The section's own render gate — `hasRealm || hasNode`, so a Node-only Chantry (no
+			nodeCount: nodeCount,
+			// The section's own render gate — `hasRealm || nodeCount > 0`, so a Node-only Chantry (no
 			// Realm) still shows something (spec: "a Chantry may have Node without Realm, and Realm
 			// without Node, exactly as the book treats them as two related but independent things").
-			show: hasRealm || hasNode,
+			show: hasRealm || (nodeCount > 0),
 			size: levelField("size", REALM_SIZE_LEVELS),
 			terrain: levelField("terrain", REALM_TERRAIN_LEVELS),
 			climate: levelField("climate", REALM_CLIMATE_LEVELS),

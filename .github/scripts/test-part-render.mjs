@@ -2025,16 +2025,19 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			{ type: "Ranged Weapon", name: "Rifle de la cámara", system: {} },
 			{ type: "Armor", name: "Chaleco del vestíbulo", system: {} },
 
-			/* EL CENSO (rebuild-chantry-book-of-chantries-only): seis entradas escogidas para que
-			   ninguna rama de la pestaña quede sin ejercitar, y las cifras están calculadas contra
-			   los TRES Rasgos/bloques con censo de la fixture (traits.guardian level 2,
-			   personnel.staffTier level 3, realm.nodeSize level 0):
-			     guardian    1 + 1 = 2 / 2   -> dentro de presupuesto, dos entradas en un grupo
-			     staffTier   0 + 0 = 0 / 3   -> el 0 EXPLÍCITO, que es legal y load-bearing
-			     node        3     = 3 / 0   -> SOBRECOSTE, que es la rama del aviso — y `node` es el
-			                                    ÚNICO de los tres que no es gente (D4), así que esta
-			                                    misma entrada sirve también para el marcador de
-			                                    retrato "no humano"
+			/* EL CENSO (rebuild-chantry-book-of-chantries-only, aforo corregido por
+			   expand-chantry-node-personnel-and-roster-linking design.md D2): seis entradas escogidas
+			   para que ninguna rama de la pestaña quede sin ejercitar, y las cifras están calculadas
+			   contra el AFORO REAL de los TRES Rasgos/bloques con censo de la fixture (traits.guardian
+			   level 2, personnel.staffTier level 3, realm.nodeCount 3) — NUNCA su propio nivel/dot:
+			     guardian    1 + 1 = 2 / 1   -> SOBRECOSTE: el aforo de guardian es SIEMPRE 1 (un
+			                                    guardián nombrado), sea cual sea su nivel (2, aquí)
+			     staffTier   0 + 0 = 0 / 12  -> el 0 EXPLÍCITO, que es legal y load-bearing; el aforo
+			                                    (STAFF_TIER_ROSTER_CAPACITY[3]) es 12, no el nivel 3
+			     node        3     = 3 / 3   -> justo en presupuesto: el aforo es `nodeCount` (3)
+			                                    directamente — y `node` es el ÚNICO de los tres que no
+			                                    es gente (D4), así que esta misma entrada sirve también
+			                                    para el marcador de retrato "no humano"
 			     "guardain"  1               -> un `relation` mal tecleado: grupo «Sin Rasgo asignado»
 			   Y una lleva markup tecleado en el nombre, porque `enrichHTML` corre sobre la
 			   descripción de la fila y un `<` sin escapar sería markup y no texto. */
@@ -2090,7 +2093,7 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			...system.realm,
 			hasRealm: true, size: 2, terrain: 1, climate: 2, interconnected: true,
 			advancedTransport: false, population: 3, socialStructure: 1,
-			hasNode: true, nodeSize: 0, nodeNamed: true, nodeBattery: false, nodeTass: true
+			nodeCount: 3, nodeSize: 0, nodeNamed: true, nodeBattery: false, nodeTass: true
 		};
 		system.personnel = {
 			staffTier: 3, staffLoyalty: 2, hereditaryStaff: true, military: true,
@@ -2565,24 +2568,26 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 
 		/* ---- 3. EL CONTENIDO: lo que la pestaña dice de cada grupo y de cada entrada ---- */
 
-		check("chantry/censo: cada grupo dice sus puntos, y el sobrecoste sale avisado", () => {
+		check("chantry/censo: cada grupo dice sus puntos contra su AFORO REAL, y el sobrecoste sale avisado", () => {
 			const html = rendered.get("locked|census") ?? "";
 
-			// guardian 1+1 sobre un nivel de 2 -> «Puntos: 2 / 2», dentro de presupuesto.
-			if (!html.includes("2 / 2")) throw new Error(`no se lee «2 / 2» para guardian: ${html.slice(0, 400)}`);
-			// staffTier 0+0 sobre un nivel de 3 -> el 0 EXPLÍCITO no consume círculo.
-			if (!html.includes("0 / 3")) throw new Error("no se lee «0 / 3» para staffTier (el 0 explícito debe sobrevivir como 0)");
-			// node 3 sobre un nivel de 0 -> sobrecoste avisado, y las entradas se siguen pintando.
-			if (!html.includes("3 / 0")) throw new Error("no se lee «3 / 0» para node");
+			// guardian 1+1 sobre un AFORO de 1 (siempre 1, sea cual sea su nivel — 2, aquí) ->
+			// «Puntos: 2 / 1», sobrecoste.
+			if (!html.includes("2 / 1")) throw new Error(`no se lee «2 / 1» para guardian: ${html.slice(0, 400)}`);
+			// staffTier 0+0 sobre un aforo de 12 (STAFF_TIER_ROSTER_CAPACITY[3], no el nivel 3) -> el
+			// 0 EXPLÍCITO no consume círculo.
+			if (!html.includes("0 / 12")) throw new Error("no se lee «0 / 12» para staffTier (el 0 explícito debe sobrevivir como 0)");
+			// node 3 sobre un aforo de 3 (nodeCount directamente) -> justo en presupuesto.
+			if (!html.includes("3 / 3")) throw new Error("no se lee «3 / 3» para node");
 			if (count(html, /class="item-warning census-over"/g) !== 1) {
 				throw new Error(`se esperaba 1 aviso de sobrecoste, hay ${count(html, /class="item-warning census-over"/g)}`);
 			}
-			if (!html.includes("Rata del muelle")) throw new Error("una entrada en sobrecoste dejó de renderizarse");
+			if (!html.includes("Nadia")) throw new Error("una entrada en sobrecoste (guardian) dejó de renderizarse");
 
 			// Las cifras salen de la MISMA función que el tooltip de la fila del Rasgo.
 			const traits = rendered.get("locked|traits") ?? "";
-			if (!/title="[^"]*\(2 \/ 2\)"/.test(traits)) {
-				throw new Error("el tooltip de la fila de guardian no lee 2 / 2: la pestaña y la fila discrepan");
+			if (!/title="[^"]*\(2 \/ 1\)"/.test(traits)) {
+				throw new Error("el tooltip de la fila de guardian no lee 2 / 1: la pestaña y la fila discrepan");
 			}
 		});
 
@@ -2863,9 +2868,9 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 	const nodeOnlyContext = await new ChantrySheetClass({ document: nodeOnlyActor })._prepareContext({});
 
 	check("chantry: a Node-only Chantry renders Node fields with no Realm fields", () => {
-		if (!nodeOnlyContext.realm.hasNode) throw new Error("the fixture's own Node build was lost");
+		if (!(nodeOnlyContext.realm.nodeCount > 0)) throw new Error("the fixture's own Node build was lost");
 		if (nodeOnlyContext.realm.hasRealm) throw new Error("the fixture's own Realm-off toggle was lost");
-		if (!nodeOnlyContext.realm.show) throw new Error("realm.show is false with hasNode true; the section would not render at all");
+		if (!nodeOnlyContext.realm.show) throw new Error("realm.show is false with nodeCount > 0; the section would not render at all");
 		if (nodeOnlyContext.realm.nodeSize.notbuilt) throw new Error("the Node's own size field lost its value");
 		if (!nodeOnlyContext.realm.terrain.notbuilt) throw new Error("the Realm's own terrain field carries a value with hasRealm false");
 	});

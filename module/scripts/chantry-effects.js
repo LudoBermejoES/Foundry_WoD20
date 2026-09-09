@@ -37,6 +37,22 @@
  * because the one-time migration (`chantry-roster-migration.js`) still reads the legacy
  * `system.traitRosters` map on a world that has not migrated yet — see its own section below for why
  * it takes a SEPARATE key list from the live census.
+ *
+ * ============================================================================================
+ * expand-chantry-node-personnel-and-roster-linking — THE NODE IS REPEATABLE, THE AFORO IS REAL
+ * ============================================================================================
+ * Two corrections on top of the above (design.md D1/D2). First, `realm.hasNode` (boolean, 0 or 1)
+ * is retired for `realm.nodeCount` (integer, 0+): the book prices it "Cada Nodo cuesta cinco
+ * puntos" — "Cada" is per-unit, so `computeRealmCost` now charges `REALM_NODE_COST_PER_NODE *
+ * nodeCount`. Second, and this is the real defect: `rosterAllowedValues()` used to return each
+ * Trait's own dot/level as the census CAPACITY (`guardian`/`staffTier`'s table INDEX, `node`'s old
+ * `nodeSize`), which measures POWER or a qualitative RATIO, never a headcount. It now returns the
+ * real aforo (`guardian`: 1 if built else 0; `staffTier`: `STAFF_TIER_ROSTER_CAPACITY`, a project
+ * table separate from its cost table; `node`: `nodeCount` directly). Because the header's dot
+ * circles (`group.rating`) used to read the SAME map, splitting the aforo out required a second,
+ * separate flat map for that purely decorative rating — `rosterRatingValues()`, right below
+ * `rosterAllowedValues()` — so `staffTier`'s new capacity (up to 20) never gets fed into a
+ * `{{#numLoop}}` and drawn as twenty dots.
  */
 
 /**
@@ -204,21 +220,58 @@ export function evaluateItemRosters(entries, allowedValues = {}) {
 }
 
 /**
- * El mapa PLANO `{guardian, staffTier, node}` que `evaluateItemRosters`/`chantryGroupResolver`
- * necesitan como "rating relevante", construido a partir de los TRES bloques que hoy lo guardan
- * (design.md/proposal.md de `rebuild-chantry-book-of-chantries-only` — el censo pasa a aceptar
- * `guardian`, `staffTier` y `node`, y los tres viven en sitios distintos del actor).
+ * `staffTier`'s roster CAPACITY table — how many people its census may hold — SEPARATE from
+ * `PERSONNEL_STAFF_TIER_LEVELS` (the field's own signed POOL COST). Mixing the two up is exactly
+ * the defect `expand-chantry-node-personnel-and-roster-linking` design.md D2 corrects: the level
+ * measures a qualitative RATIO ("dos sirvientes por mago", book-of-chantries-es.md:5901-5909), not
+ * an absolute headcount the book never gives. This table is a PROJECT decision, requested by the
+ * owner, and is never to be cited as if the book gave these numbers.
+ * index === level (0 Sin Sirvientes .. 4 Innumerables).
+ * @type {ReadonlyArray<number>}
+ */
+export const STAFF_TIER_ROSTER_CAPACITY = Object.freeze([0, 3, 6, 12, 20]);
+
+/**
+ * El mapa PLANO `{guardian, staffTier, node}` de APOROS DEL CENSO (nunca el índice de la tabla de
+ * coste del Rasgo) que `evaluateItemRosters` necesita como tope de presupuesto, construido a partir
+ * de los TRES bloques que hoy lo guardan.
  *
- * DECISIÓN TOMADA POR AMBIGÜEDAD (documentada en el resumen de la tarea): el libro no fija un tope
- * de censo para el Nodo. Se usa `realm.nodeSize` (el mismo índice 0..4 de su tabla de tamaño) como
- * unidad de presupuesto de censo, exactamente como `guardian`/`staffTier` usan su propio nivel de
- * tabla — ninguno de los tres era antes un "dot count" en sentido estricto tampoco (son niveles con
- * nombre), así que tratarlos igual es consistente con cómo ya se leía `guardian` antes de este
- * cambio (su rating de tabla, no una conversión a puntos).
+ * CORREGIDO por `expand-chantry-node-personnel-and-roster-linking` (design.md D2): el nombre y la
+ * firma de esta función SOBREVIVEN de `rebuild-chantry-book-of-chantries-only`, pero su cuerpo ya
+ * NO devuelve el nivel/dot crudo de cada Rasgo — ese era exactamente el defecto que motiva este
+ * cambio (`guardian`/`staffTier` miden PODER o RATIO, nunca un recuento de gente). Ahora:
+ *   - `guardian`: 1 si su nivel es > 0 (un guardián nombrado, sea cual sea su poder), si no 0.
+ *   - `staffTier`: `STAFF_TIER_ROSTER_CAPACITY[nivel]` — la tabla de aforo del proyecto, arriba.
+ *   - `node`: `realm.nodeCount` directamente — D1 ya da la cifra real, no hace falta tabla ninguna.
+ * @param {{traits?: Record<string, unknown>, personnel?: Record<string, unknown>, realm?: Record<string, unknown>}} [source]
+ * @returns {{guardian: number, staffTier: number, node: number}}
+ */
+export function rosterAllowedValues({ traits = {}, personnel = {}, realm = {} } = {}) {
+	return {
+		guardian: toInt(traits?.guardian) > 0 ? 1 : 0,
+		staffTier: STAFF_TIER_ROSTER_CAPACITY[toInt(personnel?.staffTier)] ?? 0,
+		node: toInt(realm?.nodeCount)
+	};
+}
+
+/**
+ * El mapa PLANO `{guardian, staffTier, node}` de RATING CRUDO — el nivel/dot que la cabecera de
+ * cada grupo del censo pinta como círculos (`v3/connections.hbs`'s `group.rating`), DELIBERADAMENTE
+ * distinto del aforo que `rosterAllowedValues` calcula arriba.
+ *
+ * DECISIÓN DE DISEÑO tomada en `expand-chantry-node-personnel-and-roster-linking` por una ambigüedad
+ * que la spec no resuelve: antes de este cambio, `rosterAllowedValues` servía las DOS cosas a la vez
+ * (rating Y aforo) porque, con el defecto que este cambio corrige, eran el mismo número. Separarlos
+ * es OBLIGATORIO ahora que dejan de coincidir — `staffTier` en particular, cuyo aforo nuevo llega a
+ * 20, pintaría 20 círculos sólidos en la cabecera si se le diera por rating, un claro roto visual que
+ * ningún guard mide hoy. `node` toma `realm.nodeSize` (la magnitud del/los Nodo(s), campo cualitativo
+ * sin cambios de D1) y NO `realm.nodeCount`: la etiqueta de esa cabecera es literalmente
+ * `wod.chantry.realm.fields.nodesize` («Tamaño del Nodo»), así que sus círculos tienen que seguir
+ * siendo el tamaño, no la cuenta — mostrar la cuenta ahí desalinearía la etiqueta del valor.
  * @param {{traits?: Record<string, unknown>, personnel?: Record<string, unknown>, realm?: Record<string, unknown>}} [source]
  * @returns {{guardian: unknown, staffTier: unknown, node: unknown}}
  */
-export function rosterAllowedValues({ traits = {}, personnel = {}, realm = {} } = {}) {
+export function rosterRatingValues({ traits = {}, personnel = {}, realm = {} } = {}) {
 	return {
 		guardian: traits?.guardian,
 		staffTier: personnel?.staffTier,
@@ -390,9 +443,12 @@ export const REALM_SOCIAL_STRUCTURE_LEVELS = Object.freeze([
 	{ points: -5 }, { points: 0 }, { points: 5 }, { points: 10 }
 ]);
 
-/** `hasNode` costs 5 points fixed ("Cada Nodo cuesta cinco puntos", book-of-chantries-es.md:5480 —
- * the same sentence that fixes `hasRealm`'s own +10, but Nodo's own figure is 5). */
-export const REALM_NODE_HAS_NODE_COST = 5;
+/** Each Node costs 5 points ("Cada Nodo cuesta cinco puntos", book-of-chantries-es.md:5480 — the
+ * same sentence that fixes `hasRealm`'s own +10, but "Cada" is the word that makes the Node's own
+ * figure PER-UNIT: a Chantry may hold several Nodes, `nodeCount` counts them, and this is the
+ * per-Node rate (`expand-chantry-node-personnel-and-roster-linking` design.md D1 — `hasNode`, a
+ * boolean that could only ever be 0 or 1, is retired for exactly this reason). */
+export const REALM_NODE_COST_PER_NODE = 5;
 
 /** `nodeNamed` costs +5 fixed ("Nombrado", book-of-chantries-es.md:5782) — the same Misceláneo
  * refinement any Realm/Node/Chantry can take, unambiguous with a real number. */
@@ -438,8 +494,11 @@ export function computeSphereShiftCost(sphereShifts) {
  * The Realm+Node block's net signed cost: the sum of every PRESENT field — a field simply absent
  * (`null`/`undefined`) from `realm` contributes nothing, the same "presence, not value, decides"
  * reading `system.traits` already gives the seven book-of-chantries Traits above. Node fields
- * (`hasNode`/`nodeSize`/`nodeNamed`) are summed here too — they are an independent purchase from
- * the Realm's own fields, but land in the SAME construction pool, never a second one.
+ * (`nodeCount`/`nodeSize`/`nodeNamed`) are summed here too — they are an independent purchase from
+ * the Realm's own fields, but land in the SAME construction pool, never a second one. `nodeCount` is
+ * REPEATABLE (`expand-chantry-node-personnel-and-roster-linking` design.md D1: "Cada Nodo cuesta
+ * cinco puntos" prices it PER UNIT, unlike `hasRealm`'s own flat +10), so it contributes
+ * `REALM_NODE_COST_PER_NODE * nodeCount`, never a flat toggle amount.
  * `nodeBattery`/`nodeTass` are NEVER summed: the book ties their discount to a Quintessence
  * performance figure it leaves to a Narrator's extended roll, never a tabulated rate — inventing
  * one here would be exactly the error `add-book-of-chantries-traits` already avoided for these two
@@ -473,7 +532,7 @@ export function computeRealmCost(realm) {
 	const socialStructurePoints = tableLevelPoints(REALM_SOCIAL_STRUCTURE_LEVELS, realm.socialStructure);
 	if (socialStructurePoints !== undefined) cost += socialStructurePoints;
 
-	if (realm.hasNode) cost += REALM_NODE_HAS_NODE_COST;
+	cost += REALM_NODE_COST_PER_NODE * toInt(realm.nodeCount);
 
 	const nodeSizePoints = tableLevelPoints(REALM_NODE_SIZE_LEVELS, realm.nodeSize);
 	if (nodeSizePoints !== undefined) cost += nodeSizePoints;
@@ -486,7 +545,7 @@ export function computeRealmCost(realm) {
 /**
  * The Realm block's Quintessence upkeep/day: reported, NEVER deducted. The Node contributes
  * NOTHING to this figure — the book associates a Node with a Quintessence PERFORMANCE (an extended
- * Narrator roll), never a maintenance cost, and `hasNode`/`nodeSize`/`nodeNamed` carry no
+ * Narrator roll), never a maintenance cost, and `nodeCount`/`nodeSize`/`nodeNamed` carry no
  * Quintessence/day figure anywhere in the Appendix Two, unlike `size`/`terrain`/`population` on the
  * Realm side, which do.
  *

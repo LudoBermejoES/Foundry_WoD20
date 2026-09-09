@@ -86,6 +86,8 @@ test("un points explícito de 0 SOBREVIVE como 0, y solo ausente/nulo/vacío pas
 });
 
 test("cinco entradas de 0 puntos en staffTier ●●● no consumen ningún círculo", () => {
+	// expand-chantry-node-personnel-and-roster-linking, design.md D2: el aforo de staffTier ●●●
+	// (nivel 3) es 12 (STAFF_TIER_ROSTER_CAPACITY), NUNCA el nivel 3 en sí.
 	const values = rosterAllowedValues({ personnel: { staffTier: 3 } });
 	const summary = evaluateItemRosters(
 		Array.from({ length: 5 }, () => ({ relation: "staffTier", points: 0 })),
@@ -93,12 +95,13 @@ test("cinco entradas de 0 puntos en staffTier ●●● no consumen ningún cír
 
 	assert.equal(summary.entries.length, 5);
 	assert.equal(summary.used, 0, "un censo de entradas descriptivas consumió círculos");
-	assert.equal(summary.allowed, 3);
+	assert.equal(summary.allowed, 12);
 	assert.equal(summary.over, false, "un censo dentro de presupuesto salió marcado como sobrecoste");
 });
 
 test("el sobrecoste se REPORTA y las entradas se siguen contando (no se bloquea)", () => {
-	const values = rosterAllowedValues({ realm: { nodeSize: 1 } });
+	// El aforo del Nodo es `nodeCount` directamente (design.md D2) — `nodeSize` ya no interviene.
+	const values = rosterAllowedValues({ realm: { nodeCount: 1 } });
 	const summary = evaluateItemRosters([{ relation: "node", points: 3 }], values).groups.node;
 
 	assert.equal(summary.over, true, "3 puntos sobre 1 círculo no salió como sobrecoste");
@@ -224,12 +227,14 @@ test("decorateCensusGroups pone puntos por grupo y por entrada, y marca el grupo
 		{ relation: "guardain", entries: [item("guardain", 4)] }
 	];
 
+	// expand-chantry-node-personnel-and-roster-linking, design.md D2: guardian's aforo es 1 (no su
+	// nivel 2), y staffTier ●●● (nivel 3) es 12 (STAFF_TIER_ROSTER_CAPACITY), no su nivel.
 	const values = rosterAllowedValues({ traits: { guardian: 2 }, personnel: { staffTier: 3 } });
 	decorateCensusGroups(groups, values);
 
 	assert.deepEqual(
 		groups.map((g) => [g.relation, g.used, g.allowed, g.over, g.unassigned]),
-		[["guardian", 2, 2, false, false], ["staffTier", 0, 3, false, false], ["guardain", 0, 0, false, true]]);
+		[["guardian", 2, 1, true, false], ["staffTier", 0, 12, false, false], ["guardain", 0, 0, false, true]]);
 
 	assert.equal(groups[1].entries[0].censuspoints, 0);
 	assert.equal(groups[0].entries[0].censuspoints, 1);

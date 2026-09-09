@@ -1589,7 +1589,7 @@
 					"empty": "No Sphere shifts.",
 					"nosphere": "- Sphere -"
 				},
-				"hasnode": "Has its own Node? (+5 points)"
+				"nodecount": "Number of Nodes (5 points each)"
 			},
 			"descriptors": {
 				"headline": "Narrative Descriptors",

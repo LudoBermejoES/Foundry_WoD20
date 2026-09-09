@@ -32,7 +32,7 @@ import {
 	REALM_SIZE_LEVELS,
 	REALM_NODE_SIZE_LEVELS,
 	REALM_HAS_REALM_COST,
-	REALM_NODE_HAS_NODE_COST,
+	REALM_NODE_COST_PER_NODE,
 	REALM_NODE_NAMED_COST,
 	computeSphereShiftCost,
 	computeRealmCost,
@@ -44,7 +44,9 @@ import {
 	PERSONNEL_CONSORT_COST_PER_POWER_LEVEL,
 	personnelLevelCost,
 	computeConsortsCost,
-	computePersonnelCost
+	computePersonnelCost,
+	STAFF_TIER_ROSTER_CAPACITY,
+	rosterRatingValues
 } from "../module/scripts/chantry-effects.js";
 
 let failures = 0;
@@ -112,40 +114,46 @@ test("the nine Sphere keys are unchanged — still used by sphereShifts", () => 
 	]);
 });
 
-test("hasRealm costs 10, hasNode costs 5 — the book's own sentence: 'Cada Nodo cuesta cinco puntos, y un Reino del Horizonte cuesta 10'", () => {
+test("hasRealm costs 10, each Node costs 5 — the book's own sentence: 'Cada Nodo cuesta cinco puntos, y un Reino del Horizonte cuesta 10'", () => {
 	assert.equal(REALM_HAS_REALM_COST, 10);
-	assert.equal(REALM_NODE_HAS_NODE_COST, 5);
+	assert.equal(REALM_NODE_COST_PER_NODE, 5);
 	assert.equal(computeRealmCost({ hasRealm: true }), 10);
-	assert.equal(computeRealmCost({ hasNode: true }), 5);
-	assert.equal(computeRealmCost({ hasRealm: true, hasNode: true }), 15, "both purchases land in the SAME pool");
+	assert.equal(computeRealmCost({ nodeCount: 1 }), 5);
+	assert.equal(computeRealmCost({ hasRealm: true, nodeCount: 1 }), 15, "both purchases land in the SAME pool");
+});
+
+test("the Node is REPEATABLE — 'Cada' prices it per unit, expand-chantry-node-personnel-and-roster-linking design.md D1", () => {
+	assert.equal(computeRealmCost({ nodeCount: 0 }), 0, "zero Nodes costs nothing");
+	assert.equal(computeRealmCost({ nodeCount: 3 }), 15, "three Nodes cost 3x5");
+	assert.equal(computeRealmCost({}), 0, "an absent nodeCount is the same as zero, never NaN");
 });
 
 test("nodeNamed costs +5, same as the Realm's own Misceláneo refinements", () => {
 	assert.equal(REALM_NODE_NAMED_COST, 5);
-	assert.equal(computeRealmCost({ hasNode: true, nodeNamed: true }), 5 + 5);
+	assert.equal(computeRealmCost({ nodeCount: 1, nodeNamed: true }), 5 + 5);
 });
 
 test("nodeSize reuses the Realm's own size table WITHOUT the 6th 'Vasto' step", () => {
 	assert.equal(REALM_NODE_SIZE_LEVELS.length, 5, "Vasto (+40) is Realm-only, book-of-chantries-es.md:5662-5673");
 	assert.deepEqual([...REALM_NODE_SIZE_LEVELS], REALM_SIZE_LEVELS.slice(0, 5));
-	assert.equal(computeRealmCost({ hasNode: true, nodeSize: 4 }), 5 + 15, "Enorme (+15), the last shared step");
+	assert.equal(computeRealmCost({ nodeCount: 1, nodeSize: 4 }), 5 + 15, "Enorme (+15), the last shared step");
 });
 
 test("nodeBattery/nodeTass are NEVER summed — informational only (design.md D3/D5)", () => {
-	const withInfo = computeRealmCost({ hasNode: true, nodeSize: 2, nodeBattery: true, nodeTass: true });
-	const withoutInfo = computeRealmCost({ hasNode: true, nodeSize: 2 });
+	const withInfo = computeRealmCost({ nodeCount: 1, nodeSize: 2, nodeBattery: true, nodeTass: true });
+	const withoutInfo = computeRealmCost({ nodeCount: 1, nodeSize: 2 });
 	assert.equal(withInfo, withoutInfo, "battery/tass must not change the pool cost at all");
 });
 
 test("a Node-only Chantry (no Realm) still prices correctly — the two are independent purchases", () => {
-	assert.equal(computeRealmCost({ hasNode: true, nodeSize: 0, nodeNamed: true }), 5 + -10 + 5);
+	assert.equal(computeRealmCost({ nodeCount: 1, nodeSize: 0, nodeNamed: true }), 5 + -10 + 5);
 	assert.equal(computeRealmCost({ hasRealm: true, size: 2 }), 10 + 5, "and vice-versa: Realm without Node");
 });
 
 test("the Node contributes NOTHING to the Quintessence upkeep/day figure — the book gives it none", () => {
 	const realmOnly = realmQuintessenceUpkeepPerDay({ hasRealm: true, size: 3 });
-	const realmPlusNode = realmQuintessenceUpkeepPerDay({ hasRealm: true, size: 3, hasNode: true, nodeSize: 4, nodeNamed: true });
-	assert.equal(realmOnly, realmPlusNode, "adding a Node must not change the Realm's own upkeep figure");
+	const realmPlusNode = realmQuintessenceUpkeepPerDay({ hasRealm: true, size: 3, nodeCount: 3, nodeSize: 4, nodeNamed: true });
+	assert.equal(realmOnly, realmPlusNode, "adding Nodes must not change the Realm's own upkeep figure");
 });
 
 test("sphereShifts still cost 2 per absolute point, sign-indifferent — the book's own worked example", () => {
@@ -247,15 +255,40 @@ test("normalisePoints: an explicit 0 survives, an absent/null/empty value become
 	assert.equal(normalisePoints(2), 2);
 });
 
-test("rosterAllowedValues flattens traits/personnel/realm into {guardian, staffTier, node}", () => {
-	const values = rosterAllowedValues({
-		traits: { guardian: 2 }, personnel: { staffTier: 3 }, realm: { nodeSize: 0 }
-	});
-	assert.deepEqual(values, { guardian: 2, staffTier: 3, node: 0 });
+test("STAFF_TIER_ROSTER_CAPACITY: 0/3/6/12/20 — a project decision, SEPARATE from staffTier's own cost table", () => {
+	assert.deepEqual([...STAFF_TIER_ROSTER_CAPACITY], [0, 3, 6, 12, 20]);
+	assert.notDeepEqual([...STAFF_TIER_ROSTER_CAPACITY], [...PERSONNEL_STAFF_TIER_LEVELS],
+		"the aforo table and the cost table must never be the same array — that IS the defect this fixes");
 });
 
-test("evaluateItemRosters groups by relation and validates against the flattened allowed map", () => {
-	const values = rosterAllowedValues({ traits: { guardian: 2 }, personnel: { staffTier: 3 }, realm: { nodeSize: 0 } });
+test("rosterAllowedValues returns the REAL census aforo, never the Trait's own dot/level (design.md D2)", () => {
+	// guardian: 1 if built (any level > 0), 0 otherwise — never the level itself.
+	assert.deepEqual(rosterAllowedValues({ traits: { guardian: 1 } }), { guardian: 1, staffTier: 0, node: 0 });
+	assert.deepEqual(rosterAllowedValues({ traits: { guardian: 4 } }), { guardian: 1, staffTier: 0, node: 0 },
+		"Ridículo (level 4) still caps the census at 1 guardián");
+	assert.deepEqual(rosterAllowedValues({ traits: { guardian: 0 } }), { guardian: 0, staffTier: 0, node: 0 });
+	assert.deepEqual(rosterAllowedValues({}), { guardian: 0, staffTier: 0, node: 0 });
+
+	// staffTier: STAFF_TIER_ROSTER_CAPACITY[level], never the level itself.
+	assert.deepEqual(rosterAllowedValues({ personnel: { staffTier: 3 } }), { guardian: 0, staffTier: 12, node: 0 });
+	assert.deepEqual(rosterAllowedValues({ personnel: { staffTier: 4 } }), { guardian: 0, staffTier: 20, node: 0 });
+
+	// node: realm.nodeCount directly — D1 already gives the real figure, no table needed.
+	assert.deepEqual(rosterAllowedValues({ realm: { nodeCount: 3 } }), { guardian: 0, staffTier: 0, node: 3 });
+	// The Node's own SIZE must never leak into its aforo — that field describes magnitude, not count.
+	assert.deepEqual(rosterAllowedValues({ realm: { nodeSize: 4, nodeCount: 1 } }), { guardian: 0, staffTier: 0, node: 1 });
+});
+
+test("rosterRatingValues preserves the RAW dot/level reading, deliberately distinct from the aforo above", () => {
+	const values = rosterRatingValues({
+		traits: { guardian: 2 }, personnel: { staffTier: 3 }, realm: { nodeSize: 0, nodeCount: 5 }
+	});
+	assert.deepEqual(values, { guardian: 2, staffTier: 3, node: 0 },
+		"the header's dot circles read the Trait's own level/size, never the new aforo (nodeCount)");
+});
+
+test("evaluateItemRosters groups by relation and validates against the flattened aforo map", () => {
+	const values = rosterAllowedValues({ traits: { guardian: 2 }, personnel: { staffTier: 3 }, realm: { nodeCount: 3 } });
 	const out = evaluateItemRosters([
 		{ relation: "guardian", points: 1 }, { relation: "guardian", points: 1 },
 		{ relation: "staffTier", points: 0 },
@@ -265,13 +298,13 @@ test("evaluateItemRosters groups by relation and validates against the flattened
 
 	assert.deepEqual(Object.keys(out.groups).sort(), [...ROSTER_TRAIT_KEYS].sort());
 	assert.equal(out.groups.guardian.used, 2);
-	assert.equal(out.groups.guardian.allowed, 2);
-	assert.equal(out.groups.guardian.over, false);
+	assert.equal(out.groups.guardian.allowed, 1, "guardian's aforo is 1 regardless of its level (2)");
+	assert.equal(out.groups.guardian.over, true, "2 entries against an aforo of 1 is over budget");
 	assert.equal(out.groups.staffTier.used, 0, "the explicit 0 survives as 0");
-	assert.equal(out.groups.staffTier.allowed, 3);
+	assert.equal(out.groups.staffTier.allowed, 12, "staffTier level 3 -> STAFF_TIER_ROSTER_CAPACITY[3]");
 	assert.equal(out.groups.node.used, 3);
-	assert.equal(out.groups.node.allowed, 0);
-	assert.equal(out.groups.node.over, true, "3 against an allowance of 0 is over budget");
+	assert.equal(out.groups.node.allowed, 3, "node's aforo is nodeCount (3) directly");
+	assert.equal(out.groups.node.over, false, "3 against an allowance of 3 is exactly on budget");
 	assert.equal(out.unassigned.entries.length, 1, "a retired key (library) lands in unassigned, not dropped");
 	assert.equal(out.unassigned.allowed, 0);
 	assert.equal(out.unassigned.over, false, "unassigned never counts against anything");
