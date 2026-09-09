@@ -2029,15 +2029,19 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			   expand-chantry-node-personnel-and-roster-linking design.md D2): seis entradas escogidas
 			   para que ninguna rama de la pestaña quede sin ejercitar, y las cifras están calculadas
 			   contra el AFORO REAL de los TRES Rasgos/bloques con censo de la fixture (traits.guardian
-			   level 2, personnel.staffTier level 3, realm.nodeCount 3) — NUNCA su propio nivel/dot:
+			   level 2, personnel.staffTier level 3, realm.nodes.length 3) — NUNCA su propio
+			   nivel/dot:
 			     guardian    1 + 1 = 2 / 1   -> SOBRECOSTE: el aforo de guardian es SIEMPRE 1 (un
 			                                    guardián nombrado), sea cual sea su nivel (2, aquí)
 			     staffTier   0 + 0 = 0 / 12  -> el 0 EXPLÍCITO, que es legal y load-bearing; el aforo
 			                                    (STAFF_TIER_ROSTER_CAPACITY[3]) es 12, no el nivel 3
-			     node        3     = 3 / 3   -> justo en presupuesto: el aforo es `nodeCount` (3)
-			                                    directamente — y `node` es el ÚNICO de los tres que no
-			                                    es gente (D4), así que esta misma entrada sirve también
-			                                    para el marcador de retrato "no humano"
+			     node        3     = 3 / 3   -> justo en presupuesto: el aforo es
+			                                    `realm.nodes.length` (3) directamente
+			                                    (`fix-chantry-foundry-sheet-parity` — el escalar
+			                                    `nodeCount` está retirado) — y `node` es el ÚNICO de
+			                                    los tres que no es gente (D4), así que esta misma
+			                                    entrada sirve también para el marcador de retrato "no
+			                                    humano"
 			     "guardain"  1               -> un `relation` mal tecleado: grupo «Sin Rasgo asignado»
 			   Y una lleva markup tecleado en el nombre, porque `enrichHTML` corre sobre la
 			   descripción de la fila y un `<` sin escapar sería markup y no texto. */
@@ -2093,7 +2097,23 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			...system.realm,
 			hasRealm: true, size: 2, terrain: 1, climate: 2, interconnected: true,
 			advancedTransport: false, population: 3, socialStructure: 1,
-			nodeCount: 3, nodeSize: 0, nodeNamed: true, nodeBattery: false, nodeTass: true
+			// fix-chantry-foundry-sheet-parity: el Nodo del libro vive en `nodes[]`, una entrada
+			// independiente y nombrada por Nodo — el escalar `nodeCount`/`nodeSize`/`nodeNamed`/
+			// `nodeBattery`/`nodeTass` que esto sustituye está retirado. Tres Nodos para que el
+			// aforo (`realm.nodes.length`) siga siendo 3, con cada campo opcional ejercitado al
+			// menos una vez entre los tres (descripción, resonancia, named, battery, tass, traits
+			// propios, wardsDefensiveLevels propio).
+			nodes: [
+				{
+					name: "Nodo del muelle", description: "Bajo las tablas del embarcadero.",
+					resonance: "Elemental", powerLevel: 0, named: true, battery: false, tass: 0
+				},
+				{
+					name: "Nodo del faro", resonance: "Entrópica", powerLevel: 3, battery: true, tass: 4,
+					traits: { guardian: 1 }, wardsDefensiveLevels: 1
+				},
+				{ name: "Nodo ciego", powerLevel: 1 }
+			]
 		};
 		system.personnel = {
 			staffTier: 3, staffLoyalty: 2, hereditaryStaff: true, military: true,
@@ -2855,7 +2875,11 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 	check("chantry: the Realm+Node section renders both halves with no cross-leak", () => {
 		const locked = rendered.get("locked|traits") ?? "";
 		if (!locked.includes("wod.chantry.realm.headline")) throw new Error("no Realm+Node section renders at all");
-		if (!locked.includes("wod.chantry.realm.fields.nodesize")) throw new Error("the Node's own size field does not render");
+		// fix-chantry-foundry-sheet-parity: each Node is its own named detail block now, not a
+		// shared "size" field — check for one Node's own name/power-level/resonance instead.
+		if (!locked.includes("Nodo del faro")) throw new Error("a Node's own name does not render");
+		if (!locked.includes("wod.chantry.realm.nodepowerlevels.3")) throw new Error("the Node's own power-level name does not render");
+		if (!locked.includes("wod.chantry.realm.fields.noderesonance")) throw new Error("a Node's own resonance field does not render");
 		if (!locked.includes("wod.chantry.realm.fields.terrain")) throw new Error("the Realm's own terrain field does not render");
 	});
 
@@ -2868,10 +2892,10 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 	const nodeOnlyContext = await new ChantrySheetClass({ document: nodeOnlyActor })._prepareContext({});
 
 	check("chantry: a Node-only Chantry renders Node fields with no Realm fields", () => {
-		if (!(nodeOnlyContext.realm.nodeCount > 0)) throw new Error("the fixture's own Node build was lost");
+		if (!(nodeOnlyContext.realm.nodes.length > 0)) throw new Error("the fixture's own Node build was lost");
 		if (nodeOnlyContext.realm.hasRealm) throw new Error("the fixture's own Realm-off toggle was lost");
-		if (!nodeOnlyContext.realm.show) throw new Error("realm.show is false with nodeCount > 0; the section would not render at all");
-		if (nodeOnlyContext.realm.nodeSize.notbuilt) throw new Error("the Node's own size field lost its value");
+		if (!nodeOnlyContext.realm.show) throw new Error("realm.show is false with nodes present; the section would not render at all");
+		if (!nodeOnlyContext.realm.nodes[1].powerLevelLabelkey) throw new Error("a Node's own power-level lost its value");
 		if (!nodeOnlyContext.realm.terrain.notbuilt) throw new Error("the Realm's own terrain field carries a value with hasRealm false");
 	});
 
