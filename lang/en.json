@@ -1533,7 +1533,8 @@
 					"nodesize": "Node Size",
 					"nodenamed": "Named Node (+5 points)",
 					"nodebattery": "Node Battery (informational: no ley lines — Quintessence must be collected in person)",
-					"nodetass": "Tass (informational: the Node produces Quintessence as physical Tass)"
+					"nodetass": "Tass (informational: the Node produces Quintessence as physical Tass)",
+					"noderesonance": "Resonance"
 				},
 				"levels": {
 					"size": {
@@ -1589,7 +1590,19 @@
 					"empty": "No Sphere shifts.",
 					"nosphere": "- Sphere -"
 				},
-				"nodecount": "Number of Nodes (5 points each)"
+				"nodecount": "Number of Nodes (5 points each)",
+				"nodepowerlevels": {
+					"0": "Latent",
+					"1": "Faint",
+					"2": "Modest",
+					"3": "Stable",
+					"4": "Notable",
+					"5": "Vigorous",
+					"6": "Thriving",
+					"7": "Formidable",
+					"8": "Colossal",
+					"9": "Transcendent"
+				}
 			},
 			"descriptors": {
 				"headline": "Narrative Descriptors",
@@ -1636,6 +1649,7 @@
 					"land-status-special-portal-minor": "Minor Special Portal (+3)",
 					"land-status-special-portal-moderate": "Moderate Special Portal (+4)",
 					"land-status-special-portal-major": "Major Special Portal (+5)",
+					"land-status-known-portal": "Known Portal (-5)",
 					"thinning-strong": "Strong Thinning (-5)",
 					"thinning-typical": "Typical Thinning (0)",
 					"thinning-weak": "Weak Thinning (+2)",

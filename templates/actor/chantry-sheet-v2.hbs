@@ -544,102 +544,86 @@
 					</div>
 				{{/if}}
 
-				{{!-- expand-chantry-node-personnel-and-roster-linking, design.md D1 — el Nodo del libro
-				      es repetible: "Cada Nodo cuesta cinco puntos" fija el coste POR UNIDAD, así que
-				      `nodeCount` es un contador (0+), no un interruptor. `nodeBattery`/`nodeTass` son
-				      INFORMATIVOS (nunca se suman al pool, D3/D5): se pintan como checkboxes de solo
-				      lectura de la nota, no como controles que compran algo. --}}
-				<div class="clearareaBox row chantry-realm-toggle-row" data-field="nodeCount">
-					<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.nodecount"}}</div>
-					{{#if locked}}
-						<span class="chantry-locked-value">{{realm.nodeCount}}</span>
-					{{else}}
-						<input class="inputdata resource-value-input" type="number" min="0"
-								name="system.realm.nodeCount" data-source="realmnodecount"
-								value="{{realm.nodeCount}}" />
-					{{/if}}
+				{{!-- fix-chantry-foundry-sheet-parity — el Nodo del libro vive hoy en `realm.nodes[]`,
+				      una entrada independiente y nombrada por Nodo (no un contador/escalar
+				      compartido). Esta sección es SOLO LECTURA: crear/editar/borrar un Nodo sigue
+				      siendo trabajo de wodchar. Cada Nodo es su propio bloque acotado (mismo idioma
+				      visual que `.chantry-trait-block`), encabezado por su nombre. Un campo opcional
+				      sin valor se OMITE entero, nunca se pinta en blanco. --}}
+				{{#if realm.nodes.length}}
+					<div class="clearareaBox row chantry-realm-toggle-row" data-field="nodeCount">
+						<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.nodecount"}}</div>
+						<span class="chantry-locked-value">{{realm.nodes.length}}</span>
 
-					{{!-- La puerta del censo del Nodo (roster re-homed): mismo patrón que la de un
-					      Rasgo con censo, pero fuera del bucle de Rasgos. Siempre visible, con o sin
-					      datos, bloqueada o no — la misma disciplina «una affordance cuya PRESENCIA
-					      depende del dato» que ya justifica el icono de `guardian`. --}}
-					{{#if realm.roster}}
-						<i class="pullLeft pointer icon collapsible button fa-solid fa-list-ul chantry-node-roster-eye"
-								title="{{localize 'wod.chantry.roster.show'}} ({{realm.roster.used}} / {{realm.roster.allowed}})"
-								data-rosterkey="node"
-								data-labelkey="wod.chantry.realm.fields.nodesize"></i>
-					{{/if}}
-				</div>
+						{{!-- La puerta del censo del Nodo (roster re-homed): mismo patrón que la de un
+						      Rasgo con censo, pero fuera del bucle de Rasgos. --}}
+						{{#if realm.roster}}
+							<i class="pullLeft pointer icon collapsible button fa-solid fa-list-ul chantry-node-roster-eye"
+									title="{{localize 'wod.chantry.roster.show'}} ({{realm.roster.used}} / {{realm.roster.allowed}})"
+									data-rosterkey="node"
+									data-labelkey="wod.chantry.realm.fields.nodesize"></i>
+						{{/if}}
+					</div>
 
-				{{#if (gt realm.nodeCount 0)}}
-					<div class="chantry-realm-fields chantry-node-fields">
+					<div class="chantry-node-list">
+						{{#each realm.nodes as |node|}}
+							<div class="chantry-trait-block chantry-node-block">
+								<div class="clearareaBox row chantry-node-row chantry-node-name">
+									<div class="headlineNormal">{{node.name}}</div>
+								</div>
 
-						{{#with realm.nodeSize as |field|}}
-							<div class="clearareaBox row chantry-realm-field-row" data-field="nodeSize">
-								<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.nodesize"}}</div>
-								{{#if ../locked}}
-									<input class="pullLeft inputdata chantry-locked-value" type="text"
-											value="{{localize field.currentlabelkey}}" disabled />
-								{{else}}
-									<select class="pullLeft inputdata editable" name="system.realm.nodeSize"
-											data-source="realmfield" data-field="nodeSize">
-										<option value="" {{#if field.notbuilt}}selected{{/if}}>{{localize "wod.chantry.bookoftraits.notbuilt"}}</option>
-										{{#each field.options as |option|}}
-											<option value="{{option.level}}" {{#if option.selected}}selected{{/if}}>{{localize option.labelkey}}</option>
-										{{/each}}
-									</select>
+								{{#if node.description}}
+									<div class="clearareaBox row chantry-node-row">
+										<span class="chantry-locked-value">{{node.description}}</span>
+									</div>
 								{{/if}}
+
+								{{#if node.resonance}}
+									<div class="clearareaBox row chantry-node-row">
+										<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.noderesonance"}}</div>
+										<span class="chantry-locked-value">{{node.resonance}}</span>
+									</div>
+								{{/if}}
+
+								{{#if node.powerLevelLabelkey}}
+									<div class="clearareaBox row chantry-node-row">
+										<span class="chantry-locked-value">{{localize node.powerLevelLabelkey}}</span>
+									</div>
+								{{/if}}
+
+								{{#if node.named}}
+									<div class="clearareaBox row chantry-node-row">
+										<span class="chantry-locked-value">{{localize "wod.chantry.realm.fields.nodenamed"}}</span>
+									</div>
+								{{/if}}
+
+								{{#if node.battery}}
+									<div class="clearareaBox row chantry-node-row">
+										<span class="chantry-locked-value">{{localize "wod.chantry.realm.fields.nodebattery"}}</span>
+									</div>
+								{{/if}}
+
+								{{#if node.tass}}
+									<div class="clearareaBox row chantry-node-row">
+										<span class="chantry-locked-value">{{localize "wod.chantry.realm.fields.nodetass"}}: {{node.tass}}</span>
+									</div>
+								{{/if}}
+
+								{{#if node.wardsDefensiveLevels}}
+									<div class="clearareaBox row chantry-node-row">
+										<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.bookoftraits.wardsdefensive.label"}}</div>
+										<span class="chantry-locked-value">{{node.wardsDefensiveLevels}}</span>
+									</div>
+								{{/if}}
+
+								{{#each node.traits as |trait|}}
+									<div class="clearareaBox row chantry-node-row" data-key="{{trait.key}}">
+										<div class="pullLeft headlineNormal ability-headlineWidth">{{localize trait.labelkey}}</div>
+										<span class="chantry-locked-value">{{localize trait.currentlabelkey}}</span>
+									</div>
+								{{/each}}
 							</div>
-						{{/with}}
-
-						<div class="clearareaBox row chantry-realm-field-row" data-field="nodeNamed">
-							<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.nodenamed"}}</div>
-							{{#if locked}}
-								{{#if realm.nodeNamed}}
-									<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
-								{{else}}
-									<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
-								{{/if}}
-							{{else}}
-								<input type="checkbox" class="editable" name="system.realm.nodeNamed"
-										data-source="realmfield" data-field="nodeNamed"
-										{{#if realm.nodeNamed}}checked{{/if}} />
-							{{/if}}
-						</div>
-
-						{{!-- INFORMATIVOS: nunca gatean el candado ni el `data-source`, porque no
-						      escriben nada que el pool sume (D3/D5) — solo anotan lo que el Narrador
-						      resolvió por su cuenta en una tirada extendida. --}}
-						<div class="clearareaBox row chantry-realm-field-row" data-field="nodeBattery">
-							<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.nodebattery"}}</div>
-							{{#if locked}}
-								{{#if realm.nodeBattery}}
-									<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
-								{{else}}
-									<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
-								{{/if}}
-							{{else}}
-								<input type="checkbox" class="editable" name="system.realm.nodeBattery"
-										data-source="realmfield" data-field="nodeBattery"
-										{{#if realm.nodeBattery}}checked{{/if}} />
-							{{/if}}
-						</div>
-
-						<div class="clearareaBox row chantry-realm-field-row" data-field="nodeTass">
-							<div class="pullLeft headlineNormal ability-headlineWidth">{{localize "wod.chantry.realm.fields.nodetass"}}</div>
-							{{#if locked}}
-								{{#if realm.nodeTass}}
-									<span class="chantry-locked-value">{{localize "wod.labels.yes"}}</span>
-								{{else}}
-									<span class="chantry-locked-value">{{localize "wod.labels.no"}}</span>
-								{{/if}}
-							{{else}}
-								<input type="checkbox" class="editable" name="system.realm.nodeTass"
-										data-source="realmfield" data-field="nodeTass"
-										{{#if realm.nodeTass}}checked{{/if}} />
-							{{/if}}
-						</div>
-
+						{{/each}}
 					</div>
 				{{/if}}
 
@@ -735,7 +719,14 @@
 
 					{{#if personnel.consorts.length}}
 						{{#each personnel.consorts as |consort|}}
+							{{!-- fix-chantry-foundry-sheet-parity task 3.3: name FIRST (full weight —
+							      a real game fact, not a muted annotation), power level next, "Ver
+							      ficha" LAST when linked. Same row shape as before, widened — never a
+							      differently-structured row for a named vs. unnamed Consort. --}}
 							<div class="clearareaBox row chantry-personnel-consort-row" data-index="{{consort.index}}">
+								{{#if consort.name}}
+									<span class="chantry-personnel-consort-name">{{consort.name}}</span>
+								{{/if}}
 								{{#if ../locked}}
 									<span class="chantry-locked-value">{{localize "wod.chantry.personnel.consortpowerlevel"}} {{consort.powerLevel}}</span>
 								{{else}}
@@ -745,6 +736,9 @@
 									<i class="pullLeft pointer icon fa-solid fa-trash chantry-personnel-consort-remove"
 											data-action="personnelConsortDelete" data-index="{{consort.index}}"
 											title="{{localize 'wod.chantry.personnel.consortremove'}}"></i>
+								{{/if}}
+								{{#if consort.link}}
+									<a class="connection-link" href="{{consort.link}}" target="_blank">{{localize 'wod.connections.link'}}</a>
 								{{/if}}
 							</div>
 						{{/each}}

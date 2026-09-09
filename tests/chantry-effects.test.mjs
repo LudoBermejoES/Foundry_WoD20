@@ -30,10 +30,11 @@ import {
 	LABORATORIES_PREFERENTIAL_COST,
 	computeLaboratoriesPreferential,
 	REALM_SIZE_LEVELS,
-	REALM_NODE_SIZE_LEVELS,
 	REALM_HAS_REALM_COST,
-	REALM_NODE_COST_PER_NODE,
 	REALM_NODE_NAMED_COST,
+	NODE_POWER_LEVELS,
+	nodePowerLevelRow,
+	nodePowerLevelCost,
 	computeSphereShiftCost,
 	computeRealmCost,
 	realmQuintessenceUpkeepPerDay,
@@ -48,6 +49,7 @@ import {
 	STAFF_TIER_ROSTER_CAPACITY,
 	rosterRatingValues
 } from "../module/scripts/chantry-effects.js";
+import { chantryDescriptorPointValue } from "../module/scripts/chantry-descriptors.js";
 
 let failures = 0;
 
@@ -114,45 +116,87 @@ test("the nine Sphere keys are unchanged — still used by sphereShifts", () => 
 	]);
 });
 
-test("hasRealm costs 10, each Node costs 5 — the book's own sentence: 'Cada Nodo cuesta cinco puntos, y un Reino del Horizonte cuesta 10'", () => {
+test("hasRealm costs 10 — the book's own sentence: 'un Reino del Horizonte cuesta 10'", () => {
 	assert.equal(REALM_HAS_REALM_COST, 10);
-	assert.equal(REALM_NODE_COST_PER_NODE, 5);
 	assert.equal(computeRealmCost({ hasRealm: true }), 10);
-	assert.equal(computeRealmCost({ nodeCount: 1 }), 5);
-	assert.equal(computeRealmCost({ hasRealm: true, nodeCount: 1 }), 15, "both purchases land in the SAME pool");
+	assert.equal(computeRealmCost({}), 0, "an absent realm block costs nothing");
 });
 
-test("the Node is REPEATABLE — 'Cada' prices it per unit, expand-chantry-node-personnel-and-roster-linking design.md D1", () => {
-	assert.equal(computeRealmCost({ nodeCount: 0 }), 0, "zero Nodes costs nothing");
-	assert.equal(computeRealmCost({ nodeCount: 3 }), 15, "three Nodes cost 3x5");
-	assert.equal(computeRealmCost({}), 0, "an absent nodeCount is the same as zero, never NaN");
+test("fix-chantry-foundry-sheet-parity: NODE_POWER_LEVELS matches wodchar's own REGLA DE LA CASA table exactly", () => {
+	assert.equal(NODE_POWER_LEVELS.length, 10);
+	assert.deepEqual([...NODE_POWER_LEVELS].map((r) => r.points), [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]);
+	assert.equal(nodePowerLevelRow(0).nameEs, "Latente");
+	assert.equal(nodePowerLevelRow(9).nameEs, "Trascendental");
 });
 
-test("nodeNamed costs +5, same as the Realm's own Misceláneo refinements", () => {
+test("each realm.nodes[] entry prices independently by its own powerLevel", () => {
+	assert.equal(computeRealmCost({ nodes: [{ powerLevel: 0 }] }), 5, "Latente");
+	assert.equal(computeRealmCost({ nodes: [{ powerLevel: 3 }] }), 20, "Estable");
+	assert.equal(computeRealmCost({ nodes: [] }), 0, "zero Nodes costs nothing");
+	assert.equal(computeRealmCost({}), 0, "an absent nodes array is the same as empty, never NaN");
+	assert.equal(computeRealmCost({ nodes: [{ powerLevel: 0 }, { powerLevel: 3 }] }), 5 + 20,
+		"multiple Nodes each price independently and sum");
+});
+
+test("a Node with no powerLevel costs nothing — REGLA DE LA CASA, add-node-power-level-house-rule D2", () => {
+	assert.equal(nodePowerLevelCost({}), 0);
+	assert.equal(computeRealmCost({ nodes: [{}] }), 0);
+});
+
+test("named costs +5 PER NODE, same as the Realm's own Misceláneo refinements", () => {
 	assert.equal(REALM_NODE_NAMED_COST, 5);
-	assert.equal(computeRealmCost({ nodeCount: 1, nodeNamed: true }), 5 + 5);
+	assert.equal(computeRealmCost({ nodes: [{ powerLevel: 0, named: true }] }), 5 + 5);
+	assert.equal(computeRealmCost({ nodes: [{ named: true }, { named: true }] }), 5 + 5, "two named Nodes, neither leveled, each pay +5 independently");
 });
 
-test("nodeSize reuses the Realm's own size table WITHOUT the 6th 'Vasto' step", () => {
-	assert.equal(REALM_NODE_SIZE_LEVELS.length, 5, "Vasto (+40) is Realm-only, book-of-chantries-es.md:5662-5673");
-	assert.deepEqual([...REALM_NODE_SIZE_LEVELS], REALM_SIZE_LEVELS.slice(0, 5));
-	assert.equal(computeRealmCost({ nodeCount: 1, nodeSize: 4 }), 5 + 15, "Enorme (+15), the last shared step");
-});
-
-test("nodeBattery/nodeTass are NEVER summed — informational only (design.md D3/D5)", () => {
-	const withInfo = computeRealmCost({ nodeCount: 1, nodeSize: 2, nodeBattery: true, nodeTass: true });
-	const withoutInfo = computeRealmCost({ nodeCount: 1, nodeSize: 2 });
-	assert.equal(withInfo, withoutInfo, "battery/tass must not change the pool cost at all");
+test("battery discounts powerLevel+1, tass discounts floor(tass/2) — add-node-battery-tass-discount", () => {
+	assert.equal(nodePowerLevelCost({ powerLevel: 0, battery: true }), 5 - 1, "Latente (5) - (0+1)");
+	assert.equal(nodePowerLevelCost({ powerLevel: 9, battery: true }), 50 - 10, "Trascendental (50) - (9+1)");
+	assert.equal(nodePowerLevelCost({ powerLevel: 3, tass: 4 }), 20 - 2, "Estable (20) - floor(4/2)");
+	assert.equal(nodePowerLevelCost({ powerLevel: 0, battery: true, tass: 10 }), 0, "floored at 0, never negative");
 });
 
 test("a Node-only Chantry (no Realm) still prices correctly — the two are independent purchases", () => {
-	assert.equal(computeRealmCost({ nodeCount: 1, nodeSize: 0, nodeNamed: true }), 5 + -10 + 5);
+	assert.equal(computeRealmCost({ nodes: [{ powerLevel: 0, named: true }] }), 5 + 5);
 	assert.equal(computeRealmCost({ hasRealm: true, size: 2 }), 10 + 5, "and vice-versa: Realm without Node");
+});
+
+test("fix-chantry-foundry-sheet-parity: the Reino's own area-Traits/wardsDefensiveLevels price ONLY when hasRealm", () => {
+	assert.equal(
+		computeRealmCost({ hasRealm: true, traits: { guardian: 2 }, wardsDefensiveLevels: 2 }),
+		10 + 0 + 10,
+		"hasRealm(10) + guardian level 2(0) + 2 wards levels x 5",
+	);
+	assert.equal(
+		computeRealmCost({ hasRealm: false, traits: { guardian: 2 }, wardsDefensiveLevels: 2 }),
+		0,
+		"with no Realm built, realm.traits/wardsDefensiveLevels are IGNORED entirely",
+	);
+});
+
+test("fix-chantry-foundry-sheet-parity: each Node's own area-Traits/wardsDefensiveLevels price ALWAYS (no hasRealm gate)", () => {
+	assert.equal(
+		computeRealmCost({ nodes: [{ powerLevel: 0, traits: { guardian: 2 }, wardsDefensiveLevels: 1 }] }),
+		5 + 0 + 5,
+		"Latente(5) + guardian level 2(0) + 1 wards level x 5 — priced even though hasRealm is absent",
+	);
+});
+
+test("fix-chantry-foundry-sheet-parity: an out-of-range Node powerLevel degrades to 0, never throws", () => {
+	assert.doesNotThrow(() => computeRealmCost({ nodes: [{ powerLevel: 15 }] }));
+	assert.equal(computeRealmCost({ nodes: [{ powerLevel: 15 }] }), 0);
+	assert.equal(nodePowerLevelRow(15), undefined);
+	assert.equal(nodePowerLevelRow(-1), undefined);
+	// The other Nodes/fields in the SAME document are unaffected by one bad Node.
+	assert.equal(
+		computeRealmCost({ nodes: [{ powerLevel: 15 }, { powerLevel: 0 }], hasRealm: true }),
+		10 + 0 + 5,
+	);
 });
 
 test("the Node contributes NOTHING to the Quintessence upkeep/day figure — the book gives it none", () => {
 	const realmOnly = realmQuintessenceUpkeepPerDay({ hasRealm: true, size: 3 });
-	const realmPlusNode = realmQuintessenceUpkeepPerDay({ hasRealm: true, size: 3, nodeCount: 3, nodeSize: 4, nodeNamed: true });
+	const realmPlusNode = realmQuintessenceUpkeepPerDay({ hasRealm: true, size: 3, nodes: [{ powerLevel: 9, named: true }] });
 	assert.equal(realmOnly, realmPlusNode, "adding Nodes must not change the Realm's own upkeep figure");
 });
 
@@ -273,22 +317,30 @@ test("rosterAllowedValues returns the REAL census aforo, never the Trait's own d
 	assert.deepEqual(rosterAllowedValues({ personnel: { staffTier: 3 } }), { guardian: 0, staffTier: 12, node: 0 });
 	assert.deepEqual(rosterAllowedValues({ personnel: { staffTier: 4 } }), { guardian: 0, staffTier: 20, node: 0 });
 
-	// node: realm.nodeCount directly — D1 already gives the real figure, no table needed.
-	assert.deepEqual(rosterAllowedValues({ realm: { nodeCount: 3 } }), { guardian: 0, staffTier: 0, node: 3 });
-	// The Node's own SIZE must never leak into its aforo — that field describes magnitude, not count.
-	assert.deepEqual(rosterAllowedValues({ realm: { nodeSize: 4, nodeCount: 1 } }), { guardian: 0, staffTier: 0, node: 1 });
+	// node: realm.nodes.length directly (fix-chantry-foundry-sheet-parity — the retired `nodeCount`
+	// scalar is gone; each Node is now its own entry in `realm.nodes[]`).
+	assert.deepEqual(
+		rosterAllowedValues({ realm: { nodes: [{ powerLevel: 0 }, { powerLevel: 2 }, { powerLevel: 5 }] } }),
+		{ guardian: 0, staffTier: 0, node: 3 },
+	);
+	assert.deepEqual(rosterAllowedValues({ realm: { nodes: [] } }), { guardian: 0, staffTier: 0, node: 0 });
+	assert.deepEqual(rosterAllowedValues({ realm: {} }), { guardian: 0, staffTier: 0, node: 0 });
 });
 
-test("rosterRatingValues preserves the RAW dot/level reading, deliberately distinct from the aforo above", () => {
+test("rosterRatingValues no longer has a Node 'size' to draw as dots — fix-chantry-foundry-sheet-parity", () => {
 	const values = rosterRatingValues({
-		traits: { guardian: 2 }, personnel: { staffTier: 3 }, realm: { nodeSize: 0, nodeCount: 5 }
+		traits: { guardian: 2 }, personnel: { staffTier: 3 }, realm: { nodes: [{ powerLevel: 5 }] }
 	});
-	assert.deepEqual(values, { guardian: 2, staffTier: 3, node: 0 },
-		"the header's dot circles read the Trait's own level/size, never the new aforo (nodeCount)");
+	assert.deepEqual(values, { guardian: 2, staffTier: 3, node: undefined },
+		"node's rating is undefined (no shared 'size' concept survives the per-Node array model) — " +
+		"the template's own {{#if group.rating}} guard already skips drawing dots when falsy");
 });
 
 test("evaluateItemRosters groups by relation and validates against the flattened aforo map", () => {
-	const values = rosterAllowedValues({ traits: { guardian: 2 }, personnel: { staffTier: 3 }, realm: { nodeCount: 3 } });
+	const values = rosterAllowedValues({
+		traits: { guardian: 2 }, personnel: { staffTier: 3 },
+		realm: { nodes: [{ powerLevel: 0 }, { powerLevel: 1 }, { powerLevel: 2 }] },
+	});
 	const out = evaluateItemRosters([
 		{ relation: "guardian", points: 1 }, { relation: "guardian", points: 1 },
 		{ relation: "staffTier", points: 0 },
@@ -303,7 +355,7 @@ test("evaluateItemRosters groups by relation and validates against the flattened
 	assert.equal(out.groups.staffTier.used, 0, "the explicit 0 survives as 0");
 	assert.equal(out.groups.staffTier.allowed, 12, "staffTier level 3 -> STAFF_TIER_ROSTER_CAPACITY[3]");
 	assert.equal(out.groups.node.used, 3);
-	assert.equal(out.groups.node.allowed, 3, "node's aforo is nodeCount (3) directly");
+	assert.equal(out.groups.node.allowed, 3, "node's aforo is realm.nodes.length (3) directly");
 	assert.equal(out.groups.node.over, false, "3 against an allowance of 3 is exactly on budget");
 	assert.equal(out.unassigned.entries.length, 1, "a retired key (library) lands in unassigned, not dropped");
 	assert.equal(out.unassigned.allowed, 0);
@@ -314,6 +366,83 @@ test("evaluateItemRosters never throws on absent or wrong-typed data", () => {
 	for (const raw of [undefined, null, "", 0, {}]) {
 		assert.doesNotThrow(() => evaluateItemRosters(raw, {}));
 	}
+});
+
+/**
+ * fix-chantry-foundry-sheet-parity — regression fixture: the REAL "Mekarchitek" Chantry, imported
+ * from wodchar's production DB into a live Foundry world for the first time, rendered
+ * "Gastados: 6" instead of wodchar's authoritative 11 (verified directly against wodchar's own
+ * `validateChantryBuild`, fed this exact document plus the real descriptor-cost catalogue).
+ * Root-caused to `computeRealmCost` ignoring `realm.nodes[]` entirely (both Nodes' powerLevel/
+ * battery/tass AND the second Node's own `traits: {guardian: 0, fortification: 2, ...}` — an
+ * EXPLICIT `guardian: 0`, "Sin Guardián", -10 pts per the "presence, not value, decides" rule this
+ * whole codebase uses — contributed 0 instead of their real net -5) and `chantry-descriptors.js`
+ * missing `land-status-known-portal` (contributed 0 instead of -5). This test recomputes the SAME
+ * formula `_prepareContext()`/`_computePoolSpent()` use, over the EXACT imported document, and
+ * asserts it now equals 11 — so a future regression in either fixed function fails loudly here,
+ * under plain `node --test`, without needing to render a sheet.
+ */
+test("fix-chantry-foundry-sheet-parity: the real Mekarchitek document now totals wodchar's authoritative 11", () => {
+	const traits = { guardian: 2, fortification: 0, wards: 0, "trap-system": 1, "alarm-system": 2 };
+	const chantryWideTraits = { laboratories: 0 };
+	const realm = {
+		hasRealm: false,
+		nodes: [
+			{ name: "Nodo en el taller de Salvador", powerLevel: 0, battery: true, tass: 0, traits: { wards: 0, "trap-system": 0, "alarm-system": 0 } },
+			{ name: "Nodo de correspondencia y fuerzas el Spree", powerLevel: 2, battery: true, tass: 2, traits: { guardian: 0, fortification: 2, wards: 0, "trap-system": 0, "alarm-system": 0 } }
+		]
+	};
+	const personnel = { consorts: [{ powerLevel: 4 }, { powerLevel: 3 }, { powerLevel: 5 }] };
+	const descriptors = [
+		"location-city", "phenomenon-magical-manifestations-subtle", "communications-modern",
+		"land-status-rented-30y", "land-status-known-portal"
+	];
+
+	let spent = 0;
+	for (const key in BOOK_OF_CHANTRIES_LEVEL_COSTS) {
+		const level = { ...traits, ...chantryWideTraits }[key];
+		if ((level === null) || (level === undefined)) continue;
+		const cost = bookTraitLevelCost(key, parseInt(level));
+		if (cost !== undefined) spent += cost;
+	}
+	spent += computeRealmCost(realm);
+	spent += computePersonnelCost(personnel);
+	spent += descriptors.reduce((sum, id) => sum + chantryDescriptorPointValue(id), 0);
+
+	assert.equal(spent, 11,
+		"edificio traits+laboratories(-5) + realm/nodes(10, incl. Node 2's own guardian:0/" +
+		"fortification:2 = -5 net) + personnel(+24) + descriptors(-18) = 11");
+});
+
+/**
+ * fix-chantry-foundry-sheet-parity task 1.7 — a SYNTHETIC fixture exercising the Reino's own
+ * area-Trait/wardsDefensiveLevels allocation and a Node's `named` flag together with ITS OWN
+ * area-Trait/wardsDefensiveLevels allocation: Mekarchitek's own document does not touch any of
+ * these four fields, so without this fixture a regression in task 1.6's port would ship unnoticed.
+ */
+test("fix-chantry-foundry-sheet-parity task 1.7: Reino + Node area-Traits/wardsDefensiveLevels/named all price together", () => {
+	const realm = {
+		hasRealm: true,
+		traits: { guardian: 2 }, // Normal (0)
+		wardsDefensiveLevels: 1, // +5
+		nodes: [
+			{
+				powerLevel: 1, // Tenue, 10
+				named: true, // +5
+				traits: { fortification: 2 }, // Bien Fortificado, +5
+				wardsDefensiveLevels: 2 // +10
+			}
+		]
+	};
+	const expected =
+		REALM_HAS_REALM_COST // 10
+		+ 0 // Reino's own guardian level 2 (Normal, 0)
+		+ 5 // Reino's own 1 wards level x 5
+		+ 10 // Node's powerLevel 1 (Tenue)
+		+ 5 // Node's named
+		+ 5 // Node's own fortification level 2 (Bien Fortificado)
+		+ 10; // Node's own 2 wards levels x 5
+	assert.equal(computeRealmCost(realm), expected);
 });
 
 console.log(failures

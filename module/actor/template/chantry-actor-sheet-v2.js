@@ -19,7 +19,9 @@ import {
 	REALM_CLIMATE_LEVELS,
 	REALM_POPULATION_LEVELS,
 	REALM_SOCIAL_STRUCTURE_LEVELS,
-	REALM_NODE_SIZE_LEVELS,
+	NODE_POWER_LEVELS,
+	nodePowerLevelRow,
+	REALM_NODE_NAMED_COST,
 	computePersonnelCost,
 	computeConsortsCost,
 	PERSONNEL_STAFF_TIER_LEVELS,
@@ -416,11 +418,12 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		   llamada, así que no pueden discrepar.
 		   rebuild-chantry-book-of-chantries-only: el censo pasa de leer `system.traits` a secas a leer
 		   el mapa PLANO `{guardian, staffTier, node}` que `rosterAllowedValues` construye — `staffTier`
-		   vive en `system.personnel` y el `node` del libro en `system.realm.nodeCount`, ninguno de los
+		   vive en `system.personnel` y el `node` del libro en `system.realm.nodes.length`
+		   (`fix-chantry-foundry-sheet-parity`: el escalar `nodeCount` está retirado), ninguno de los
 		   dos bajo `system.traits`.
 		   expand-chantry-node-personnel-and-roster-linking, design.md D2: `rosterAllowedValues` ya NO
 		   devuelve el nivel/dot crudo de cada Rasgo — devuelve el AFORO real (`guardian`=1 si está
-		   construido, `staffTier` por su tabla de aforo, `node`=`nodeCount` directamente). */
+		   construido, `staffTier` por su tabla de aforo, `node`=`nodes.length` directamente). */
 		const censusEntries = actor.items?.filter?.(isConnectionEntry) ?? [];
 		const rosterValues = rosterAllowedValues({ traits: traits, personnel: personnel, realm: realm });
 		const rosters = evaluateItemRosters(
@@ -677,7 +680,7 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 				/* rebuild-chantry-book-of-chantries-only: el mapa PLANO {guardian, staffTier, node},
 				   no `system.traits` a secas — `staffTier` vive en `system.personnel` y el `node` del
-				   libro en `system.realm.nodeSize`/`nodeCount`.
+				   libro en `system.realm.nodes.length` (`fix-chantry-foundry-sheet-parity`).
 				   expand-chantry-node-personnel-and-roster-linking, design.md D2 — DOS mapas, no uno:
 				   `capacity` es el AFORO real (nunca el índice de tabla del Rasgo) que
 				   `decorateCensusGroups`/`evaluateItemRosters` usan para «Puntos: X / Y» y el aviso de
@@ -1021,42 +1024,16 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 			await this.actor.update(update);
 		}
-		/* expand-chantry-node-personnel-and-roster-linking, design.md D1 — el Nodo del libro pasa de
-		   interruptor (`hasNode`, 0/1) a CONTADOR repetible (`nodeCount`, 0+): "Cada Nodo cuesta
-		   cinco puntos" fija el coste POR UNIDAD, así que una Capilla puede tener varios. Bajarlo a 0
-		   limpia SUS CUATRO campos descriptivos, la misma disciplina que el interruptor retirado ya
-		   aplicaba (y que `realmhasrealm` sigue aplicando al lado del Reino) — subirlo por encima de 0
-		   los deja intactos, porque ya no hay un "on/off" que limpiar, solo un contador que puede
-		   volver a 0. Un valor no numérico o negativo (campo vaciado a mano) se trata como 0, igual
-		   que `personnelconsort` ya hace para `powerLevel`. */
-		else if (source === "realmnodecount") {
-			let value = parseInt(target.value);
-			if (!Number.isInteger(value) || value < 0) value = 0;
-
-			const update = (value > 0)
-				? { "system.realm.nodeCount": value }
-				: {
-					"system.realm.nodeCount": 0,
-					"system.realm.nodeSize": null,
-					"system.realm.nodeNamed": false,
-					"system.realm.nodeBattery": false,
-					"system.realm.nodeTass": false
-				};
-
-			const realmForCost = (value > 0)
-				? { ...(this.actor.system.realm ?? {}), nodeCount: value }
-				: { ...(this.actor.system.realm ?? {}), nodeCount: 0, nodeSize: null, nodeNamed: false };
-			update["system.pool.spent"] = this._computePoolSpent({ realm: realmForCost });
-
-			await this.actor.update(update);
-		}
+		/* fix-chantry-foundry-sheet-parity — the OLD single-value `nodeCount`/`nodeSize`/`nodeNamed`/
+		   `nodeBattery`/`nodeTass` editing handlers (`realmnodecount` source, and those five field
+		   names inside `realmfield`) are REMOVED here: wodchar moved to `realm.nodes[]`, an array of
+		   individually-authored Node entries, and editing a Node stays wodchar's job — this sheet
+		   only DISPLAYS them (read-only Node detail section, `_prepareRealmContext`). There is
+		   nothing left for this sheet to write for a Node. */
 		else if (source === "realmfield") {
 			const field = dataset.field;
-			/* `nodeSize` se une a los campos escalares de nivel con tabla (misma disciplina que
-			   `size`), y `nodeNamed`/`nodeBattery`/`nodeTass` a los booleanos — los tres son
-			   informativos o de coste plano, nunca escalonados. */
-			const scalarFields = ["size", "terrain", "climate", "population", "socialStructure", "nodeSize"];
-			const booleanFields = ["interconnected", "advancedTransport", "nodeNamed", "nodeBattery", "nodeTass"];
+			const scalarFields = ["size", "terrain", "climate", "population", "socialStructure"];
+			const booleanFields = ["interconnected", "advancedTransport"];
 
 			if (!scalarFields.includes(field) && !booleanFields.includes(field)) return;
 
@@ -1117,7 +1094,11 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		}
 		/* `consorts[].powerLevel` — la única cifra que edita un control dentro de la lista repetible;
 		   añadir/quitar una fila entera son ACCIONES (`personnelConsortAdd`/`personnelConsortDelete`,
-		   abajo), porque son un CLIC, no un control que escribe un valor. */
+		   abajo), porque son un CLIC, no un control que escribe un valor.
+		   `fix-chantry-foundry-sheet-parity` task 3.4: `consorts[index] = { ...consorts[index],
+		   powerLevel }` en vez de un literal que sustituye la entrada entera — la versión anterior
+		   descartaba en silencio `name`/`characterId` (`name-chantry-consorts`) en cuanto se editaba
+		   el nivel de poder desde Foundry. */
 		else if (source === "personnelconsort") {
 			const index = Number(dataset.index);
 			const consorts = foundry.utils.deepClone(this.actor.system.personnel?.consorts ?? []);
@@ -1127,7 +1108,7 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			let powerLevel = parseInt(target.value);
 			if (!Number.isInteger(powerLevel) || (powerLevel < 0)) powerLevel = 0;
 
-			consorts[index] = { powerLevel: powerLevel };
+			consorts[index] = { ...consorts[index], powerLevel: powerLevel };
 
 			const personnel = { ...(this.actor.system.personnel ?? {}), consorts: consorts };
 
@@ -1264,16 +1245,16 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	}
 
 	/**
-	 * The Horizon Realm+Node block's render-ready shape (design.md D4/D12, task 5.2; extended by
-	 * `rebuild-chantry-book-of-chantries-only` with the book's own Node — `hasNode`/`nodeSize`/
-	 * `nodeNamed`/`nodeBattery`/`nodeTass`, an INDEPENDENT purchase from the Realm's own fields that
-	 * shares this same `system.realm` object and this same render section; `hasNode` later retired by
-	 * `expand-chantry-node-personnel-and-roster-linking` for `nodeCount`, a repeatable counter — see
-	 * design.md D1): the `hasRealm` toggle plus `nodeCount`'s own numeric field, for each NAMED-LEVEL
-	 * field a `<select>`'s worth of options sized to its OWN table, the boolean fields, the
-	 * `sphereShifts` array (a repeating-row idiom), and the computed daily Quintessence upkeep —
-	 * REPORTED, never subtracted from anything (D4). The section as a whole renders when EITHER
-	 * `hasRealm` is true or `nodeCount` is greater than 0 (a Chantry may have one without the other,
+	 * The Horizon Realm+Node block's render-ready shape (design.md D4/D12, task 5.2). Each Node in
+	 * `realm.nodes[]` is an INDEPENDENT purchase from the Realm's own fields, sharing this same
+	 * `system.realm` object and this same render section (`fix-chantry-foundry-sheet-parity`
+	 * replaces the retired `hasNode`(0/1)/`nodeCount`(repeatable counter)/`nodeSize`/`nodeNamed`/
+	 * `nodeBattery`/`nodeTass` scalar history — see `_prepareNodeContext` for each Node's own shape).
+	 * For the Realm's own fields: the `hasRealm` toggle, for each NAMED-LEVEL field a `<select>`'s
+	 * worth of options sized to its OWN table, the boolean fields, the `sphereShifts` array (a
+	 * repeating-row idiom), and the computed daily Quintessence upkeep — REPORTED, never subtracted
+	 * from anything (D4). The section as a whole renders when EITHER `hasRealm` is true or
+	 * `realm.nodes` is non-empty (a Chantry may have one without the other,
 	 * book-of-chantries-es.md:5656).
 	 * @param {object} realm  `actor.system.realm ?? {}`
 	 * @param {{used: number, allowed: number, over: boolean}} [nodeRoster]  the Node's own census
@@ -1306,16 +1287,17 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 
 		const sphereShifts = Array.isArray(realm.sphereShifts) ? realm.sphereShifts : [];
 		const hasRealm = !!realm.hasRealm;
-		const nodeCountRaw = parseInt(realm.nodeCount, 10);
-		const nodeCount = (Number.isInteger(nodeCountRaw) && nodeCountRaw > 0) ? nodeCountRaw : 0;
+		const nodes = Array.isArray(realm.nodes) ? realm.nodes : [];
 
 		return {
 			hasRealm: hasRealm,
-			nodeCount: nodeCount,
-			// The section's own render gate — `hasRealm || nodeCount > 0`, so a Node-only Chantry (no
-			// Realm) still shows something (spec: "a Chantry may have Node without Realm, and Realm
-			// without Node, exactly as the book treats them as two related but independent things").
-			show: hasRealm || (nodeCount > 0),
+			// The section's own render gate — `hasRealm || nodes.length > 0`, so a Node-only Chantry
+			// (no Realm) still shows something (spec: "a Chantry may have Node without Realm, and
+			// Realm without Node, exactly as the book treats them as two related but independent
+			// things"). `fix-chantry-foundry-sheet-parity`: `nodes.length` replaces the retired
+			// `nodeCount` scalar.
+			show: hasRealm || (nodes.length > 0),
+			nodes: nodes.map((node) => this._prepareNodeContext(node)),
 			size: levelField("size", REALM_SIZE_LEVELS),
 			terrain: levelField("terrain", REALM_TERRAIN_LEVELS),
 			climate: levelField("climate", REALM_CLIMATE_LEVELS),
@@ -1342,17 +1324,43 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			})),
 			upkeep: realmQuintessenceUpkeepPerDay(realm),
 
-			/* rebuild-chantry-book-of-chantries-only — el Nodo del libro, D3. `nodeSize` reutiliza la
-			   tabla de tamaño del Reino SIN el 6º peldaño "Vasto" (REALM_NODE_SIZE_LEVELS, exclusivo
-			   del Reino). `nodeBattery`/`nodeTass` son INFORMATIVOS: nunca se suman al pool (D3/D5). */
-			nodeSize: levelField("nodeSize", REALM_NODE_SIZE_LEVELS),
-			nodeNamed: !!realm.nodeNamed,
-			nodeBattery: !!realm.nodeBattery,
-			nodeTass: !!realm.nodeTass,
 			// La puerta del censo del Nodo (D con roster re-homed): mismo patrón que el icono de
 			// censo de un Rasgo de construcción, pero fuera del bucle de Rasgos porque el Nodo del
 			// libro ya no vive bajo `system.traits`.
 			roster: nodeRoster ? { ...nodeRoster } : null
+		};
+	}
+
+	/**
+	 * ONE `realm.nodes[]` entry's read-only display shape (`fix-chantry-foundry-sheet-parity`).
+	 * Every field is OMITTED (not rendered blank) when absent — `hbs` gates each on its own
+	 * `#if`. The power-level name comes from `NODE_POWER_LEVELS` (REGLA DE LA CASA, no book
+	 * citation — `nodePowerLevelRow` degrades to `undefined` for an out-of-range level rather than
+	 * throwing, so ONE bad Node never takes down the whole sheet). `named` is a SEPARATE, per-Node
+	 * boolean (`:5782`, +5, book-cited) — never folded into the power-level name. Its own area-Traits
+	 * reuse the SAME `wod.chantry.traitlevels.<key>.<level>` localized strings (name + cost +
+	 * description in one) the Edificio's own Traits block already renders.
+	 * @param {object} node  one `realm.nodes[]` entry
+	 * @returns {object}
+	 */
+	_prepareNodeContext(node) {
+		const powerLevelRow = nodePowerLevelRow(node?.powerLevel);
+		const ownTraits = [];
+		for (const key of ["guardian", "fortification", "wards", "trap-system", "alarm-system"]) {
+			const level = node?.traits?.[key];
+			if ((level === null) || (level === undefined)) continue;
+			ownTraits.push({ key, labelkey: `wod.chantry.traits.${key}`, currentlabelkey: `wod.chantry.traitlevels.${key}.${parseInt(level)}` });
+		}
+		return {
+			name: typeof node?.name === "string" ? node.name : "",
+			description: typeof node?.description === "string" && node.description.trim() !== "" ? node.description : null,
+			resonance: typeof node?.resonance === "string" && node.resonance.trim() !== "" ? node.resonance : null,
+			powerLevelLabelkey: powerLevelRow ? `wod.chantry.realm.nodepowerlevels.${powerLevelRow.level}` : null,
+			battery: !!node?.battery,
+			tass: Number.isInteger(node?.tass) && node.tass > 0 ? node.tass : null,
+			named: !!node?.named,
+			wardsDefensiveLevels: Number.isInteger(node?.wardsDefensiveLevels) && node.wardsDefensiveLevels > 0 ? node.wardsDefensiveLevels : null,
+			traits: ownTraits
 		};
 	}
 
@@ -1394,9 +1402,14 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			staffLoyalty: levelField("staffLoyalty", PERSONNEL_STAFF_LOYALTY_LEVELS, "staffloyalty"),
 			hereditaryStaff: !!personnel.hereditaryStaff,
 			military: !!personnel.military,
+			// `fix-chantry-foundry-sheet-parity` task 3.2: `name`/`link` pass through — `name` alone
+			// (no `characterId`) is a real, reachable shape (`chantryConsortSchema` types both
+			// independently optional), so it must render with no link rather than erroring.
 			consorts: consorts.map((consort, index) => ({
 				index: index,
-				powerLevel: Number.isInteger(consort?.powerLevel) ? consort.powerLevel : (parseInt(consort?.powerLevel) || 0)
+				powerLevel: Number.isInteger(consort?.powerLevel) ? consort.powerLevel : (parseInt(consort?.powerLevel) || 0),
+				name: typeof consort?.name === "string" && consort.name.trim() !== "" ? consort.name : null,
+				link: typeof consort?.link === "string" && consort.link.trim() !== "" ? consort.link : null
 			})),
 			consortsCost: computeConsortsCost(consorts),
 			// La puerta del censo de `staffTier`: mismo patrón que el Nodo, fuera del bucle de

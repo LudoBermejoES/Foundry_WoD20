@@ -14,9 +14,10 @@
  * task's scope, a `wod20-char`/coordinator decision) and a `wod20-compendium-es` regeneration +
  * deploy — a second submodule's release, not this one's.
  *
- * So this Actor-type SYSTEM carries its own copy of the 69 rows the catalogue held at the time of
- * writing (`webgen/data/entities/mage/mage-chantry-descriptors.json`, 2026-09-08,
- * complete-chantry-descriptor-catalogue), the same way
+ * So this Actor-type SYSTEM carries its own copy of the rows the catalogue held at the time of
+ * writing (`webgen/data/entities/mage/mage-chantry-descriptors.json` — 64 as of
+ * `fix-chantry-foundry-sheet-parity`, which re-synced the one id that had drifted,
+ * `land-status-known-portal`), the same way
  * `chantry-effects.js` carries its own copy of `BOOK_OF_CHANTRIES_LEVEL_COSTS`/`REALM_*_LEVELS`
  * rather than reading `wod20-char`'s TypeScript module (design.md D11's `realmLevelPoints` doc says
  * the same thing about those tables). ONLY the id -> category MAPPING lives here; every localized
@@ -26,7 +27,7 @@
  * ============================================================================================
  * KNOWN GAP, RECORDED RATHER THAN HIDDEN
  * ============================================================================================
- * If the wodchar catalogue grows past these 69 rows, an id a Chantry carries may be ABSENT from
+ * If the wodchar catalogue grows past these rows, an id a Chantry carries may be ABSENT from
  * `CHANTRY_DESCRIPTOR_IDS`
  * below. `descriptorFallbackLabel()` exists for exactly that case: it degrades to a readable label
  * derived from the id itself (kebab-case -> Title Case) rather than rendering blank or throwing.
@@ -94,6 +95,7 @@ export const CHANTRY_DESCRIPTOR_CATEGORY_BY_ID = Object.freeze({
 	"land-status-special-portal-minor": "land-status",
 	"land-status-special-portal-moderate": "land-status",
 	"land-status-special-portal-major": "land-status",
+	"land-status-known-portal": "land-status",
 	"thinning-strong": "thinning",
 	"thinning-typical": "thinning",
 	"thinning-weak": "thinning",
@@ -131,11 +133,13 @@ export const CHANTRY_DESCRIPTOR_IDS = Object.freeze(Object.keys(CHANTRY_DESCRIPT
 
 /**
  * `id` -> the book's own `mechanics.flavor_point_value`, a manual copy of
- * `webgen/data/entities/mage/mage-chantry-descriptors.json` (same 69 rows, same sync discipline as
- * `CHANTRY_DESCRIPTOR_CATEGORY_BY_ID` above — re-sync both together on a catalogue change).
- * `reprice-chantry-descriptors` (2026-09-08) reverts the earlier "descriptors are zero-cost" design
- * decision: the book prices 65 of these 69 rows (four sit at 0), and the sheet's own `poolSpent`
- * now sums them exactly like every other priced block, matching wodchar's own computation.
+ * `webgen/data/entities/mage/mage-chantry-descriptors.json` (same rows, same sync discipline as
+ * `CHANTRY_DESCRIPTOR_CATEGORY_BY_ID` above — re-sync both together on a catalogue change; last
+ * re-synced `fix-chantry-foundry-sheet-parity`, 64 rows, adding `land-status-known-portal`, an
+ * honestly-sourced project house rule with no book citation — see that entity's own `sources` in
+ * the wodchar catalogue). `reprice-chantry-descriptors` (2026-09-08) reverts the earlier
+ * "descriptors are zero-cost" design decision: the sheet's own `poolSpent` sums every one of these
+ * exactly like every other priced block, matching wodchar's own computation.
  * @type {Readonly<Record<string, number>>}
  */
 export const CHANTRY_DESCRIPTOR_POINT_VALUE_BY_ID = Object.freeze({
@@ -173,6 +177,7 @@ export const CHANTRY_DESCRIPTOR_POINT_VALUE_BY_ID = Object.freeze({
 	"land-status-special-portal-minor": 3,
 	"land-status-special-portal-moderate": 4,
 	"land-status-special-portal-major": 5,
+	"land-status-known-portal": -5,
 	"thinning-strong": -5,
 	"thinning-typical": 0,
 	"thinning-weak": 2,

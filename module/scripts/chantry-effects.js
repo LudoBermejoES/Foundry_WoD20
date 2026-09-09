@@ -53,6 +53,16 @@
  * separate flat map for that purely decorative rating — `rosterRatingValues()`, right below
  * `rosterAllowedValues()` — so `staffTier`'s new capacity (up to 20) never gets fed into a
  * `{{#numLoop}}` and drawn as twenty dots.
+ *
+ * SUPERSEDED by `fix-chantry-foundry-sheet-parity`: `realm.nodeCount`/`nodeSize`/`nodeNamed`
+ * (the "Node is repeatable" model this section describes) are THEMSELVES now retired — wodchar
+ * moved on again, to `realm.nodes[]`, an array of INDIVIDUALLY named/priced Node entries
+ * (`add-chantry-node-roster`/`add-node-power-level-house-rule`), each with its own `powerLevel`
+ * (a REGLA DE LA CASA house-rule scale, `NODE_POWER_LEVELS` below — not the book's flat 5-pt rate
+ * this section describes), `battery`/`tass` discounts, `named`, and its own area-Traits/
+ * `wardsDefensiveLevels`. `computeRealmCost`/`rosterAllowedValues`/`rosterRatingValues` below read
+ * `realm.nodes` directly; this whole section is kept as the record of WHY the previous shape existed,
+ * not as a description of the code beneath it.
  */
 
 /**
@@ -69,8 +79,9 @@ export const SPHERE_KEYS = Object.freeze([
 /**
  * The THREE Traits/blocks that accept a census today (rebuild-chantry-book-of-chantries-only,
  * design.md/proposal.md): `guardian` (a construction Trait, in `traitcost`), `staffTier` (the
- * Personnel block's own level) and `node` (the book's own Node, `system.realm.nodeSize`). Of the
- * Dossier's original eight (`allies`, `retainers`, `spies`, `backup`, `elders`,
+ * Personnel block's own level) and `node` (the book's own Node — `system.realm.nodes[]`, one
+ * census per individual Node, `fix-chantry-foundry-sheet-parity`). Of the Dossier's original eight
+ * (`allies`, `retainers`, `spies`, `backup`, `elders`,
  * `cult-sympathizers`, `library`, `node`), only `node` survives — and it is a DIFFERENT `node`: the
  * book's own, not the Dossier's net-Quintessence Trait, which is retired outright.
  *
@@ -242,7 +253,9 @@ export const STAFF_TIER_ROSTER_CAPACITY = Object.freeze([0, 3, 6, 12, 20]);
  * cambio (`guardian`/`staffTier` miden PODER o RATIO, nunca un recuento de gente). Ahora:
  *   - `guardian`: 1 si su nivel es > 0 (un guardián nombrado, sea cual sea su poder), si no 0.
  *   - `staffTier`: `STAFF_TIER_ROSTER_CAPACITY[nivel]` — la tabla de aforo del proyecto, arriba.
- *   - `node`: `realm.nodeCount` directamente — D1 ya da la cifra real, no hace falta tabla ninguna.
+ *   - `node`: `realm.nodes.length` (`fix-chantry-foundry-sheet-parity` — el escalar `nodeCount` que
+ *     D1 introdujo está retirado: hoy cada Nodo es una entrada independiente en `realm.nodes[]`, y
+ *     el aforo es sencillamente cuántas hay).
  * @param {{traits?: Record<string, unknown>, personnel?: Record<string, unknown>, realm?: Record<string, unknown>}} [source]
  * @returns {{guardian: number, staffTier: number, node: number}}
  */
@@ -250,7 +263,7 @@ export function rosterAllowedValues({ traits = {}, personnel = {}, realm = {} } 
 	return {
 		guardian: toInt(traits?.guardian) > 0 ? 1 : 0,
 		staffTier: STAFF_TIER_ROSTER_CAPACITY[toInt(personnel?.staffTier)] ?? 0,
-		node: toInt(realm?.nodeCount)
+		node: Array.isArray(realm?.nodes) ? realm.nodes.length : 0
 	};
 }
 
@@ -264,10 +277,12 @@ export function rosterAllowedValues({ traits = {}, personnel = {}, realm = {} } 
  * (rating Y aforo) porque, con el defecto que este cambio corrige, eran el mismo número. Separarlos
  * es OBLIGATORIO ahora que dejan de coincidir — `staffTier` en particular, cuyo aforo nuevo llega a
  * 20, pintaría 20 círculos sólidos en la cabecera si se le diera por rating, un claro roto visual que
- * ningún guard mide hoy. `node` toma `realm.nodeSize` (la magnitud del/los Nodo(s), campo cualitativo
- * sin cambios de D1) y NO `realm.nodeCount`: la etiqueta de esa cabecera es literalmente
- * `wod.chantry.realm.fields.nodesize` («Tamaño del Nodo»), así que sus círculos tienen que seguir
- * siendo el tamaño, no la cuenta — mostrar la cuenta ahí desalinearía la etiqueta del valor.
+ * ningún guard mide hoy. `node` ya NO tiene un "tamaño" que pintar como círculos
+ * (`fix-chantry-foundry-sheet-parity`: `nodeSize` era un escalar COMPARTIDO por todos los Nodos, que
+ * el modelo actual — cada Nodo con su propio `powerLevel` independiente — no tiene sustituto directo
+ * para; inventar aquí "el nivel de poder del primer Nodo" mentiría sobre los demás). El grupo `node`
+ * queda sin rating (`undefined`), y la plantilla ya se abstiene de pintar círculos cuando
+ * `group.rating` es falsy (`{{#if group.rating}}`).
  * @param {{traits?: Record<string, unknown>, personnel?: Record<string, unknown>, realm?: Record<string, unknown>}} [source]
  * @returns {{guardian: unknown, staffTier: unknown, node: unknown}}
  */
@@ -275,7 +290,7 @@ export function rosterRatingValues({ traits = {}, personnel = {}, realm = {} } =
 	return {
 		guardian: traits?.guardian,
 		staffTier: personnel?.staffTier,
-		node: realm?.nodeSize
+		node: undefined
 	};
 }
 
@@ -443,23 +458,102 @@ export const REALM_SOCIAL_STRUCTURE_LEVELS = Object.freeze([
 	{ points: -5 }, { points: 0 }, { points: 5 }, { points: 10 }
 ]);
 
-/** Each Node costs 5 points ("Cada Nodo cuesta cinco puntos", book-of-chantries-es.md:5480 — the
- * same sentence that fixes `hasRealm`'s own +10, but "Cada" is the word that makes the Node's own
- * figure PER-UNIT: a Chantry may hold several Nodes, `nodeCount` counts them, and this is the
- * per-Node rate (`expand-chantry-node-personnel-and-roster-linking` design.md D1 — `hasNode`, a
- * boolean that could only ever be 0 or 1, is retired for exactly this reason). */
-export const REALM_NODE_COST_PER_NODE = 5;
-
 /** `nodeNamed` costs +5 fixed ("Nombrado", book-of-chantries-es.md:5782) — the same Misceláneo
- * refinement any Realm/Node/Chantry can take, unambiguous with a real number. */
+ * refinement any Realm/Node/Chantry can take, unambiguous with a real number. Kept as a PER-NODE
+ * boolean (`fix-chantry-foundry-sheet-parity`): each `realm.nodes[]` entry carries its own `named`,
+ * independent of every other Node's. */
 export const REALM_NODE_NAMED_COST = 5;
 
-/** The Node's own size table — the SAME 5 named levels `size` uses (Diminuto/Pequeño/Medio/Grande/
- * Enorme), WITHOUT the 6th "Vasto" step, which the book reserves for a Realm only
- * (book-of-chantries-es.md:5662-5673: "Cada área se compra por separado", and only the Realm's own
- * size entry lists a Vasto option). Derived from `REALM_SIZE_LEVELS` rather than a second literal,
- * so the two tables cannot drift out of sync on the four points they share. */
-export const REALM_NODE_SIZE_LEVELS = Object.freeze(REALM_SIZE_LEVELS.slice(0, 5));
+/**
+ * `fix-chantry-foundry-sheet-parity`: the per-Node power-level house-rule scale
+ * (`add-node-power-level-house-rule` — REGLA DE LA CASA, never a book citation), ported verbatim
+ * from `wod20-char/web/server/services/rules/chantry.ts`'s `NODE_POWER_LEVELS` (points/name; the
+ * Quintessence/week column is wodchar's own informational figure and is not needed for pricing
+ * here). `REALM_NODE_COST_PER_NODE`/`REALM_NODE_SIZE_LEVELS`/`nodeCount`/`nodeSize` — the OLDER
+ * flat-per-Node-count model this table replaces — are RETIRED: `computeRealmCost` below now reads
+ * `realm.nodes[]` directly, matching the CURRENT wodchar schema (`add-chantry-node-roster`).
+ * @type {ReadonlyArray<{level: number, nameEs: string, points: number}>}
+ */
+export const NODE_POWER_LEVELS = Object.freeze([
+	Object.freeze({ level: 0, nameEs: "Latente", points: 5 }),
+	Object.freeze({ level: 1, nameEs: "Tenue", points: 10 }),
+	Object.freeze({ level: 2, nameEs: "Modesto", points: 15 }),
+	Object.freeze({ level: 3, nameEs: "Estable", points: 20 }),
+	Object.freeze({ level: 4, nameEs: "Notable", points: 25 }),
+	Object.freeze({ level: 5, nameEs: "Vigoroso", points: 30 }),
+	Object.freeze({ level: 6, nameEs: "Pujante", points: 35 }),
+	Object.freeze({ level: 7, nameEs: "Formidable", points: 40 }),
+	Object.freeze({ level: 8, nameEs: "Colosal", points: 45 }),
+	Object.freeze({ level: 9, nameEs: "Trascendental", points: 50 })
+]);
+
+/**
+ * `NODE_POWER_LEVELS[level]`, or `undefined` for an out-of-range level — NEVER throws, unlike
+ * wodchar's own `nodePowerLevelRow` (which throws by design and relies on
+ * `validateChantryBuild`'s try/catch, a mechanism this read-only sheet has no equivalent of). This
+ * file's own established contract (`bookTraitLevelCost`) is degrade-to-undefined, and a single
+ * hand-edited/stale Node with an out-of-range `powerLevel` must not take down `_prepareContext` for
+ * the whole actor (`fix-chantry-foundry-sheet-parity` task 1.8).
+ * @param {number} level
+ * @returns {{level: number, nameEs: string, points: number}|undefined}
+ */
+export function nodePowerLevelRow(level) {
+	return Number.isInteger(level) ? NODE_POWER_LEVELS[level] : undefined;
+}
+
+/** Mirrors `wod20-char`'s `nodeBatteryDiscount`: a battery-equipped Node discounts `powerLevel + 1`
+ * points from its own power-level cost. 0 if `battery` is falsy or `powerLevel` is absent/invalid. */
+function nodeBatteryDiscount(entry) {
+	if (!entry?.battery) return 0;
+	const level = toInt(entry.powerLevel);
+	return Number.isInteger(entry.powerLevel) ? level + 1 : 0;
+}
+
+/** Mirrors `wod20-char`'s `nodeTassDiscount`: 1 point discounted per 2 points of `tass` (floor
+ * division). Degrades to 0 for an invalid/out-of-range `tass` rather than throwing — this sheet
+ * only ever READS an already-validated (or, for a stale actor, already-invalid and unactionable)
+ * value. */
+function nodeTassDiscount(entry) {
+	const tass = toInt(entry?.tass);
+	if (tass <= 0) return 0;
+	return Math.floor(tass / 2);
+}
+
+/**
+ * ONE Node entry's own `powerLevel`-derived cost, after the `battery`/`tass` house-rule discounts,
+ * floored at 0 — mirrors `wod20-char`'s `nodePowerLevelCost` exactly, except it DEGRADES (contributes
+ * 0) for an out-of-range/absent `powerLevel` instead of throwing (`fix-chantry-foundry-sheet-parity`
+ * task 1.8). `named`'s book-cited `+5` is NOT part of this; `computeRealmCost` adds it separately.
+ * @param {object} entry  one `realm.nodes[]` entry
+ * @returns {number}
+ */
+export function nodePowerLevelCost(entry) {
+	const row = nodePowerLevelRow(entry?.powerLevel);
+	if (!row) return 0;
+	return Math.max(0, row.points - nodeBatteryDiscount(entry) - nodeTassDiscount(entry));
+}
+
+/**
+ * Sums the 5 area-scoped book-of-chantries Traits (`guardian`/`fortification`/`wards`/
+ * `trap-system`/`alarm-system` — `research-library`/`laboratories` are Chantry-wide only, never
+ * per-area) against `BOOK_OF_CHANTRIES_LEVEL_COSTS` via `bookTraitLevelCost`, which already
+ * degrades an out-of-range level to 0 rather than throwing. Mirrors `wod20-char`'s own
+ * `sumAreaTraits` — used for the Reino's own area (`realm.traits`, only when `hasRealm`) and each
+ * Node's own area (`node.traits`), the SAME per-area Trait allocation the Edificio itself uses.
+ * @param {object|null|undefined} traits
+ * @returns {number}
+ */
+function sumAreaTraits(traits) {
+	if (!traits || typeof traits !== "object") return 0;
+	let spend = 0;
+	for (const key of ["guardian", "fortification", "wards", "trap-system", "alarm-system"]) {
+		const level = traits[key];
+		if ((level === null) || (level === undefined)) continue;
+		const cost = bookTraitLevelCost(key, parseInt(level));
+		if (cost !== undefined) spend += cost;
+	}
+	return spend;
+}
 
 /** Signed integer parse allowing negatives, unlike this file's own `toInt()` (which floors
  * negatives to 0 — correct for a dot count, wrong for `sphereShifts[].delta`, which is explicitly
@@ -493,16 +587,17 @@ export function computeSphereShiftCost(sphereShifts) {
 /**
  * The Realm+Node block's net signed cost: the sum of every PRESENT field — a field simply absent
  * (`null`/`undefined`) from `realm` contributes nothing, the same "presence, not value, decides"
- * reading `system.traits` already gives the seven book-of-chantries Traits above. Node fields
- * (`nodeCount`/`nodeSize`/`nodeNamed`) are summed here too — they are an independent purchase from
- * the Realm's own fields, but land in the SAME construction pool, never a second one. `nodeCount` is
- * REPEATABLE (`expand-chantry-node-personnel-and-roster-linking` design.md D1: "Cada Nodo cuesta
- * cinco puntos" prices it PER UNIT, unlike `hasRealm`'s own flat +10), so it contributes
- * `REALM_NODE_COST_PER_NODE * nodeCount`, never a flat toggle amount.
- * `nodeBattery`/`nodeTass` are NEVER summed: the book ties their discount to a Quintessence
- * performance figure it leaves to a Narrator's extended roll, never a tabulated rate — inventing
- * one here would be exactly the error `add-book-of-chantries-traits` already avoided for these two
- * exact fields.
+ * reading `system.traits` already gives the seven book-of-chantries Traits above.
+ *
+ * `fix-chantry-foundry-sheet-parity`: each entry of `realm.nodes[]` is its OWN independent
+ * purchase, priced regardless of `hasRealm` (mirrors `wod20-char`'s own `computeRealmCost`) —
+ * `nodePowerLevelCost(node)` (the REGLA DE LA CASA power-level table, `NODE_POWER_LEVELS`,
+ * discounted by `battery`/`tass`, floored at 0), `+REALM_NODE_NAMED_COST` if `node.named`, and the
+ * Node's own area-Trait allocation (`sumAreaTraits(node.traits)`) plus its own
+ * `wardsDefensiveLevels` — all land in the SAME construction pool, never a second one. The Reino's
+ * own area-Trait allocation (`realm.traits`/`realm.wardsDefensiveLevels`) is priced the SAME way,
+ * but ONLY when `hasRealm` is true (mirrors `wod20-char`'s own `hasRealm` guard on
+ * `computeAreaTraitSpend`) — it has no meaning for a Chantry with Nodes but no Realm.
  * @param {object|null|undefined} realm  `system.realm`
  * @returns {number}
  */
@@ -532,22 +627,33 @@ export function computeRealmCost(realm) {
 	const socialStructurePoints = tableLevelPoints(REALM_SOCIAL_STRUCTURE_LEVELS, realm.socialStructure);
 	if (socialStructurePoints !== undefined) cost += socialStructurePoints;
 
-	cost += REALM_NODE_COST_PER_NODE * toInt(realm.nodeCount);
+	// The Reino's own area-Trait allocation only exists once the Realm is actually built — mirrors
+	// wodchar's own `hasRealm` guard on `computeAreaTraitSpend(input.realm.traits, ...)`.
+	if (realm.hasRealm) {
+		cost += sumAreaTraits(realm.traits);
+		cost += computeWardsDefensiveWards(realm.wardsDefensiveLevels).cost;
+	}
 
-	const nodeSizePoints = tableLevelPoints(REALM_NODE_SIZE_LEVELS, realm.nodeSize);
-	if (nodeSizePoints !== undefined) cost += nodeSizePoints;
-
-	if (realm.nodeNamed) cost += REALM_NODE_NAMED_COST;
+	// Each Node in `realm.nodes[]` (`add-chantry-node-roster`/`add-node-power-level-house-rule`) is
+	// its OWN independent purchase, always priced regardless of `hasRealm` — mirrors wodchar's own
+	// `computeRealmCost` loop over `realm.nodes`.
+	for (const node of Array.isArray(realm.nodes) ? realm.nodes : []) {
+		cost += nodePowerLevelCost(node);
+		if (node?.named) cost += REALM_NODE_NAMED_COST;
+		cost += sumAreaTraits(node?.traits);
+		cost += computeWardsDefensiveWards(node?.wardsDefensiveLevels).cost;
+	}
 
 	return cost;
 }
 
 /**
- * The Realm block's Quintessence upkeep/day: reported, NEVER deducted. The Node contributes
- * NOTHING to this figure — the book associates a Node with a Quintessence PERFORMANCE (an extended
- * Narrator roll), never a maintenance cost, and `nodeCount`/`nodeSize`/`nodeNamed` carry no
- * Quintessence/day figure anywhere in the Appendix Two, unlike `size`/`terrain`/`population` on the
- * Realm side, which do.
+ * The Realm block's Quintessence upkeep/day: reported, NEVER deducted. A Node contributes NOTHING
+ * to this figure — the book associates a Node with a Quintessence PERFORMANCE (an extended
+ * Narrator roll), never a maintenance cost, and no Node field (`powerLevel`, `named`, `battery`,
+ * `tass`, or its own area-Traits) carries a Quintessence/day figure anywhere in the Appendix Two,
+ * unlike `size`/`terrain`/`population` on the Realm side, which do. (A Node's own Quintessence/WEEK
+ * YIELD is a separate, informational-only figure wodchar reports per Node — irrelevant here.)
  *
  * CORRECTED formula (design.md D4 of `add-book-of-chantries-traits`): NOT
  * `REALM_UPKEEP_MULTIPLIER x computeRealmCost()` — that folds in `hasRealm`'s flat +10 and fields

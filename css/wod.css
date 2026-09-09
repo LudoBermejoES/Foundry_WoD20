@@ -3399,6 +3399,80 @@ input.sheet-infoWidth {
   pointer-events: none;
 }
 
+/* ---- (4) Narrative descriptor tags: real pills, not crowded inline text
+   (fix-chantry-foundry-sheet-parity) ----
+   Wraps onto multiple ROWS, never horizontal scroll — this sheet's own column is a fixed narrow
+   width, and a scrolling strip would hide every tag past the first few. The inter-tag gap reuses
+   `.chantry-trait-row`'s own 10px inter-column gap rather than inventing a new spacing unit, and
+   each tag is bounded by a real border/pill so a reader can tell where one ends and the next
+   begins even with several attached. */
+.chantry-body .chantry-descriptor-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chantry-body .chantry-descriptor-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--main-border-color, currentColor);
+  border-radius: 12px;
+}
+
+/* Subordinate to the tag's own label — the SAME reduced-size/reduced-opacity treatment
+   `.chantry-trait-cost` already uses for a Trait row's cost, reused rather than invented fresh. */
+.chantry-body .chantry-descriptor-tag-category,
+.chantry-body .chantry-descriptor-tag-cost {
+  font-size: var(--wod-font-xs);
+  opacity: 0.75;
+}
+
+.chantry-body .chantry-descriptor-tag-remove {
+  flex: 0 0 auto;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.chantry-body .chantry-descriptor-tag-remove:hover,
+.chantry-body .chantry-descriptor-tag-remove:focus {
+  opacity: 1;
+}
+
+/* ---- (5) Node detail blocks: each Node is its own bounded card
+   (fix-chantry-foundry-sheet-parity) ----
+   Reuses `.chantry-trait-block`'s own block+zebra-band idiom (a Chantry may have several Nodes,
+   and a flat undifferentiated list would be illegible) — the name renders as this block's own
+   heading-weight first line, its other fields as ordinary locked-value rows underneath. */
+.chantry-body .chantry-node-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chantry-body .chantry-node-block:nth-of-type(even) {
+  background: var(--main-dim-color);
+}
+
+.chantry-body .chantry-node-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 6px;
+}
+
+.chantry-body .chantry-node-name .headlineNormal {
+  font-weight: bold;
+}
+
+/* ---- (6) Consort rows: name first at full weight, power level next, link last
+   (fix-chantry-foundry-sheet-parity) ---- */
+.chantry-body .chantry-personnel-consort-name {
+  flex: 0 0 auto;
+  font-weight: bold;
+}
+
 .chantry-body .chantry-trait-roster-eye:hover,
 .chantry-body .chantry-trait-roster-eye:focus {
   opacity: 1;
