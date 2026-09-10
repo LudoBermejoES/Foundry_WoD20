@@ -3440,6 +3440,18 @@ input.sheet-infoWidth {
   opacity: 1;
 }
 
+/* add-descriptor-node-personnel-eyes: same reduced-opacity treatment `.chantry-trait-eye`
+   already uses for a Trait row's description eye. */
+.chantry-body .chantry-descriptor-tag-eye {
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+
+.chantry-body .chantry-descriptor-tag-eye:hover,
+.chantry-body .chantry-descriptor-tag-eye:focus {
+  opacity: 1;
+}
+
 /* ---- (5) Node detail blocks: each Node is its own bounded card
    (fix-chantry-foundry-sheet-parity) ----
    A REAL border + padding, not zebra shading alone — measured against a live render: the zebra

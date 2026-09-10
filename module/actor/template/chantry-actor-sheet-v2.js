@@ -620,7 +620,12 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			categorykey: isKnownChantryDescriptor(id)
 				? `wod.chantry.descriptors.categories.${chantryDescriptorCategory(id)}`
 				: null,
-			pointValue: chantryDescriptorPointValue(id)
+			pointValue: chantryDescriptorPointValue(id),
+			// add-descriptor-node-personnel-eyes: every KNOWN id has a `wod.chantry.descriptors.
+			// descriptions.<id>` entry (both are generated from the SAME 64-row source, and a test
+			// asserts the two sets stay equal) — an unknown/fallback id has no description content
+			// to show, so it gets no eye at all rather than an eye that opens nothing.
+			descriptionkey: isKnownChantryDescriptor(id) ? `wod.chantry.descriptors.descriptions.${id}` : null
 		}));
 
 		// The "add" picker: every KNOWN id not already attached, grouped by category in the same
@@ -1386,7 +1391,17 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		for (const key of ["guardian", "fortification", "wards", "trap-system", "alarm-system"]) {
 			const level = node?.traits?.[key];
 			if ((level === null) || (level === undefined)) continue;
-			ownTraits.push({ key, labelkey: `wod.chantry.traits.${key}`, currentlabelkey: `wod.chantry.traitlevels.${key}.${parseInt(level)}` });
+			// add-descriptor-node-personnel-eyes: reuses the SAME description content the Edificio's
+			// own row for this Trait already has (`wod.chantry.traitdescriptions.<key>`) — a Node's
+			// own guardian/fortification/etc. is priced from the identical table, so there is no
+			// separate content to author here, only the same eye affordance this sheet already
+			// gives every other instance of a table-priced Trait.
+			ownTraits.push({
+				key,
+				labelkey: `wod.chantry.traits.${key}`,
+				currentlabelkey: `wod.chantry.traitlevels.${key}.${parseInt(level)}`,
+				descriptionkey: `wod.chantry.traitdescriptions.${key}`
+			});
 		}
 		return {
 			name: typeof node?.name === "string" ? node.name : "",

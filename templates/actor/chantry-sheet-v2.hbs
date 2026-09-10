@@ -373,6 +373,14 @@
 						{{/if}}
 					{{/with}}
 
+					{{!-- add-descriptor-node-personnel-eyes: read-only, same idiom as every other
+					      description eye on this sheet. --}}
+					<i class="pullLeft pointer icon collapsible button fa-solid fa-eye chantry-trait-eye"
+							title="{{localize 'wod.labels.show.description'}}"
+							data-traitkey="personnel:staffTier"
+							data-labelkey="wod.chantry.personnel.stafftier"
+							data-descriptionkey="wod.chantry.personnel.descriptions.stafftier"></i>
+
 					{{!-- La puerta del censo de `staffTier` — mismo patrón que la del Nodo. --}}
 					{{#if personnel.roster}}
 						<i class="pullLeft pointer icon collapsible button fa-solid fa-list-ul chantry-personnel-roster-eye"
@@ -398,6 +406,12 @@
 							</select>
 						{{/if}}
 					{{/with}}
+
+					<i class="pullLeft pointer icon collapsible button fa-solid fa-eye chantry-trait-eye"
+							title="{{localize 'wod.labels.show.description'}}"
+							data-traitkey="personnel:staffLoyalty"
+							data-labelkey="wod.chantry.personnel.staffloyalty"
+							data-descriptionkey="wod.chantry.personnel.descriptions.staffloyalty"></i>
 				</div>
 
 				<div class="clearareaBox row chantry-personnel-field-row" data-field="hereditaryStaff">
@@ -498,6 +512,17 @@
 									{{tag.fallbacklabel}}
 								{{/if}}
 								<span class="chantry-descriptor-tag-cost">({{signed tag.pointValue}})</span>
+								{{!-- add-descriptor-node-personnel-eyes: read-only, same idiom as every other
+								      description eye on this sheet (bound unconditionally, never gated on
+								      locked). Only KNOWN ids get one -- an unknown/fallback tag has no
+								      description content to show (see `descriptionkey`'s own comment). --}}
+								{{#if tag.descriptionkey}}
+									<i class="pullLeft pointer icon collapsible button fa-solid fa-eye chantry-descriptor-tag-eye"
+											title="{{localize 'wod.labels.show.description'}}"
+											data-traitkey="descriptor:{{tag.id}}"
+											data-labelkey="{{tag.labelkey}}"
+											data-descriptionkey="{{tag.descriptionkey}}"></i>
+								{{/if}}
 								{{#unless ../locked}}
 									<i class="pointer icon fa-solid fa-xmark chantry-descriptor-tag-remove"
 											data-action="descriptorRemove" data-id="{{tag.id}}"

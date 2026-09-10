@@ -2127,16 +2127,15 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 				{ powerLevel: 1 }
 			]
 		};
-		/* NO SE PUEBLA `system.descriptors` AQUÍ, y no por omisión: hacerlo revela un defecto
-		   PREEXISTENTE y AJENO a este cambio — `{{#unless locked}}` en la fila de un descriptor
-		   adjunto vive dentro de `{{#each descriptorTags as |tag|}}` SIN `../` (chantry-sheet-v2.hbs,
-		   bloque `descriptorRemove`), así que `locked` resuelve contra `tag` (undefined) y el botón
-		   de quitar se renderiza SIEMPRE, también bloqueada. Es exactamente la trampa de profundidad
-		   que este proyecto ya ha cazado varias veces en otros partials, nacida en
-		   `reprice-chantry-descriptors` (2026-09-08) — anterior a este cambio y fuera de su alcance
-		   («no toques nada de descriptores narrativos»). Poblar este campo aquí lo pondría en rojo
-		   por una razón que no tiene nada que ver con el Libro de las Capillas; queda reportado en el
-		   resumen de esta tarea en vez de comitido como una "corrección" no pedida. */
+		/* add-descriptor-node-personnel-eyes: the depth trap this comment used to document
+		   (`{{#unless locked}}` missing its `../` inside `{{#each descriptorTags as |tag|}}`) is
+		   GONE from `chantry-sheet-v2.hbs` — verified by reading the file: the remove button's guard
+		   already reads `{{#unless ../locked}}`. Fixed independently of this change at some point
+		   after the comment was written; it just never got cleared. Populating `system.descriptors`
+		   is what this task needs anyway, to exercise the new per-tag description eye (a KNOWN id
+		   gets one, "not-a-real-descriptor" — unrecognised, exercising `descriptorFallbackLabel`'s
+		   existing gap — must not). */
+		system.descriptors = ["location-city", "communications-modern", "not-a-real-descriptor"];
 		/* EL PORTADOR VIEJO, con la forma que SIEMPRE tuvo (las ocho claves del Dossier) — nunca la
 		   forma nueva. Un mundo sin migrar todavía tiene datos así, y esta hoja no debe leerlos. */
 		system.traitRosters = {
@@ -2359,6 +2358,49 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		const traits = rendered.get("unlocked|traits") ?? "";
 		const consortDeletes = (traits.match(/data-action="personnelConsortDelete"/g) ?? []).length;
 		if (consortDeletes !== 2) throw new Error(`expected 2 consort deletes for the fixture's 2 consorts, got ${consortDeletes}`);
+	});
+
+	/* add-descriptor-node-personnel-eyes: staffTier and staffLoyalty each get the SAME description-
+	   eye idiom the seven book-of-chantries Traits already have — read-only, bound unconditionally,
+	   `data-traitkey`/`data-labelkey`/`data-descriptionkey`. */
+	check("chantry: Sirvientes (staffTier/staffLoyalty) each carry a description eye", () => {
+		const locked = rendered.get("locked|traits") ?? "";
+		for (const [traitkey, labelkey, descriptionkey] of [
+			["personnel:staffTier", "wod.chantry.personnel.stafftier", "wod.chantry.personnel.descriptions.stafftier"],
+			["personnel:staffLoyalty", "wod.chantry.personnel.staffloyalty", "wod.chantry.personnel.descriptions.staffloyalty"]
+		]) {
+			const needle = `data-traitkey="${traitkey}"`;
+			if (!locked.includes(needle)) throw new Error(`no description eye for ${traitkey}`);
+			const re = new RegExp(`data-traitkey="${traitkey}"[^>]*data-labelkey="${labelkey}"[^>]*data-descriptionkey="${descriptionkey}"`);
+			if (!re.test(locked)) throw new Error(`${traitkey}'s eye does not carry the expected labelkey/descriptionkey pair`);
+		}
+	});
+
+	/* add-descriptor-node-personnel-eyes: a Node's own power-level row and each of its own
+	   area-Trait rows (guardian/fortification/etc., independent of the Edificio's) get an eye too —
+	   the fixture's "Nodo del faro" carries powerLevel AND its own `traits: { guardian: 1 }`, so
+	   both paths are exercised by the one Node. */
+	check("chantry: a Node's own power-level row and its own Trait rows each carry a description eye", () => {
+		const realm = rendered.get("locked|realm") ?? "";
+		if (!/data-traitkey="node-power-level"[^>]*data-labelkey="wod\.chantry\.realm\.nodepowerlevel\.headline"[^>]*data-descriptionkey="wod\.chantry\.realm\.nodepowerlevel\.description"/.test(realm)) {
+			throw new Error("no (or malformed) description eye on a Node's own power-level row");
+		}
+		// Node-own Trait rows reuse the SAME traitdescriptions content the Edificio's own rows use.
+		const re = /data-key="guardian"[\s\S]{0,900}?data-traitkey="guardian"[^>]*data-labelkey="wod\.chantry\.traits\.guardian"[^>]*data-descriptionkey="wod\.chantry\.traitdescriptions\.guardian"/;
+		if (!re.test(realm)) throw new Error(`no description eye (or wrong keys) on a Node's own "guardian" Trait row`);
+	});
+
+	/* add-descriptor-node-personnel-eyes: a KNOWN narrative descriptor gets an eye; an id this
+	   system's bundled catalogue does not recognise gets none (it has no description content to
+	   show — see `descriptorFallbackLabel`'s own gap). */
+	check("chantry: a known narrative descriptor tag carries a description eye, an unknown one does not", () => {
+		const locked = rendered.get("locked|traits") ?? "";
+		if (!/data-traitkey="descriptor:location-city"[^>]*data-labelkey="wod\.chantry\.descriptors\.catalog\.location-city"[^>]*data-descriptionkey="wod\.chantry\.descriptors\.descriptions\.location-city"/.test(locked)) {
+			throw new Error("no (or malformed) description eye on the known 'location-city' descriptor tag");
+		}
+		if (locked.includes('data-traitkey="descriptor:not-a-real-descriptor"')) {
+			throw new Error("an unrecognised descriptor id rendered a description eye with nothing behind it");
+		}
 	});
 
 	/* i-see-consortes-in-censo-tab: los Consortes NO son Items, así que ningún `data-action` los

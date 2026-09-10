@@ -264,6 +264,14 @@
 						{{#if node.powerLevelLabelkey}}
 							<div class="clearareaBox row chantry-node-row">
 								<span class="chantry-locked-value">{{localize node.powerLevelLabelkey}}</span>
+								{{!-- add-descriptor-node-personnel-eyes: same content for every Node (the
+								      house-rule power-level table is shared, not per-instance) — read-only,
+								      same idiom as every other description eye on this sheet. --}}
+								<i class="pullLeft pointer icon collapsible button fa-solid fa-eye chantry-trait-eye"
+										title="{{localize 'wod.labels.show.description'}}"
+										data-traitkey="node-power-level"
+										data-labelkey="wod.chantry.realm.nodepowerlevel.headline"
+										data-descriptionkey="wod.chantry.realm.nodepowerlevel.description"></i>
 							</div>
 						{{/if}}
 
@@ -296,6 +304,14 @@
 							<div class="clearareaBox row chantry-node-row" data-key="{{trait.key}}">
 								<div class="pullLeft headlineNormal ability-headlineWidth">{{localize trait.labelkey}}</div>
 								<span class="chantry-locked-value">{{localize trait.currentlabelkey}}</span>
+								{{!-- add-descriptor-node-personnel-eyes: SAME content as the Edificio's own
+								      row for this Trait (`wod.chantry.traitdescriptions.<key>`) — a Node's own
+								      area-Trait is priced from the identical table. --}}
+								<i class="pullLeft pointer icon collapsible button fa-solid fa-eye chantry-trait-eye"
+										title="{{localize 'wod.labels.show.description'}}"
+										data-traitkey="{{trait.key}}"
+										data-labelkey="{{trait.labelkey}}"
+										data-descriptionkey="{{trait.descriptionkey}}"></i>
 							</div>
 						{{/each}}
 					</div>
