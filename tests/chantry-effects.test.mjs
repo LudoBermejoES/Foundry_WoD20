@@ -129,6 +129,15 @@ test("fix-chantry-foundry-sheet-parity: NODE_POWER_LEVELS matches wodchar's own 
 	assert.equal(nodePowerLevelRow(9).nameEs, "Trascendental");
 });
 
+test("separate-realm-node-tab: NODE_POWER_LEVELS carries wodchar's Quintaesencia/semana column too", () => {
+	assert.deepEqual(
+		[...NODE_POWER_LEVELS].map((r) => r.quintessencePerWeek),
+		[2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]);
+	assert.equal(nodePowerLevelRow(0).quintessencePerWeek, 2, "Latente");
+	assert.equal(nodePowerLevelRow(3).quintessencePerWeek, 16, "Estable");
+	assert.equal(nodePowerLevelRow(9).quintessencePerWeek, 1024, "Trascendental");
+});
+
 test("each realm.nodes[] entry prices independently by its own powerLevel", () => {
 	assert.equal(computeRealmCost({ nodes: [{ powerLevel: 0 }] }), 5, "Latente");
 	assert.equal(computeRealmCost({ nodes: [{ powerLevel: 3 }] }), 20, "Estable");

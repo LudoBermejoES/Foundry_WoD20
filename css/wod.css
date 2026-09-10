@@ -3481,6 +3481,14 @@ input.sheet-infoWidth {
   font-size: 1.05em;
 }
 
+/* separate-realm-node-tab: the Node's own Quintaesencia/semana figure, next to its name --
+   subordinate to the name itself, same reduced-size/reduced-opacity treatment as
+   `.chantry-trait-cost`/`.chantry-descriptor-tag-cost` (an annotation, not a second heading). */
+.chantry-body .chantry-node-quintessence {
+  font-size: var(--wod-font-xs);
+  opacity: 0.75;
+}
+
 /* The Node's free-text description (no label — it is prose, not a data row): visually
    subordinate, matching the reduced-opacity treatment every other secondary annotation on this
    sheet already uses, so it reads as narrative color rather than another field. */

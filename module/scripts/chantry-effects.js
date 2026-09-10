@@ -467,24 +467,26 @@ export const REALM_NODE_NAMED_COST = 5;
 /**
  * `fix-chantry-foundry-sheet-parity`: the per-Node power-level house-rule scale
  * (`add-node-power-level-house-rule` — REGLA DE LA CASA, never a book citation), ported verbatim
- * from `wod20-char/web/server/services/rules/chantry.ts`'s `NODE_POWER_LEVELS` (points/name; the
- * Quintessence/week column is wodchar's own informational figure and is not needed for pricing
- * here). `REALM_NODE_COST_PER_NODE`/`REALM_NODE_SIZE_LEVELS`/`nodeCount`/`nodeSize` — the OLDER
- * flat-per-Node-count model this table replaces — are RETIRED: `computeRealmCost` below now reads
- * `realm.nodes[]` directly, matching the CURRENT wodchar schema (`add-chantry-node-roster`).
- * @type {ReadonlyArray<{level: number, nameEs: string, points: number}>}
+ * from `wod20-char/web/server/services/rules/chantry.ts`'s `NODE_POWER_LEVELS` (points/name AND,
+ * since `separate-realm-node-tab`, `quintessencePerWeek` too — that column was DROPPED when this
+ * table was first ported here because pricing never needed it; it does now, to show each Node's
+ * own Quintaesencia/semana next to its name). `REALM_NODE_COST_PER_NODE`/`REALM_NODE_SIZE_LEVELS`/
+ * `nodeCount`/`nodeSize` — the OLDER flat-per-Node-count model this table replaces — are RETIRED:
+ * `computeRealmCost` below now reads `realm.nodes[]` directly, matching the CURRENT wodchar schema
+ * (`add-chantry-node-roster`).
+ * @type {ReadonlyArray<{level: number, nameEs: string, points: number, quintessencePerWeek: number}>}
  */
 export const NODE_POWER_LEVELS = Object.freeze([
-	Object.freeze({ level: 0, nameEs: "Latente", points: 5 }),
-	Object.freeze({ level: 1, nameEs: "Tenue", points: 10 }),
-	Object.freeze({ level: 2, nameEs: "Modesto", points: 15 }),
-	Object.freeze({ level: 3, nameEs: "Estable", points: 20 }),
-	Object.freeze({ level: 4, nameEs: "Notable", points: 25 }),
-	Object.freeze({ level: 5, nameEs: "Vigoroso", points: 30 }),
-	Object.freeze({ level: 6, nameEs: "Pujante", points: 35 }),
-	Object.freeze({ level: 7, nameEs: "Formidable", points: 40 }),
-	Object.freeze({ level: 8, nameEs: "Colosal", points: 45 }),
-	Object.freeze({ level: 9, nameEs: "Trascendental", points: 50 })
+	Object.freeze({ level: 0, nameEs: "Latente", points: 5, quintessencePerWeek: 2 }),
+	Object.freeze({ level: 1, nameEs: "Tenue", points: 10, quintessencePerWeek: 4 }),
+	Object.freeze({ level: 2, nameEs: "Modesto", points: 15, quintessencePerWeek: 8 }),
+	Object.freeze({ level: 3, nameEs: "Estable", points: 20, quintessencePerWeek: 16 }),
+	Object.freeze({ level: 4, nameEs: "Notable", points: 25, quintessencePerWeek: 32 }),
+	Object.freeze({ level: 5, nameEs: "Vigoroso", points: 30, quintessencePerWeek: 64 }),
+	Object.freeze({ level: 6, nameEs: "Pujante", points: 35, quintessencePerWeek: 128 }),
+	Object.freeze({ level: 7, nameEs: "Formidable", points: 40, quintessencePerWeek: 256 }),
+	Object.freeze({ level: 8, nameEs: "Colosal", points: 45, quintessencePerWeek: 512 }),
+	Object.freeze({ level: 9, nameEs: "Trascendental", points: 50, quintessencePerWeek: 1024 })
 ]);
 
 /**
@@ -495,7 +497,7 @@ export const NODE_POWER_LEVELS = Object.freeze([
  * hand-edited/stale Node with an out-of-range `powerLevel` must not take down `_prepareContext` for
  * the whole actor (`fix-chantry-foundry-sheet-parity` task 1.8).
  * @param {number} level
- * @returns {{level: number, nameEs: string, points: number}|undefined}
+ * @returns {{level: number, nameEs: string, points: number, quintessencePerWeek: number}|undefined}
  */
 export function nodePowerLevelRow(level) {
 	return Number.isInteger(level) ? NODE_POWER_LEVELS[level] : undefined;

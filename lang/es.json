@@ -1515,7 +1515,7 @@
 				}
 			},
 			"realm": {
-				"headline": "Reino del Horizonte",
+				"headline": "Nodos y Reino del Horizonte",
 				"hasrealm": "¿Tiene Reino del Horizonte? (+10 puntos)",
 				"upkeep": "Mantenimiento de Quintaesencia/día (informado, nunca descontado de ningún total almacenado)",
 				"fields": {
@@ -1531,7 +1531,8 @@
 					"nodenamed": "Nodo Nombrado (+5 puntos)",
 					"nodebattery": "Batería de Nodo (informativo: sin líneas ley — la Quintaesencia se recoge en persona)",
 					"nodetass": "Tass (informativo: el Nodo produce Quintaesencia en forma de Tass material)",
-					"noderesonance": "Resonancia"
+					"noderesonance": "Resonancia",
+					"nodequintessenceperweek": "Quintaesencia/semana"
 				},
 				"levels": {
 					"size": {

@@ -296,7 +296,11 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	 * rebuild-chantry-book-of-chantries-only RETIRES THE EFFECTS TAB. Integrated Effects depended on
 	 * three Dossier Traits (`integrated-effects`/`node`/`reality-zone`) all retired in this change,
 	 * and the book offers no equivalent "anchored spell" subsystem to give the tab an honest number
-	 * (design.md D2). Three tabs now: Rasgos, Censo, Equipo.
+	 * (design.md D2). Three tabs then: Rasgos, Censo, Equipo.
+	 *
+	 * separate-realm-node-tab ADDS A FOURTH: Reino del Horizonte + Nodo, previously inline inside
+	 * Rasgos (the same move Censo already got out of Rasgos, earlier). Four tabs now: Rasgos,
+	 * Nodos y Reino del Horizonte, Censo, Equipo — declared in that order because it is rail order.
 	 */
 	tabGroups = {
 		primary: "traits"
@@ -308,6 +312,17 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			group: "primary",
 			title: game.i18n.localize("wod.chantry.traitsheadline"),
 			icon: game.worldofdarkness.icons.chantry.stats
+		},
+		/* separate-realm-node-tab — el Reino del Horizonte + los Nodos, sacados de la pestaña Rasgos
+		   a la suya propia (el mismo movimiento que el Censo ya tuvo). Título renombrado
+		   («Reino del Horizonte» -> «Nodos y Reino del Horizonte», `wod.chantry.realm.headline`,
+		   la misma clave que el banner interior de la pestaña) porque ahora cubre AMBOS bloques, no
+		   solo el Reino. */
+		realm: {
+			id: "realm",
+			group: "primary",
+			title: game.i18n.localize("wod.chantry.realm.headline"),
+			icon: game.worldofdarkness.icons.chantry.magic
 		},
 		/* EL CENSO (add-chantry-roster-tab, tarea 4.1). El orden de DECLARACIÓN es el orden del riel
 		   (`v3/navigation.hbs` itera este objeto), así que ir aquí es ir «entre Rasgos y Efectos».
@@ -331,8 +346,8 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 	};
 
 	/*
-	 * FOUR PARTS: the rail, and one per tab (Rasgos, Censo, Equipo — Efectos retired, see the class
-	 * header above).
+	 * FIVE PARTS: the rail, and one per tab (Rasgos, Nodos y Reino del Horizonte, Censo, Equipo —
+	 * Efectos retired, see the class header above).
 	 *
 	 * `chantry-sheet-v2.hbs` KEEPS ITS NAME as the Rasgos tab (see that file's own header): two
 	 * preflight gates read it by path, and its content is unchanged bar the roster include.
@@ -349,6 +364,11 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		},
 		traits: {
 			template: "systems/worldofdarkness/templates/actor/chantry-sheet-v2.hbs"
+		},
+		/* separate-realm-node-tab — su propio fichero, extraído tal cual de donde vivía dentro de
+		   `chantry-sheet-v2.hbs` (mismo `.chantry-body`, mismas clases CSS, cero cambio de estilo). */
+		realm: {
+			template: "systems/worldofdarkness/templates/actor/chantry-sheet-realm.hbs"
 		},
 		/* LA MISMA PLANTILLA QUE EL PJ, no una copia (tarea 4.4 y el requisito de la spec: «SHALL
 		   reuse the PC roster's markup rather than a Chantry-only copy»). El interruptor es
@@ -667,6 +687,13 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 		switch (partId) {
 			case "traits":
 				context.tab = context.tabs.traits;
+				return context;
+
+			/* separate-realm-node-tab: `context.realm` ya llega construido por `_prepareContext`
+			   (lo mismo que ya era cierto para `traits` arriba, que también lo lee sin reconstruirlo) —
+			   este `case` no necesita más que apuntar el `tab`. */
+			case "realm":
+				context.tab = context.tabs.realm;
 				return context;
 
 			/* SIN ESTE `case` LA PESTAÑA SALE EN BLANCO Y SIN ERROR: un part sin preparador se
@@ -1366,6 +1393,10 @@ export default class ChantryActorSheetV2 extends HandlebarsApplicationMixin(foun
 			description: typeof node?.description === "string" && node.description.trim() !== "" ? node.description : null,
 			resonance: typeof node?.resonance === "string" && node.resonance.trim() !== "" ? node.resonance : null,
 			powerLevelLabelkey: powerLevelRow ? `wod.chantry.realm.nodepowerlevels.${powerLevelRow.level}` : null,
+			// separate-realm-node-tab: shown next to the Node's own name, not folded into the
+			// power-level name row below — this is the raw Quintaesencia/semana figure the book
+			// (via the house-rule table) ties to a Node's power level, never a shared/pool total.
+			quintessencePerWeek: powerLevelRow ? powerLevelRow.quintessencePerWeek : null,
 			battery: !!node?.battery,
 			tass: Number.isInteger(node?.tass) && node.tass > 0 ? node.tass : null,
 			named: !!node?.named,

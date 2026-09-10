@@ -1518,7 +1518,7 @@
 				}
 			},
 			"realm": {
-				"headline": "Horizon Realm",
+				"headline": "Nodes and Horizon Realm",
 				"hasrealm": "Has a Horizon Realm? (+10 points)",
 				"upkeep": "Quintessence upkeep/day (reported, never deducted from any stored total)",
 				"fields": {
@@ -1534,7 +1534,8 @@
 					"nodenamed": "Named Node (+5 points)",
 					"nodebattery": "Node Battery (informational: no ley lines — Quintessence must be collected in person)",
 					"nodetass": "Tass (informational: the Node produces Quintessence as physical Tass)",
-					"noderesonance": "Resonance"
+					"noderesonance": "Resonance",
+					"nodequintessenceperweek": "Quintessence/week"
 				},
 				"levels": {
 					"size": {

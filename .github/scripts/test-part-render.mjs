@@ -2515,6 +2515,9 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		let empty = { locked: "", unlocked: "" };
 		let rail = { locked: "", unlocked: "" };
 		let emptyTraits = { locked: "", unlocked: "" };
+		// separate-realm-node-tab: the Node's own census door moved off the traits render onto its
+		// own "realm" part, alongside the Reino/Node section it always lived in.
+		let emptyRealm = { locked: "", unlocked: "" };
 		let emptyError = null;
 
 		try {
@@ -2524,6 +2527,8 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			rail.unlocked = await renderChantry("tabs", false, stripCensus, "emptycensus");
 			emptyTraits.locked = await renderChantry("traits", true, stripCensus, "emptycensus");
 			emptyTraits.unlocked = await renderChantry("traits", false, stripCensus, "emptycensus");
+			emptyRealm.locked = await renderChantry("realm", true, stripCensus, "emptycensus");
+			emptyRealm.unlocked = await renderChantry("realm", false, stripCensus, "emptycensus");
 		}
 		catch (err) { emptyError = err; }
 
@@ -2741,23 +2746,31 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 			   exigía que el icono DESAPARECIERA desbloqueada (donde el bloque, ya retirado, tomaba el
 			   relevo) y que solo saliera para los Rasgos sin entradas. La regla nueva es más simple y
 			   más fuerte: navegar no escribe y no depende del dato, así que el icono está siempre, para
-			   los ocho, con o sin entradas, bloqueada o no. */
-			for (const [tag, html] of [
-				["sin censo, bloqueada", emptyTraits.locked],
-				["sin censo, desbloqueada", emptyTraits.unlocked],
-				["con datos, bloqueada", rendered.get("locked|traits") ?? ""],
-				["con datos, desbloqueada", rendered.get("unlocked|traits") ?? ""]
+			   los ocho, con o sin entradas, bloqueada o no.
+
+			   separate-realm-node-tab: las tres puertas ya NO viven todas en la pestaña Rasgos — la del
+			   Nodo se mudó con el bloque Reino+Nodo a su propia pestaña "realm". Se suman las dos
+			   pestañas para no afirmar un reparto concreto entre ellas (2+1, o el que sea), solo que las
+			   tres siguen existiendo en algún sitio. */
+			for (const [tag, traitsHtml, realmHtml] of [
+				["sin censo, bloqueada", emptyTraits.locked, emptyRealm.locked],
+				["sin censo, desbloqueada", emptyTraits.unlocked, emptyRealm.unlocked],
+				["con datos, bloqueada", rendered.get("locked|traits") ?? "", rendered.get("locked|realm") ?? ""],
+				["con datos, desbloqueada", rendered.get("unlocked|traits") ?? "", rendered.get("unlocked|realm") ?? ""]
 			]) {
-				if (doors(html) !== ROSTER_TRAIT_KEYS.length) {
-					throw new Error(`${doors(html)} puerta(s) al censo (${tag}); se espera una por Rasgo con ` +
-						`censo (${ROSTER_TRAIT_KEYS.length}). Una affordance cuya PRESENCIA depende del dato o ` +
-						`del candado es la clase de defecto que esto arregla`);
+				const found = doors(traitsHtml) + doors(realmHtml);
+				if (found !== ROSTER_TRAIT_KEYS.length) {
+					throw new Error(`${found} puerta(s) al censo (${tag}, Rasgos+Reino/Nodo); se espera una por ` +
+						`Rasgo con censo (${ROSTER_TRAIT_KEYS.length}). Una affordance cuya PRESENCIA depende del ` +
+						`dato o del candado es la clase de defecto que esto arregla`);
 				}
 			}
 		});
 
 		check("chantry/censo: el icono es ligable y nunca choca con la eye de la descripción", () => {
-			const html = rendered.get("locked|traits") ?? "";
+			// separate-realm-node-tab: guardian/staffTier's doors are still on "traits", the Node's
+			// own moved to "realm" — both tabs are checked so the moved icon keeps its coverage.
+			const html = (rendered.get("locked|traits") ?? "") + (rendered.get("locked|realm") ?? "");
 			const icons = [...html.matchAll(/<i\b[^>]*data-rosterkey="[^"]*"[^>]*>/g)].map((m) => m[0]);
 
 			if (icons.length === 0) throw new Error("no census icon to inspect");
@@ -2922,7 +2935,8 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 	   have Node without Realm, and Realm without Node") is checked more narrowly below; here both
 	   halves render together with neither leaking the other's fields. */
 	check("chantry: the Realm+Node section renders both halves with no cross-leak", () => {
-		const locked = rendered.get("locked|traits") ?? "";
+		// separate-realm-node-tab: this section moved off the Rasgos tab into its own "realm" part.
+		const locked = rendered.get("locked|realm") ?? "";
 		if (!locked.includes("wod.chantry.realm.headline")) throw new Error("no Realm+Node section renders at all");
 		// fix-chantry-foundry-sheet-parity: each Node is its own named detail block now, not a
 		// shared "size" field — check for one Node's own name/power-level/resonance instead.
@@ -2930,6 +2944,38 @@ console.log("\nH. the Chantry/Construct sheet renders every part, locked and unl
 		if (!locked.includes("wod.chantry.realm.nodepowerlevels.3")) throw new Error("the Node's own power-level name does not render");
 		if (!locked.includes("wod.chantry.realm.fields.noderesonance")) throw new Error("a Node's own resonance field does not render");
 		if (!locked.includes("wod.chantry.realm.fields.terrain")) throw new Error("the Realm's own terrain field does not render");
+	});
+
+	/* separate-realm-node-tab: each Node's own Quintaesencia/semana, shown next to its name — the
+	   same NODE_POWER_LEVELS figure `computeRealmCost` already priced with, never seen by a reader
+	   until now. "Nodo del faro" is powerLevel 3 -> 16/semana; "Nodo ciego" (no traits/description,
+	   the sparsest fixture Node) is powerLevel 1 -> 4/semana, proving the figure does not depend on
+	   any of the OTHER optional fields being present. */
+	check("chantry: each Node shows its own Quintaesencia/semana next to its name", () => {
+		const locked = rendered.get("locked|realm") ?? "";
+		// The armature's own `localize` returns the key unchanged (I11's own discipline), so a
+		// literal key string next to the number is exactly what a correct render produces here.
+		if (!locked.includes('class="chantry-node-quintessence">16 wod.chantry.realm.fields.nodequintessenceperweek<')) {
+			throw new Error("Nodo del faro (powerLevel 3) does not show its 16 Quintaesencia/semana");
+		}
+		if (!locked.includes('class="chantry-node-quintessence">4 wod.chantry.realm.fields.nodequintessenceperweek<')) {
+			throw new Error("Nodo ciego (powerLevel 1) does not show its 4 Quintaesencia/semana");
+		}
+	});
+
+	/* A Node with NO powerLevel at all must show no figure — "not built" costs and produces
+	   nothing (chantry-effects.js's own documented decision), never a misleading "0". */
+	check("chantry: a Node with no powerLevel shows no Quintaesencia figure at all", () => {
+		const noLevelActor = buildChantryActor();
+		noLevelActor.system.realm = {
+			...noLevelActor.system.realm,
+			nodes: [{ name: "Nodo sin nivel" }]
+		};
+		const context = new ChantrySheetClass({ document: noLevelActor })._prepareRealmContext(
+			noLevelActor.system.realm, undefined);
+		if (context.nodes[0].quintessencePerWeek !== null) {
+			throw new Error(`expected null for a Node with no powerLevel, got ${context.nodes[0].quintessencePerWeek}`);
+		}
 	});
 
 	/* AWAITED OUTSIDE `check`, same discipline as `capContext` above. */
